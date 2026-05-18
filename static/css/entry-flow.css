@@ -1,0 +1,215 @@
+/* ============================================================
+   DAS — Entry Flow CSS  (Phase 3.3 / DAS-341–351)
+   Extends: tokens.css, components.css
+   Scope: exam create v2 + edit parity steppers
+   ============================================================ */
+
+/* ── Stepper button ─────────────────────────────────────────── */
+.das-stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--body);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out),
+              background var(--t-fast);
+}
+
+.das-stepper-btn:active  { transform: scale(0.87); background: var(--surface-3); }
+.das-stepper-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+/* ── Stepper inline input (replaces static span) ───────────── */
+.das-stepper-input {
+  /* Typography — match the span exactly */
+  font-size: 1.25rem;      /* text-xl */
+  font-weight: 900;        /* font-black */
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1;
+
+  /* Hard width constraint — Tailwind w-8 + min-w-0 on the element,
+     this CSS must not fight it */
+  width: 2rem;             /* w-8 = 32px */
+  min-width: 0;
+  flex-shrink: 0;
+
+  /* Invisible — inherit card background */
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+
+  /* Subtle focus highlight */
+  border-radius: 6px;
+  transition: background var(--t-fast);
+}
+
+.das-stepper-input:focus {
+  background: var(--surface-3);
+  outline: none;
+}
+
+.das-stepper-input:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* Suppress number spinners */
+.das-stepper-input::-webkit-inner-spin-button,
+.das-stepper-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.das-stepper-input[type=number]               { -moz-appearance: textfield; }
+
+/* ── Subject entry card ─────────────────────────────────────── */
+.das-entry-card {
+  background: var(--surface-1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 1rem;
+  transition: border-color var(--t-base);
+}
+
+.das-entry-card--overflow {
+  border-color: var(--down);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.das-entry-card__accent {
+  height: 3px;
+  border-radius: 2px;
+  margin-bottom: 0.75rem;
+}
+
+.das-entry-card__net-badge {
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.das-entry-card__net-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+}
+
+/* ── Stepper row within a card ──────────────────────────────── */
+.das-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.das-stepper-row + .das-stepper-row { margin-top: 0.5rem; }
+
+/* ── Remaining / validation badge ───────────────────────────── */
+.das-remaining-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--r-pill);
+}
+
+.das-remaining-badge--ok   { background: var(--up-tint);   color: var(--up); }
+.das-remaining-badge--warn { background: var(--surface-2); color: var(--muted); }
+.das-remaining-badge--over { background: var(--down-tint); color: var(--down); }
+
+/* ── Sticky create/edit footer ──────────────────────────────── */
+.das-create-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 0.75rem 1.25rem;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.das-create-footer__inner {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+/* ── Draft restore banner ───────────────────────────────────── */
+.das-draft-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--r-chip);
+  background: var(--primary-tint);
+  border: 1px solid var(--primary);
+}
+
+/* ── Topic picker ────────────────────────────────────────────── */
+.das-topic-picker {
+  background: var(--surface-1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.das-topic-item {
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  transition: background var(--t-fast);
+  border-bottom: 1px solid var(--border);
+  color: var(--body);
+  font-size: 0.875rem;
+}
+
+.das-topic-item:last-child  { border-bottom: none; }
+.das-topic-item:hover       { background: var(--surface-2); }
+.das-topic-item--selected   { background: var(--primary-tint); color: var(--primary); font-weight: 600; }
+
+/* ── Step-progress dots ─────────────────────────────────────── */
+.das-step-dots { display: flex; gap: 0.375rem; align-items: center; }
+
+.das-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background var(--t-base), width var(--t-base);
+}
+
+.das-step-dot--active {
+  width: 18px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+/* ── Reduced-motion overrides ───────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .das-stepper-btn,
+  .das-stepper-btn:active,
+  .das-entry-card,
+  .das-step-dot,
+  .das-step-dot--active {
+    transition: none !important;
+    transform: none !important;
+  }
+}

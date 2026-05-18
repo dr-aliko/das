@@ -1,0 +1,56 @@
+{% load i18n %}
+{# DAS-322: Quick Actions Row — 3 buttons (Konu Çalış removed) #}
+<div class="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-3">
+
+  {# Compare — routes to v2 compare page pre-seeded with this exam #}
+  <a href="{% url 'student:compare_v2' %}?exam1={{ exam.id }}&denemeler_v2=1"
+     class="flex flex-col items-center justify-center p-3 das-card text-center
+            lg:flex-row lg:justify-start lg:gap-3 lg:py-4 lg:px-5
+            active:scale-95 transition-transform group">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center mb-2 lg:mb-0 shrink-0
+                group-active:scale-90 transition-transform"
+         style="background:rgba(99,102,241,.12); color:#818cf8;">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </div>
+    <span class="text-[10px] lg:text-sm font-bold uppercase lg:normal-case lg:tracking-normal"
+          style="color:var(--muted)">{% trans "Kıyasla" %}</span>
+  </a>
+
+  {# Edit — routes to the exam edit form #}
+  <a href="{% url 'student:exam_edit' exam_id=exam.id %}"
+     class="flex flex-col items-center justify-center p-3 das-card text-center
+            lg:flex-row lg:justify-start lg:gap-3 lg:py-4 lg:px-5
+            active:scale-95 transition-transform group">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center mb-2 lg:mb-0 shrink-0
+                group-active:scale-90 transition-transform"
+         style="background:rgba(245,158,11,.12); color:#f59e0b;">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+    </div>
+    <span class="text-[10px] lg:text-sm font-bold uppercase lg:normal-case lg:tracking-normal"
+          style="color:var(--muted)">{% trans "Düzenle" %}</span>
+  </a>
+
+  {# Delete #}
+  <button @click="$dispatch('open-delete-modal')"
+          class="flex flex-col items-center justify-center p-3 das-card
+                 lg:flex-row lg:justify-start lg:gap-3 lg:py-4 lg:px-5
+                 active:scale-95 transition-transform group">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center mb-2 lg:mb-0 shrink-0
+                group-active:scale-90 transition-transform"
+         style="background:rgba(239,68,68,.1); color:#ef4444;">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </div>
+    <span class="text-[10px] lg:text-sm font-bold uppercase lg:normal-case lg:tracking-normal"
+          style="color:var(--muted)">{% trans "Sil" %}</span>
+  </button>
+
+</div>

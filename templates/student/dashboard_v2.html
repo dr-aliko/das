@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Panelim" %} — DAS{% endblock %}
+
+{% block content %}
+<script>
+function examSelect() {
+  return {
+    sel: [],
+    toggle(id) {
+      const i = this.sel.indexOf(id);
+      if (i > -1) this.sel.splice(i, 1);
+      else if (this.sel.length < 2) this.sel.push(id);
+    },
+    picked(id)  { return this.sel.includes(id); },
+    dimmed(id)  { return this.sel.length >= 2 && !this.sel.includes(id); },
+    goCompare() { window.location.href = '/student/karsilastir/?exam1=' + this.sel[0] + '&exam2=' + this.sel[1]; },
+
+    dashPeriod:    '{{ period }}',
+    dashType:      'all',
+    periodLoading: false,
+
+    async setPeriod(p) {
+      if (p === this.dashPeriod || this.periodLoading) return;
+      this.periodLoading = true;
+      const prevPeriod = this.dashPeriod;
+      this.dashPeriod = p;
+      const scrollY = window.scrollY;
+      try {
+        const r = await fetch('{% url "student:dashboard_analytics" %}?period=' + encodeURIComponent(p) + '&chart_period=' + encodeURIComponent('{{ chart_period|default:"30" }}'), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+        set('das-greeting', d.greeting_html);
+        set('das-kpi',      d.kpi_html);
+        set('das-subjects', d.subjects_html);
+        if (typeof window.DASInitCharts === 'function') window.DASInitCharts(d.chart_data, d.scatter_data, d.has_exams);
+        if (window._studentTasksComp && Array.isArray(d.radar_data)) window._studentTasksComp.radar = d.radar_data;
+        const u = new URL(window.location.href);
+        if (p === 'all') u.searchParams.delete('period');
+        else             u.searchParams.set('period', p);
+        history.replaceState({}, '', u.toString());
+        window.scrollTo(0, scrollY);
+      } catch (e) {
+        console.error('Analytics update failed:', e);
+        this.dashPeriod = prevPeriod;
+      } finally {
+        this.periodLoading = false;
+      }
+    },
+  };
+}
+
+function studentTasks() {
+  return {
+    csrf: '{{ csrf_token }}',
+    tab: 'radar',
+    radar:     {{ radar_json|safe }},
+    active:    {{ active_json|safe }},
+    completed: {{ completed_json|safe }},
+
+    get completedBySubject() {
+      const g = {};
+      for (const t of this.completed) {
+        const k = t.subject.startsWith('TYT ') ? t.subject.slice(4) : t.subject;
+        (g[k] = g[k] || []).push(t);
+      }
+      return Object.entries(g).map(([name, tasks]) => ({name, tasks}));
+    },
+
+    selfAssign(t, direct) {
+      fetch('/student/self-assign/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+        body: JSON.stringify({topic_id: t.id, direct_complete: direct})
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        this.radar = this.radar.filter(r => r.id !== t.id);
+        const obj = {id: d.task_id, topic_id: t.id, name: t.name, subject: t.subject, sub: t.sub, wrong: t.wrong, blank: t.blank};
+        if (direct) { this.completed.unshift(obj); } else { this.active.push({...obj, byCoach: false}); }
+      });
+    },
+
+    completeTask(t) {
+      fetch('/student/task/' + t.id + '/complete/', {
+        method: 'POST', headers: {'X-CSRFToken': this.csrf}
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        this.active = this.active.filter(a => a.id !== t.id);
+        this.completed.unshift({...t, ...(d.task || {})});
+      });
+    },
+
+    cancelTask(t) {
+      fetch('/student/task/' + t.id + '/action/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+        body: JSON.stringify({action: 'cancel_assignment'})
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        this.active = this.active.filter(a => a.id !== t.id);
+        if (t.topic_id) {
+          this.radar.push({id: t.topic_id, name: t.name, subject: t.subject, sub: t.sub,
+            wrong: t.wrong !== undefined ? t.wrong : 0, blank: t.blank !== undefined ? t.blank : 0});
+        }
+      });
+    },
+
+    undoComplete(t) {
+      fetch('/student/task/' + t.id + '/action/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+        body: JSON.stringify({action: 'undo_complete'})
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) return;
+        this.completed = this.completed.filter(c => c.id !== t.id);
+        this.active.push({id: t.id, topic_id: t.topic_id, name: t.name,
+          subject: t.subject, sub: t.sub, byCoach: !!t.byCoach});
+      });
+    },
+
+    init() { window._studentTasksComp = this; },
+  };
+}
+</script>
+
+<div class="min-h-screen pb-10" x-data="examSelect()">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    <div id="das-greeting" class="border-b border-ink-700">
+      {% include "dashboard/partials/_greeting.html" %}
+    </div>
+
+    <div class="sticky top-14 z-20 border-b border-ink-700"
+         style="background:rgba(15,20,28,0.92); backdrop-filter:blur(10px);">
+      {% include "dashboard/partials/_filter_chips.html" %}
+    </div>
+
+    <div id="das-kpi" class="pt-4">
+      {% include "dashboard/partials/_kpi_strip.html" %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 pb-6">
+
+      <div class="lg:col-span-8 space-y-4">
+
+        <div id="das-charts">
+          <div id="das-charts-empty" class="hidden mb-5">
+            <div class="rounded-xl border border-ink-700 bg-ink-850 text-center py-8">
+              <p class="text-sm text-ink-400">{% trans "Bu dönemde sınav bulunmuyor." %}</p>
+            </div>
+          </div>
+
+          {% if has_chart_data %}
+            {% include "dashboard/partials/_trend_chart_refined.html" %}
+            <div class="space-y-3 mb-5" id="das-chart-cards">
+              <div class="rounded-xl border border-ink-700 bg-ink-850 p-4" style="height:200px;">
+                <p class="das-kpi-label mb-2">{% trans "Toplam Net (Sınav Bazlı)" %}</p>
+                <canvas id="barChart"></canvas>
+              </div>
+              <div class="rounded-xl border border-ink-700 bg-ink-850 p-4" style="height:200px;">
+                <p class="das-kpi-label mb-2">{% trans "Çözüm Süresi vs. Net" %}</p>
+                <div id="scatterEmpty" class="hidden text-center py-8 text-sm text-ink-400">
+                  {% trans "Henüz süre verisi yok — sınav eklerken her dersin yanına çözüm süresini gir." %}
+                </div>
+                <canvas id="scatterChart"></canvas>
+              </div>
+            </div>
+          {% else %}
+            <div class="rounded-xl border border-ink-700 bg-ink-850 text-center py-10 mb-5">
+              <div class="text-5xl mb-4">📝</div>
+              <h2 class="text-lg font-semibold text-ink-100 mb-2">{% trans "Henüz sınav yok" %}</h2>
+              <p class="text-sm text-ink-400 mb-6">{% trans "İlk deneme sonucunu girerek başla." %}</p>
+              <a href="/student/exam/new/"
+                 class="inline-flex items-center gap-2 bg-steel-500 hover:bg-steel-400
+                        text-white font-semibold px-6 py-2.5 rounded-lg transition-colors">
+                {% trans "İlk Sınavı Ekle" %}
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="das-subjects">
+          {% if subjects %}{% include "dashboard/partials/_subject_breakdown_carousel.html" %}{% endif %}
+        </div>
+
+      </div>
+
+      <aside class="lg:col-span-4 lg:sticky lg:top-20 lg:self-start">
+        <div x-data="studentTasks()"
+             class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-steel-400 inline-block"></span>
+            <h2 class="font-semibold text-ink-100 text-sm">{% trans "Görev Takibi" %}</h2>
+          </div>
+
+          <div class="flex gap-1 mb-3 rounded-lg p-1 bg-ink-800">
+            <a href="?period=all" @click.prevent="setPeriod('all')"
+               class="flex-1 text-center text-xs py-1.5 rounded-md font-medium transition"
+               :class="dashPeriod === 'all' ? 'bg-ink-750 text-steel-300 shadow-sm' : 'text-ink-400 hover:text-ink-200'">{% trans "Tümü" %}</a>
+            <a href="?period=90" @click.prevent="setPeriod('90')"
+               class="flex-1 text-center text-xs py-1.5 rounded-md font-medium transition"
+               :class="dashPeriod === '90' ? 'bg-ink-750 text-steel-300 shadow-sm' : 'text-ink-400 hover:text-ink-200'">{% trans "3 Ay" %}</a>
+            <a href="?period=30" @click.prevent="setPeriod('30')"
+               class="flex-1 text-center text-xs py-1.5 rounded-md font-medium transition"
+               :class="dashPeriod === '30' ? 'bg-ink-750 text-steel-300 shadow-sm' : 'text-ink-400 hover:text-ink-200'">{% trans "30 Gün" %}</a>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1 mb-4 text-xs font-medium">
+            <button @click="tab='radar'" class="py-1.5 rounded-md transition text-left px-2"
+              :class="tab==='radar' ? 'bg-ruby-tint text-ruby-500' : 'text-ink-500 hover:bg-ink-800'">
+              🔴 {% trans "Radar" %} <span x-text="'(' + radar.length + ')'"></span>
+            </button>
+            <button @click="tab='active'" class="py-1.5 rounded-md transition text-left px-2"
+              :class="tab==='active' ? 'bg-steel-tint text-steel-400' : 'text-ink-500 hover:bg-ink-800'">
+              📌 {% trans "Aktif" %} <span x-text="'(' + active.length + ')'"></span>
+            </button>
+            <button @click="tab='done'" class="py-1.5 rounded-md transition text-left px-2"
+              :class="tab==='done' ? 'bg-emerald-tint text-emerald-500' : 'text-ink-500 hover:bg-ink-800'">
+              ✅ {% trans "Bitti" %} <span x-text="'(' + completed.length + ')'"></span>
+            </button>
+          </div>
+
+          <div x-show="tab==='radar'" x-cloak>
+            <template x-if="radar.length > 0">
+              <div class="space-y-1.5">
+                <template x-for="t in radar" :key="t.id">
+                  <div class="flex items-start gap-2 p-2 rounded-lg" style="background:var(--surface-2);">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-[var(--heading)] truncate" x-text="t.name"></div>
+                      <div class="flex items-center gap-1 flex-wrap mt-0.5">
+                        <span class="text-xs text-[var(--muted)]" x-text="t.subject.slice(4)"></span>
+                        <span x-show="t.wrong > 0" class="text-xs px-1 py-0.5 rounded bg-red-900/30 text-red-400" x-text="t.wrong + 'Y'"></span>
+                        <span x-show="t.blank > 0" class="text-xs px-1 py-0.5 rounded bg-[var(--surface-3)] text-[var(--muted)]" x-text="t.blank + 'B'"></span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-0.5 shrink-0">
+                      <button @click="selfAssign(t, false)"
+                        class="text-xs px-1.5 py-0.5 rounded border border-steel-500/50 text-steel-400 hover:bg-steel-tint whitespace-nowrap transition">
+                        {% trans "Ata →" %}
+                      </button>
+                      <button @click="selfAssign(t, true)"
+                        class="text-xs px-1.5 py-0.5 rounded border border-emerald-600 text-emerald-400 hover:bg-emerald-900/30 whitespace-nowrap transition">
+                        {% trans "Bitti ✓" %}
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="radar.length === 0">
+              <div class="text-center py-6">
+                <div class="text-3xl mb-2">🎯</div>
+                <p class="text-sm text-ink-400">{% trans "Tüm konular görevlendirildi!" %}</p>
+              </div>
+            </template>
+          </div>
+
+          <div x-show="tab==='active'" x-cloak>
+            <template x-if="active.length > 0">
+              <div class="space-y-1.5">
+                <template x-for="t in active" :key="t.id">
+                  <div class="flex items-center gap-2 p-2 rounded-lg border"
+                       style="background:var(--primary-tint); border-color:var(--primary);">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-[var(--heading)] truncate" x-text="t.name"></div>
+                      <div class="flex items-center gap-1 mt-0.5">
+                        <span class="text-xs text-[var(--muted)]" x-text="t.subject.slice(4)"></span>
+                        <span class="text-xs px-1 py-0.5 rounded"
+                          :class="t.byCoach ? 'bg-indigo-900/40 text-indigo-300' : 'bg-[var(--surface-3)] text-[var(--muted)]'"
+                          x-text="t.byCoach ? 'Koç' : 'Sen'"></span>
+                      </div>
+                      <template x-if="t.created_at">
+                        <div class="flex items-center gap-1 mt-1 text-[10px]" style="color:var(--muted-2)">
+                          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                          <span x-text="'Eklendi: ' + t.created_at"></span>
+                        </div>
+                      </template>
+                    </div>
+                    <div class="flex flex-col gap-0.5 shrink-0">
+                      <button @click="completeTask(t)" class="text-xs px-1.5 py-0.5 rounded border border-emerald-600 text-emerald-400 hover:bg-emerald-900/20 whitespace-nowrap transition">{% trans "Bitti ✓" %}</button>
+                      <button @click="cancelTask(t)"   class="text-xs px-1.5 py-0.5 rounded border border-red-700 text-red-400 hover:bg-red-900/20 whitespace-nowrap transition">{% trans "İptal" %}</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="active.length === 0">
+              <p class="text-sm text-ink-400 text-center py-4">{% trans "Aktif görev yok." %}</p>
+            </template>
+          </div>
+
+          <div x-show="tab==='done'" x-cloak>
+            <template x-if="completed.length > 0">
+              <div class="space-y-3">
+                <template x-for="group in completedBySubject" :key="group.name">
+                  <div>
+                    <div class="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-1" x-text="group.name"></div>
+                    <template x-for="t in group.tasks" :key="t.id">
+                      <div class="flex items-center gap-2 p-2 rounded-lg border border-emerald-800/30 bg-emerald-900/10 mb-1">
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs font-medium text-[var(--heading)] truncate" x-text="t.name"></div>
+                          <template x-if="t.created_at || t.completed_at">
+                            <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[10px]" style="color:var(--muted-2)">
+                              <span x-show="t.created_at" x-text="'Eklendi: ' + (t.created_at||'')"></span>
+                              <span x-show="t.created_at && t.completed_at" aria-hidden="true">·</span>
+                              <span x-show="t.completed_at" x-text="'Bitti: ' + (t.completed_at||'')"></span>
+                              <span x-show="t.cycle_days !== null && t.cycle_days !== undefined"
+                                    class="text-emerald-500/80 font-medium"
+                                    x-text="'(' + (t.cycle_days === 0 ? 'aynı gün' : t.cycle_days + ' günde') + ')'"></span>
+                            </div>
+                          </template>
+                        </div>
+                        <button @click="undoComplete(t)"
+                          class="text-xs px-1.5 py-0.5 rounded border border-ink-600 text-ink-400 hover:bg-ink-750 whitespace-nowrap transition shrink-0">
+                          {% trans "Geri Al" %}
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="completed.length === 0">
+              <p class="text-sm text-ink-400 text-center py-4">{% trans "Henüz tamamlanan yok." %}</p>
+            </template>
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  {% if exams %}
+  <div x-show="sel.length === 2" x-cloak
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+              flex items-center gap-2 sm:gap-4 px-4 sm:px-6 py-3 rounded-2xl shadow-xl
+              max-w-[calc(100vw-2rem)]"
+       style="background:var(--primary); color:white;">
+    <span class="text-sm font-medium">{% trans "2 deneme seçildi" %}</span>
+    <button @click="goCompare()"
+      class="bg-white font-semibold text-sm px-4 py-1.5 rounded-lg transition"
+      style="color:var(--primary);">
+      {% trans "Karşılaştır →" %}
+    </button>
+    <button @click="sel=[]" class="text-lg leading-none opacity-70 hover:opacity-100">×</button>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function trendChart() {
+  return {
+    period: '{{ chart_period|default:"30" }}',
+    periodLabel: '{{ chart_period_label|default:"Son 30 gün"|escapejs }}',
+    loading: false,
+    avg: '—', max: '—', delta: '—', deltaUp: true,
+    periodText(key) {
+      if (key === '7') return 'Son 7 gün';
+      if (key === 'all') return 'Tümü';
+      return 'Son 30 gün';
+    },
+    async setPeriod(key) {
+      if (this.period === key || this.loading) return;
+      const previousPeriod = this.period;
+      const previousLabel = this.periodLabel;
+      this.period = key;
+      this.periodLabel = this.periodText(key);
+      this.loading = true;
+      try {
+        const url = new URL('{% url "student:dashboard_chart_data" %}', window.location.origin);
+        url.searchParams.set('chart_period', key);
+        const response = await fetch(url.toString(), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        this.period = data.chart_period || key;
+        this.periodLabel = data.chart_period_label || this.periodText(this.period);
+        window.DASInitCharts(data.chart_data, data.scatter_data, data.has_exams);
+        const historyUrl = new URL(window.location.href);
+        if (this.period === '30') historyUrl.searchParams.delete('chart_period');
+        else historyUrl.searchParams.set('chart_period', this.period);
+        history.replaceState({}, '', historyUrl.toString());
+      } catch (error) {
+        console.error('Chart update failed:', error);
+        this.period = previousPeriod;
+        this.periodLabel = previousLabel;
+      } finally {
+        this.loading = false;
+      }
+    },
+    init() {
+      window._trendChartComp = this;
+      window.DASTrend && window.DASTrend.update(this.period, this);
+    },
+  };
+}
+
+window.DASInitCharts = function(d, sd, hasExams) {
+  const emptyEl = document.getElementById('das-charts-empty');
+  const cardsEl = document.getElementById('das-chart-cards');
+  const trendEl = document.querySelector('[x-data*="trendChart"]');
+
+  if (!hasExams) {
+    ['lineChart', 'barChart', 'scatterChart'].forEach(id => Chart.getChart(id)?.destroy());
+    window.DASTrend = null;
+    if (emptyEl) emptyEl.style.display = '';
+    if (cardsEl) cardsEl.style.display = 'none';
+    if (window._trendChartComp) {
+      window._trendChartComp.avg = '—';
+      window._trendChartComp.max = '—';
+      window._trendChartComp.delta = '—';
+      window._trendChartComp.deltaUp = true;
+    }
+    document.getElementById('scatterEmpty')?.classList.add('hidden');
+    document.getElementById('scatterChart')?.classList.remove('hidden');
+    return;
+  }
+
+  if (!d.labels || d.labels.length === 0) return;
+
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (cardsEl) cardsEl.style.display = '';
+  if (trendEl) trendEl.style.display = '';
+
+  ['lineChart', 'barChart', 'scatterChart'].forEach(id => Chart.getChart(id)?.destroy());
+
+  const isMobile = window.innerWidth < 640;
+  const _labels    = d.labels.slice();
+  const _examIds   = (d.exam_ids   || []).slice();
+  const _examNames = (d.exam_names || []).slice();
+  const _subData   = d.subjects.map(s => s.data.slice());
+  const _totals    = (d.totals && d.totals.length)
+    ? d.totals.slice()
+    : Array.from({length: _labels.length}, (_, i) =>
+        d.subjects.reduce((sum, s) => sum + (s.data[i] || 0), 0));
+
+  let _s = _cut('{{ chart_period|default:"30" }}');
+
+  function _cut(key) {
+    return { labels: _labels.slice(), examIds: _examIds.slice(), examNames: _examNames.slice(),
+             data: _subData.map(arr => arr.slice()), totals: _totals.slice() };
+  }
+
+  function _summary(totals) {
+    if (!totals.length) return { avg: '—', max: '—', delta: '—', deltaUp: true };
+    const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
+    const max = Math.max(...totals);
+    const raw = totals.length > 1 ? totals[totals.length - 1] - totals[0] : 0;
+    return { avg: avg.toFixed(1), max: max.toFixed(1), delta: Math.abs(raw).toFixed(1), deltaUp: raw >= 0 };
+  }
+
+  function nav(i) { if (_examIds[i]) window.location.href = '/student/exam/' + _examIds[i] + '/'; }
+
+  const lineChart = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: { labels: _s.labels, datasets: d.subjects.map((s, i) => ({
+        label: s.name, data: _s.data[i], borderColor: s.border, backgroundColor: s.bg,
+        borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: false,
+    })) },
+    options: {
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 42 } },
+      interaction: { mode: 'index', intersect: false },
+      onClick(_, el) { if (el.length) nav(el[0].index); },
+      plugins: {
+        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+        tooltip: { callbacks: {
+          title: i => _s.examNames[i[0].dataIndex] + ' (' + _s.labels[i[0].dataIndex] + ')',
+          footer: i => 'Toplam: ' + i.reduce((s, x) => s + x.parsed.y, 0).toFixed(2),
+        }},
+      },
+      scales: {
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } },
+        x: { grid: { display: false }, ticks: { color: '#8A8AA3', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+      },
+    },
+  });
+  requestAnimationFrame(() => document.getElementById('lineChartSkeleton')?.remove());
+
+  window.DASTrend = {
+    update(key, comp) {
+      _s = _cut(key);
+      lineChart.data.labels = _s.labels;
+      lineChart.data.datasets.forEach((ds, i) => { ds.data = _s.data[i]; });
+      lineChart.update('none');
+      const sum = _summary(_s.totals);
+      comp.avg = sum.avg; comp.max = sum.max; comp.delta = sum.delta; comp.deltaUp = sum.deltaUp;
+    },
+  };
+
+  const barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: { labels: d.labels, datasets: d.subjects.map(s => ({ label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false })) },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      onClick(_, el) { if(el.length) nav(el[0].index); },
+      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+        tooltip: { callbacks: { title: i => _examNames[i[0].dataIndex] + ' (' + d.labels[i[0].dataIndex] + ')', footer: i => 'Toplam: ' + i.reduce((s,x)=>s+x.parsed.y,0).toFixed(2) } } },
+      scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#8A8AA3', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+                y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } } } }
+  });
+
+  [lineChart, barChart].forEach(chart => {
+    chart.canvas.addEventListener('mousemove', e => {
+      chart.canvas.style.cursor = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true).length ? 'pointer' : 'default';
+    });
+  });
+
+  if (!sd.datasets || sd.datasets.length === 0) {
+    document.getElementById('scatterEmpty')?.classList.remove('hidden');
+    document.getElementById('scatterChart')?.classList.add('hidden');
+  } else {
+    document.getElementById('scatterEmpty')?.classList.add('hidden');
+    document.getElementById('scatterChart')?.classList.remove('hidden');
+    new Chart(document.getElementById('scatterChart'), {
+      type: 'scatter',
+      data: { datasets: sd.datasets.map(s => ({ label: s.label, data: s.data, backgroundColor: s.border, borderColor: s.border, pointRadius: 6, pointHoverRadius: 8 })) },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+          tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
+        },
+        scales: {
+          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: '#8A8AA3', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' }, beginAtZero: true },
+          y: { title: { display: !isMobile, text: 'Net Skor', color: '#8A8AA3', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } }
+        }
+      }
+    });
+  }
+
+  if (window._trendChartComp && window.DASTrend) {
+    window.DASTrend.update(window._trendChartComp.period || '30', window._trendChartComp);
+  }
+};
+
+{% if has_chart_data %}
+window.DASInitCharts({{ chart_data_json|safe }}, {{ scatter_data_json|safe }}, true);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% load i18n %}
+{# DAS-310: empty + sparse state components #}
+
+{% if state == 'total_empty' %}
+{# Zero exams ever — brand-new user #}
+<div class="flex flex-col items-center justify-center py-16 px-8 text-center
+            bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+  <div class="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-5">
+    <svg class="w-10 h-10" style="color:var(--primary)" fill="none" stroke="currentColor"
+         viewBox="0 0 24 24" stroke-width="1.5">
+      <use href="#das-icon-exam"/>
+    </svg>
+  </div>
+  <h3 class="text-base font-bold text-slate-900 mb-2">{% trans "Henüz deneme girmedin" %}</h3>
+  <p class="text-sm text-slate-500 mb-8 max-w-xs leading-relaxed">
+    {% trans "TYT denemelerini buraya ekle, gelişimini takip et." %}
+  </p>
+  <a href="{% url 'student:exam_step1' %}"
+     class="bg-primary text-white px-8 py-3 rounded-xl text-sm font-bold
+            shadow-lg shadow-primary/25 active:scale-95 transition-transform">
+    {% trans "İlk Denemeni Ekle" %}
+  </a>
+</div>
+
+{% elif state == 'recent_empty' %}
+{# Exams exist in archive but none in last 30 days #}
+<div class="flex flex-col items-center justify-center py-10 px-8 text-center
+            bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+  <div class="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3">
+    <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <use href="#das-icon-calendar"/>
+    </svg>
+  </div>
+  <h3 class="text-sm font-bold text-slate-900 mb-1">{% trans "Son 30 günde deneme yok" %}</h3>
+  <p class="text-xs text-slate-500 mb-5">{% trans "Yeni bir deneme ekle ya da arşive göz at." %}</p>
+  <a href="{% url 'student:exam_step1' %}"
+     class="bg-primary text-white px-5 py-2 rounded-xl text-sm font-bold
+            active:scale-95 transition-transform">
+    {% trans "Deneme Ekle" %}
+  </a>
+</div>
+
+{% elif state == 'sparse_banner' %}
+{# 1-2 recent exams — encouragement banner, dismissible #}
+<div x-data="{ dismissed: false }" x-show="!dismissed" x-cloak
+     class="rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden"
+     style="background:var(--primary); color:white;">
+  {# Decorative glow #}
+  <div class="absolute -right-6 -top-6 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+  <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <use href="#das-icon-trending-up"/>
+    </svg>
+  </div>
+
+  <div class="flex-grow min-w-0">
+    <p class="text-[10px] font-bold opacity-70 uppercase tracking-widest mb-0.5">
+      {% trans "Yolun Başındasın" %}
+    </p>
+    <p class="text-sm font-bold leading-tight">
+      {% blocktrans with needed=exams_needed %}Gelişim grafiği için {{ needed }} deneme daha gerekli.{% endblocktrans %}
+    </p>
+  </div>
+
+  <button @click="dismissed = true"
+          class="opacity-60 hover:opacity-100 transition-opacity p-1.5 shrink-0 -mr-1"
+          aria-label="{% trans 'Kapat' %}">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+</div>
+
+{% endif %}

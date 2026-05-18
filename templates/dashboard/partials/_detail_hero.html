@@ -1,0 +1,44 @@
+{% load i18n %}
+{# DAS-321: Hero Card — net-focused, delta chip #}
+<div class="das-card p-6 lg:p-8 xl:p-10" style="border-left: 4px solid var(--primary);">
+  <div class="flex justify-between items-start mb-4">
+    <div class="min-w-0 pr-3">
+      <span class="text-xs lg:text-sm font-bold uppercase tracking-wider" style="color:var(--muted)">
+        {{ exam.exam_date|date:"d F Y" }}
+      </span>
+      <h2 class="text-xl lg:text-3xl xl:text-4xl font-bold mt-1 truncate" style="color:var(--heading)">
+        {{ exam.publisher.name }}
+      </h2>
+    </div>
+    <span class="shrink-0 px-2 lg:px-3 py-1 lg:py-1.5 rounded text-[10px] lg:text-xs
+                 font-bold uppercase tracking-wide bg-slate-100 text-slate-500">
+      {{ exam_type }}
+    </span>
+  </div>
+
+  <div class="flex items-baseline gap-3 mt-4 lg:mt-6">
+    <span class="text-3xl lg:text-4xl xl:text-5xl font-bold tabular-nums leading-none"
+          style="color:var(--heading)">
+      {{ exam.total_net|floatformat:2 }}
+    </span>
+    <span class="text-lg lg:text-2xl font-bold" style="color:var(--muted)">{% trans "Net" %}</span>
+  </div>
+
+  {% if net_delta is not None %}
+  <div class="mt-4 flex items-center gap-2">
+    <span class="px-2.5 lg:px-3 py-1 lg:py-1.5 rounded-full text-xs lg:text-sm
+                 font-bold flex items-center gap-1
+      {% if net_delta >= 0 %}bg-up-tint text-up{% else %}bg-down-tint text-down{% endif %}">
+      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+        {% if net_delta >= 0 %}
+        <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        {% else %}
+        <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 112 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        {% endif %}
+      </svg>
+      {{ net_delta_display }}
+    </span>
+    <span class="text-xs lg:text-sm font-medium" style="color:var(--muted)">{% trans "önceki sınava göre" %}</span>
+  </div>
+  {% endif %}
+</div>

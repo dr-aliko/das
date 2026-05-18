@@ -1,0 +1,250 @@
+{% load i18n %}
+{% comment %}DAS-348: Inline Topic Error Picker
+   Progressive-disclosure topic picker embedded in exam_create_v2.
+   Shares Alpine state with parent x-data (same component scope).
+   Requires: topicRows, newTopic, allTopics, allSubjects, topicSubCats(), topicFilteredTopics(),
+             selectNewTopic(t), canAddTopic(), addTopicRow(), topicStep1Info(), saveDraft(){% endcomment %}
+
+<div class="space-y-3 pb-4">
+
+  {# ── Existing topic error rows ── #}
+  <template x-if="topicRows.length > 0">
+    <div class="space-y-2">
+      <p class="text-xs font-bold uppercase tracking-wide" style="color:var(--muted)">
+        {% trans "Eklenen Hatalar" %}
+        (<span x-text="topicRows.length"></span>)
+      </p>
+
+      {# Per-subject wrong allocation progress #}
+      <div class="space-y-1.5 mb-1">
+        <template x-for="sid in [...new Set(topicRows.map(r=>String(r.subjectId)))]" :key="sid">
+          <div>
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-semibold"
+                    style="color:var(--muted)"
+                    x-text="topicRows.find(r=>String(r.subjectId)===sid)?.subjectName||''"></span>
+              <span class="text-[10px] font-semibold tabular-nums"
+                    :style="topicWrongsFor(sid) > (rows[sid]?.y||0) ? 'color:var(--down)'
+                           : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0)>0 ? 'color:#10b981'
+                           : 'color:var(--muted)'"
+                    x-text="topicWrongsFor(sid) + ' / ' + (rows[sid]?.y||0) + ' yanlış'"></span>
+            </div>
+            <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-3)">
+              <div class="h-full rounded-full transition-all duration-200"
+                   :style="'width:' + topicProgressPercent(sid) + '%; background:' + topicProgressColor(sid)"></div>
+            </div>
+            <p class="text-[10px] mt-0.5"
+               :style="topicWrongsFor(sid) > (rows[sid]?.y||0) ? 'color:var(--down)'
+                      : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0)>0 ? 'color:#10b981'
+                      : 'color:var(--muted)'"
+               x-text="topicWrongsFor(sid) > (rows[sid]?.y||0)
+                       ? '⚠ ' + (topicWrongsFor(sid) - (rows[sid]?.y||0)) + ' fazla konu eklendi!'
+                       : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0) > 0
+                       ? '✓ Tüm yanlışlar eşlendi!'
+                       : (rows[sid]?.y||0) - topicWrongsFor(sid) + ' yanlış daha eklenebilir'">
+            </p>
+          </div>
+        </template>
+      </div>
+
+      <div class="hidden grid-cols-12 gap-2 px-3 mb-1 sm:grid
+                  text-[10px] font-bold uppercase tracking-wide"
+           style="color:var(--muted)">
+        <div class="col-span-5">{% trans "Konu" %}</div>
+        <div class="col-span-3 text-center text-down">{% trans "Yanlış" %}</div>
+        <div class="col-span-3 text-center" style="color:var(--muted)">{% trans "Boş" %}</div>
+      </div>
+
+      <template x-for="(row, idx) in topicRows" :key="idx">
+        <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl
+                    sm:grid sm:grid-cols-12"
+             style="background:var(--surface-2); border:1px solid var(--border);">
+          {# Label #}
+          <div class="flex-1 min-w-0 sm:col-span-5">
+            <p class="text-sm font-semibold truncate"
+               style="color:var(--heading)" x-text="row.topicName || '—'"></p>
+            <p class="text-xs truncate" style="color:var(--muted)"
+               x-text="(row.subCat ? row.subCat + ' · ' : '') + (row.subjectName || '')"></p>
+          </div>
+          {# Wrong #}
+          <div class="w-14 shrink-0 sm:w-auto sm:col-span-3">
+            <input type="number"
+                   x-model.number="row.wrongCount"
+                   min="0" max="40"
+                   class="w-full text-center text-sm rounded-lg border px-1.5 py-1.5
+                          font-bold tabular-nums focus:outline-none focus:ring-2"
+                   style="background:var(--down-tint); border-color:var(--down);
+                          color:var(--down); --tw-ring-color:var(--down);">
+          </div>
+          {# Blank #}
+          <div class="w-14 shrink-0 sm:w-auto sm:col-span-3">
+            <input type="number"
+                   x-model.number="row.blankCount"
+                   min="0" max="40"
+                   class="w-full text-center text-sm rounded-lg border px-1.5 py-1.5
+                          font-bold tabular-nums focus:outline-none focus:ring-2"
+                   style="background:var(--surface-3); border-color:var(--border-strong);
+                          color:var(--muted);">
+          </div>
+          {# Remove #}
+          <div class="shrink-0 sm:col-span-1 flex justify-end">
+            <button type="button"
+                    @click="topicRows.splice(idx, 1); saveDraft()"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                    style="color:var(--muted)"
+                    aria-label="{% trans 'Kaldır' %}">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  {# ── Add new topic error panel ── #}
+  <div class="das-topic-picker">
+
+    {# Panel header #}
+    <div class="flex items-center gap-2 px-4 py-3 border-b"
+         style="border-color:var(--border)">
+      <svg class="w-4 h-4 shrink-0" style="color:var(--primary)"
+           fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      <span class="font-bold text-sm" style="color:var(--heading)">{% trans "Hata Ekle" %}</span>
+    </div>
+
+    <div class="p-4 space-y-3">
+
+      {# 1. Subject select #}
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wide mb-1.5"
+               style="color:var(--muted)">{% trans "Ders" %}</label>
+        <select x-model="newTopic.subjectId"
+                @change="newTopic.subCat=''; newTopic.topicId=null; newTopic.search=''"
+                class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                       focus:outline-none focus:ring-2"
+                style="background:var(--surface-2); border-color:var(--border-strong);
+                       color:var(--body); --tw-ring-color:var(--primary);">
+          <option value="">{% trans "Ders seçin…" %}</option>
+          <template x-for="s in allSubjects" :key="s.id">
+            <option :value="s.id" x-text="s.name"></option>
+          </template>
+        </select>
+
+        {# Step-1 cross-reference reminder (DAS-348) #}
+        <div x-show="newTopic.subjectId && topicStep1Info()" x-cloak
+             class="mt-2 flex items-start gap-2 px-3 py-2 rounded-lg text-xs"
+             style="background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3);">
+          <svg class="w-3.5 h-3.5 shrink-0 mt-0.5" style="color:#b45309"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span style="color:#92400e">
+            {% trans "Bu dersten" %}
+            <strong class="text-down" x-text="topicStep1Info()?.wrong"></strong> {% trans "yanlış," %}
+            <strong style="color:var(--muted)" x-text="topicStep1Info()?.blank"></strong> {% trans "boş girdin" %}
+          </span>
+        </div>
+      </div>
+
+      {# 2. Sub-category chips #}
+      <div x-show="topicSubCats().length > 0" x-cloak>
+        <label class="block text-xs font-bold uppercase tracking-wide mb-1.5"
+               style="color:var(--muted)">{% trans "Alt Ders" %}</label>
+        <div class="flex flex-wrap gap-2">
+          <template x-for="sc in topicSubCats()" :key="sc">
+            <button type="button"
+                    @click="newTopic.subCat = (newTopic.subCat === sc ? '' : sc);
+                            newTopic.topicId = null; newTopic.search = ''"
+                    :class="newTopic.subCat === sc
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-border-strong'"
+                    class="px-3 py-1.5 rounded-lg border text-sm font-medium transition"
+                    style="color:var(--body)"
+                    x-text="sc">
+            </button>
+          </template>
+        </div>
+      </div>
+
+      {# 3. Topic search + scrollable list #}
+      <div x-show="newTopic.subjectId && (topicSubCats().length === 0 || newTopic.subCat)"
+           x-cloak>
+        <label class="block text-xs font-bold uppercase tracking-wide mb-1.5"
+               style="color:var(--muted)">{% trans "Konu" %}</label>
+        <input type="text"
+               x-model="newTopic.search"
+               placeholder="{% trans 'Konu ara…' %}"
+               class="w-full rounded-t-xl border-b-0 border px-3 py-2.5 text-sm
+                      focus:outline-none focus:ring-2"
+               style="background:var(--surface-2); border-color:var(--border-strong);
+                      color:var(--body); --tw-ring-color:var(--primary);">
+        <div class="border rounded-b-xl overflow-y-auto"
+             style="max-height:200px; border-color:var(--border-strong);
+                    background:var(--surface-2);">
+          <template x-for="t in topicFilteredTopics()" :key="t.id">
+            <div @click="selectNewTopic(t)"
+                 :class="newTopic.topicId === t.id ? 'das-topic-item--selected' : ''"
+                 class="das-topic-item"
+                 x-text="t.name"></div>
+          </template>
+          <div x-show="topicFilteredTopics().length === 0"
+               class="px-3 py-4 text-sm text-center"
+               style="color:var(--muted)">{% trans "Konu bulunamadı" %}</div>
+        </div>
+      </div>
+
+      {# 4. Wrong / blank count inputs #}
+      <div x-show="newTopic.topicId" x-cloak class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 text-down">
+            {% trans "Yanlış Sayısı" %}
+          </label>
+          <input type="number"
+                 x-model.number="newTopic.wrongCount"
+                 min="0"
+                 :max="Math.max(0, (rows[newTopic.subjectId]?.y || 0) - topicWrongsFor(String(newTopic.subjectId)))"
+                 :disabled="topicWrongsFor(String(newTopic.subjectId)) >= (rows[String(newTopic.subjectId)]?.y || 0)"
+                 class="w-full rounded-xl border px-3 py-2.5 text-center text-sm
+                        font-bold tabular-nums focus:outline-none focus:ring-2
+                        disabled:opacity-40 disabled:cursor-not-allowed"
+                 style="background:var(--down-tint); border-color:var(--down);
+                        color:var(--down); --tw-ring-color:var(--down);">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wide mb-1.5"
+                 style="color:var(--muted)">{% trans "Boş Sayısı" %}</label>
+          <input type="number"
+                 x-model.number="newTopic.blankCount"
+                 min="0" max="40"
+                 class="w-full rounded-xl border px-3 py-2.5 text-center text-sm
+                        font-bold tabular-nums focus:outline-none focus:ring-2"
+                 style="background:var(--surface-3); border-color:var(--border-strong);
+                        color:var(--muted);">
+        </div>
+      </div>
+
+      {# 5. Add button #}
+      <button type="button"
+              @click="addTopicRow()"
+              :disabled="!canAddTopic()"
+              :class="canAddTopic()
+                ? 'bg-primary text-white active:scale-[0.98]'
+                : 'opacity-30 cursor-not-allowed'"
+              class="w-full py-3 rounded-xl font-bold text-sm transition-all
+                     flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        {% trans "Listeye Ekle" %}
+      </button>
+
+    </div>
+  </div>{# /das-topic-picker #}
+
+</div>{# /space-y-3 #}

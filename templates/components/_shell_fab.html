@@ -1,0 +1,15 @@
+{% if user.is_student %}
+<a href="/student/exam/new/"
+   class="lg:hidden fixed z-[45] right-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)]
+          w-14 h-14 rounded-full bg-primary shadow-fab
+          flex items-center justify-center text-white
+          active:scale-95 transition-transform"
+   aria-label="Yeni Deneme Ekle">
+  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2.5"
+       stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true">
+    <use href="#das-icon-plus"/>
+  </svg>
+</a>
+{% endif %}

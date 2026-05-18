@@ -1,0 +1,40 @@
+{% comment %}
+   ============================================================
+   DAS Icon — templates/components/_icon.html
+   ============================================================
+   Usage:
+     {% include "components/_icon.html" with name="bell" %}
+     {% include "components/_icon.html" with name="bell" size=20 %}
+     {% include "components/_icon.html" with name="bell" size=20 class="text-muted" %}
+     {% include "components/_icon.html" with name="bell" label="Bildirimler" %}
+
+   Parameters:
+     name   (required) — icon id without "das-icon-" prefix
+     size   (optional, default: 20) — width and height in px
+     class  (optional) — extra CSS classes on the <svg>
+     label  (optional) — if provided, renders aria-label instead of aria-hidden
+                         use for standalone icon buttons with no visible text
+
+   All icons are 24×24 viewBox with currentColor stroke.
+   Color is always inherited from parent — set via Tailwind or CSS class.
+
+   NOTE: Requires _das_icons_sprite.html included in base.html.
+   ============================================================
+{% endcomment %}
+
+{% with icon_size=size|default:20 icon_class=class|default:"" %}
+<svg
+  width="{{ icon_size }}"
+  height="{{ icon_size }}"
+  {% if label %}
+    role="img"
+    aria-label="{{ label }}"
+  {% else %}
+    aria-hidden="true"
+    focusable="false"
+  {% endif %}
+  class="das-icon{% if icon_class %} {{ icon_class }}{% endif %}"
+  style="flex-shrink:0;display:inline-block;vertical-align:middle;">
+  <use href="#das-icon-{{ name }}"></use>
+</svg>
+{% endwith %}

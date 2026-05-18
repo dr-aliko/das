@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Denemeler — DAS{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="das-section-head">
+    <h1>Tüm Denemelerim</h1>
+    <a href="{% url 'student:exam_step1' %}"
+       class="text-sm font-semibold text-primary hover:underline">+ Yeni Deneme</a>
+  </div>
+
+  <div class="das-card" style="padding:0; overflow:hidden;">
+    <div class="px-4">
+      {% for exam in page %}
+        <div class="das-exam-row"
+             onclick="window.location='{% url 'student:exam_detail' exam.id %}'">
+          <span class="leading-dot bg-[var(--primary)]"></span>
+          <div class="flex-1 min-w-0">
+            <div class="exam-title">{{ exam.custom_name }}</div>
+            <div class="exam-meta">{{ exam.publisher.name }} · {{ exam.exam_date }}</div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <div class="text-right">
+              <div class="exam-net">{{ exam.total_net|floatformat:2 }}</div>
+            </div>
+            <div class="flex gap-1 text-xs" onclick="event.stopPropagation()">
+              <a href="{% url 'student:exam_edit' exam.id %}"
+                 class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">Düzenle</a>
+              <a href="{% url 'student:exam_delete' exam.id %}"
+                 class="px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600">Sil</a>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="py-10 text-center text-sm" style="color:var(--muted)">
+          Henüz deneme bulunmuyor.
+          <a href="{% url 'student:exam_step1' %}" class="block mt-2 text-primary font-medium">İlk Denemeyi Ekle →</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if page.has_other_pages %}
+  <div class="flex items-center justify-center gap-4 mt-4 text-sm">
+    {% if page.has_previous %}
+      <a href="?p={{ page.previous_page_number }}"
+         class="px-3 py-1.5 rounded-lg border border-border-soft text-body hover:bg-surface-2">← Önceki</a>
+    {% endif %}
+    <span style="color:var(--muted)">Sayfa {{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+      <a href="?p={{ page.next_page_number }}"
+         class="px-3 py-1.5 rounded-lg border border-border-soft text-body hover:bg-surface-2">Sonraki →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

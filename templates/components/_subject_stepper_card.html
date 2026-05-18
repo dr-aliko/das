@@ -1,0 +1,155 @@
+{% load i18n %}
+
+<div class="das-entry-card"
+     :class="overflow('{{ subject.id }}') ? 'das-entry-card--overflow' : ''">
+
+  {# Accent bar — subject colour #}
+  <div class="das-entry-card__accent"
+       style="background: {{ subject.color }};"></div>
+
+  {# Header: subject label + live net #}
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-baseline gap-2">
+      <span class="font-black text-base" style="color:var(--heading)">{{ subject.display_name }}</span>
+      <span class="text-xs font-medium" style="color:var(--muted)">{{ subject.question_count }}S</span>
+    </div>
+    <div class="text-right">
+      <span class="das-entry-card__net-badge"
+            :class="net('{{ subject.id }}') >= 0 ? 'text-up' : 'text-down'"
+            x-text="fmtNet(net('{{ subject.id }}'))"></span>
+      <span class="das-entry-card__net-label">net</span>
+    </div>
+  </div>
+
+  {# Stepper rows #}
+  <div class="space-y-2">
+
+    {# — Doğru — #}
+    <div class="das-stepper-row">
+      <div>
+        <span class="text-sm font-bold" style="color:var(--body)">{% trans "Doğru" %}</span>
+        <span class="block text-[10px] font-bold text-up">+1.00</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button"
+                class="das-stepper-btn"
+                @click="decD('{{ subject.id }}')"
+                :disabled="rows['{{ subject.id }}'].d <= 0 || saving"
+                aria-label="{{ subject.display_name }} doğru azalt">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+          </svg>
+        </button>
+        <input type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               x-model.number="rows['{{ subject.id }}'].d"
+               @focus="$el.select()"
+               @input="
+                 const r = rows['{{ subject.id }}'];
+                 r.d = Math.min(Math.max(0, Math.floor(r.d) || 0),
+                                r.total - (Math.floor(r.y) || 0));
+                 typeof _schedDraft === 'function' && _schedDraft();
+               "
+               @keydown.arrow-up.prevent="incD('{{ subject.id }}')"
+               @keydown.arrow-down.prevent="decD('{{ subject.id }}')"
+               :disabled="saving"
+               class="das-stepper-input w-8 min-w-0 shrink-0 p-0 text-center appearance-none"
+               style="color:var(--heading);"
+               aria-label="{{ subject.display_name }} doğru sayısı">
+        <button type="button"
+                class="das-stepper-btn"
+                @click="incD('{{ subject.id }}')"
+                :disabled="overflow('{{ subject.id }}') || saving"
+                aria-label="{{ subject.display_name }} doğru artır">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    {# — Yanlış — #}
+    <div class="das-stepper-row">
+      <div>
+        <span class="text-sm font-bold" style="color:var(--body)">{% trans "Yanlış" %}</span>
+        <span class="block text-[10px] font-bold text-down">−0.25</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button"
+                class="das-stepper-btn"
+                @click="decY('{{ subject.id }}')"
+                :disabled="rows['{{ subject.id }}'].y <= 0 || saving"
+                aria-label="{{ subject.display_name }} yanlış azalt">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+          </svg>
+        </button>
+        <input type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               x-model.number="rows['{{ subject.id }}'].y"
+               @focus="$el.select()"
+               @input="
+                 const r = rows['{{ subject.id }}'];
+                 r.y = Math.min(Math.max(0, Math.floor(r.y) || 0),
+                                r.total - (Math.floor(r.d) || 0));
+                 typeof _schedDraft === 'function' && _schedDraft();
+               "
+               @keydown.arrow-up.prevent="incY('{{ subject.id }}')"
+               @keydown.arrow-down.prevent="decY('{{ subject.id }}')"
+               :disabled="saving"
+               class="das-stepper-input w-8 min-w-0 shrink-0 p-0 text-center appearance-none"
+               style="color:var(--heading);"
+               aria-label="{{ subject.display_name }} yanlış sayısı">
+        <button type="button"
+                class="das-stepper-btn"
+                @click="incY('{{ subject.id }}')"
+                :disabled="overflow('{{ subject.id }}') || saving"
+                aria-label="{{ subject.display_name }} yanlış artır">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    {# — Boş — auto-computed, intentionally read-only #}
+    <div class="das-stepper-row opacity-50">
+      <div>
+        <span class="text-sm font-bold" style="color:var(--body)">{% trans "Boş" %}</span>
+        <span class="block text-[10px] font-bold" style="color:var(--primary)">{% trans "Otomatik" %}</span>
+      </div>
+      <span class="text-xl font-black tabular-nums w-8 text-center mr-[3.25rem]"
+            style="color:var(--heading)"
+            x-text="blank('{{ subject.id }}')"></span>
+    </div>
+
+  </div>{# /steppers #}
+
+  {# Card footer: total counter + remaining badge #}
+  <div class="flex items-center justify-between mt-3 px-0.5">
+    <span class="text-[10px]" style="color:var(--muted-2)">
+      {% trans "Toplam" %}
+      <span class="font-bold tabular-nums"
+            x-text="rows['{{ subject.id }}'].d + rows['{{ subject.id }}'].y + blank('{{ subject.id }}')"></span>
+      / {{ subject.question_count }} {% trans "soru" %}
+    </span>
+    <span class="das-remaining-badge"
+          :class="remaining('{{ subject.id }}') < 0
+            ? 'das-remaining-badge--over'
+            : remaining('{{ subject.id }}') === 0
+              ? 'das-remaining-badge--ok'
+              : 'das-remaining-badge--warn'"
+          x-text="remaining('{{ subject.id }}') < 0
+            ? 'Sınır aşıldı!'
+            : remaining('{{ subject.id }}') + ' kalan'">
+    </span>
+  </div>
+
+  {# Hidden POST fields — values kept in sync by Alpine :value binding #}
+  <input type="hidden" name="correct_{{ subject.id }}" :value="rows['{{ subject.id }}'].d">
+  <input type="hidden" name="wrong_{{ subject.id }}"   :value="rows['{{ subject.id }}'].y">
+  <input type="hidden" name="blank_{{ subject.id }}"   :value="blank('{{ subject.id }}')">
+
+</div>{# /das-entry-card #}

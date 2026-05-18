@@ -1,0 +1,14 @@
+<div class="hidden lg:flex max-w-7xl mx-auto px-4 gap-1 border-t border-white/10">
+  {% if user.is_student %}
+    {% include "components/_shell_dtab.html" with href="/student/" label="Panel" %}
+    {% include "components/_shell_dtab.html" with href="/student/denemeler/" label="Denemeler" %}
+    {% include "components/_shell_dtab.html" with href="/student/tasks/" label="Görevler" %}
+    {% include "components/_shell_dtab.html" with href="/brans/" label="Branş" %}
+    {% include "components/_shell_dtab.html" with href="/profil/" label="Profil" %}
+  {% else %}
+    {% include "components/_shell_dtab.html" with href="/coach/" label="Öğrenciler" %}
+    {% include "components/_shell_dtab.html" with href="/coach/tasks/" label="Görevler" %}
+    {% include "components/_shell_dtab.html" with href="/coach/brans/" label="Branş" %}
+    {% include "components/_shell_dtab.html" with href="/auth/invite-students/" label="Davet" %}
+  {% endif %}
+</div>

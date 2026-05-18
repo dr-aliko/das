@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }} — Branş Karşılaştırma — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="{% url 'coach:brans_student_detail' student.pk %}"
+         class="text-sm text-indigo-500 hover:underline">← {{ student.full_name }}</a>
+      <h1 class="text-2xl font-bold text-gray-800 mt-1">Branş Karşılaştırma</h1>
+    </div>
+  </div>
+
+  {# ── Side-by-side headers ── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for entry, label, color in a_b_pairs %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 {{ color }} border-b border-gray-100">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ label }}</p>
+        <p class="text-sm font-medium text-gray-700 mt-0.5">{{ entry.ders.display_name }}</p>
+        <p class="text-xs text-gray-400 mt-0.5">{{ entry.tarih|date:"d.m.Y" }}</p>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100 text-center">
+        <div class="py-4">
+          <p class="text-xl font-bold text-green-600">{{ entry.dogru }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">Doğru</p>
+        </div>
+        <div class="py-4">
+          <p class="text-xl font-bold text-red-500">{{ entry.yanlis }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">Yanlış</p>
+        </div>
+        <div class="py-4">
+          <p class="text-xl font-bold text-gray-400">{{ entry.bos }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">Boş</p>
+        </div>
+        <div class="py-4">
+          <p class="text-xl font-bold text-indigo-600">{{ entry.net }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">Net</p>
+        </div>
+      </div>
+      {% if entry.sure_dakika %}
+      <div class="px-5 py-2 border-t border-gray-50 text-xs text-gray-400 text-center">
+        ⏱ {{ entry.sure_dakika }} dk
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Delta row ── #}
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4">Değişim (Yeni − Eski)</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+      {% for label, delta, positive_good in deltas %}
+      <div class="rounded-xl py-3 px-2
+        {% if delta > 0 and positive_good %}bg-green-50
+        {% elif delta < 0 and positive_good %}bg-red-50
+        {% elif delta < 0 and not positive_good %}bg-green-50
+        {% elif delta > 0 and not positive_good %}bg-red-50
+        {% else %}bg-gray-50{% endif %}">
+        <p class="text-lg font-bold
+          {% if delta > 0 and positive_good %}text-green-600
+          {% elif delta < 0 and positive_good %}text-red-500
+          {% elif delta < 0 and not positive_good %}text-green-600
+          {% elif delta > 0 and not positive_good %}text-red-500
+          {% else %}text-gray-400{% endif %}">
+          {% if delta > 0 %}+{% endif %}{{ delta }}
+        </p>
+        <p class="text-xs text-gray-400 mt-0.5">{{ label }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Bar chart ── #}
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-[150px] sm:h-[180px]">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4">Net Karşılaştırması</h2>
+    <canvas id="bransCompareChart" height="80"></canvas>
+  </div>
+
+  {# ── Konu Bazlı Değişim ── #}
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-600">Konu Bazlı Değişim</h2>
+      <p class="text-xs text-gray-400 mt-0.5">Yeni − Eski · En çok değişenden sıralı</p>
+    </div>
+    {% if topic_deltas %}
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+          <th class="px-5 py-2.5 text-left">Konu</th>
+          <th class="px-4 py-2.5 text-center">Eski</th>
+          <th class="px-4 py-2.5 text-center">Yeni</th>
+          <th class="px-4 py-2.5 text-center">Değişim</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for row in topic_deltas %}
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-5 py-3 text-gray-700">{{ row.name }}</td>
+          <td class="px-4 py-3 text-center text-gray-500">{{ row.a_val }}</td>
+          <td class="px-4 py-3 text-center text-gray-500">{{ row.b_val }}</td>
+          <td class="px-4 py-3 text-center font-semibold
+            {% if row.delta < 0 %}text-green-600
+            {% elif row.delta > 0 %}text-red-500
+            {% else %}text-gray-400{% endif %}">
+            {% if row.delta < 0 %}↓ {{ row.delta }}
+            {% elif row.delta > 0 %}↑ +{{ row.delta }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-gray-400">
+      Konu bazlı hata verisi bulunamadı.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const raw = {{ chart_data_json|safe }};
+  const nets = raw.datasets[0].data.filter(v => v != null);
+  const minNet = nets.length ? Math.min(...nets) : 0;
+  const maxNet = nets.length ? Math.max(...nets) : 10;
+  const pad    = Math.max(2, Math.ceil((maxNet - minNet) * 0.3));
+
+  const TR_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  function fmtDate(iso) {
+    const [y, m, d] = iso.split('-');
+    return `${parseInt(d)} ${TR_MONTHS[parseInt(m) - 1]} ${y}`;
+  }
+  const SLOT_LABELS = ['Eski', 'Yeni'];
+
+  const isMobile = window.innerWidth < 640;
+  new Chart(document.getElementById('bransCompareChart'), {
+    type: 'bar',
+    data: raw,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => `${SLOT_LABELS[ctx[0].dataIndex] ?? ''} · ${fmtDate(ctx[0].label)}`,
+            label: ctx => ` Net: ${ctx.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          min: Math.max(0, Math.floor(minNet - pad)),
+          max: Math.ceil(maxNet + pad),
+          ticks: { font: { size: 11 } },
+          title: { display: !isMobile, text: 'Net', font: { size: 11 } },
+        },
+        x: { ticks: { font: { size: 11 } } },
+      },
+    },
+  });
+})();
+</script>
+{% endblock %}

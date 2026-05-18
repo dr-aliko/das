@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Çevrimdışı — DAS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: #ffffff;
+      border-radius: 1.5rem;
+      box-shadow: 0 1px 12px rgba(0, 0, 0, 0.08);
+      max-width: 420px;
+      width: 90%;
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 1.25rem; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #111827;
+    }
+    p {
+      color: #6b7280;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+    .btn {
+      display: inline-block;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.65rem 1.5rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #4338ca; }
+    .hint {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>Çevrimdışısınız</h1>
+    <p>
+      Bu sayfayı görüntülemek için internet bağlantısı gerekiyor.<br>
+      Bağlantınızı kontrol edip tekrar deneyin.
+    </p>
+    <a class="btn" href="/">Ana Sayfaya Dön</a>
+    <p class="hint">Daha önce ziyaret ettiğiniz sayfalar çevrimdışı erişilebilir olabilir.</p>
+  </div>
+</body>
+</html>

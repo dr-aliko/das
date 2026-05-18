@@ -1,0 +1,178 @@
+{# DAS-5.4: Student Task Detail Sheet #}
+{# Lives inside studentMobilePanel Alpine scope. Uses: #}
+{#   showDetailSheet, detailTask, toggleComplete(), markQuality(), openEdit() #}
+
+<div x-show="showDetailSheet"
+     class="fixed inset-0 z-50 flex items-end justify-center"
+     x-cloak>
+
+    <!-- Backdrop -->
+    <div x-show="showDetailSheet"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="showDetailSheet = false"
+         class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+    <!-- Sheet panel -->
+    <div x-show="showDetailSheet"
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full max-w-lg bg-[var(--surface-1)] rounded-t-[24px] shadow-2xl max-h-[85vh] flex flex-col">
+
+        <!-- Handle -->
+        <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mt-4 mb-3 shrink-0"></div>
+
+        <!-- Header: type badge + title + close -->
+        <div class="px-6 pb-4 border-b border-[var(--border)] flex items-start gap-3 shrink-0">
+            <!-- Left colour accent bar -->
+            <div class="w-1 rounded-full self-stretch shrink-0 mt-0.5"
+                 :style="{ backgroundColor: detailTask?.color ?? 'var(--primary)' }"></div>
+
+            <div class="flex-1 min-w-0">
+                <!-- Type badge + duration row -->
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                          :style="{ backgroundColor: (detailTask?.color ?? 'var(--primary)') + '33', color: detailTask?.color ?? 'var(--primary)' }"
+                          x-text="detailTask?.subject ?? ''"></span>
+                    <template x-if="detailTask?.duration">
+                        <span class="text-[10px] font-bold text-[var(--muted)] flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span x-text="detailTask.duration"></span>
+                        </span>
+                    </template>
+                    <!-- Coach badge -->
+                    <template x-if="detailTask?.isMaster">
+                        <span class="text-[10px] font-bold text-[var(--muted)] bg-[var(--surface-2)] border border-[var(--border)] px-1.5 py-0.5 rounded-full">
+                            Koç planı
+                        </span>
+                    </template>
+                </div>
+
+                <!-- Title -->
+                <h3 class="text-lg font-black text-[var(--heading)] leading-snug"
+                    :class="detailTask?.done ? 'line-through text-[var(--muted)]' : ''"
+                    x-text="detailTask?.title ?? ''"></h3>
+            </div>
+
+            <!-- Close button -->
+            <button @click="showDetailSheet = false"
+                    class="shrink-0 w-8 h-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--heading)] rounded-xl transition-colors mt-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Scrollable body: detaylar list -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-3"
+             style="-ms-overflow-style:none;scrollbar-width:none;">
+
+            <!-- Playlist name (konu_anlatimi tasks that have liste_baslik saved in meta) -->
+            <template x-if="detailTask?.raw?.aktivite_tipi === 'konu_anlatimi' && detailTask?.raw?.meta?.liste_baslik">
+                <div class="flex items-center gap-1.5 px-0.5">
+                    <svg class="w-3.5 h-3.5 text-[var(--muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 6h16M4 10h16M4 14h10"/>
+                    </svg>
+                    <p class="text-[11px] font-bold text-[var(--muted)] truncate"
+                       x-text="detailTask.raw.meta.liste_baslik"></p>
+                </div>
+            </template>
+
+            <!-- Section label -->
+            <template x-if="detailTask?.raw?.detaylar?.length">
+                <p class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                    <span x-text="detailTask.raw.aktivite_tipi === 'konu_anlatimi' ? 'Videolar' : 'Detaylar'"></span>
+                    <span class="normal-case font-normal"
+                          x-show="detailTask.raw.detaylar.length > 1"
+                          x-text="' (' + detailTask.raw.detaylar.length + ')'"></span>
+                </p>
+            </template>
+
+            <!-- Detaylar entries -->
+            <template x-for="(d, idx) in (detailTask?.raw?.detaylar ?? [])" :key="idx">
+                <div class="flex items-start gap-3 p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+                    <!-- Index badge for konu_anlatimi (video number) -->
+                    <template x-if="detailTask.raw.aktivite_tipi === 'konu_anlatimi'">
+                        <span class="shrink-0 w-5 h-5 rounded-full bg-[var(--primary-tint)] border border-[var(--primary)] flex items-center justify-center text-[9px] font-black text-[var(--primary)]"
+                              x-text="idx + 1"></span>
+                    </template>
+                    <!-- Bullet for other types -->
+                    <template x-if="detailTask.raw.aktivite_tipi !== 'konu_anlatimi'">
+                        <div class="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
+                             :style="{ backgroundColor: detailTask.color }"></div>
+                    </template>
+
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-[var(--heading)] leading-snug"
+                           x-text="d.aciklama"></p>
+                        <p x-show="d.sure_bilgisi"
+                           class="text-[10px] font-bold text-[var(--muted)] mt-0.5"
+                           x-text="d.sure_bilgisi"></p>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Empty state when no detaylar -->
+            <template x-if="!detailTask?.raw?.detaylar?.length">
+                <p class="text-sm text-[var(--muted)] text-center py-6">Bu görev için ek detay bulunmuyor.</p>
+            </template>
+        </div>
+
+        <!-- Footer: quality rating + completion + edit -->
+        <div class="px-6 pt-4 pb-6 border-t border-[var(--border)] space-y-3 shrink-0 bg-[var(--surface-1)]">
+
+            <!-- Tekrar quality rating (only when: tekrar type, not yet rated, not done) -->
+            <template x-if="detailTask?.raw?.aktivite_tipi === 'tekrar' && !detailTask?.raw?.tekrar_quality && !detailTask?.done">
+                <div>
+                    <p class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">
+                        Zorluk Değerlendirmesi
+                    </p>
+                    <div class="flex gap-2">
+                        <button @click="markQuality(detailTask.id, 'easy')"
+                                class="flex-1 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-bold active:scale-95 transition-transform">
+                            Kolay
+                        </button>
+                        <button @click="markQuality(detailTask.id, 'medium')"
+                                class="flex-1 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-bold active:scale-95 transition-transform">
+                            Orta
+                        </button>
+                        <button @click="markQuality(detailTask.id, 'hard')"
+                                class="flex-1 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold active:scale-95 transition-transform">
+                            Zor
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Completion toggle -->
+            <button @click="toggleComplete(detailTask.id)"
+                    class="w-full py-3 rounded-xl text-sm font-bold border transition-all active:scale-95"
+                    :class="detailTask?.done
+                        ? 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'
+                        : 'bg-white border-green-300 text-green-600 hover:bg-green-50'"
+                    x-text="detailTask?.done ? '↩ Geri Al' : 'Tamamlandı ✓'">
+            </button>
+
+            <!-- Edit button (only for editable tasks) -->
+            <template x-if="detailTask?.canEdit">
+                <button @click="showDetailSheet = false; openEdit(detailTask)"
+                        class="w-full py-3 rounded-xl text-sm font-bold border border-[var(--primary)] text-[var(--primary)] bg-[var(--primary-tint)] active:scale-95 transition-transform">
+                    Düzenle
+                </button>
+            </template>
+
+        </div>
+    </div>
+</div>

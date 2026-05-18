@@ -1,0 +1,47 @@
+{# DAS Mobile V2 — Completed Tasks Accordion. Expects activeDayCompletedTasks in Alpine scope. #}
+<div class="das-completed-tasks mt-8" x-data="{ expanded: false }" x-show="activeDayCompletedTasks.length > 0">
+  <button @click="expanded = !expanded"
+          class="w-full flex items-center justify-between py-2 px-1 text-[var(--muted)] hover:text-[var(--heading)] transition-colors active:scale-[0.98]">
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] font-black uppercase tracking-widest">Tamamlanan Görevler</span>
+      <span class="bg-[var(--surface-2)] text-[var(--muted-2)] text-[10px] font-bold px-2 py-0.5 rounded-full"
+            x-text="activeDayCompletedTasks.length">0</span>
+    </div>
+    <svg class="w-5 h-5 transition-transform duration-300"
+         :class="expanded ? 'rotate-180' : ''"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </button>
+
+  <div x-show="expanded" x-collapse class="space-y-3 mt-4">
+    <template x-for="task in activeDayCompletedTasks" :key="task.id">
+      <div class="das-card p-0 overflow-hidden flex items-stretch min-h-[64px] opacity-60 grayscale-[0.2] active:scale-[0.98] transition-transform"
+           @click="openCompletedTask(task)">
+        <div class="w-1.5 shrink-0" :style="{ backgroundColor: task.color }"></div>
+
+        <div class="flex-1 p-3 flex items-center gap-4">
+          <button @click.stop="toggleCompletedTask(task)"
+                  class="w-5 h-5 rounded-full bg-green-500 border-2 border-green-500 text-white flex items-center justify-center shrink-0"
+                  :class="canToggleCompleted ? '' : 'cursor-default'"
+                  :title="canToggleCompleted ? 'Geri al' : 'Tamamlandı'">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-bold text-[var(--muted)] line-through leading-tight decoration-[var(--muted-2)] truncate"
+                x-text="task.title"></h3>
+            <div class="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-2)] mt-0.5">
+              <span x-text="task.subject"></span>
+              <template x-if="task.duration">
+                <span> • <span x-text="task.duration"></span></span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>

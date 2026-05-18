@@ -1,0 +1,57 @@
+{% load i18n %}
+{% comment %}
+   DAS-009 — KPI Strip (2×2 grid)
+   Context: stats (avg_net, avg_net_delta, last_net, last_net_delta,
+                    exam_count, last_exam_title, weekly_hours, selected_period)
+{% endcomment %}
+<div class="px-4 mb-5">
+  <div class="grid grid-cols-2 gap-3">
+
+    {# KPI: Net Ortalaması #}
+    <div class="das-card flex flex-col justify-between gap-1">
+      <div class="das-kpi-label">{% trans "Net Ort." %}</div>
+      <div class="flex items-baseline gap-1.5 mt-1">
+        <div class="das-kpi-value">{{ stats.avg_net|floatformat:1 }}</div>
+        {% if stats.avg_net_delta is not None %}
+          <span class="delta {% if stats.avg_net_delta > 0 %}up{% else %}down{% endif %}">
+            {% if stats.avg_net_delta > 0 %}+{% endif %}{{ stats.avg_net_delta|floatformat:1 }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="text-[10px] text-[var(--muted)]">{{ stats.selected_period }}</div>
+    </div>
+
+    {# KPI: Son Deneme #}
+    <div class="das-card flex flex-col justify-between gap-1">
+      <div class="das-kpi-label">{% trans "Son Deneme" %}</div>
+      <div class="flex items-baseline gap-1.5 mt-1">
+        <div class="das-kpi-value text-[var(--primary-glow)]">{{ stats.last_net|floatformat:1 }}</div>
+        {% if stats.last_net_delta is not None %}
+          <span class="delta {% if stats.last_net_delta > 0 %}up{% else %}down{% endif %}">
+            {% if stats.last_net_delta > 0 %}+{% endif %}{{ stats.last_net_delta|floatformat:1 }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="text-[10px] text-[var(--muted)] truncate">{{ stats.last_exam_title|truncatechars:16 }}</div>
+    </div>
+
+    {# KPI: Deneme Sayısı #}
+    <div class="das-card flex flex-col justify-between gap-1">
+      <div class="das-kpi-label">{% trans "Deneme" %}</div>
+      <div class="mt-1">
+        <div class="das-kpi-value">{{ stats.exam_count }}</div>
+      </div>
+      <div class="text-[10px] text-[var(--muted)]">{% trans "toplam" %}</div>
+    </div>
+
+    {# KPI: Gri Konu #}
+    <div class="das-card flex flex-col justify-between gap-1">
+      <div class="das-kpi-label">{% trans "Gri Konu" %}</div>
+      <div class="mt-1">
+        <div class="das-kpi-value">{{ stats.radar_count }}</div>
+      </div>
+      <div class="text-[10px] text-[var(--muted)]">{% trans "çalışılmayı bekliyor" %}</div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Branş Denemesi Detay — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-ink-100">Branş Denemesi</h1>
+    <a href="{% url 'brans_hub' %}" class="text-sm text-steel-500 hover:text-steel-400 dark:text-steel-400">← Branş Hub'a Dön</a>
+  </div>
+
+  <div class="bg-white dark:bg-ink-850 rounded-2xl shadow-sm border border-gray-100 dark:border-ink-700 overflow-hidden">
+
+    <div class="px-6 py-4 bg-gray-50 dark:bg-ink-800 border-b border-gray-100 dark:border-ink-700 flex items-center justify-between">
+      <div>
+        <p class="text-xs text-gray-400 dark:text-ink-400 uppercase tracking-wide">{{ entry.ders.exam_type }}</p>
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-ink-100 mt-0.5">{{ entry.ders.display_name }}</h2>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-gray-400 dark:text-ink-400">{{ entry.tarih|date:"d.m.Y" }}</p>
+        <p class="text-3xl font-bold text-steel-500 mt-0.5">{{ entry.net }}</p>
+        <p class="text-xs text-gray-400 dark:text-ink-400">net</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 divide-x divide-gray-100 dark:divide-ink-700">
+      <div class="px-6 py-4 text-center">
+        <p class="text-2xl font-bold text-emerald-500">{{ entry.dogru }}</p>
+        <p class="text-xs text-gray-400 dark:text-ink-400 mt-1 uppercase tracking-wide">Doğru</p>
+      </div>
+      <div class="px-6 py-4 text-center">
+        <p class="text-2xl font-bold text-ruby-500">{{ entry.yanlis }}</p>
+        <p class="text-xs text-gray-400 dark:text-ink-400 mt-1 uppercase tracking-wide">Yanlış</p>
+      </div>
+      <div class="px-6 py-4 text-center">
+        <p class="text-2xl font-bold text-gray-400 dark:text-ink-400">{{ entry.bos }}</p>
+        <p class="text-xs text-gray-400 dark:text-ink-400 mt-1 uppercase tracking-wide">Boş</p>
+      </div>
+    </div>
+
+    {% if delta %}
+    <div class="px-6 py-4 border-t
+                {% if delta.net > 0 %}border-emerald-500/20 bg-emerald-500/8 dark:bg-emerald-500/5
+                {% elif delta.net < 0 %}border-ruby-500/20 bg-ruby-500/8 dark:bg-ruby-500/5
+                {% else %}border-gray-100 dark:border-ink-700 bg-gray-50 dark:bg-ink-800{% endif %}">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold uppercase tracking-wide
+                  {% if delta.net > 0 %}text-emerald-500{% elif delta.net < 0 %}text-ruby-500{% else %}text-gray-500 dark:text-ink-400{% endif %}">
+          Önceki sınava göre
+        </p>
+        <span class="text-xs text-gray-400 dark:text-ink-400">{{ delta.prev_tarih|date:"d.m.Y" }} · Net {{ delta.prev_net }}</span>
+      </div>
+      <div class="flex items-end gap-5">
+        {% with delta.net as d %}
+        <div class="text-center">
+          <p class="text-2xl font-bold leading-none
+                    {% if d > 0 %}text-emerald-500{% elif d < 0 %}text-ruby-500{% else %}text-gray-400 dark:text-ink-400{% endif %}">
+            {% if d > 0 %}↑ +{{ d }}{% elif d < 0 %}↓ {{ d }}{% else %}{{ d }}{% endif %}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-ink-400 mt-1">Net</p>
+        </div>
+        {% endwith %}
+        <span class="self-stretch w-px bg-gray-200 dark:bg-ink-700 mx-1"></span>
+        {% with delta.dogru as d %}
+        <div class="text-center">
+          <p class="text-base font-semibold
+                    {% if d > 0 %}text-emerald-500{% elif d < 0 %}text-ruby-500{% else %}text-gray-400 dark:text-ink-400{% endif %}">
+            {% if d > 0 %}+{% endif %}{{ d }}
+          </p>
+          <p class="text-xs text-gray-400 dark:text-ink-400">Doğru</p>
+        </div>
+        {% endwith %}
+        {% with delta.yanlis as d %}
+        <div class="text-center">
+          <p class="text-base font-semibold
+                    {% if d < 0 %}text-emerald-500{% elif d > 0 %}text-ruby-500{% else %}text-gray-400 dark:text-ink-400{% endif %}">
+            {% if d > 0 %}+{% endif %}{{ d }}
+          </p>
+          <p class="text-xs text-gray-400 dark:text-ink-400">Yanlış</p>
+        </div>
+        {% endwith %}
+        {% with delta.bos as d %}
+        <div class="text-center">
+          <p class="text-base font-semibold
+                    {% if d < 0 %}text-emerald-500{% elif d > 0 %}text-ruby-500{% else %}text-gray-400 dark:text-ink-400{% endif %}">
+            {% if d > 0 %}+{% endif %}{{ d }}
+          </p>
+          <p class="text-xs text-gray-400 dark:text-ink-400">Boş</p>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if entry.sure_dakika or entry.ogrenci_notu %}
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-ink-700 space-y-3">
+      {% if entry.sure_dakika %}
+        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-ink-300">
+          <span class="text-gray-400 dark:text-ink-400">⏱</span>
+          <span>{{ entry.sure_dakika }} dakika</span>
+        </div>
+      {% endif %}
+      {% if entry.ogrenci_notu %}
+        <div class="text-sm text-gray-600 dark:text-ink-300">
+          <p class="text-xs text-gray-400 dark:text-ink-400 uppercase tracking-wide mb-1">Not</p>
+          <p class="whitespace-pre-wrap">{{ entry.ogrenci_notu }}</p>
+        </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-ink-700 flex gap-3">
+      <a href="{% url 'student:brans_edit' entry.pk %}"
+         class="flex-1 text-center bg-steel-500 hover:bg-steel-400 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+        Düzenle
+      </a>
+      <form method="post" action="{% url 'student:brans_delete' entry.pk %}" class="flex-1"
+            onsubmit="return confirm('Bu branş denemesini silmek istediğine emin misin?')">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full border border-ruby-500/30 text-ruby-500 hover:bg-ruby-tint font-medium py-2.5 rounded-lg text-sm transition">
+          Sil
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="bg-white dark:bg-ink-850 rounded-2xl shadow-sm border border-gray-100 dark:border-ink-700 overflow-hidden mt-4">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-ink-700 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-700 dark:text-ink-200">Konu Hataları</h2>
+      <a href="{% url 'student:brans_topic_errors' entry.pk %}"
+         class="text-xs text-steel-400 hover:text-steel-300 font-medium flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Düzenle
+      </a>
+    </div>
+
+    {% if topic_errors %}
+      <div class="px-6 py-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {% for err in topic_errors %}
+            <div class="flex items-center justify-between p-2.5 rounded-lg border
+                        {% if forloop.first %}bg-ruby-tint border-ruby-500/20{% else %}bg-gray-50 dark:bg-ink-800 border-gray-100 dark:border-ink-700{% endif %}">
+              <div class="min-w-0 mr-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-medium text-gray-800 dark:text-ink-100 truncate">{{ err.topic.name }}</span>
+                  {% if forloop.first %}<span class="text-xs font-bold text-ruby-500 shrink-0">⚠ En Kritik</span>{% endif %}
+                </div>
+                {% if err.topic.sub_category %}
+                  <div class="text-xs text-gray-400 dark:text-ink-400">{{ err.topic.sub_category }}</div>
+                {% endif %}
+              </div>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0
+                           {% if forloop.first %}bg-ruby-500 text-white{% else %}bg-ruby-tint text-ruby-500{% endif %}">
+                {{ err.yanlis_sayisi }}Y
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="px-6 py-8 text-center">
+        <p class="text-sm text-gray-400 dark:text-ink-400 mb-3">Henüz konu hatası kaydedilmemiş.</p>
+        <a href="{% url 'student:brans_topic_errors' entry.pk %}"
+           class="inline-block bg-steel-500 hover:bg-steel-400 text-white font-semibold
+                  px-5 py-2 rounded-lg text-sm transition">
+          Konu Hatalarını Gir →
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Öğrenci Denemeleri — DAS{% endblock %}
+
+{% block content %}
+<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700">
+    <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Öğrenci Denemeleri</h1>
+    <p class="text-sm text-ink-400 mt-1">Öğrenci seç — tüm deneme geçmişini görüntüle</p>
+  </div>
+
+  <div class="p-4 md:p-6">
+    {% if student_data %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      {% for item in student_data %}
+      <a href="{% url 'coach:student_exams' item.student.id %}"
+         class="group rounded-xl border border-ink-700 bg-ink-850 hover:bg-ink-800
+                hover:border-ink-600 hover:shadow-card-lg hover:scale-[1.01]
+                transition-all duration-200 p-4">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="pii w-10 h-10 rounded-full bg-gradient-to-br from-steel-500 to-steel-700
+                      flex items-center justify-center text-white font-semibold text-sm shrink-0">
+            {{ item.student.full_name|slice:":1"|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="pii font-semibold text-ink-100 truncate">{{ item.student.full_name }}</p>
+            <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
+          </div>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+               class="text-ink-500 group-hover:text-steel-400 transition-colors shrink-0"
+               viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </div>
+        <div class="grid grid-cols-3 divide-x divide-ink-700 border-y border-ink-700 py-3">
+          <div class="text-center">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Toplam</p>
+            <p class="mt-0.5 text-base font-bold text-ink-100 tnum">{{ item.total }}</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Son Net</p>
+            <p class="mt-0.5 text-base font-bold text-steel-400 tnum">
+              {% if item.last_net %}{{ item.last_net|floatformat:2 }}{% else %}—{% endif %}
+            </p>
+          </div>
+          <div class="text-center">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Son Tarih</p>
+            <p class="mt-0.5 text-sm font-bold text-ink-200 tnum">
+              {% if item.last_date %}{{ item.last_date|date:"d M" }}{% else %}—{% endif %}
+            </p>
+          </div>
+        </div>
+        <div class="mt-3 flex justify-end">
+          <span class="text-xs text-steel-400 group-hover:text-steel-300 font-medium
+                       inline-flex items-center gap-1 transition-colors">
+            Tüm denemeleri gör
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-dashed border-ink-700 p-12 text-center">
+      <p class="text-sm text-ink-400">Henüz kayıtlı öğrenci yok.</p>
+      <a href="{% url 'users_app:coach_invites' %}"
+         class="mt-3 inline-flex items-center gap-1.5 text-sm text-steel-400 hover:text-steel-300 font-medium">
+        Öğrenci davet et
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

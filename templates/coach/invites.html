@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Öğrenci Davetleri — DAS{% endblock %}
+
+{% block content %}
+
+<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700">
+    <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Öğrenci Davetleri</h1>
+    <p class="text-sm text-ink-400 mt-1">Email ile yeni öğrenci ekle ve gönderilen davetleri takip et.</p>
+  </div>
+
+  <div class="p-4 md:p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <div class="lg:col-span-5">
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-5 lg:sticky lg:top-20">
+
+          <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider mb-4">Yeni Davet</h3>
+
+          <form method="post" class="space-y-3">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+              <label class="text-xs text-ink-400 font-medium block mb-1.5">
+                {{ field.label }}
+                {% if not field.field.required %}
+                  <span class="text-ink-500 font-normal">(isteğe bağlı)</span>
+                {% endif %}
+              </label>
+              <input type="{{ field.field.widget.input_type }}"
+                     name="{{ field.html_name }}"
+                     value="{{ field.value|default:'' }}"
+                     placeholder="{% if field.html_name == 'email' %}ornek@email.com{% else %}Ad Soyad{% endif %}"
+                     class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700
+                            text-sm text-ink-100 placeholder:text-ink-500
+                            focus:outline-none focus:border-steel-500 focus:bg-ink-900 transition-colors">
+              {% if field.errors %}
+                <p class="text-ruby-500 text-xs mt-1">{{ field.errors.0 }}</p>
+              {% endif %}
+            </div>
+            {% endfor %}
+            <div class="pt-1">
+              <button type="submit"
+                      class="w-full h-10 rounded-lg bg-steel-500 hover:bg-steel-400
+                             text-white font-medium text-sm transition-colors">
+                Davet Gönder
+              </button>
+            </div>
+          </form>
+
+          <div class="mt-5 pt-5 border-t border-ink-700">
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Bekleyen</p>
+                <p class="mt-1 text-lg font-bold text-amber-500 tnum">{{ invite_pending }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Kabul</p>
+                <p class="mt-1 text-lg font-bold text-emerald-500 tnum">{{ invite_accepted }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Toplam</p>
+                <p class="mt-1 text-lg font-bold text-ink-100 tnum">{{ invite_total }}</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+
+          <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Gönderilen Davetler</h3>
+            {% if invites %}
+            <span class="text-xs text-ink-400">{{ invite_total }} davet</span>
+            {% endif %}
+          </div>
+
+          {% if invites %}
+          <div class="divide-y divide-ink-700">
+            {% for inv in invites %}
+            <div class="px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors"
+                 x-data="{ confirm: false }" data-removable>
+              <div class="pii w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0
+                          {% if inv.is_used %}bg-emerald-tint text-emerald-500{% else %}bg-ink-700 text-ink-300{% endif %}">
+                {{ inv.email|slice:":1"|upper }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="pii text-sm font-medium text-ink-100 truncate">{{ inv.email }}</p>
+                <p class="text-[11px] text-ink-500">
+                  {% if inv.full_name %}<span class="pii">{{ inv.full_name }}</span> · {% endif %}
+                  {{ inv.created_at|date:"d.m.Y H:i" }}
+                </p>
+              </div>
+              {% if inv.is_used %}
+              <span class="px-2 py-0.5 rounded-full bg-emerald-tint text-emerald-500 text-[11px] font-semibold shrink-0">
+                Kabul Edildi
+              </span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded-full bg-amber-tint text-amber-500 text-[11px] font-semibold shrink-0"
+                    x-show="!confirm">
+                Bekliyor
+              </span>
+              <div class="flex items-center gap-1.5 shrink-0" x-show="confirm" x-cloak>
+                <span class="text-[11px] text-ruby-500 font-semibold">Geri al?</span>
+                <button @click="
+                  fetch('{% url 'users_app:revoke_invite' inv.id %}', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? ''}
+                  }).then(r => r.json()).then(d => {
+                    if (d.ok) { $el.closest('[data-removable]').remove(); window.dasToast('Davet geri alındı.', 'ruby'); }
+                    else confirm = false;
+                  })"
+                  class="px-2 py-0.5 rounded bg-ruby-500 text-white text-[11px] font-semibold hover:bg-ruby-400 transition-colors">
+                  Evet
+                </button>
+                <button @click="confirm = false"
+                        class="px-2 py-0.5 rounded bg-ink-750 text-ink-300 text-[11px] font-semibold hover:bg-ink-700 transition-colors">
+                  İptal
+                </button>
+              </div>
+              <button @click="confirm = true" x-show="!confirm"
+                      class="w-7 h-7 inline-flex items-center justify-center rounded-lg
+                             text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint transition-colors shrink-0"
+                      title="Daveti geri al">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75"
+                     viewBox="0 0 24 24" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="px-4 py-10 text-center">
+            <p class="text-sm text-ink-500">Henüz davet gönderilmedi.</p>
+            <p class="text-xs text-ink-600 mt-1">Formu kullanarak öğrenci davet edebilirsiniz.</p>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

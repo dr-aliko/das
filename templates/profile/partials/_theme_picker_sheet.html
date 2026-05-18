@@ -1,0 +1,132 @@
+{% load i18n %}
+{% comment %}DAS-406: Theme picker bottom sheet.
+Parent x-data must expose: showThemeSheet (bool), activeTheme (string), saveTheme(theme) fn.
+Uses @click on full-width buttons — no hidden <input> elements so Safari iOS click fires reliably.
+$watch('activeTheme') in profileState.init() calls saveTheme when activeTheme changes.{% endcomment %}
+<div x-show="showThemeSheet"
+     x-cloak
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="translate-y-full"
+     x-transition:enter-end="translate-y-0"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="translate-y-0"
+     x-transition:leave-end="translate-y-full"
+     class="fixed inset-0 z-[60] flex items-end justify-center">
+
+  {# Backdrop #}
+  <div x-show="showThemeSheet"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="showThemeSheet = false"
+       class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+  {# Sheet #}
+  <div class="relative w-full max-w-md rounded-t-[20px] shadow-2xl p-6 pb-[calc(env(safe-area-inset-bottom)+3rem)]"
+       style="background:var(--surface-1);"
+       @click.stop>
+
+    {# Drag handle #}
+    <div class="w-12 h-1 rounded-full mx-auto mb-6" style="background:var(--border);"></div>
+    <h3 class="text-lg font-bold mb-6" style="color:var(--heading)">{% trans "Görünüm Tercihi" %}</h3>
+
+    <div class="space-y-3" role="radiogroup" aria-label="{% trans 'Tema seçimi' %}">
+
+      {# — Auto — #}
+      <button type="button"
+              @click="activeTheme = 'auto'"
+              class="w-full flex items-center justify-between p-4 rounded-xl border-2
+                     transition-all text-left active:scale-[0.98]"
+              :class="activeTheme === 'auto'
+                ? 'border-primary bg-[var(--primary-tint)]'
+                : 'border-[var(--border)] bg-[var(--surface-1)]'"
+              role="radio"
+              :aria-checked="activeTheme === 'auto'">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+               style="background:var(--surface-2); color:var(--muted)">
+            <svg class="w-6 h-6" viewBox="0 0 24 24"><use href="#das-icon-panel"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-bold" style="color:var(--heading)">{% trans "Otomatik" %}</p>
+            <p class="text-[10px]" style="color:var(--muted)">{% trans "Sistem ayarlarına uyar" %}</p>
+          </div>
+        </div>
+        {# Custom radio dot #}
+        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-3"
+             :class="activeTheme === 'auto' ? 'border-primary' : 'border-[var(--border)]'">
+          <div x-show="activeTheme === 'auto'"
+               class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+        </div>
+      </button>
+
+      {# — Light — #}
+      <button type="button"
+              @click="activeTheme = 'light'"
+              class="w-full flex items-center justify-between p-4 rounded-xl border-2
+                     transition-all text-left active:scale-[0.98]"
+              :class="activeTheme === 'light'
+                ? 'border-primary bg-[var(--primary-tint)]'
+                : 'border-[var(--border)] bg-[var(--surface-1)]'"
+              role="radio"
+              :aria-checked="activeTheme === 'light'">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+               style="background:var(--surface-2); color:var(--muted)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75"
+                 viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-bold" style="color:var(--heading)">{% trans "Açık Tema" %}</p>
+            <p class="text-[10px]" style="color:var(--muted)">{% trans "Her zaman açık" %}</p>
+          </div>
+        </div>
+        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-3"
+             :class="activeTheme === 'light' ? 'border-primary' : 'border-[var(--border)]'">
+          <div x-show="activeTheme === 'light'"
+               class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+        </div>
+      </button>
+
+      {# — Dark — #}
+      <button type="button"
+              @click="activeTheme = 'dark'"
+              class="w-full flex items-center justify-between p-4 rounded-xl border-2
+                     transition-all text-left active:scale-[0.98]"
+              :class="activeTheme === 'dark'
+                ? 'border-primary bg-[var(--primary-tint)]'
+                : 'border-[var(--border)] bg-[var(--surface-1)]'"
+              role="radio"
+              :aria-checked="activeTheme === 'dark'">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+               style="background:var(--surface-2); color:var(--muted)">
+            <svg class="w-6 h-6" viewBox="0 0 24 24"><use href="#das-icon-moon"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-bold" style="color:var(--heading)">{% trans "Koyu Tema" %}</p>
+            <p class="text-[10px]" style="color:var(--muted)">{% trans "Her zaman koyu" %}</p>
+          </div>
+        </div>
+        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-3"
+             :class="activeTheme === 'dark' ? 'border-primary' : 'border-[var(--border)]'">
+          <div x-show="activeTheme === 'dark'"
+               class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+        </div>
+      </button>
+
+    </div>
+
+    <button @click="showThemeSheet = false"
+            class="w-full mt-8 font-bold p-4 rounded-xl active:scale-[0.98]
+                   transition-transform bg-primary text-white">
+      {% trans "Bitti" %}
+    </button>
+  </div>
+</div>

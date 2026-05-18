@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }} — Branş Analizi — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{sel:[], toggle(id){const i=this.sel.indexOf(id); i>-1?this.sel.splice(i,1):(this.sel.length<2&&this.sel.push(id));}, go(){window.location='{% url 'coach:brans_compare' student.pk %}?a='+this.sel[0]+'&b='+this.sel[1];}}">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="{% url 'coach:brans_analytics' %}"
+         class="text-sm text-indigo-500 hover:underline">← Tüm Öğrenciler</a>
+      <h1 class="text-2xl font-bold text-gray-800 mt-1">{{ student.full_name }}</h1>
+      <p class="text-sm text-gray-400">Branş Deneme Geçmişi</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% for val, label in period_choices %}
+        <a href="?period={{ val }}{% if ders_filter %}&ders={{ ders_filter }}{% endif %}"
+           class="px-4 py-1.5 rounded-full text-sm font-medium transition border
+                  {% if period == val %}bg-indigo-600 text-white border-indigo-600
+                  {% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}">
+          {{ label }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Ders filter chips ── #}
+  {% if all_ders %}
+  <div class="flex flex-wrap gap-2">
+    <a href="?period={{ period }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium transition border
+              {% if not ders_filter %}bg-indigo-600 text-white border-indigo-600
+              {% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}">
+      Tüm Dersler
+    </a>
+    {% for d in all_ders %}
+      <a href="?period={{ period }}&ders={{ d.pk }}"
+         class="px-4 py-1.5 rounded-full text-sm font-medium transition border
+                {% if ders_filter == d.pk|stringformat:"s" %}bg-indigo-600 text-white border-indigo-600
+                {% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}">
+        {{ d.display_name }}
+      </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Net Trend Chart ── #}
+  {% if has_entries %}
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-[160px] sm:h-[200px]">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4">Net Gelişim</h2>
+    <canvas id="bransChart" height="90"></canvas>
+  </div>
+  {% endif %}
+
+  {# ── Per-subject tables ── #}
+  {% if not grouped %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10 text-center text-gray-400">
+      {% if ders_filter or period != 'all' %}
+        Bu filtre için kayıt bulunamadı.
+      {% else %}
+        Bu öğrenci henüz branş denemesi girmemiş.
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% for ders, entries in grouped.items %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-700 text-sm">
+          {{ ders.display_name }}
+        </h2>
+        <span class="text-xs text-gray-400">{{ entries|length }} kayıt</span>
+      </div>
+      <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+            <th class="px-4 py-2.5 w-8"></th>
+            <th class="px-5 py-2.5 text-left">Tarih</th>
+            <th class="px-4 py-2.5 text-center">Doğru</th>
+            <th class="px-4 py-2.5 text-center">Yanlış</th>
+            <th class="px-4 py-2.5 text-center">Boş</th>
+            <th class="px-4 py-2.5 text-center font-semibold text-gray-600">Net</th>
+            <th class="px-4 py-2.5 text-center hidden sm:table-cell">Süre</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for entry in entries %}
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-4 py-3 text-center w-8">
+                <input type="checkbox" :value="{{ entry.pk }}"
+                       @change="toggle({{ entry.pk }})"
+                       :disabled="sel.length >= 2 && !sel.includes({{ entry.pk }})"
+                       class="rounded text-indigo-500 focus:ring-indigo-300 disabled:opacity-30 cursor-pointer">
+              </td>
+              <td class="px-5 py-3 text-gray-700">{{ entry.tarih|date:"d.m.Y" }}</td>
+              <td class="px-4 py-3 text-center text-green-600 font-medium">{{ entry.dogru }}</td>
+              <td class="px-4 py-3 text-center text-red-500 font-medium">{{ entry.yanlis }}</td>
+              <td class="px-4 py-3 text-center text-gray-400">{{ entry.bos }}</td>
+              <td class="px-4 py-3 text-center font-bold
+                {% if entry.net >= 8 %}text-green-600
+                {% elif entry.net >= 5 %}text-yellow-600
+                {% else %}text-red-500{% endif %}">
+                {{ entry.net }}
+              </td>
+              <td class="px-4 py-3 text-center text-gray-400 text-xs hidden sm:table-cell">
+                {% if entry.sure_dakika %}{{ entry.sure_dakika }} dk{% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  {% endfor %}
+
+  {# ── En Çok Hata Yapılan Konular ── #}
+  {% if top_topics %}
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-700 text-sm">En Çok Hata Yapılan Konular</h2>
+      <p class="text-xs text-gray-400 mt-0.5">
+        {% if period == '30' %}Son 30 gün{% elif period == '90' %}Son 3 ay{% else %}Tüm zamanlar{% endif %}
+      </p>
+    </div>
+    <div class="divide-y divide-gray-50">
+      {% for row in top_topics %}
+        <div class="px-5 py-3 flex items-center justify-between
+                    {% if forloop.first %}bg-red-50{% endif %}">
+          <div class="flex items-center gap-3 min-w-0 mr-4">
+            {% if forloop.first %}
+              <span class="text-xs font-bold text-red-500 shrink-0">#1</span>
+            {% elif forloop.counter == 2 %}
+              <span class="text-xs font-semibold text-orange-400 shrink-0">#2</span>
+            {% else %}
+              <span class="text-xs text-gray-300 shrink-0">#{{ forloop.counter }}</span>
+            {% endif %}
+            <div class="min-w-0">
+              <div class="text-sm font-medium text-gray-800 truncate">{{ row.topic__name }}</div>
+              <div class="text-xs text-gray-400">
+                {% if row.topic__sub_category %}{{ row.topic__sub_category }} · {% endif %}
+                {{ row.topic__subject__exam_type }} {{ row.topic__subject__name }}
+                {% if row.son_tarih %} · Son: {{ row.son_tarih|date:"d.m.Y" }}{% endif %}
+              </div>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0
+                       {% if forloop.first %}bg-red-500 text-white{% else %}bg-red-100 text-red-600{% endif %}">
+            {{ row.toplam_yanlis }}Y
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Compare floating bar ── #}
+  <div x-show="sel.length === 2" x-cloak
+       class="shell-floating-bar fixed bottom-6 left-1/2 -translate-x-1/2 z-40
+              bg-indigo-700 text-white rounded-2xl shadow-xl px-4 sm:px-6 py-3
+              flex items-center gap-2 sm:gap-4 text-sm font-medium
+              max-w-[calc(100vw-2rem)]">
+    <span>2 kayıt seçildi</span>
+    <button @click="go()"
+            class="bg-white text-indigo-700 font-semibold px-4 py-1.5 rounded-lg hover:bg-indigo-50 transition">
+      Karşılaştır →
+    </button>
+    <button @click="sel = []" class="opacity-70 hover:opacity-100 transition text-lg leading-none">&times;</button>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_entries %}
+<script>
+(function () {
+  const raw = {{ chart_data_json|safe }};
+  const allNets = raw.datasets.flatMap(ds => ds.data.filter(v => v != null));
+  const minNet = allNets.length ? Math.min(...allNets) : 0;
+  const maxNet = allNets.length ? Math.max(...allNets) : 10;
+  const pad    = Math.max(2, Math.ceil((maxNet - minNet) * 0.25));
+
+  const TR_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  function fmtDate(iso) {
+    const [y, m, d] = iso.split('-');
+    return `${parseInt(d)} ${TR_MONTHS[parseInt(m) - 1]} ${y}`;
+  }
+
+  const isMobile = window.innerWidth < 640;
+  new Chart(document.getElementById('bransChart'), {
+    type: 'line',
+    data: {
+      labels: raw.labels,
+      datasets: raw.datasets.map(ds => ({
+        ...ds,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
+        fill: false,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      animation: { duration: 200 },
+      plugins: {
+        legend: {
+          position: isMobile ? 'right' : 'bottom',
+          labels: { boxWidth: isMobile ? 8 : 10, boxHeight: isMobile ? 8 : 10, padding: isMobile ? 8 : 16, font: { size: isMobile ? 10 : 11 }, usePointStyle: true },
+          onClick(e, item, legend) {
+            const ci = legend.chart;
+            ci.getDatasetMeta(item.datasetIndex).hidden =
+              !ci.getDatasetMeta(item.datasetIndex).hidden;
+            ci.update();
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: ctx => fmtDate(ctx[0].label),
+            label: ctx => {
+              const v = ctx.parsed.y;
+              return ` ${ctx.dataset.label}: ${v != null ? v : '—'}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { font: { size: isMobile ? 9 : 11 }, maxTicksLimit: isMobile ? 4 : undefined } },
+        y: {
+          min: Math.max(0, Math.floor(minNet - pad)),
+          max: Math.ceil(maxNet + pad),
+          ticks: { font: { size: 11 } },
+          title: { display: !isMobile, text: 'Net', font: { size: 11 } },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Deneme Karşılaştırma — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex items-center gap-4">
+    <a href="/student/" class="text-gray-400 hover:text-gray-600 transition">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Deneme Karşılaştırma</h1>
+      {% if comparison %}
+      <p class="text-sm text-gray-400">{{ comparison.exam_a.exam_date }} → {{ comparison.exam_b.exam_date }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if comparison %}
+
+  <!-- Sınav şeridi -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3 flex items-center gap-3">
+      <span class="w-3 h-3 rounded-full bg-indigo-500 shrink-0"></span>
+      <div>
+        <div class="text-xs text-indigo-500 font-semibold uppercase tracking-wide">A — Önceki (Baz)</div>
+        <div class="font-semibold text-gray-800 text-sm">{{ comparison.exam_a.custom_name }}</div>
+        <div class="text-xs text-gray-400">{{ comparison.exam_a.exam_date }}</div>
+      </div>
+    </div>
+    <div class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-3 flex items-center gap-3">
+      <span class="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></span>
+      <div>
+        <div class="text-xs text-emerald-600 font-semibold uppercase tracking-wide">B — Güncel</div>
+        <div class="font-semibold text-gray-800 text-sm">{{ comparison.exam_b.custom_name }}</div>
+        <div class="text-xs text-gray-400">{{ comparison.exam_b.exam_date }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <!-- Radar Chart (2/5) -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+      <h2 class="font-semibold text-gray-700 mb-4 text-sm">Ders Ayak İzi</h2>
+      <div class="flex-1 flex items-center justify-center">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Delta Tablosu (3/5) -->
+    <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-700 text-sm">Net &amp; Süre Değişimi</h2>
+        <div class="flex items-center gap-4 text-xs text-gray-400">
+          <span><span class="font-bold text-indigo-500">A</span> Önceki</span>
+          <span><span class="font-bold text-emerald-500">B</span> Güncel</span>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-50">
+        {% for d in comparison.deltas %}
+        <div class="flex items-center px-3 sm:px-6 py-3 gap-3 hover:bg-gray-50 transition">
+          <div class="w-16 sm:w-20 shrink-0 text-xs font-semibold text-gray-700">
+            {% if d.subject.name|slice:":4" == "TYT " %}{{ d.subject.name|slice:"4:" }}
+            {% elif d.subject.name|slice:":4" == "AYT " %}{{ d.subject.name|slice:"4:" }}
+            {% else %}{{ d.subject.name }}{% endif %}
+          </div>
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="text-xs text-indigo-500 font-medium tabular-nums">{{ d.net_a|floatformat:2 }}</span>
+            <svg class="w-3 h-3 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <span class="text-xs text-emerald-600 font-medium tabular-nums">{{ d.net_b|floatformat:2 }}</span>
+            {% if d.net_delta > 0 %}
+            <span class="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"/></svg>
+              +{{ d.net_delta|floatformat:2 }}
+            </span>
+            {% elif d.net_delta < 0 %}
+            <span class="inline-flex items-center gap-0.5 text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+              {{ d.net_delta|floatformat:2 }}
+            </span>
+            {% else %}
+            <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">= 0</span>
+            {% endif %}
+          </div>
+          <div class="shrink-0 text-right min-w-[4.5rem] sm:min-w-24">
+            {% if d.dur_delta is not None %}
+            <div class="flex items-center justify-end gap-1.5">
+              <span class="text-xs text-gray-400 tabular-nums">{{ d.dur_a }}→{{ d.dur_b }}dk</span>
+              {% if d.dur_delta < 0 %}
+              <span class="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>{{ d.dur_delta }}dk</span>
+              {% elif d.dur_delta > 0 %}
+              <span class="inline-flex items-center gap-0.5 text-xs font-bold text-red-500 bg-red-50 px-1 py-0.5 rounded">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"/></svg>+{{ d.dur_delta }}dk</span>
+              {% else %}
+              <span class="text-xs text-gray-400">=0dk</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Kapanan Eksikler -->
+  {% if comparison.closed_gaps %}
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl shrink-0">🏆</div>
+      <div>
+        <h2 class="font-semibold text-gray-800">Kapanan Eksikler — Rövanş!</h2>
+        <p class="text-xs text-gray-400 mt-0.5">
+          A sınavında hatalı ya da boş, B sınavında başarılı konular
+          <span class="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-xs">{{ comparison.closed_gaps|length }}</span>
+        </p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      {% for topic in comparison.closed_gaps %}
+      <div class="flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
+        <div class="w-5 h-5 rounded-full bg-emerald-400 flex items-center justify-center shrink-0">
+          <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-xs font-semibold text-gray-800 truncate">{{ topic.name }}</div>
+          <div class="text-xs text-gray-400">
+            {% if topic.subject.name|slice:":4" == "TYT " %}{{ topic.subject.name|slice:"4:" }}
+            {% elif topic.subject.name|slice:":4" == "AYT " %}{{ topic.subject.name|slice:"4:" }}
+            {% else %}{{ topic.subject.name }}{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-gray-50 border border-gray-100 rounded-2xl p-8 text-center">
+    <div class="text-4xl mb-3">📊</div>
+    <p class="text-sm font-medium text-gray-500">Bu iki sınav arasında kapanan eksik bulunamadı.</p>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-12 text-center">
+    <div class="text-5xl mb-4">⚖️</div>
+    <p class="text-base font-semibold text-gray-600 mb-1">Paneline dön ve 2 deneme seç</p>
+    <p class="text-sm text-gray-400 mb-6">Sınav listesinden 2 denemeye tik at, ardından "Karşılaştır" butonuna bas.</p>
+    <a href="/student/" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-lg transition">
+      ← Panele Dön
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if comparison %}
+<script>
+(function () {
+  const d = {{ comparison.radar_json|safe }};
+  const maxVal = Math.max(...d.data_a, ...d.data_b, 1);
+  const step = maxVal <= 10 ? 2 : maxVal <= 30 ? 5 : 10;
+  const isMobile = window.innerWidth < 640;
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: d.label_a, data: d.data_a.map(v => Math.max(0, v)), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.12)', borderWidth: 2, pointBackgroundColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6 },
+        { label: d.label_b, data: d.data_b.map(v => Math.max(0, v)), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', borderWidth: 2, pointBackgroundColor: '#10b981', pointRadius: 4, pointHoverRadius: 6 },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 10, padding: isMobile ? 8 : 14, font: { size: isMobile ? 10 : 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)}` } } },
+      scales: { r: { min: 0, suggestedMax: maxVal + step, ticks: { stepSize: step, font: { size: 9 }, backdropColor: 'transparent', color: '#9ca3af' }, pointLabels: { font: { size: isMobile ? 9 : 11 }, color: '#374151' }, grid: { color: 'rgba(0,0,0,0.06)' }, angleLines: { color: 'rgba(0,0,0,0.06)' } } },
+    },
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

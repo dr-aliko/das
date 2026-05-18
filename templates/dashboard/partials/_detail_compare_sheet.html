@@ -1,0 +1,183 @@
+{% load i18n %}
+{# DAS-327: Compare Previous — diverging-bar bottom sheet #}
+<div x-show="showCompareSheet" x-cloak
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0 translate-y-full"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-full"
+     class="fixed inset-0 z-50 flex items-end justify-center">
+
+  {# Backdrop #}
+  <div @click="showCompareSheet = false"
+       class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+
+  {# Sheet #}
+  <div class="relative w-full max-w-xl rounded-t-3xl shadow-2xl flex flex-col
+              max-h-[90vh]"
+       style="background:var(--surface-1);"
+       @click.stop>
+
+    {# Drag handle #}
+    <div class="flex justify-center pt-3 pb-4 shrink-0 cursor-pointer"
+         @click="showCompareSheet = false">
+      <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
+    </div>
+
+    {% if not prev_exam %}
+    {# No previous exam — graceful empty state #}
+    <div class="px-6 pb-8 text-center">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+           style="background:var(--surface-2);">
+        <svg class="w-7 h-7" style="color:var(--muted)" fill="none"
+             stroke="currentColor" viewBox="0 0 24 24">
+          <use href="#das-icon-exam"/>
+        </svg>
+      </div>
+      <p class="text-sm font-semibold" style="color:var(--muted)">
+        {% trans "Karşılaştırılacak önceki sınav bulunamadı." %}
+      </p>
+      <button @click="showCompareSheet = false"
+              class="mt-6 w-full py-3 rounded-2xl font-bold text-sm"
+              style="background:var(--surface-2); color:var(--body);">{% trans "Kapat" %}</button>
+    </div>
+
+    {% else %}
+    {# ── Has prev exam ─────────────────────────────────────────────── #}
+
+    {# Scrollable body #}
+    <div class="overflow-y-auto overscroll-contain flex-1 px-6 space-y-6">
+
+      {# Header — previous exam metadata #}
+      <div class="shrink-0">
+        <h3 class="text-xl font-black" style="color:var(--heading)">{% trans "Önceki ile Kıyasla" %}</h3>
+        <p class="text-xs font-bold uppercase tracking-widest mt-1" style="color:var(--muted)">
+          {{ prev_exam.publisher }} · {{ prev_exam.date|date:"d M Y" }}
+        </p>
+      </div>
+
+      {# ── Net comparison hero ─────────────────────────────────────── #}
+      <div class="grid grid-cols-2 gap-3 shrink-0">
+        <div class="p-4 rounded-2xl text-center"
+             style="background:var(--surface-2); border:1px solid var(--border);">
+          <span class="text-2xl font-black tabular-nums" style="color:var(--heading)"
+                x-text="fmtNet(displayNet, 2)">{{ net_total|floatformat:2 }}</span>
+          <span class="text-[10px] font-bold uppercase block mt-0.5"
+                style="color:var(--muted)">{% trans "Bu Sınav" %}</span>
+        </div>
+        <div class="p-4 rounded-2xl text-center"
+             style="background:var(--surface-2); border:1px solid var(--border);">
+          <span class="text-2xl font-black tabular-nums" style="color:var(--muted-2)">
+            {{ prev_exam.net_total|floatformat:2 }}
+          </span>
+          <span class="text-[10px] font-bold uppercase block mt-0.5"
+                style="color:var(--muted)">{% trans "Önceki" %}</span>
+        </div>
+      </div>
+
+      {# Delta chip — live (reflects in-session mutations via displayNet) #}
+      <div class="flex items-center justify-center shrink-0">
+        <span class="px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5"
+              :class="displayNet >= {{ prev_exam.net_total }}
+                ? 'text-up bg-up-tint'
+                : 'text-down bg-down-tint'">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <template x-if="displayNet >= {{ prev_exam.net_total }}">
+              <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </template>
+            <template x-if="displayNet < {{ prev_exam.net_total }}">
+              <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </template>
+          </svg>
+          <span x-text="(displayNet >= {{ prev_exam.net_total }} ? '+' : '')
+                        + fmtNet(displayNet - {{ prev_exam.net_total }}, 2)">
+            {{ net_delta_display }}
+          </span>
+          {% trans "genel net değişimi" %}
+        </span>
+      </div>
+
+      {# ── Diverging bar chart — subject deltas ─────────────────────── #}
+      {% if subject_deltas %}
+      <div class="shrink-0 space-y-1">
+        <p class="text-[10px] font-black uppercase tracking-widest pb-2"
+           style="color:var(--muted-2); border-bottom:1px solid var(--border)">
+          {% trans "Ders Bazlı Değişim" %}
+        </p>
+
+        {% for s in subject_deltas %}
+        <div class="flex items-center gap-3 py-1">
+
+          {# Subject label — fixed width #}
+          <span class="text-[11px] font-bold uppercase w-20 shrink-0 truncate"
+                style="color:var(--muted)">{{ s.name }}</span>
+
+          {# Diverging bar container #}
+          <div class="flex-1 relative h-6 flex items-center" aria-hidden="true">
+            {# Center divider #}
+            <div class="absolute left-1/2 top-0 bottom-0 w-px"
+                 style="background:var(--border-strong);"></div>
+
+            {% if s.delta > 0 %}
+            {# Positive — bar extends RIGHT from center #}
+            <div class="absolute left-1/2 top-[5px] bottom-[5px] rounded-r-full"
+                 style="width:{{ s.delta_percent|floatformat:1 }}%;
+                        background:var(--up-tint);
+                        border-left:2px solid var(--up);
+                        min-width:4px;"></div>
+
+            {% elif s.delta < 0 %}
+            {# Negative — bar extends LEFT from center #}
+            <div class="absolute right-1/2 top-[5px] bottom-[5px] rounded-l-full"
+                 style="width:{{ s.delta_percent_abs|floatformat:1 }}%;
+                        background:var(--down-tint);
+                        border-right:2px solid var(--down);
+                        min-width:4px;"></div>
+
+            {% else %}
+            {# No change #}
+            <div class="absolute left-1/2 -translate-x-1/2 text-[9px] font-bold"
+                 style="color:var(--muted-2)">—</div>
+            {% endif %}
+          </div>
+
+          {# Delta value label #}
+          <span class="text-[11px] font-black tabular-nums w-14 text-right shrink-0"
+                :class="''" {# class binding placeholder — color set via style #}
+                style="color: {% if s.delta > 0 %}var(--up){% elif s.delta < 0 %}var(--down){% else %}var(--muted-2){% endif %}">
+            {% if s.delta > 0 %}+{% endif %}{{ s.delta|floatformat:2 }}
+          </span>
+
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>{# end scrollable body #}
+
+    {# ── Footer actions (DAS-365) ────────────────────────────────────── #}
+    <div class="shrink-0 px-6 pt-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] space-y-3"
+         style="border-top:1px solid var(--border);">
+      {# DAS-365: Link to V2 full compare page — "Tam karşılaştırma →" #}
+      <a href="{% url 'student:compare_v2' %}?exam1={{ exam.id }}&exam2={{ prev_exam.id }}&denemeler_v2=1"
+         class="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl
+                font-bold text-sm text-primary transition-opacity active:opacity-70"
+         style="background:var(--primary-tint);">
+        {% trans "Tam karşılaştırma" %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <use href="#das-icon-chev-right"/>
+        </svg>
+      </a>
+      <button @click="showCompareSheet = false"
+              class="w-full py-3 rounded-2xl font-bold text-sm
+                     transition-opacity active:opacity-70"
+              style="background:var(--surface-2); color:var(--body);">
+        {% trans "Kapat" %}
+      </button>
+    </div>
+
+    {% endif %}{# end has prev_exam #}
+
+  </div>{# end sheet #}
+</div>

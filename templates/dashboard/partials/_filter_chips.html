@@ -1,0 +1,57 @@
+{% load i18n %}
+{% comment %}
+   DAS-009 — Dashboard Filter Chips
+   Period chips: @click.prevent intercepts for AJAX update (setPeriod); href is the
+   no-JS fallback. Active chip styling driven by Alpine dashPeriod.
+   Type chips: visual Alpine state only.
+   Outer Alpine x-data required: dashPeriod, dashType, periodLoading, setPeriod()
+{% endcomment %}
+<div class="das-filter-row" id="filter-chips">
+
+  {# ── Period filters (AJAX first, href fallback) ── #}
+  <a href="?period=all&v2=1"
+     @click.prevent="setPeriod('all')"
+     class="das-filter-chip"
+     :class="dashPeriod === 'all' ? 'active' : ''"
+     :aria-busy="periodLoading && dashPeriod === 'all'">{% trans "Tümü" %}</a>
+
+  <a href="?period=30&v2=1"
+     @click.prevent="setPeriod('30')"
+     class="das-filter-chip"
+     :class="dashPeriod === '30' ? 'active' : ''"
+     :aria-busy="periodLoading && dashPeriod === '30'">{% trans "30 Gün" %}</a>
+
+  <a href="?period=90&v2=1"
+     @click.prevent="setPeriod('90')"
+     class="das-filter-chip"
+     :class="dashPeriod === '90' ? 'active' : ''"
+     :aria-busy="periodLoading && dashPeriod === '90'">{% trans "3 Ay" %}</a>
+
+  {# Loading indicator — visible while AJAX fetch is in-flight #}
+  <span x-show="periodLoading" x-cloak
+        class="das-filter-chip opacity-60 pointer-events-none flex items-center gap-1">
+    <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10"
+              stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+  </span>
+
+  <div class="row-divider"></div>
+
+  {# ── Type filters (Alpine visual state, future data filter) ── #}
+  <button type="button"
+          class="das-filter-chip"
+          :class="dashType === 'all' ? 'active' : ''"
+          @click="dashType = 'all'">{% trans "Tümü" %}</button>
+
+  <button type="button"
+          class="das-filter-chip"
+          :class="dashType === 'TYT' ? 'active' : ''"
+          @click="dashType = 'TYT'">
+    <span class="swatch bg-[var(--turkce)]"></span>
+    TYT
+  </button>
+
+</div>

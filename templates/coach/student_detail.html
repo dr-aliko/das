@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }} — DAS{% endblock %}
+
+{% block content %}
+<script>
+function coachExamSelect() {
+  return {
+    sel: [],
+    studentId: {{ student.id }},
+    toggle(id) {
+      const i = this.sel.indexOf(id);
+      if (i > -1) this.sel.splice(i, 1);
+      else if (this.sel.length < 2) this.sel.push(id);
+    },
+    picked(id)  { return this.sel.includes(id); },
+    dimmed(id)  { return this.sel.length >= 2 && !this.sel.includes(id); },
+    goCompare() { window.location.href = '/coach/student/' + this.studentId + '/compare/?exam1=' + this.sel[0] + '&exam2=' + this.sel[1]; },
+  };
+}
+</script>
+<div class="space-y-6" x-data="coachExamSelect()">
+
+  <!-- Başlık + dönem filtresi -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="/coach/" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">{{ student.full_name }}</h1>
+        <p class="text-gray-400 text-sm">{{ student.email }}</p>
+      </div>
+    </div>
+
+    <div class="flex gap-1 bg-gray-100 rounded-lg p-1 self-start sm:self-auto">
+      <a href="?period=all" class="px-4 py-1.5 rounded-md text-sm font-medium transition
+        {% if period == 'all' %}bg-white shadow text-indigo-700{% else %}text-gray-500 hover:text-gray-700{% endif %}">Tümü</a>
+      <a href="?period=90" class="px-4 py-1.5 rounded-md text-sm font-medium transition
+        {% if period == '90' %}bg-white shadow text-indigo-700{% else %}text-gray-500 hover:text-gray-700{% endif %}">Son 3 Ay</a>
+      <a href="?period=30" class="px-4 py-1.5 rounded-md text-sm font-medium transition
+        {% if period == '30' %}bg-white shadow text-indigo-700{% else %}text-gray-500 hover:text-gray-700{% endif %}">Son 30 Gün</a>
+    </div>
+  </div>
+
+  <!-- Karşılaştırma bandı -->
+  <div x-show="sel.length === 2" x-cloak
+    class="shell-floating-bar fixed bottom-6 left-1/2 -translate-x-1/2 bg-indigo-700 text-white rounded-2xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
+    <span class="text-sm font-medium">2 deneme seçildi</span>
+    <button @click="goCompare()"
+      class="bg-white text-indigo-700 font-semibold text-sm px-4 py-1.5 rounded-lg hover:bg-indigo-50 transition">
+      Seçilen 2 Denemeyi Karşılaştır →
+    </button>
+    <button @click="sel=[]" class="text-indigo-300 hover:text-white text-lg leading-none">×</button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Sol: Grafikler + Sınav Listesi (2/3) -->
+    <div class="lg:col-span-2 space-y-6">
+
+      {% if exams %}
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="font-semibold text-gray-700">Net Gelişim (Ders Bazlı)</h2>
+          <span class="text-xs text-gray-400">{{ period|default:"Tüm zamanlar" }}</span>
+        </div>
+        <canvas id="lineChart" height="140"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
+        <h2 class="font-semibold text-gray-700 mb-1">Toplam Net (Sınav Bazlı)</h2>
+        <canvas id="barChart" height="120"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
+        <h2 class="font-semibold text-gray-700 mb-1">Çözüm Süresi vs. Net</h2>
+        <div id="scatterEmpty" class="hidden text-center py-6 text-sm text-gray-400">
+          Öğrenci henüz ders süresi girmemiş.
+        </div>
+        <canvas id="scatterChart" height="160"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 class="font-semibold text-gray-700">Tüm Denemeler</h2>
+          <span class="text-xs text-gray-400">{{ exams|length }} sınav · 2 seçerek karşılaştır</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+          {% for exam in exams %}
+          <div class="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 transition group"
+               :class="{ 'bg-indigo-50 border-l-4 border-indigo-500': picked({{ exam.id }}), 'opacity-40 pointer-events-none': dimmed({{ exam.id }}) }">
+
+            <input type="checkbox"
+              :checked="picked({{ exam.id }})"
+              :disabled="dimmed({{ exam.id }})"
+              @change="toggle({{ exam.id }})"
+              class="w-4 h-4 rounded accent-indigo-600 cursor-pointer shrink-0">
+
+            <a href="/student/exam/{{ exam.id }}/" class="flex-1 flex items-center justify-between min-w-0">
+              <div>
+                <div class="font-medium text-gray-800 group-hover:text-indigo-700">{{ exam.custom_name }}</div>
+                <div class="text-xs text-gray-400 mt-0.5">{{ exam.publisher.name }} · {{ exam.exam_date }}</div>
+              </div>
+              <div class="font-bold text-indigo-700 ml-4">{{ exam.total_net|floatformat:2 }}</div>
+            </a>
+
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-gray-50 rounded-2xl p-10 text-center text-gray-400">
+        {% if period != 'all' %}Seçili dönemde sınav yok.{% else %}Bu öğrencinin sınavı yok.{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sağ: Görev Paneli (1/3) -->
+    <div>
+      <script>
+      function coachTasks() {
+        return {
+          csrf:             '{{ csrf_token }}',
+          studentId:        {{ student.id }},
+          tab:              'radar',
+          radar:            {{ radar_json|safe }},
+          dueReview:        {{ due_review_json|safe }},
+          active:           {{ active_json|safe }},
+          completed:        {{ completed_json|safe }},
+          sessionCompleted: [],
+          serverDoneCount:  {{ completed_tasks|length }},
+
+          get completedBySubject() {
+            const g = {};
+            for (const t of this.completed) {
+              const k = t.subject.startsWith('TYT ') ? t.subject.slice(4) : t.subject;
+              (g[k] = g[k] || []).push(t);
+            }
+            return Object.entries(g).map(([name, tasks]) => ({name, tasks}));
+          },
+
+          assignTask(t) {
+            fetch('/coach/assign-task/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({topic_id: t.id, student_id: this.studentId})
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              this.radar = this.radar.filter(r => r.id !== t.id);
+              this.active.push({
+                id: d.task_id, topic_id: t.id,
+                name: t.name, subject: t.subject, sub: t.sub,
+                byCoach: true, wrong: t.wrong, blank: t.blank,
+              });
+            });
+          },
+
+          completeTask(t) {
+            fetch('/coach/task/' + t.id + '/complete/', {
+              method: 'POST', headers: {'X-CSRFToken': this.csrf}
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              this.active = this.active.filter(a => a.id !== t.id);
+              // Merge: keep topic_id (and other client-side fields) from the active
+              // item; overlay any server-confirmed fields from d.task on top.
+              const task = {...t, ...(d.task || {})};
+              this.completed.unshift(task);
+              this.sessionCompleted.unshift(task);
+            });
+          },
+
+          sm2Review(t, quality) {
+            fetch('/coach/task/' + t.id + '/action/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({action: 'sm2_review', quality_score: quality})
+            }).then(r => r.json()).then(d => {
+              if (d.ok) this.dueReview = this.dueReview.filter(r => r.id !== t.id);
+            });
+          },
+
+          cancelTask(t) {
+            fetch('/coach/task/' + t.id + '/action/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({action: 'cancel_assignment'})
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              this.active = this.active.filter(a => a.id !== t.id);
+              if (t.topic_id) {
+                this.radar.push({
+                  id: t.topic_id, name: t.name, subject: t.subject, sub: t.sub,
+                  wrong: t.wrong !== undefined ? t.wrong : 0,
+                  blank: t.blank !== undefined ? t.blank : 0,
+                });
+              }
+            });
+          },
+
+          undoComplete(t) {
+            fetch('/coach/task/' + t.id + '/action/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({action: 'undo_complete'})
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              this.completed = this.completed.filter(c => c.id !== t.id);
+              this.dueReview = this.dueReview.filter(r => r.id !== t.id);
+              this.active.push({...t});
+            });
+          },
+
+          undoCompletedTask(taskId) {
+            const task = this.completed.find(c => c.id === taskId);
+            fetch('/coach/task/' + taskId + '/action/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({action: 'undo_complete'})
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              const el = document.getElementById('done-task-' + taskId);
+              if (el) el.remove();
+              this.completed  = this.completed.filter(c => c.id !== taskId);
+              this.dueReview  = this.dueReview.filter(r => r.id !== taskId);
+              this.serverDoneCount--;
+              if (task) this.active.push({...task});
+            });
+          },
+
+          undoSessionCompleted(t) {
+            fetch('/coach/task/' + t.id + '/action/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+              body: JSON.stringify({action: 'undo_complete'})
+            }).then(r => r.json()).then(d => {
+              if (!d.ok) return;
+              this.sessionCompleted = this.sessionCompleted.filter(c => c.id !== t.id);
+              this.completed        = this.completed.filter(c => c.id !== t.id);
+              this.dueReview        = this.dueReview.filter(r => r.id !== t.id);
+              this.active.push({...t});
+            });
+          },
+        };
+      }
+      </script>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-4"
+           x-data="coachTasks()">
+
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-2 h-2 rounded-full bg-indigo-400 inline-block"></span>
+          <h2 class="font-semibold text-gray-700 text-sm">Görev Paneli</h2>
+        </div>
+
+        <!-- 4 Tab (2x2 grid) -->
+        <div class="grid grid-cols-2 gap-1 mb-4 text-xs font-medium">
+          <button @click="tab='radar'" class="py-1.5 rounded-md transition text-left px-2"
+            :class="tab==='radar' ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:bg-gray-50'">
+            🔴 Radar <span x-text="'(' + radar.length + ')'"></span>
+          </button>
+          <button @click="tab='review'" class="py-1.5 rounded-md transition text-left px-2"
+            :class="tab==='review' ? 'bg-amber-50 text-amber-600' : 'text-gray-500 hover:bg-gray-50'">
+            🔁 Tekrar <span x-text="'(' + dueReview.length + ')'"></span>
+          </button>
+          <button @click="tab='active'" class="py-1.5 rounded-md transition text-left px-2"
+            :class="tab==='active' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'">
+            📌 Aktif <span x-text="'(' + active.length + ')'"></span>
+          </button>
+          <button @click="tab='done'" class="py-1.5 rounded-md transition text-left px-2"
+            :class="tab==='done' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'">
+            ✅ Bitti <span x-text="'(' + completed.length + ')'"></span>
+          </button>
+        </div>
+
+        <!-- RADAR -->
+        <div x-show="tab==='radar'" x-cloak>
+          <template x-if="radar.length > 0">
+            <div id="radar-list-container" class="space-y-1.5">
+              <template x-for="t in radar" :key="t.id">
+                <div class="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-gray-800 truncate" x-text="t.name"></div>
+                    <div class="flex items-center gap-1 flex-wrap mt-0.5">
+                      <span class="text-xs text-gray-400" x-text="t.subject.slice(4)"></span>
+                      <span x-show="t.wrong > 0" class="text-xs px-1 py-0.5 rounded bg-red-100 text-red-600" x-text="t.wrong + 'Y'"></span>
+                      <span x-show="t.blank > 0" class="text-xs px-1 py-0.5 rounded bg-gray-200 text-gray-500" x-text="t.blank + 'B'"></span>
+                    </div>
+                  </div>
+                  <button @click="assignTask(t)"
+                    class="text-xs px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 hover:bg-indigo-50 whitespace-nowrap transition shrink-0">
+                    Görev Ata
+                  </button>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="radar.length === 0">
+            <div class="text-center py-6">
+              <div class="text-3xl mb-2">🎯</div>
+              <p class="text-sm text-gray-400">Tüm konular görevlendirildi!</p>
+            </div>
+          </template>
+        </div>
+
+        <!-- TEKRAR: SM-2 incelemesi gelen tamamlananlar -->
+        <div x-show="tab==='review'" x-cloak>
+          <template x-if="dueReview.length > 0">
+            <div class="space-y-2">
+              <template x-for="t in dueReview" :key="t.id">
+                <div class="p-2 rounded-lg bg-amber-50 border border-amber-100">
+                  <div class="text-xs font-medium text-gray-800 truncate mb-1.5" x-text="t.name"></div>
+                  <div class="text-xs text-gray-400 mb-2" x-text="t.subject.slice(4)"></div>
+                  <div class="flex gap-1">
+                    <button @click="sm2Review(t, 3)"
+                      class="flex-1 text-xs py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition font-medium">
+                      Zor (3)
+                    </button>
+                    <button @click="sm2Review(t, 4)"
+                      class="flex-1 text-xs py-1 rounded border border-amber-200 text-amber-600 hover:bg-amber-50 transition font-medium">
+                      Normal (4)
+                    </button>
+                    <button @click="sm2Review(t, 5)"
+                      class="flex-1 text-xs py-1 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition font-medium">
+                      Kolay (5)
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="dueReview.length === 0">
+            <div class="text-center py-6">
+              <div class="text-3xl mb-2">🏆</div>
+              <p class="text-sm text-gray-400">Bugün tekrar zamanı gelen konu yok.</p>
+            </div>
+          </template>
+        </div>
+
+        <!-- AKTİF: İptal + Tamamlandı -->
+        <div x-show="tab==='active'" x-cloak>
+          <template x-if="active.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in active" :key="t.id">
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-indigo-50 border border-indigo-100">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-gray-800 truncate" x-text="t.name"></div>
+                    <div class="flex items-center gap-1 mt-0.5">
+                      <span class="text-xs text-gray-400" x-text="t.subject.slice(4)"></span>
+                      <span class="text-xs px-1 py-0.5 rounded"
+                        :class="t.byCoach ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'"
+                        x-text="t.byCoach ? 'Koç' : 'Öğrenci'"></span>
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-0.5 shrink-0">
+                    <button @click="completeTask(t)"
+                      class="text-xs px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 whitespace-nowrap transition">
+                      Bitti ✓
+                    </button>
+                    <button @click="cancelTask(t)"
+                      class="text-xs px-1.5 py-0.5 rounded border border-red-200 text-red-500 hover:bg-red-50 whitespace-nowrap transition">
+                      İptal Et
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="active.length === 0">
+            <p class="text-sm text-gray-400 text-center py-4">Aktif görev yok.</p>
+          </template>
+        </div>
+
+        <!-- TAMAMLANANLAR: Derse göre gruplu + next_review_date + Geri Al -->
+        <div x-show="tab==='done'" x-cloak>
+
+          <!-- Bu oturumda tamamlananlar (Alpine-reaktif) -->
+          <template x-if="sessionCompleted.length > 0">
+            <div class="mb-3 pb-3 border-b border-gray-100 space-y-1.5">
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Az Önce Tamamlandı</div>
+              <template x-for="t in sessionCompleted" :key="t.id">
+                <div class="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-gray-800 truncate" x-text="t.name"></div>
+                    <div class="text-xs text-emerald-600 mt-0.5">✓ Tamamlandı</div>
+                  </div>
+                  <span class="text-xs px-1 py-0.5 rounded font-medium shrink-0"
+                    :class="t.byCoach ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'"
+                    x-text="t.byCoach ? 'Koç' : 'Öğrenci'"></span>
+                  <button @click="undoSessionCompleted(t)"
+                    class="text-xs px-1.5 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-100 whitespace-nowrap transition shrink-0">
+                    Geri Al
+                  </button>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- Önceki oturumlardan tamamlananlar (sunucu tarafı, gruplu) -->
+          {% regroup completed_tasks by topic.subject.name as subject_groups %}
+          <div x-show="serverDoneCount > 0" class="space-y-3">
+            {% for group in subject_groups %}
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                {% if group.grouper|slice:":4" == "TYT " %}{{ group.grouper|slice:"4:" }}{% else %}{{ group.grouper }}{% endif %}
+              </div>
+              {% for t in group.list %}
+              <div id="done-task-{{ t.id }}"
+                   class="flex items-center gap-1.5 p-2 rounded-lg mb-1 {% if not t.next_review_date or t.next_review_date <= today %}bg-red-50 border border-red-100{% else %}bg-emerald-50 border border-emerald-100{% endif %}">
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-medium text-gray-800 truncate">{{ t.topic.name }}</div>
+                  <div class="text-xs mt-0.5 {% if not t.next_review_date or t.next_review_date <= today %}text-red-500 font-medium{% else %}text-gray-400{% endif %}">
+                    {% if not t.next_review_date %}Tekrar tarihi yok
+                    {% elif t.next_review_date <= today %}⚠ {{ t.next_review_date|date:"d.m.Y" }}
+                    {% else %}{{ t.next_review_date|date:"d.m.Y" }}
+                    {% endif %}
+                  </div>
+                </div>
+                <span class="text-xs px-1 py-0.5 rounded font-medium shrink-0 {% if t.assigned_by_coach %}bg-indigo-100 text-indigo-600{% else %}bg-gray-100 text-gray-500{% endif %}">
+                  {% if t.assigned_by_coach %}Koç{% else %}Öğrenci{% endif %}
+                </span>
+                <button @click="undoCompletedTask({{ t.id }})"
+                        class="text-xs px-1.5 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-100 whitespace-nowrap transition shrink-0">
+                  Geri Al
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+          <p x-show="completed.length === 0" class="text-sm text-gray-400 text-center py-4">Henüz tamamlanan yok.</p>
+        </div>
+
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if exams %}
+<script>
+(function() {
+  const d = {{ chart_data_json|safe }};
+  if (!d.labels || d.labels.length === 0) return;
+
+  const examNames = d.exam_names;
+
+  const isMobile = window.innerWidth < 640;
+  const lineChart = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: d.subjects.map(s => ({
+        label: s.name, data: s.data, borderColor: s.border, backgroundColor: s.bg,
+        borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7,
+        tension: 0.35, fill: false,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
+        tooltip: { callbacks: {
+          title: items => examNames[items[0].dataIndex] + ' (' + d.labels[items[0].dataIndex] + ')',
+          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
+        }}
+      },
+      scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false }, ticks: { font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } } }
+    }
+  });
+
+  const barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: d.subjects.map(s => ({
+        label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
+        tooltip: { callbacks: {
+          title: items => examNames[items[0].dataIndex] + ' (' + d.labels[items[0].dataIndex] + ')',
+          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
+        }}
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+        y: { stacked: true, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+
+  const sd = {{ scatter_data_json|safe }};
+  if (!sd.datasets || sd.datasets.length === 0) {
+    document.getElementById('scatterEmpty').classList.remove('hidden');
+    document.getElementById('scatterChart').classList.add('hidden');
+  } else {
+    new Chart(document.getElementById('scatterChart'), {
+      type: 'scatter',
+      data: { datasets: sd.datasets.map(s => ({ label: s.label, data: s.data, backgroundColor: s.border, borderColor: s.border, pointRadius: 6, pointHoverRadius: 8 })) },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
+          tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
+        },
+        scales: {
+          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, beginAtZero: true },
+          y: { title: { display: !isMobile, text: 'Net Skor', color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

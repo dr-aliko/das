@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{{ page_title|default:"Branş Denemesi Ekle" }} — DAS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/entry-flow.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5 pb-[calc(env(safe-area-inset-bottom)+7rem)]" x-data="bransCreateV2()">
+  
+  {# ── Page header ── #}
+  <div class="flex items-center gap-3 pt-1">
+    <a href="{{ back_url|default:'/student/brans/' }}"
+       class="p-2 rounded-xl transition hover:opacity-70"
+       style="color:var(--muted)"
+       aria-label="{% trans 'Geri' %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-xl font-black" style="color:var(--heading)">{{ page_title|default:"Branş Denemesi Ekle" }}</h1>
+      {% if coach_view and student %}
+      <p class="text-xs font-medium mt-0.5" style="color:var(--muted)">Bu kayıt {{ student.full_name }} öğrencisine eklenecek.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" id="exam-create-form" @submit="saving = true">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url|default:'/brans/' }}">
+    {# Sync visual alpine state with hidden form inputs #}
+    <input type="hidden" name="dogru" :value="d">
+    <input type="hidden" name="yanlis" :value="y">
+    <input type="hidden" name="bos" :value="bos">
+
+    {# ── Section 1: Sınav Bilgileri ── #}
+    <div class="rounded-card p-5 space-y-4 mb-5" style="background:var(--surface-1); border:1.5px solid var(--border);">
+      <h2 class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Sınav Bilgileri</h2>
+      
+      {# Ders (Subject) #}
+      <div>
+        <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Ders <span class="text-down">*</span></label>
+        <select name="ders" x-model="ders" required @change="d=0; y=0;" class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2" style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
+          <option value="">Seçin…</option>
+          {% for val, label in form.ders.field.choices %}
+          {% if val %}
+          <option value="{{ val }}" {% if form.ders.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        {% if form.ders.errors %}<p class="text-down text-xs mt-1">{{ form.ders.errors.0 }}</p>{% endif %}
+      </div>
+
+      {# Date + Duration #}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Tarih <span class="text-down">*</span></label>
+          <input type="date" name="tarih" x-model="tarih" required class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2" style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
+          {% if form.tarih.errors %}<p class="text-down text-xs mt-1">{{ form.tarih.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Süre <span class="text-xs font-medium ml-0.5" style="color:var(--muted)">(dk)</span></label>
+          <input type="number" name="sure_dakika" x-model="sure" min="1" max="300" class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2" style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
+          {% if form.sure_dakika.errors %}<p class="text-down text-xs mt-1">{{ form.sure_dakika.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      {# Note #}
+      <div>
+        <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Not <span class="text-xs font-medium ml-0.5" style="color:var(--muted)">(opsiyonel)</span></label>
+        <textarea name="ogrenci_notu" x-model="not" rows="2" placeholder="Deneme hakkında kısa not…" class="w-full rounded-xl border px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2" style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);"></textarea>
+        {% if form.ogrenci_notu.errors %}<p class="text-down text-xs mt-1">{{ form.ogrenci_notu.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    {# ── Section 2: Ders Sonucu — stepper card ── #}
+    <div class="space-y-3 mb-5" x-show="ders" x-cloak>
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Ders Sonucu</h2>
+        <button type="button" @click="d=0; y=0;" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:opacity-70" style="color:var(--muted)">Sıfırla</button>
+      </div>
+
+      <div class="das-entry-card" :class="hasOverflow ? 'das-entry-card--overflow' : ''">
+        <div class="das-entry-card__accent" style="background: var(--primary);"></div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-baseline gap-2">
+            <span class="font-black text-base" style="color:var(--heading)">Sonuç</span>
+            <span class="text-xs font-medium" style="color:var(--muted)" x-text="total + 'S'"></span>
+          </div>
+          <div class="text-right">
+            <span class="das-entry-card__net-badge" :class="totalNet >= 0 ? 'text-up' : 'text-down'" x-text="fmtNet(totalNet)"></span>
+            <span class="das-entry-card__net-label">net</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          {# Doğru #}
+          <div class="das-stepper-row">
+            <div>
+              <span class="text-sm font-bold" style="color:var(--body)">Doğru</span>
+              <span class="block text-[10px] font-bold text-up">+1.00</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="das-stepper-btn" @click="decD()" :disabled="d <= 0 || saving"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg></button>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" x-model.number="d" @focus="$el.select()" @input="constrainD()" @keydown.arrow-up.prevent="incD()" @keydown.arrow-down.prevent="decD()" :disabled="saving" class="das-stepper-input w-8 min-w-0 shrink-0 p-0 text-center appearance-none" style="color:var(--heading);">
+              <button type="button" class="das-stepper-btn" @click="incD()" :disabled="hasOverflow || saving"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>
+            </div>
+          </div>
+
+          {# Yanlış #}
+          <div class="das-stepper-row">
+            <div>
+              <span class="text-sm font-bold" style="color:var(--body)">Yanlış</span>
+              <span class="block text-[10px] font-bold text-down">−0.25</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="das-stepper-btn" @click="decY()" :disabled="y <= 0 || saving"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg></button>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" x-model.number="y" @focus="$el.select()" @input="constrainY()" @keydown.arrow-up.prevent="incY()" @keydown.arrow-down.prevent="decY()" :disabled="saving" class="das-stepper-input w-8 min-w-0 shrink-0 p-0 text-center appearance-none" style="color:var(--heading);">
+              <button type="button" class="das-stepper-btn" @click="incY()" :disabled="hasOverflow || saving"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>
+            </div>
+          </div>
+
+          {# Boş #}
+          <div class="das-stepper-row opacity-50">
+            <div>
+              <span class="text-sm font-bold" style="color:var(--body)">Boş</span>
+              <span class="block text-[10px] font-bold" style="color:var(--primary)">Otomatik</span>
+            </div>
+            <span class="text-xl font-black tabular-nums w-8 text-center mr-[3.25rem]" style="color:var(--heading)" x-text="bos"></span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-3 px-0.5">
+          <span class="text-[10px]" style="color:var(--muted-2)">Toplam <span class="font-bold tabular-nums" x-text="d + y + bos"></span> / <span x-text="total"></span> soru</span>
+          <span class="das-remaining-badge" :class="remaining < 0 ? 'das-remaining-badge--over' : remaining === 0 ? 'das-remaining-badge--ok' : 'das-remaining-badge--warn'" x-text="remaining < 0 ? 'Sınır aşıldı!' : remaining + ' kalan'"></span>
+        </div>
+      </div>
+    </div>
+
+    {# Sticky footer MUST be inside the form to work on older mobile browsers #}
+    {% include "dashboard/partials/_create_footer_bar.html" %}
+
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function bransCreateV2() {
+  const limits = {{ subjects_json|safe }};
+  return {
+    ders: '{{ form.ders.value|default:"" }}',
+    tarih: '{{ form.tarih.value|default:"" }}',
+    sure: '{{ form.sure_dakika.value|default:"" }}',
+    not: '{{ form.ogrenci_notu.value|escapejs|default:"" }}',
+    d: parseInt('{{ form.dogru.value|default:"0" }}', 10) || 0,
+    y: parseInt('{{ form.yanlis.value|default:"0" }}', 10) || 0,
+    saving: false,
+    
+    get total() { return limits[this.ders] || 0; },
+    get bos() { return Math.max(0, this.total - (Math.floor(this.d)||0) - (Math.floor(this.y)||0)); },
+    get totalNet() { return (Math.floor(this.d)||0) - (Math.floor(this.y)||0) * 0.25; },
+    get hasOverflow() { return this.total > 0 && ((Math.floor(this.d)||0) + (Math.floor(this.y)||0) > this.total); },
+    get remaining() { return this.total - (Math.floor(this.d)||0) - (Math.floor(this.y)||0); },
+    get metaValid() { return !!(this.ders && this.tarih); },
+    get durationOver() { return false; },
+    get formValid() { return this.metaValid && !this.hasOverflow; },
+    
+    incD() { if (!this.hasOverflow && !this.saving) this.d++; },
+    decD() { if (this.d > 0 && !this.saving) this.d--; },
+    incY() { if (!this.hasOverflow && !this.saving) this.y++; },
+    decY() { if (this.y > 0 && !this.saving) this.y--; },
+    
+    constrainD() { this.d = Math.min(Math.max(0, Math.floor(this.d) || 0), this.total - (Math.floor(this.y) || 0)); },
+    constrainY() { this.y = Math.min(Math.max(0, Math.floor(this.y) || 0), this.total - (Math.floor(this.d) || 0)); },
+    
+    fmtNet(v, d) { return (v || 0).toFixed(d != null ? d : 2); }
+  }
+}
+</script>
+{% endblock %}

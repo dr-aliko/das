@@ -1,0 +1,68 @@
+{% load i18n %}
+{% comment %}DAS-344: Sticky Create Footer
+   Renders a fixed bottom bar with live total-net + submit button.
+   Requires Alpine: totalNet, hasOverflow, durationOver, metaValid, formValid, saving, fmtNet(v,d)
+   Submit button targets form id="exam-create-form" (rendered outside the form tag).{% endcomment %}
+
+<div class="das-create-footer z-[60] bottom-[calc(env(safe-area-inset-bottom)+4rem)] lg:bottom-0">
+  <div class="das-create-footer__inner">
+    <div class="flex items-center gap-4">
+
+      {# ── Live total net ── #}
+      <div class="shrink-0">
+        <span class="text-[10px] font-bold uppercase tracking-wide" style="color:var(--muted)">
+          {% trans "Toplam Net" %}
+        </span>
+        <div class="text-2xl font-black tabular-nums leading-none mt-0.5"
+             :class="hasOverflow || !metaValid ? 'text-down'
+                     : totalNet >= 0 ? 'text-up' : 'text-down'"
+             x-text="fmtNet(totalNet, 2)">0.00</div>
+      </div>
+
+      {# ── Validation messages (priority: meta > overflow > duration) ── #}
+      <div class="flex-1 min-w-0 space-y-0.5">
+        <p x-show="!metaValid" x-cloak
+           class="text-xs font-semibold truncate text-down">
+          {% trans "Sınav bilgileri eksik" %}
+        </p>
+        <p x-show="metaValid && hasOverflow" x-cloak
+           class="text-xs font-semibold truncate text-down">
+          {% trans "Soru sınırı aşıldı" %}
+        </p>
+        <p x-show="metaValid && !hasOverflow && durationOver" x-cloak
+           class="text-xs font-semibold truncate text-down">
+          {% trans "Süre 165 dk'yı aşıyor" %}
+        </p>
+        <p x-show="metaValid && !hasOverflow && !durationOver && hasTopicOverflow" x-cloak
+           class="text-xs font-semibold truncate text-down">
+          {% trans "Konu hata sayısı yanlış sayısını aşıyor" %}
+        </p>
+        <p x-show="formValid" x-cloak
+           class="text-xs font-medium truncate" style="color:var(--muted)">
+          {% trans "Kaydetmeye hazır" %}
+        </p>
+      </div>
+
+      {# ── Submit ── #}
+      <button type="submit"
+              form="exam-create-form"
+              :disabled="!formValid || saving"
+              :class="formValid && !saving
+                ? 'bg-primary text-white shadow-fab active:scale-[0.96]'
+                : 'opacity-30 cursor-not-allowed bg-primary text-white'"
+              class="shrink-0 px-6 py-3 rounded-2xl font-bold text-sm transition-all">
+        <span x-show="!saving">{% trans "Kaydet" %}</span>
+        <span x-show="saving" x-cloak class="flex items-center gap-2">
+          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          {% trans "Kaydediliyor…" %}
+        </span>
+      </button>
+
+    </div>
+  </div>
+</div>

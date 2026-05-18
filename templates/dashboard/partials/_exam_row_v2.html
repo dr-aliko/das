@@ -1,0 +1,78 @@
+<div class="das-card p-3 flex items-center gap-3 overflow-hidden select-none"
+     role="button"
+     tabindex="0"
+     :class="compareMode
+       ? 'cursor-pointer active:scale-[0.98]'
+       : 'cursor-pointer'"
+     @click="compareMode
+       ? toggleSelection({{ exam.id }}, '{{ exam.type }}')
+       : (window.location.href = '{% url "student:exam_detail" exam.id %}')"
+     @keydown.enter.prevent="$el.click()"
+     @keydown.space.prevent="$el.click()">
+
+  {# Left accent — colour-coded by exam type #}
+  <div class="absolute left-0 top-3 bottom-3 w-1 rounded-r-full
+    {% if exam.type == 'TYT' %}bg-blue-500
+    {% elif exam.type == 'AYT' %}bg-indigo-500
+    {% else %}bg-orange-400{% endif %}">
+  </div>
+
+  {# Compare-mode selection indicator #}
+  <div x-show="compareMode"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 -translate-x-1"
+       x-transition:enter-end="opacity-100 translate-x-0"
+       class="shrink-0 ml-1">
+    <div class="w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center"
+         :class="selected.some(s => s.id === {{ exam.id }})
+           ? 'bg-primary border-primary'
+           : 'border-slate-300'">
+      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+           x-show="selected.some(s => s.id === {{ exam.id }})">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+  </div>
+
+  {# Meta — type badge + publisher + date — min-w-0 allows text truncation #}
+  <div class="flex-grow min-w-0 pl-1">
+    <div class="flex items-center gap-1.5 mb-0.5 min-w-0">
+      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">
+        {{ exam.type }}
+      </span>
+      <span class="text-[10px] text-slate-300 shrink-0">·</span>
+      <span class="text-[10px] font-medium text-slate-500 truncate">{{ exam.publisher }}</span>
+    </div>
+    <div class="text-sm font-semibold text-slate-700 truncate">
+      {{ exam.date|date:"d M Y" }}
+    </div>
+  </div>
+
+  {# Net + delta chip — shrink-0 so it never collapses #}
+  <div class="text-right shrink-0 max-w-[6rem]">
+    <div class="text-lg font-bold text-slate-900 tnum leading-none">
+      {{ exam.net|floatformat:2 }}
+    </div>
+    <div class="mt-0.5 flex justify-end">
+      {% if exam.delta is not None %}
+        {% if exam.delta > 0 %}
+          <span class="text-[10px] font-bold text-up bg-up-tint px-1.5 py-0.5 rounded-md tnum">
+            +{{ exam.delta|floatformat:2 }}
+          </span>
+        {% elif exam.delta < 0 %}
+          <span class="text-[10px] font-bold text-down bg-down-tint px-1.5 py-0.5 rounded-md tnum">
+            {{ exam.delta|floatformat:2 }}
+          </span>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {# Chevron — normal mode only, keyboard-accessible indicator #}
+  <div x-show="!compareMode" class="text-slate-300 shrink-0" aria-hidden="true">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <use href="#das-icon-chev-right"/>
+    </svg>
+  </div>
+
+</div>

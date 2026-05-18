@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.custom_name }} — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Başlık + aksiyonlar -->
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="/student/" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">{{ exam.custom_name }}</h1>
+        <div class="flex items-center gap-3 mt-1 text-sm text-gray-400">
+          <span>{{ exam.publisher.name }}</span>
+          <span>·</span><span>{{ exam.exam_date }}</span>
+          {% if exam.duration_minutes %}<span>·</span><span>{{ exam.duration_minutes }} dk</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="text-right mr-2">
+        <div class="text-xs text-gray-400">Toplam Net</div>
+        <div class="text-3xl font-bold text-indigo-700">{{ exam.total_net|floatformat:2 }}</div>
+      </div>
+      <a href="/student/exam/{{ exam.id }}/edit/"
+        title="Düzenle"
+        class="p-2 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-200 text-gray-500 hover:text-indigo-600 transition">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </a>
+      <a href="/student/exam/{{ exam.id }}/delete/"
+        title="Sil"
+        class="p-2 rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 text-gray-500 hover:text-red-500 transition">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- Ders Sonuçları -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-700">Ders Sonuçları</h2>
+    </div>
+    <div class="divide-y divide-gray-50">
+      {% for result in results %}
+      <div class="px-6 py-4 flex items-center justify-between">
+        <div class="font-medium text-gray-700">{{ result.subject.name }}</div>
+        <div class="flex items-center gap-6 text-sm">
+          <div class="text-center">
+            <div class="text-xs text-gray-400 mb-0.5">Doğru</div>
+            <div class="font-semibold text-emerald-600">{{ result.correct_answers }}</div>
+          </div>
+          <div class="text-center">
+            <div class="text-xs text-gray-400 mb-0.5">Yanlış</div>
+            <div class="font-semibold text-red-500">{{ result.wrong_answers }}</div>
+          </div>
+          <div class="text-center">
+            <div class="text-xs text-gray-400 mb-0.5">Boş</div>
+            <div class="font-semibold text-gray-400">{{ result.blank_answers }}</div>
+          </div>
+          <div class="text-center border-l border-gray-100 pl-5">
+            <div class="text-xs text-gray-400 mb-0.5">Net</div>
+            <div class="font-bold text-base {% if result.net_score >= 0 %}text-indigo-700{% else %}text-red-500{% endif %}">
+              {{ result.net_score|floatformat:2 }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Konu Hataları -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-700">Konu Hataları</h2>
+      <a href="/student/exam/{{ exam.id }}/errors/"
+        class="flex items-center gap-1.5 text-xs text-indigo-600 hover:underline font-medium">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Düzenle
+      </a>
+    </div>
+
+    {% if topic_errors %}
+    <div class="px-6 py-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {% for error in topic_errors %}
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100">
+          <div class="min-w-0 mr-3">
+            <div class="text-sm font-medium text-gray-800 truncate">{{ error.topic.name }}</div>
+            <div class="text-xs text-gray-400">
+              {% if error.topic.sub_category %}{{ error.topic.sub_category }} · {% endif %}{{ error.topic.subject.name }}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            {% if error.wrong_count > 0 %}
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600">{{ error.wrong_count }}Y</span>
+            {% endif %}
+            {% if error.blank_count > 0 %}
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">{{ error.blank_count }}B</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="px-6 py-5 text-sm text-gray-400 text-center">
+      Konu hatası kaydedilmemiş.
+      <a href="/student/exam/{{ exam.id }}/errors/" class="text-indigo-500 hover:underline ml-1">Şimdi ekle →</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

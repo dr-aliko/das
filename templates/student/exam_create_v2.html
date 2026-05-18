@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% if is_edit %}{% trans "Deneme Düzenle" %}{% else %}{% trans "Yeni Deneme" %}{% endif %} — DAS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/entry-flow.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}DAS-343: Fast-Entry Create V2 — single page, meta+stepper+topic errors.
+DAS-341 stepper cards | DAS-342 draft persistence | DAS-344 sticky footer
+DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutation safety{% endcomment %}
+
+<script>
+  window._DAS_TOPICS_V2   = {{ topics_json|safe }};
+  window._DAS_SUBJECTS_V2 = {{ subjects_json|safe }};
+  {% if is_edit %}
+  window._DAS_EXAM_PREFILL = {{ prefill_json|safe }};
+  {% endif %}
+</script>
+
+<div class="space-y-5 pb-[calc(env(safe-area-inset-bottom)+7rem)]"
+     x-data="examCreateV2()"
+     x-init="init()">
+
+  {# ── Page header ── #}
+  <div class="flex items-center gap-3 pt-1">
+    <a href="{% if is_edit %}{% url 'student:exam_detail_v2' exam_id=exam.id %}{% else %}/student/denemeler/{% endif %}"
+       class="p-2 rounded-xl transition hover:opacity-70"
+       style="color:var(--muted)"
+       aria-label="{% trans 'Geri' %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-xl font-black" style="color:var(--heading)">
+        {% if is_edit %}{% trans "Deneme Düzenle" %}{% else %}{% trans "Yeni Deneme" %}{% endif %}
+      </h1>
+      <p class="text-xs font-medium mt-0.5" style="color:var(--muted)">
+        {% if is_edit %}{{ exam.custom_name }}{% else %}{% trans "TYT Sınav Sonuçları" %}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {# ── Draft restore banner (DAS-342) — hidden in edit mode ── #}
+  <div x-show="hasDraft{% if is_edit %} && false{% endif %}" x-cloak class="das-draft-banner">
+    <div>
+      <span class="text-xs font-bold" style="color:var(--primary)">{% trans "Kaydedilmemiş Taslak" %}</span>
+      <span class="text-xs ml-1.5" style="color:var(--muted)" x-text="draftAgeLabel"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" @click="restoreDraft()"
+              class="text-xs font-bold px-3 py-1.5 rounded-lg transition active:opacity-70"
+              style="background:var(--primary); color:white;">
+        {% trans "Geri Yükle" %}
+      </button>
+      <button type="button" @click="dismissDraft()"
+              class="text-xs font-semibold px-2 py-1.5 rounded-lg transition hover:opacity-70"
+              style="color:var(--muted)">
+        {% trans "Sil" %}
+      </button>
+    </div>
+  </div>
+
+  {# ── FORM ── id referenced by the footer's submit button #}
+  <form id="exam-create-form"
+        method="post"
+        @submit.prevent="handleSubmit($event)">
+    {% csrf_token %}
+    {# Topic errors JSON — written by handleSubmit before native submit #}
+    <input type="hidden" name="errors_json" x-ref="topicErrorsInput">
+
+    {# ── Section 1: Sınav Bilgileri ── #}
+    <div class="rounded-card p-5 space-y-4 mb-5"
+         style="background:var(--surface-1); border:1.5px solid var(--border);">
+      <h2 class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">
+        {% trans "Sınav Bilgileri" %}
+      </h2>
+
+      {# Publisher #}
+      <div>
+        <label for="id_publisher"
+               class="block text-sm font-bold mb-1.5"
+               style="color:var(--body)">
+          {% trans "Yayın" %} <span class="text-down">*</span>
+        </label>
+        <select id="id_publisher" name="publisher"
+                x-model="publisherId" required
+                class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                       focus:outline-none focus:ring-2"
+                style="background:var(--surface-2); border-color:var(--border-strong);
+                       color:var(--body); --tw-ring-color:var(--primary);">
+          <option value="">{% trans "Seçin…" %}</option>
+          {% for pub in publishers %}
+            <option value="{{ pub.id }}">{{ pub.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Custom name #}
+      <div>
+        <label for="id_custom_name"
+               class="block text-sm font-bold mb-1.5"
+               style="color:var(--body)">
+          {% trans "Deneme Adı" %} <span class="text-down">*</span>
+        </label>
+        <input id="id_custom_name" type="text" name="custom_name"
+               x-model="customName" required
+               placeholder="{% trans 'Örn: Haziran 1. Denemem' %}"
+               autocomplete="off"
+               class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                      focus:outline-none focus:ring-2"
+               style="background:var(--surface-2); border-color:var(--border-strong);
+                      color:var(--body); --tw-ring-color:var(--primary);">
+      </div>
+
+      {# Date + duration (2-col on mobile too — both compact) #}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="id_exam_date"
+                 class="block text-sm font-bold mb-1.5"
+                 style="color:var(--body)">
+            {% trans "Tarih" %} <span class="text-down">*</span>
+          </label>
+          <input id="id_exam_date" type="date" name="exam_date"
+                 x-model="examDate" required
+                 max="{{ today_iso }}"
+                 class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                        focus:outline-none focus:ring-2"
+                 style="background:var(--surface-2); border-color:var(--border-strong);
+                        color:var(--body); --tw-ring-color:var(--primary);">
+        </div>
+        <div>
+          <label for="id_duration"
+                 class="block text-sm font-bold mb-1.5"
+                 style="color:var(--body)">
+            {% trans "Süre" %}
+            <span class="text-xs font-medium ml-0.5" style="color:var(--muted)">({% trans "dk" %})</span>
+          </label>
+          <input id="id_duration" type="number" name="duration_minutes"
+                 x-model="duration"
+                 min="1" max="300" placeholder="165"
+                 :class="durationOver ? 'border-down' : ''"
+                 class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                        focus:outline-none focus:ring-2"
+                 style="background:var(--surface-2); border-color:var(--border-strong);
+                        color:var(--body); --tw-ring-color:var(--primary);">
+        </div>
+      </div>
+
+      {# Student note (collapsed by default for speed) #}
+      <div>
+        <label for="id_student_note"
+               class="block text-sm font-bold mb-1.5"
+               style="color:var(--body)">
+          {% trans "Not" %}
+          <span class="text-xs font-medium ml-0.5" style="color:var(--muted)">({% trans "opsiyonel" %})</span>
+        </label>
+        <textarea id="id_student_note" name="student_note"
+                  x-model="studentNote" rows="2"
+                  placeholder="{% trans 'Sınav hakkında kısa not…' %}"
+                  class="w-full rounded-xl border px-3 py-2.5 text-sm resize-none
+                         focus:outline-none focus:ring-2"
+                  style="background:var(--surface-2); border-color:var(--border-strong);
+                         color:var(--body); --tw-ring-color:var(--primary);"></textarea>
+      </div>
+    </div>
+
+    {# ── Section 2: Ders Sonuçları — stepper cards (DAS-341) ── #}
+    <div class="space-y-3 mb-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-widest"
+            style="color:var(--muted)">{% trans "Ders Sonuçları" %}</h2>
+        <button type="button" @click="resetAll()"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:opacity-70"
+                style="color:var(--muted)">
+          {% trans "Sıfırla" %}
+        </button>
+      </div>
+
+      {% for subject in subjects %}
+        {% include "components/_subject_stepper_card.html" with subject=subject %}
+      {% endfor %}
+    </div>
+
+    {# ── Section 3: Hata Analizi — progressive disclosure (DAS-348) ── #}
+    <div class="rounded-card overflow-hidden mb-5"
+         style="background:var(--surface-1); border:1.5px solid var(--border);">
+
+      {# Toggle header #}
+      <button type="button"
+              @click="showTopicSection = !showTopicSection"
+              class="w-full flex items-center justify-between px-5 py-4 text-left
+                     transition hover:opacity-80"
+              :style="showTopicSection ? 'background:var(--surface-2)' : ''"
+              :aria-expanded="showTopicSection">
+        <div class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 shrink-0" style="color:var(--primary)"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                     M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <span class="font-bold text-sm" style="color:var(--heading)">{% trans "Hata Analizi" %}</span>
+          <span x-show="topicRows.length > 0" x-cloak
+                class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style="background:var(--primary-tint); color:var(--primary)"
+                x-text="topicRows.length + ' konu'"></span>
+          <span class="text-xs" style="color:var(--muted)">{% trans "opsiyonel" %}</span>
+        </div>
+        <svg class="w-4 h-4 transition-transform duration-200"
+             :class="showTopicSection ? 'rotate-180' : ''"
+             style="color:var(--muted)"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+
+      {# Collapsible body (x-collapse from @alpinejs/collapse) #}
+      <div x-show="showTopicSection"
+           x-collapse
+           class="border-t px-5 pt-4"
+           style="border-color:var(--border);">
+        {% include "dashboard/partials/_topic_picker_inline.html" %}
+      </div>
+    </div>
+
+  </form>{# /exam-create-form #}
+
+</div>{# /x-data wrapper #}
+
+{# ── Sticky footer — outside form, connects via form="exam-create-form" ── #}
+{% include "dashboard/partials/_create_footer_bar.html" %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'js/das-draft.js' %}"></script>
+<script>
+/* ── DAS-343 + DAS-342 + DAS-345 + DAS-346 + DAS-349: examCreateV2 Alpine data ── */
+function examCreateV2() {
+  const DRAFT_KEY  = 'das-draft-exam-create-{{ request.user.id }}';
+  const allTopics  = window._DAS_TOPICS_V2   || [];
+  const allSubjects = window._DAS_SUBJECTS_V2 || [];
+
+  /* Subject config from Django — avoids re-parsing from DOM */
+  const subjectConfig = [
+    {% for s in subjects %}
+    { id: '{{ s.id }}', total: {{ s.question_count }} },
+    {% endfor %}
+  ];
+
+  return {
+    /* ── Meta ──────────────────────────────────────────────────────────── */
+    publisherId:  '',
+    customName:   '',
+    examDate:     '',
+    duration:     '',
+    studentNote:  '',
+
+    /* ── Subject rows { [id]: { d, y, total } } ─────────────────────── */
+    rows: {},
+
+    /* ── Topic errors ───────────────────────────────────────────────── */
+    topicRows:        [],
+    newTopic:         {
+      subjectId: '', subCat: '', topicId: null,
+      topicName: '', subjectName: '', search: '',
+      wrongCount: 1, blankCount: 0,
+    },
+    showTopicSection: false,
+    allTopics,
+    allSubjects,
+
+    /* ── Draft ──────────────────────────────────────────────────────── */
+    hasDraft:     false,
+    draftAgeLabel: '',
+    _draft:       null,
+    _draftTimer:  null,
+
+    /* ── UI ─────────────────────────────────────────────────────────── */
+    saving: false,
+
+    /* ── Per-subject computed ────────────────────────────────────────── */
+    net(id)       { const r = this.rows[id]; return r.d - r.y * 0.25; },
+    blank(id)     { return Math.max(0, this.rows[id].total - this.rows[id].d - this.rows[id].y); },
+    remaining(id) { return this.rows[id].total - this.rows[id].d - this.rows[id].y; },
+    overflow(id)  { return (this.rows[id].d + this.rows[id].y) > this.rows[id].total; },
+
+    /* ── Global computed (Alpine getters) ──────────────────────────── */
+    get totalNet()    { return Object.keys(this.rows).reduce((s, id) => s + this.net(id), 0); },
+    get hasOverflow() { return Object.keys(this.rows).some(id => this.overflow(id)); },
+    get hasTopicOverflow() { return Object.keys(this.rows).some(id => this.topicWrongsFor(id) > (this.rows[id]?.y || 0)); },
+    get metaValid()   { return !!(this.publisherId && this.customName.trim() && this.examDate); },
+    get durationOver(){ return (parseFloat(this.duration) || 0) > 165; },
+    get formValid()   { return this.metaValid && !this.hasOverflow && !this.durationOver && !this.hasTopicOverflow; },
+
+    /* ── Stepper actions (DAS-346: arrow-key events on buttons) ─────── */
+    incD(id) { if (!this.overflow(id) && !this.saving) { this.rows[id].d++; this._schedDraft(); } },
+    decD(id) { if (this.rows[id].d > 0 && !this.saving) { this.rows[id].d--; this._schedDraft(); } },
+    incY(id) { if (!this.overflow(id) && !this.saving) { this.rows[id].y++; this._schedDraft(); } },
+    decY(id) { if (this.rows[id].y > 0 && !this.saving) { this.rows[id].y--; this._schedDraft(); } },
+    resetAll() {
+      Object.keys(this.rows).forEach(id => { this.rows[id].d = 0; this.rows[id].y = 0; });
+      this._schedDraft();
+    },
+
+    /* ── Format helper ──────────────────────────────────────────────── */
+    fmtNet(v, d) { return (v || 0).toFixed(d != null ? d : 2); },
+
+    /* ── Draft helpers (DAS-342) ───────────────────────────────────── */
+    _schedDraft() {
+      clearTimeout(this._draftTimer);
+      this._draftTimer = setTimeout(() => this.saveDraft(), 400);
+    },
+
+    saveDraft() {
+      const data = {
+        publisherId: this.publisherId, customName: this.customName,
+        examDate: this.examDate, duration: this.duration,
+        studentNote: this.studentNote, topicRows: this.topicRows,
+        rows: Object.fromEntries(
+          Object.entries(this.rows).map(([id, r]) => [id, { d: r.d, y: r.y }])
+        ),
+      };
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.assign(data, { _ts: Date.now() }))); }
+      catch(e) {}
+    },
+
+    restoreDraft() {
+      const d = this._draft;
+      if (!d) return;
+      if (d.publisherId)  this.publisherId  = d.publisherId;
+      if (d.customName)   this.customName   = d.customName;
+      if (d.examDate)     this.examDate     = d.examDate;
+      if (d.duration)     this.duration     = d.duration;
+      if (d.studentNote)  this.studentNote  = d.studentNote;
+      if (d.rows) {
+        Object.entries(d.rows).forEach(([id, r]) => {
+          if (this.rows[id]) { this.rows[id].d = r.d || 0; this.rows[id].y = r.y || 0; }
+        });
+      }
+      if (d.topicRows && d.topicRows.length) this.topicRows = d.topicRows;
+      this.hasDraft = false; this._draft = null;
+    },
+
+    dismissDraft() {
+      try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+      this.hasDraft = false; this._draft = null;
+    },
+
+    /* ── Topic picker helpers ───────────────────────────────────────── */
+    topicSubCats() {
+      if (!this.newTopic.subjectId) return [];
+      return [...new Set(
+        allTopics
+          .filter(t => t.subject_id == this.newTopic.subjectId && t.sub_category)
+          .map(t => t.sub_category)
+      )].sort();
+    },
+
+    topicFilteredTopics() {
+      const q = this.newTopic.search.toLowerCase();
+      return allTopics.filter(t => {
+        if (t.subject_id != this.newTopic.subjectId) return false;
+        if (this.topicSubCats().length > 0 && t.sub_category !== this.newTopic.subCat) return false;
+        if (q && !t.name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+    },
+
+    selectNewTopic(t) {
+      this.newTopic.topicId     = t.id;
+      this.newTopic.topicName   = t.name;
+      this.newTopic.subjectName = t.subject_name;
+    },
+
+    canAddTopic() {
+      if (!this.newTopic.topicId) return false;
+      if (this.newTopic.wrongCount <= 0 && this.newTopic.blankCount <= 0) return false;
+      const sid    = String(this.newTopic.subjectId);
+      const target = this.rows[sid]?.y || 0;
+      const adding = parseInt(this.newTopic.wrongCount) || 0;
+      if (adding > 0 && this.topicWrongsFor(sid) + adding > target) return false;
+      return true;
+    },
+
+    addTopicRow() {
+      if (!this.canAddTopic()) return;
+      const hit = this.topicRows.find(r => r.topicId === this.newTopic.topicId);
+      if (hit) {
+        hit.wrongCount += this.newTopic.wrongCount;
+        hit.blankCount += this.newTopic.blankCount;
+      } else {
+        this.topicRows.push({ ...this.newTopic });
+      }
+      /* reset picker, keep subject + subCat for rapid same-subject entry */
+      this.newTopic.topicId    = null;
+      this.newTopic.topicName  = '';
+      this.newTopic.search     = '';
+      /* clamp to remaining capacity so the input never violates its own :max */
+      const _sid = String(this.newTopic.subjectId);
+      const _rem = Math.max(0, (this.rows[_sid]?.y || 0) - this.topicWrongsFor(_sid));
+      this.newTopic.wrongCount = _rem > 0 ? 1 : 0;
+      this.newTopic.blankCount = 0;
+      this._schedDraft();
+    },
+
+    /* Step-1 Y/B reminder for topic picker (DAS-348) */
+    topicStep1Info() {
+      const id = String(this.newTopic.subjectId);
+      const r  = this.rows[id];
+      if (!r) return null;
+      return { wrong: r.y, blank: this.blank(id) };
+    },
+
+    /* ── Topic-error progress helpers ──────────────────────────────── */
+    topicWrongsFor(subjectId) {
+      return this.topicRows
+        .filter(r => String(r.subjectId) === String(subjectId))
+        .reduce((s, r) => s + (parseInt(r.wrongCount) || 0), 0);
+    },
+    topicBlanksFor(subjectId) {
+      return this.topicRows
+        .filter(r => String(r.subjectId) === String(subjectId))
+        .reduce((s, r) => s + (parseInt(r.blankCount) || 0), 0);
+    },
+    topicProgressColor(subjectId) {
+      const target = this.rows[subjectId]?.y || 0;
+      const mapped = this.topicWrongsFor(subjectId);
+      if (target === 0 || mapped === 0) return 'transparent';
+      if (mapped < target)   return '#f59e0b';
+      if (mapped === target) return '#10b981';
+      return 'var(--down)';
+    },
+    topicProgressPercent(subjectId) {
+      const target = this.rows[subjectId]?.y || 0;
+      if (target === 0) return 0;
+      return Math.min(100, Math.round((this.topicWrongsFor(subjectId) / target) * 100));
+    },
+
+    /* ── Submit — DAS-349 mutation safety ───────────────────────────── */
+    handleSubmit(e) {
+      /* Double-submit guard */
+      if (!this.formValid || this.saving) return;
+
+      /* Serialize topic errors into hidden field */
+      this.$refs.topicErrorsInput.value = JSON.stringify(
+        this.topicRows.map(r => ({
+          topicId: r.topicId, topicName: r.topicName,
+          subjectId: r.subjectId, subjectName: r.subjectName,
+          subCat: r.subCat || '',
+          wrongCount: r.wrongCount, blankCount: r.blankCount,
+        }))
+      );
+
+      this.saving = true;
+
+      /* Clear draft before navigation so bfcache restore doesn't re-offer it */
+      try { localStorage.removeItem(DRAFT_KEY); } catch(er) {}
+
+      e.target.submit();
+    },
+
+    /* ── Init ───────────────────────────────────────────────────────── */
+    init() {
+      /* Build subject rows from Django-rendered config */
+      subjectConfig.forEach(s => { this.rows[s.id] = { d: 0, y: 0, total: s.total }; });
+
+      /* Pre-fill from edit context (exam_edit view injects _DAS_EXAM_PREFILL) */
+      const prefill = window._DAS_EXAM_PREFILL;
+      if (prefill) {
+        this.publisherId  = prefill.publisherId  || '';
+        this.customName   = prefill.customName   || '';
+        this.examDate     = prefill.examDate     || '';
+        this.duration     = prefill.duration     || '';
+        this.studentNote  = prefill.studentNote  || '';
+        if (prefill.rows) {
+          Object.keys(prefill.rows).forEach(id => {
+            if (this.rows[id]) {
+              this.rows[id].d = prefill.rows[id].d || 0;
+              this.rows[id].y = prefill.rows[id].y || 0;
+            }
+          });
+        }
+        this.topicRows = prefill.topicRows || [];
+        return; /* skip draft check when editing */
+      }
+
+      /* Check stored draft (DAS-342) */
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          const d = JSON.parse(raw);
+          this._draft   = d;
+          this.hasDraft = true;
+          const age = d._ts ? Math.round((Date.now() - d._ts) / 60000) : null;
+          this.draftAgeLabel = age !== null ? `(${age} dk önce)` : '';
+        }
+      } catch(e) {}
+
+      /* Watch meta fields for debounced draft autosave */
+      ['publisherId', 'customName', 'examDate', 'duration', 'studentNote']
+        .forEach(f => this.$watch(f, () => this._schedDraft()));
+    },
+  };
+}
+</script>
+{% endblock %}

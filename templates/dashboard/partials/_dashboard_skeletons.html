@@ -1,0 +1,53 @@
+{# DAS-014: Dashboard Skeleton Loaders — opt-in reference partial            #}
+{# Not included anywhere by default. Use when converting sections to async  #}
+{# fetches. Requires .skeleton from components.css (DAS-014).               #}
+
+{# ── 1. Subject Breakdown / KPI grid (4 cards, 2-col) ─────────────────── #}
+<div class="px-4 mb-5 grid grid-cols-2 gap-3">
+  {% for _ in "1234" %}
+  <div class="das-card h-32 flex flex-col justify-between">
+    <div>
+      <div class="skeleton h-2 w-16 mb-2"></div>
+      <div class="skeleton h-6 w-20 mb-2"></div>
+      <div class="skeleton h-3 w-10"></div>
+    </div>
+    <div>
+      <div class="skeleton h-1.5 w-full rounded-full"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── 2. Trend Chart card (matches 200px chart body + summary strip) ─────── #}
+<div class="px-4 mb-5">
+  <div class="das-card p-0 overflow-hidden">
+    <div class="p-4 flex items-end gap-2 justify-center" style="height:200px;">
+      <div class="skeleton w-4 rounded-t" style="height:40%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:62%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:28%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:50%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:72%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:58%;"></div>
+      <div class="skeleton w-4 rounded-t" style="height:44%;"></div>
+    </div>
+    <div class="bg-[var(--surface-2)] border-t border-[var(--border)] px-4 py-3 h-[48px]"></div>
+  </div>
+</div>
+
+{# ── 3. List (weak topics / recent exams, 3 rows) ─────────────────────── #}
+<div class="px-4 mb-5">
+  <div class="das-card space-y-4">
+    {% for _ in "123" %}
+    <div class="flex items-center justify-between pb-4 border-b border-[var(--border)] last:border-0 last:pb-0">
+      <div class="flex items-center gap-3">
+        <div class="skeleton w-8 h-8 rounded-full"></div>
+        <div>
+          <div class="skeleton h-3 w-32 mb-1.5"></div>
+          <div class="skeleton h-2 w-20"></div>
+        </div>
+      </div>
+      <div class="skeleton h-4 w-10"></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

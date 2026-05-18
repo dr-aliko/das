@@ -1,0 +1,938 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Görevler — DAS{% endblock %}
+
+{% block content %}
+{# ── MOBILE VIEW (DAS-501-507, DAS-512-522) ─────────────────────────────────── #}
+<div class="md:hidden -mx-4 -mt-5 sm:-mt-8"
+     x-data="coachMobilePanel()"
+     x-init="init()"
+     x-cloak>
+
+  {# Slim app bar #}
+  <header class="sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] px-4 h-14 flex items-center justify-between"
+          x-data="{ open: false }">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[var(--primary)]">
+        <svg class="w-5 h-5" viewBox="0 0 24 24"><use href="#das-icon-task"/></svg>
+      </div>
+      <h1 class="text-sm font-bold text-[var(--heading)] uppercase tracking-wider">Görevler</h1>
+    </div>
+    <div class="relative ml-auto shrink-0">
+      <button @click="open = !open"
+              type="button"
+              class="w-10 h-10 flex items-center justify-center rounded-xl text-[var(--muted)] active:scale-95 transition-transform"
+              :class="open ? 'bg-[var(--surface-2)] text-[var(--primary)]' : ''"
+              aria-label="Dışa aktar menüsünü aç">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
+        </svg>
+      </button>
+      <div x-show="open"
+           @click.away="open = false"
+           x-transition:enter="transition ease-out duration-100"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           class="absolute right-0 mt-2 w-48 bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden z-50"
+           x-cloak>
+        <div class="p-2 space-y-1">
+          <a :href="selectedStudent ? exportUrl('hafta.xlsx') : '#'"
+             @click="open = false"
+             class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left"
+             :class="selectedStudent ? '' : 'opacity-40 pointer-events-none'">
+            <svg class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Excel Olarak İndir
+          </a>
+          <button @click="exportHTML(); open = false"
+                  :disabled="!selectedStudent"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left disabled:opacity-40 disabled:pointer-events-none">
+            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            HTML Olarak İndir
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {# Coach context bar — sticky sub-header with student picker #}
+  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+    <button @click="showStudentSheet = true"
+            class="w-full px-4 py-3 flex items-center justify-between active:bg-[var(--surface-2)] transition-colors">
+      <div class="flex items-center gap-3">
+        <div x-show="selectedStudent"
+             class="pii w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold"
+             x-text="selectedStudent?.initials ?? '?'"></div>
+        <div class="text-left">
+          <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-tight">Öğrenci İzleniyor</div>
+          <div class="pii text-sm font-bold text-[var(--heading)]"
+               x-text="selectedStudent ? selectedStudent.full_name : 'Öğrenci seçin…'"></div>
+        </div>
+      </div>
+      <svg class="w-5 h-5 text-[var(--muted-2)]" viewBox="0 0 24 24">
+        <use href="#das-icon-chev-down"/>
+      </svg>
+    </button>
+  </div>
+
+  {# Week strip #}
+  <div class="bg-[var(--surface-1)] pt-4 pb-2 border-b border-[var(--border)]">
+    <div class="px-4 mb-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <button @click="prevWeek()"
+                class="p-1 text-[var(--muted)] active:scale-90 transition-transform">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <span class="text-xs font-bold text-[var(--heading)]" x-text="weekLabel"></span>
+        <button @click="nextWeek()"
+                class="p-1 text-[var(--muted)] active:scale-90 transition-transform">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+      <button @click="goToday()"
+              class="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider active:scale-95 transition-transform">
+        Bugün
+      </button>
+    </div>
+
+    <div class="flex justify-between px-2 gap-1" style="overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;">
+      <template x-for="(day, idx) in days" :key="day.iso">
+        <button @click="activeDay = idx + 1"
+                class="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all relative min-w-[36px]"
+                :class="activeDay === idx + 1
+                    ? 'bg-[var(--primary-tint)] border border-[var(--primary)]'
+                    : 'border border-transparent'">
+          <span class="text-[10px] font-bold uppercase"
+                :class="activeDay === idx + 1 ? 'text-[var(--primary)]' : 'text-[var(--muted)]'"
+                x-text="day.label"></span>
+          <span class="text-sm font-black"
+                :class="activeDay === idx + 1 ? 'text-[var(--heading)]' : 'text-[var(--muted)]'"
+                x-text="day.num"></span>
+          <div class="flex gap-0.5 h-2 items-center">
+            <template x-for="i in Math.min(day.tasks.length, 3)" :key="i">
+              <div class="w-1 h-1 rounded-full"
+                   :class="activeDay === idx + 1 ? 'bg-[var(--primary)]' : 'bg-[var(--muted-2)]'"></div>
+            </template>
+          </div>
+        </button>
+      </template>
+    </div>
+  </div>
+
+  {# Day header + task list #}
+  <main class="px-4 pt-5 pb-28">
+    <div class="flex items-center justify-between mb-5">
+      <div class="flex items-baseline gap-2">
+        <h2 class="text-xl font-black text-[var(--heading)] uppercase"
+            x-text="['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA','CUMARTESİ','PAZAR'][activeDay - 1]"></h2>
+        <span class="text-[var(--muted)] text-sm font-medium"
+              x-text="days[activeDay-1] ? days[activeDay-1].num + ' ' + days[activeDay-1].month : ''"></span>
+      </div>
+      <span class="text-[10px] font-bold text-[var(--muted-2)] uppercase tracking-widest">
+        <span x-text="activeDayTasks.length"></span> GÖREV
+      </span>
+    </div>
+
+    {# Loading indicator #}
+    <div x-show="loading" class="py-10 text-center text-[var(--muted)] text-sm">
+      <div class="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+      Yükleniyor…
+    </div>
+
+    {# No student selected #}
+    <div x-show="!loading && !selectedStudent" class="py-12 text-center">
+      <p class="text-sm font-bold text-[var(--muted)]">Görevleri görüntülemek için bir öğrenci seçin.</p>
+    </div>
+
+    {# Task cards #}
+    <div x-show="!loading && selectedStudent" class="space-y-3">
+      <template x-for="task in activeDayActiveTasks" :key="task.id">
+        <div class="das-card p-0 overflow-hidden flex items-stretch min-h-[72px] active:scale-[0.98] transition-transform"
+             @click="openEdit(task)">
+
+          <div class="w-1.5 shrink-0" :style="{ backgroundColor: task.color }"></div>
+
+          <div class="flex-1 p-4 flex items-center gap-4">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-sm font-bold text-[var(--heading)] leading-tight truncate mb-0.5"
+                  x-text="task.title"></h3>
+              <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <span x-text="task.subject"></span>
+                <template x-if="task.duration">
+                  <span>• <span x-text="task.duration"></span></span>
+                </template>
+              </div>
+            </div>
+            <svg class="w-5 h-5 text-[var(--muted-2)] shrink-0" viewBox="0 0 24 24">
+              <use href="#das-icon-chev-right"/>
+            </svg>
+          </div>
+        </div>
+      </template>
+
+      {% include "tasks/partials/_completed_tasks_accordion.html" %}
+
+      <div x-show="!loading && selectedStudent && activeDayTasks.length === 0" class="py-12 text-center">
+        <div class="w-16 h-16 bg-[var(--surface-2)] rounded-full flex items-center justify-center mx-auto mb-4 text-[var(--muted-2)]">
+          <svg class="w-8 h-8" viewBox="0 0 24 24"><use href="#das-icon-task"/></svg>
+        </div>
+        <p class="text-sm font-bold text-[var(--muted)]">Bu gün için görev bulunmuyor.</p>
+        <button @click="openAdd()" class="mt-4 text-[var(--primary)] font-bold text-sm active:scale-95 transition-transform">
+          Yeni görev ekle →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  {# FAB — add task for selected student #}
+  <button @click="openAdd()"
+          x-show="selectedStudent"
+          class="fixed bottom-24 right-4 w-14 h-14 bg-[var(--primary)] text-white rounded-2xl shadow-lg shadow-indigo-500/40 flex items-center justify-center active:scale-95 transition-transform z-30">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/>
+    </svg>
+  </button>
+
+  {% include "tasks/partials/_task_bottom_sheets.html" %}
+
+</div>
+{# ── END MOBILE VIEW ─────────────────────────────────────────────────────────── #}
+
+<script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
+<div class="hidden md:block">
+<div x-data="panel()" x-init="init()" x-cloak>
+
+  <div class="print:hidden flex items-center gap-2 mb-5 flex-wrap">
+
+    <select x-model="studentId" @change="loadWeek()"
+            class="pii h-9 pl-3 pr-8 rounded-lg bg-ink-850 border border-ink-700 text-sm
+                   text-ink-100 focus:outline-none focus:border-steel-500 transition">
+      <option value="">Öğrenci Seçin</option>
+      {% for s in students %}
+      <option value="{{ s.id }}">{{ s.full_name }}</option>
+      {% endfor %}
+    </select>
+
+    <button x-show="studentId"
+            @click="coachResetStudentWeek()"
+            :title="'Öğrencinin bu haftaki düzenlemelerini sil, koç planına geri dön'"
+            class="h-9 px-3 rounded-lg border text-xs font-medium transition flex items-center gap-1.5
+                   bg-ruby-tint border-ruby-500/30 text-ruby-500 hover:bg-ruby-500/20">
+      Planı Sıfırla
+    </button>
+
+    <button x-show="studentId"
+            @click="bulkToggleEditPermit()"
+            :title="allTasksEditable ? 'Öğrenci tüm görevleri düzenleyebiliyor — kilitle' : 'Öğrenciye bu haftaki tüm görevleri düzenleme izni ver'"
+            class="h-9 px-3 rounded-lg border text-xs font-medium transition flex items-center gap-1.5"
+            :class="allTasksEditable
+              ? 'bg-steel-tint border-steel-500/50 text-steel-400 hover:bg-steel-500/20'
+              : 'bg-ink-850 border-ink-700 text-ink-400 hover:bg-ink-800'">
+      <span x-text="allTasksEditable ? '🔓' : '🔒'"></span>
+      <span x-text="allTasksEditable ? 'Düzenleme Açık' : 'Düzenleme Kapalı'"></span>
+    </button>
+
+    <div class="inline-flex items-center rounded-lg bg-ink-850 border border-ink-700 overflow-hidden">
+      <button @click="prevWeek()"
+              class="px-2 h-9 text-ink-300 hover:bg-ink-800 transition text-sm font-bold">
+        ←
+      </button>
+      <span class="text-sm font-semibold text-ink-100 px-3 tabular-nums" x-text="weekLabel"></span>
+      <button @click="nextWeek()"
+              class="px-2 h-9 text-ink-300 hover:bg-ink-800 transition text-sm font-bold">
+        →
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <a :href="exportUrl('hafta.xlsx')"
+         class="h-9 px-3 flex items-center gap-1.5 bg-emerald-tint border border-emerald-500/30
+                text-emerald-500 rounded-lg text-xs font-semibold hover:bg-emerald-500/20 transition">
+        Excel
+      </a>
+      <button @click="exportHTML()" :disabled="!studentId"
+              class="h-9 px-3 bg-ink-850 border border-ink-700 text-ink-300 rounded-lg text-xs
+                     font-medium hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
+        HTML
+      </button>
+      <button @click="showSettingsModal = true"
+              class="h-9 px-3 bg-ink-850 border border-ink-700 rounded-lg text-xs font-medium
+                     text-ink-400 hover:bg-ink-800 transition"
+              title="Renk Ayarları">
+        Renkler
+      </button>
+      <button x-show="studentId"
+              @click="showCompleted = !showCompleted"
+              class="h-9 px-3 rounded-lg border text-xs font-medium transition"
+              :class="showCompleted
+                ? 'bg-emerald-tint border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20'
+                : 'bg-ink-850 border-ink-700 text-ink-400 hover:bg-ink-800'"
+              x-text="showCompleted ? 'Tamamlananları gizle' : 'Tamamlananları göster'">
+      </button>
+      <span x-show="studentId && completionStats.total > 0"
+            class="text-xs text-ink-500 whitespace-nowrap tnum"
+            x-text="'Tamamlanan: ' + completionStats.done + ' / ' + completionStats.total">
+      </span>
+    </div>
+  </div>
+
+  {% if not students %}
+  <div class="rounded-xl border border-amber-500/30 bg-amber-tint p-5 text-center text-amber-500 text-sm">
+    Henüz size atanmış öğrenci yok. Öğrenci atamak için yöneticiye başvurun.
+  </div>
+  {% endif %}
+
+  <div class="overflow-x-auto pb-2">
+  <div id="weekly-grid" class="grid grid-cols-7 gap-3 min-h-[60vh] min-w-[1100px]">
+    <template x-for="(gun, idx) in days" :key="idx">
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden flex flex-col min-h-[420px] transition-all"
+           :class="gun.tarih === window.DAS_TODAY ? 'ring-2 ring-steel-500/40' : ''"
+           @dragover.prevent
+           @drop="onDrop($event, gun.tarih)">
+
+        <div class="px-3 py-3 border-b border-ink-700 shrink-0"
+             :class="gun.tarih === window.DAS_TODAY ? 'bg-steel-tint' : 'bg-ink-900/40'">
+          <div class="text-[10px] uppercase tracking-wider font-bold"
+               :class="gun.tarih === window.DAS_TODAY ? 'text-steel-400' : 'text-ink-500'"
+               x-text="gun.tarih === window.DAS_TODAY ? gun.label + ' · Bugün' : gun.label"></div>
+          <div class="text-xs mt-0.5 tnum"
+               :class="gun.tarih === window.DAS_TODAY ? 'text-ink-100' : 'text-ink-300'"
+               x-text="gun.tarih"></div>
+          <div class="text-[11px] font-semibold mt-0.5 text-steel-400 tnum"
+               x-text="dailyLabel(idx)"></div>
+        </div>
+
+        <div data-pdf-hide class="print:hidden px-2 pt-2 shrink-0">
+          <button @click="openAddTask(gun.tarih)" :disabled="!studentId"
+                  class="w-full py-2 text-xs text-ink-500 hover:text-ink-200 hover:bg-ink-800
+                         rounded-lg border border-dashed border-ink-700 hover:border-ink-600
+                         disabled:opacity-30 disabled:cursor-not-allowed transition">
+            + Ekle
+          </button>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-2 p-2 overflow-y-auto">
+          <template x-for="g in visibleGorevler(gun)" :key="g.id">
+            <div x-data="{ sheetOpen: false }"
+                 class="task-card break-inside-avoid rounded-lg border-2 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-card"
+                 :class="g.is_completed ? 'opacity-60' : ''"
+                 :style="{background: colorFor(g.aktivite_tipi), borderColor: borderFor(g.aktivite_tipi)}"
+                 draggable="true"
+                 @dragstart="onDragStart($event, g.id, gun.tarih)">
+
+              <div @click="sheetOpen = true" class="cursor-pointer sm:cursor-auto">
+                <div class="text-xs font-semibold leading-snug mb-1 sm:whitespace-normal truncate"
+                     :class="g.is_completed ? 'line-through' : ''"
+                     :style="{color: titleColorFor(g.aktivite_tipi)}"
+                     x-text="g.ders_title"></div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="task-type-badge text-[9px] font-bold leading-none px-1.5 py-0.5 rounded-full"
+                        :style="{background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
+                        x-text="aktiviteLabel(g.aktivite_tipi)"></span>
+                  <span x-show="g.ozel_sure_dk"
+                        class="text-[10px] font-medium text-ink-400 tnum"
+                        x-text="durStr(g.ozel_sure_dk)"></span>
+                </div>
+              </div>
+
+              <div class="hidden sm:block">
+                <template x-for="d in g.detaylar" :key="d.id">
+                  <div class="text-[10px] text-ink-400 leading-relaxed mt-1" x-text="formatDetay(d)"></div>
+                </template>
+              </div>
+
+              <div data-pdf-hide class="print:hidden mt-2 hidden sm:flex gap-1 flex-wrap">
+                <button @click.stop="editTask(g)"
+                        class="flex-1 text-[10px] font-medium py-1 bg-ink-800/60 border border-ink-700
+                               text-ink-200 rounded-md hover:bg-ink-800 transition">
+                  Düzenle
+                </button>
+                <button @click.stop="deleteTask(g.id)"
+                        class="flex-1 text-[10px] font-medium py-1 bg-ruby-tint border border-ruby-500/30
+                               text-ruby-500 rounded-md hover:bg-ruby-500/20 transition">
+                  Sil
+                </button>
+                <button @click.stop="toggleStudentPermit(g.id)"
+                        :title="g.student_can_edit ? 'Öğrenci düzenleyebiliyor — kilitle' : 'Öğrenciye düzenleme izni ver'"
+                        class="text-[10px] py-1 px-1.5 rounded-md border transition"
+                        :class="g.student_can_edit
+                          ? 'border-steel-500/50 text-steel-400 bg-steel-tint'
+                          : 'border-ink-700 text-ink-500 bg-ink-800/60'">
+                  <span x-text="g.student_can_edit ? '🔓' : '🔒'"></span>
+                </button>
+              </div>
+
+              <div x-show="sheetOpen"
+                   @click.self="sheetOpen = false"
+                   @keydown.escape.window="sheetOpen = false"
+                   x-transition:enter="transition ease-out duration-200"
+                   x-transition:enter-start="opacity-0"
+                   x-transition:enter-end="opacity-100"
+                   x-transition:leave="transition ease-in duration-150"
+                   x-transition:leave-start="opacity-100"
+                   x-transition:leave-end="opacity-0"
+                   class="sm:hidden fixed inset-0 bg-black/50 z-[60] flex items-end">
+                <div class="w-full bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col"
+                     @click.stop>
+                  <div class="flex justify-center pt-3 pb-2 shrink-0">
+                    <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+                  </div>
+                  <div class="px-5 pb-3 border-b border-gray-100 flex items-start justify-between gap-2 shrink-0">
+                    <div class="min-w-0">
+                      <div class="text-sm font-semibold leading-snug"
+                           :class="g.is_completed ? 'line-through text-gray-400' : ''"
+                           :style="g.is_completed ? '' : {color: titleColorFor(g.aktivite_tipi)}"
+                           x-text="g.ders_title"></div>
+                      <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                        <span class="task-type-badge text-xs font-semibold leading-none px-2 py-0.5 rounded-full"
+                              :style="{background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
+                              x-text="aktiviteLabel(g.aktivite_tipi)"></span>
+                        <span x-show="g.ozel_sure_dk" class="text-xs font-medium text-gray-500" x-text="durStr(g.ozel_sure_dk)"></span>
+                      </div>
+                    </div>
+                    <button @click="sheetOpen = false"
+                            class="shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition text-xl leading-none">
+                      &times;
+                    </button>
+                  </div>
+                  <div class="overflow-y-auto flex-1 px-5 py-3">
+                    <template x-for="d in g.detaylar" :key="d.id">
+                      <div class="text-xs text-gray-500 leading-relaxed mb-1" x-text="formatDetay(d)"></div>
+                    </template>
+                  </div>
+                  <div class="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 shrink-0">
+                    <div class="flex gap-2">
+                      <button @click="editTask(g); sheetOpen = false"
+                              class="flex-1 text-sm font-medium py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition">
+                        Düzenle
+                      </button>
+                      <button @click="deleteTask(g.id); sheetOpen = false"
+                              class="flex-1 text-sm font-medium py-2.5 bg-white border border-red-200 text-red-500 rounded-xl hover:bg-red-50 transition">
+                        Sil
+                      </button>
+                    </div>
+                    <button @click="toggleStudentPermit(g.id)"
+                            :title="g.student_can_edit ? 'Öğrenci düzenleyebiliyor — kilitle' : 'Öğrenciye düzenleme izni ver'"
+                            class="w-full text-sm font-medium py-2.5 rounded-xl border transition"
+                            :class="g.student_can_edit ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50' : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'">
+                      <span x-text="g.student_can_edit ? '🔓 Öğrenci düzenleyebiliyor' : '🔒 Düzenleme kilitli'"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </template>
+
+          <div x-show="studentId && !gun.gorevler.length"
+               class="flex-1 flex items-center justify-center py-6">
+            <span class="text-xs text-ink-700 select-none">—</span>
+          </div>
+        </div>
+
+      </div>
+    </template>
+  </div>
+  </div>
+
+  <div x-show="showTaskModal"
+       class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+       @keydown.escape.window="showTaskModal = false">
+    <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-ink-850 border border-ink-700"
+         @click.stop>
+      <div class="overflow-y-auto flex-1 p-6 pb-2">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-base font-semibold text-ink-100"
+              x-text="editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h2>
+          <button @click="showTaskModal = false"
+                  class="w-7 h-7 flex items-center justify-center text-ink-400 hover:text-ink-200
+                         hover:bg-ink-800 rounded-lg transition text-lg leading-none">
+            &times;
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Aktivite Tipi</label>
+          <select x-model="taskForm.aktivite_tipi"
+                  class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                         text-ink-100 focus:outline-none focus:border-steel-500 transition">
+            <option value="konu_anlatimi">Konu Anlatımı</option>
+            <option value="soru_cozumu">Soru Çözümü</option>
+            <option value="tekrar">Tekrar</option>
+          </select>
+        </div>
+
+        <div x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'" class="mb-4 grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+            <select x-model="taskForm.sinav_tipi"
+                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
+              <option value="TYT">TYT</option>
+              <option value="AYT">AYT</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Ders</label>
+            <select x-model="taskForm.konu_ders_id"
+                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
+              <option value="">Ders seçin</option>
+              <template x-for="d in dersler" :key="d.id">
+                <option :value="d.id" x-text="d.ad"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+
+        <div x-show="taskForm.aktivite_tipi === 'konu_anlatimi'" class="mb-4 space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+              <select x-model="taskForm.sinav_tipi"
+                      @change="taskForm.konu_ders_id = ''; listeler = []; videolar = [];"
+                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                <option value="TYT">TYT</option>
+                <option value="AYT">AYT</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Ders</label>
+              <select x-model="taskForm.konu_ders_id" @change="loadListeler()"
+                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                <option value="">Ders seçin</option>
+                <template x-for="d in dersler" :key="d.id">
+                  <option :value="d.id" x-text="d.ad"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Oynatma Listesi</label>
+            <select x-model="taskForm.liste_id" @change="loadVideolar()"
+                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
+              <option value="">Liste seçin</option>
+              <template x-for="l in listeler" :key="l.id">
+                <option :value="l.id" x-text="l.baslik"></option>
+              </template>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
+              Videolar
+              <span x-show="taskForm.selectedVideos.length"
+                    class="ml-1 normal-case font-normal text-steel-400"
+                    x-text="'(' + taskForm.selectedVideos.length + ' seçili)'"></span>
+            </label>
+            <div x-ref="videoList"
+                 class="border border-ink-700 rounded-xl max-h-56 overflow-y-auto divide-y divide-ink-700 bg-ink-800">
+              <template x-for="v in videolar" :key="v.id">
+                <label class="flex items-center gap-3 px-3 py-2 cursor-pointer transition"
+                       :class="taskForm.selectedVideos.includes(String(v.id)) ? 'bg-steel-tint' : 'hover:bg-ink-750'">
+                  <input type="checkbox" :value="v.id"
+                         x-model="taskForm.selectedVideos" @change="updateSure()"
+                         class="rounded text-steel-500 focus:ring-steel-400">
+                  <span class="text-xs flex-1 leading-snug text-ink-200" x-text="v.baslik"></span>
+                  <span class="text-xs text-ink-500 shrink-0 tnum" x-text="v.sure_dk + ' dk'"></span>
+                </label>
+              </template>
+              <p x-show="!videolar.length" class="text-xs text-ink-500 text-center py-5">
+                Liste seçildiğinde videolar görünür.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
+              Ek Not <span class="font-normal normal-case">(isteğe bağlı)</span>
+            </label>
+            <input x-model="taskForm.konu_not" type="text" placeholder="Ek not…"
+                   class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                          text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500 transition">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Süre (dk)</label>
+          <input x-model.number="taskForm.ozel_sure_dk" type="number" min="0"
+                 class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                        text-ink-100 focus:outline-none focus:border-steel-500 transition">
+        </div>
+
+        <div class="mb-4" x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'">
+          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Açıklama</label>
+          <textarea x-model="taskForm.aciklama" rows="2" placeholder="Kaynak / konu / not…"
+                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800 text-ink-100
+                           placeholder:text-ink-500 resize-none focus:outline-none focus:border-steel-500 transition"></textarea>
+        </div>
+
+        <p x-show="taskForm.error"
+           class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2 mb-2"
+           x-text="taskForm.error"></p>
+      </div>
+
+      <div class="flex justify-end gap-2 px-6 py-4 border-t border-ink-700 bg-ink-850 rounded-b-2xl shrink-0">
+        <button @click="showTaskModal = false"
+                class="px-5 py-2 border border-ink-700 rounded-xl text-sm font-medium
+                       text-ink-300 hover:bg-ink-800 transition">
+          İptal
+        </button>
+        <button @click="saveTask()"
+                class="px-5 py-2 bg-steel-500 text-white rounded-xl text-sm font-semibold
+                       hover:bg-steel-400 active:bg-steel-600 transition shadow-sm">
+          Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="showSettingsModal"
+       class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+       @keydown.escape.window="showSettingsModal = false">
+    <div class="rounded-2xl shadow-card-lg w-full max-w-xs p-6 bg-ink-850 border border-ink-700"
+         @click.stop>
+      <h2 class="text-base font-semibold text-ink-100 mb-4">Renk Ayarları</h2>
+      <div class="space-y-2">
+        <template x-for="item in [
+          {key:'konu_anlatimi', label:'Konu Anlatımı'},
+          {key:'soru_cozumu',   label:'Soru Çözümü'},
+          {key:'tekrar',        label:'Tekrar'}
+        ]" :key="item.key">
+          <div class="flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition"
+               :style="{background: colorFor(item.key), borderColor: borderFor(item.key)}">
+            <span class="text-sm font-semibold"
+                  :style="{color: titleColorFor(item.key)}"
+                  x-text="item.label"></span>
+            <input type="color" :value="colorSettings[item.key]"
+                   @input="colorSettings[item.key] = $event.target.value; saveColorSettings()"
+                   class="w-9 h-8 rounded-lg cursor-pointer border border-ink-700 bg-transparent p-0.5">
+          </div>
+        </template>
+      </div>
+      <div class="flex justify-between mt-5 gap-2">
+        <button @click="resetColors()"
+                class="px-4 py-2 text-sm text-ink-400 border border-ink-700 rounded-xl
+                       hover:bg-ink-800 transition">
+          Varsayılana Dön
+        </button>
+        <button @click="showSettingsModal = false"
+                class="px-5 py-2 bg-steel-500 text-white text-sm font-semibold rounded-xl
+                       hover:bg-steel-400 transition">
+          Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+/* Applied only during PDF capture via JS: document.body.classList.add('pdf-mode') */
+body.pdf-mode .task-card {
+  display: block !important;
+  height: auto !important;
+  min-height: unset !important;
+  padding: 6px !important;
+  margin-bottom: 4px !important;
+}
+body.pdf-mode * {
+  transform: none !important;
+}
+/* Lift overflow only on the scrollable column containers — NOT globally */
+body.pdf-mode .overflow-y-auto {
+  overflow: visible !important;
+}
+/* Hide badge in PDF — task type already appears in the title text */
+body.pdf-mode .task-type-badge {
+  display: none !important;
+}
+/* Compact spacing to keep tall grids within one page */
+body.pdf-mode .task-card {
+  padding: 4px 6px !important;
+  margin-bottom: 3px !important;
+}
+body.pdf-mode .gap-2 {
+  gap: 4px !important;
+}
+body.pdf-mode .p-2, body.pdf-mode .p-2\.5 {
+  padding: 4px !important;
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="{% static 'js/tasks_panel.js' %}"></script>
+<script>
+/* DAS-501-522 + DAS-5.3: Coach Mobile Task Manager with Video/Playlist API */
+function coachMobilePanel() {
+  const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+  const ISO = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const DAY_LABELS = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  const TYPE_COLORS = { konu_anlatimi:'var(--turkce)', soru_cozumu:'var(--mat)', tekrar:'var(--fen)' };
+  const TYPE_LABELS = { konu_anlatimi:'Konu Anlatımı', soru_cozumu:'Soru Çözümü', tekrar:'Tekrar' };
+
+  return {
+    /* ── Week state ── */
+    weekStart:'', days:[], activeDay:1, weekLabel:'', loading:false,
+    canToggleCompleted:false,
+
+    /* ── Student context ── */
+    students:[], selectedStudent:null,
+
+    /* ── API-driven data for konu_anlatimi cascade ── */
+    dersler:[], listeler:[], videolar:[],
+
+    /* ── Sheet state (shared with _task_bottom_sheets.html) ── */
+    showStudentSheet:false, showAddSheet:false, showEditSheet:false,
+    editingTask:null,
+    taskForm:{
+      ders_title:'', subject:'mat',
+      aktivite_tipi:'soru_cozumu', sinav_tipi:'TYT',
+      konu_ders_id:'', liste_id:'', selectedVideos:[],
+      konu_not:'', tarih:'', ozel_sure_dk:0, aciklama:'', error:'',
+    },
+
+    get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
+    get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
+    get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
+
+    /* ── Lifecycle ── */
+    async init(){
+      const today=new Date(), dow=today.getDay()||7;
+      this.activeDay=dow;
+      const mon=new Date(today); mon.setDate(today.getDate()-dow+1);
+      this.weekStart=ISO(mon); this.taskForm.tarih=ISO(today);
+      this._build();
+      await Promise.all([this._loadStudents(), this._loadDersler()]);
+    },
+
+    async _loadStudents(){
+      try{
+        const r=await fetch('/coach/tasks/api/students');
+        const data=await r.json();
+        this.students=(data.students??[]).map(s=>({
+          ...s, initials:s.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2),
+        }));
+        if(this.students.length>0){ this.selectedStudent=this.students[0]; await this.loadWeek(); }
+      }catch(e){ console.error('[coach mobile] students', e); }
+    },
+
+    async _loadDersler(){
+      try{
+        const r=await fetch('/coach/tasks/api/dersler');
+        const data=await r.json();
+        this.dersler=data.dersler??[];
+      }catch(e){ console.error('[coach mobile] dersler', e); }
+    },
+
+    /* ── Week navigation ── */
+    _build(){
+      const start=new Date(this.weekStart+'T00:00:00');
+      this.days=DAY_LABELS.map((label,i)=>{
+        const d=new Date(start); d.setDate(start.getDate()+i);
+        return {iso:ISO(d),label,num:d.getDate(),month:MONTHS[d.getMonth()],tasks:[]};
+      });
+      const s=this.days[0],e=this.days[6],yr=new Date(this.weekStart+'T00:00:00').getFullYear();
+      this.weekLabel=s.month===e.month?`${s.num} – ${e.num} ${s.month} ${yr}`:`${s.num} ${s.month} – ${e.num} ${e.month} ${yr}`;
+    },
+    async loadWeek(){
+      if(!this.selectedStudent)return;
+      this.loading=true;
+      try{
+        const r=await fetch(`/coach/tasks/api/gorevler?student_id=${this.selectedStudent.id}&hafta=${this.weekStart}`);
+        const data=await r.json();
+        this.days.forEach(d=>{d.tasks=[];});
+        for(const g of (data.gorevler??[])){
+          const day=this.days.find(d=>d.iso===g.tarih);
+          if(day) day.tasks.push({
+            id:g.id, tarih:g.tarih,
+            title:g.ders_title||'—',
+            subject:TYPE_LABELS[g.aktivite_tipi]??g.aktivite_tipi,
+            duration:g.ozel_sure_dk?g.ozel_sure_dk+' dk':'',
+            color:TYPE_COLORS[g.aktivite_tipi]??'var(--primary)',
+            done:g.is_completed, raw:g,
+          });
+        }
+      }finally{this.loading=false;}
+    },
+    prevWeek(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()-7);this.weekStart=ISO(d);this._build();this.loadWeek();},
+    nextWeek(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()+7);this.weekStart=ISO(d);this._build();this.loadWeek();},
+    goToday(){
+      const today=new Date(),dow=today.getDay()||7;
+      this.activeDay=dow;
+      const mon=new Date(today);mon.setDate(today.getDate()-dow+1);
+      this.weekStart=ISO(mon);this._build();this.loadWeek();
+    },
+
+    /* ── Video/Playlist cascade (mirrors tasks_panel.js exactly) ── */
+    async loadListeler(){
+      if(!this.taskForm.konu_ders_id)return;
+      this.listeler=[];
+      try{
+        const tip=this.taskForm.sinav_tipi||'TYT';
+        const r=await fetch(`/coach/tasks/api/oynatma-listeleri/${this.taskForm.konu_ders_id}?tip=${tip}`);
+        const data=await r.json();
+        this.listeler=data.listeler??[];
+      }catch(e){ console.error('[coach mobile] listeler', e); }
+    },
+    async loadVideolar(listeId){
+      const id=listeId??this.taskForm.liste_id;
+      if(!id)return;
+      this.videolar=[];
+      try{
+        const r=await fetch(`/coach/tasks/api/videolar/${id}`);
+        const data=await r.json();
+        this.videolar=data.videolar??[];
+      }catch(e){ console.error('[coach mobile] videolar', e); }
+    },
+    updateSure(){
+      const total=this.taskForm.selectedVideos.reduce((sum,vid_id)=>{
+        const v=this.videolar.find(v=>v.id==vid_id);
+        return sum+(v?.sure_dk??0);
+      },0);
+      this.taskForm.ozel_sure_dk=total;
+    },
+
+    /* ── Sheet open/close ── */
+    openAdd(){
+      if(!this.selectedStudent)return;
+      this.editingTask=null;
+      const dayIso=this.days[this.activeDay-1]?.iso??this.weekStart;
+      this.listeler=[]; this.videolar=[];
+      this.taskForm={
+        ders_title:'', subject:'mat', aktivite_tipi:'soru_cozumu', sinav_tipi:'TYT',
+        konu_ders_id:'', liste_id:'', selectedVideos:[],
+        konu_not:'', tarih:dayIso, ozel_sure_dk:0, aciklama:'', error:'',
+      };
+      this.showAddSheet=true;
+    },
+
+    async openEdit(task){
+      this.editingTask=task;
+      const g=task.raw;
+      this.listeler=[]; this.videolar=[];
+      this.taskForm={
+        ders_title:g.ders_title??'', subject:'mat',
+        aktivite_tipi:g.aktivite_tipi??'soru_cozumu', sinav_tipi:'TYT',
+        konu_ders_id:'', liste_id:'', selectedVideos:[],
+        konu_not:'', tarih:g.tarih, ozel_sure_dk:g.ozel_sure_dk??0,
+        aciklama:g.detaylar?.[0]?.aciklama??'', error:'',
+      };
+
+      /* Hydrate konu_anlatimi cascade identically to the desktop _hydrateKonuEdit */
+      if(g.aktivite_tipi==='konu_anlatimi' && g.meta){
+        const meta=g.meta;
+        this.taskForm.sinav_tipi=meta.sinav_tipi??'TYT';
+        this.taskForm.konu_ders_id=String(meta.ders_id??'');
+        await this.loadListeler();
+        this.taskForm.liste_id=String(meta.liste_id??'');
+        await this.loadVideolar(meta.liste_id);
+        const savedIds=new Set((meta.videos??[]).map(v=>String(v.id)));
+        this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
+        this.updateSure();
+      }
+      this.showEditSheet=true;
+    },
+    openCompletedTask(task){ this.openEdit(task); },
+    toggleCompletedTask(task){ if(this.canToggleCompleted) task.done=!task.done; },
+    exportUrl(ext){
+      const studentId=this.selectedStudent?.id??'';
+      return `/coach/tasks/export/${ext}?student_id=${encodeURIComponent(studentId)}&hafta=${encodeURIComponent(this.weekStart)}`;
+    },
+    _exportDays(){ return this.days.map(d=>({label:d.label,tarih:d.iso,gorevler:d.tasks.map(t=>t.raw)})); },
+    exportHTML(){
+      if(!this.selectedStudent)return;
+      _downloadWeeklyHTML(this._exportDays(), DEFAULT_COLORS, this.selectedStudent.full_name, this.weekLabel, `hafta_${this.weekStart}.html`);
+    },
+
+    /* ── Save — matches desktop payload contract exactly ── */
+    async saveMobileTask(){
+      if(!this.selectedStudent)return;
+      this.taskForm.error='';
+      const csrf=CSRF();
+      const at=this.taskForm.aktivite_tipi;
+      let ders_title, detaylar, extra={};
+
+      if(at==='konu_anlatimi'){
+        if(!this.taskForm.selectedVideos.length){
+          this.taskForm.error='En az bir video seçilmeli.'; return;
+        }
+        /* Build detaylar: one entry per selected video, optional konu_not appended */
+        const detaylarArr=this.taskForm.selectedVideos.map(vid_id=>{
+          const v=this.videolar.find(v=>v.id==vid_id);
+          return { aciklama:v?.baslik??String(vid_id), sure_bilgisi:v?`${v.sure_dk} dk`:'' };
+        });
+        if(this.taskForm.konu_not.trim()) detaylarArr.push({aciklama:this.taskForm.konu_not.trim(),sure_bilgisi:''});
+        detaylar=JSON.stringify(detaylarArr);
+
+        /* ders_title: same formula as desktop */
+        const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
+        ders_title=ders?`${ders.ad} - Konu Anlatımı`:(this.taskForm.ders_title||'Konu Anlatımı');
+
+        /* meta payload fields — source of truth for future edit hydration */
+        extra={
+          sinav_tipi:this.taskForm.sinav_tipi,
+          konu_ders_id:this.taskForm.konu_ders_id,
+          liste_id:this.taskForm.liste_id,
+          liste_baslik:this.listeler.find(l=>String(l.id)===this.taskForm.liste_id)?.baslik??'',
+          videos:this.taskForm.selectedVideos.map(vid_id=>{
+            const v=this.videolar.find(v=>v.id==vid_id);
+            return {id:Number(vid_id),title:v?.baslik??'',duration:v?.sure_dk??0};
+          }),
+        };
+      }else{
+        /* soru_cozumu / tekrar */
+        if(!this.taskForm.ders_title.trim()){
+          this.taskForm.error='Görev başlığı gerekli.'; return;
+        }
+        ders_title=this.taskForm.ders_title.trim();
+        const aciklama=(this.taskForm.aciklama||ders_title||'—').trim();
+        detaylar=JSON.stringify([{aciklama,sure_bilgisi:''}]);
+      }
+
+      const payload={
+        tarih:this.taskForm.tarih,
+        aktivite_tipi:at,
+        ders_title,
+        ozel_sure_dk:this.taskForm.ozel_sure_dk||null,
+        detaylar,
+        ...extra,
+      };
+      if(!this.editingTask) payload.student_id=this.selectedStudent.id;
+
+      const url=this.editingTask?`/coach/tasks/api/gorev/${this.editingTask.id}`:'/coach/tasks/api/gorevler';
+      const method=this.editingTask?'PUT':'POST';
+      try{
+        const r=await fetch(url,{method,headers:{'X-CSRFToken':csrf,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(!r.ok){
+          const err=await r.json().catch(()=>({}));
+          this.taskForm.error=Object.values(err.errors||{}).flat().join(' ')||'İşlem başarısız.';
+          return;
+        }
+        this.showAddSheet=false; this.showEditSheet=false; this.editingTask=null;
+        await this.loadWeek();
+      }catch{ this.taskForm.error='Bağlantı hatası.'; }
+    },
+
+    async deleteMobileTask(taskId){
+      if(!confirm('Bu görevi silmek istiyor musunuz?'))return;
+      await fetch(`/coach/tasks/api/gorev/${taskId}`,{method:'DELETE',headers:{'X-CSRFToken':CSRF()}});
+      this.showEditSheet=false; this.editingTask=null;
+      await this.loadWeek();
+    },
+  };
+}
+</script>
+{% endblock %}

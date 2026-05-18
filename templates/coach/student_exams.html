@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ student.full_name }} — Denemeler — DAS{% endblock %}
+
+{% block content %}
+<div class="pb-28"
+     x-data="coachCompareModeState({{ student.id }})"
+     @keydown.escape.window="if(compareMode) toggleCompareMode()">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700">
+      <div class="flex items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <a href="{% url 'coach:exam_overview' %}"
+               class="text-xs text-steel-400 hover:text-steel-300 transition-colors">← Denemeler</a>
+            <span class="text-ink-600">/</span>
+            <span class="pii text-xs text-ink-400">{{ student.full_name }}</span>
+          </div>
+          <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white"><span class="pii">{{ student.full_name }}</span></h1>
+          <p class="text-sm text-ink-400 mt-1">{{ exams.total_count }} deneme</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="sortOpen = true"
+                  class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg
+                         text-ink-400 hover:bg-ink-800 transition-colors"
+                  title="Sırala">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>
+            </svg>
+          </button>
+          <button @click="toggleCompareMode()"
+                  class="h-9 px-3 rounded-lg text-sm font-semibold transition-colors"
+                  :class="compareMode
+                    ? 'bg-ruby-500 text-white'
+                    : 'bg-ink-850 border border-ink-700 text-ink-200 hover:bg-ink-800'">
+            <span x-text="compareMode ? 'İptal' : 'Karşılaştır'"></span>
+          </button>
+          <a href="{% url 'coach:student_detail' student.id %}"
+             class="hidden md:inline-flex h-9 px-3 rounded-lg bg-ink-850 border border-ink-700
+                    hover:bg-ink-800 text-ink-200 text-sm font-medium items-center gap-1.5 transition-colors">
+            Profil →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# ── Mobile filter strip (sticky, blurred) ── #}
+    <div class="md:hidden sticky top-14 z-20 border-b border-ink-700 py-2 space-y-2"
+         style="background:rgba(10,14,20,0.95); backdrop-filter:blur(10px);">
+      <div class="flex overflow-x-auto gap-2 px-4 no-scrollbar overscroll-x-contain">
+        <button @click="setPeriod('')"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
+                :class="activePeriod === '' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300'">
+          Tümü
+        </button>
+        <button @click="setPeriod('30')"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
+                :class="activePeriod === '30' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300'">
+          30 Gün
+        </button>
+        <button @click="setPeriod('90')"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
+                :class="activePeriod === '90' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300'">
+          3 Ay
+        </button>
+        <button @click="setPeriod('365')"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
+                :class="activePeriod === '365' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300'">
+          1 Yıl
+        </button>
+      </div>
+      <div class="flex items-center gap-2 px-4 overflow-x-auto no-scrollbar overscroll-x-contain">
+        <button @click="sortOpen = true"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
+                :class="activeSort !== 'date' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300'">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>
+          </svg>
+          <span x-text="{date:'Tarih', net:'Net', publisher:'Yayın'}[activeSort] || 'Sırala'"></span>
+        </button>
+      </div>
+    </div>
+
+    {# ── Desktop filter row (wrapped) ── #}
+    <div class="hidden md:flex flex-wrap items-center gap-2 px-6 py-3 border-b border-ink-700">
+      <button @click="setPeriod('')"
+              class="h-8 px-3 rounded-full text-xs font-medium transition-colors"
+              :class="activePeriod === '' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+        Tümü
+      </button>
+      <button @click="setPeriod('30')"
+              class="h-8 px-3 rounded-full text-xs font-medium transition-colors"
+              :class="activePeriod === '30' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+        30 Gün
+      </button>
+      <button @click="setPeriod('90')"
+              class="h-8 px-3 rounded-full text-xs font-medium transition-colors"
+              :class="activePeriod === '90' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+        3 Ay
+      </button>
+      <button @click="setPeriod('365')"
+              class="h-8 px-3 rounded-full text-xs font-medium transition-colors"
+              :class="activePeriod === '365' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+        1 Yıl
+      </button>
+      <span class="w-px h-5 bg-ink-700"></span>
+      <button @click="sortOpen = true"
+              class="h-8 px-3 rounded-full text-xs font-medium transition-colors inline-flex items-center gap-1.5"
+              :class="activeSort !== 'date' ? 'bg-steel-tint border border-steel-500 text-steel-300' : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>
+        </svg>
+        <span x-text="{date:'Tarih', net:'Net', publisher:'Yayın'}[activeSort] || 'Sırala'"></span>
+      </button>
+    </div>
+
+    <div class="p-4 md:p-6 space-y-8">
+
+      {% if exams.total_count == 0 %}
+      <div class="rounded-xl border border-dashed border-ink-700 p-10 text-center">
+        <p class="text-sm text-ink-300">{{ student.full_name }} henüz deneme girmemiş.</p>
+      </div>
+
+      {% else %}
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">Son 30 Gün · {{ exams.recent|length }} deneme</p>
+          {% if exams.recent|length > 0 and exams.recent|length < sparse_threshold %}
+          <p class="text-xs text-amber-500">Daha fazla deneme eklenmesi önerilir</p>
+          {% endif %}
+        </div>
+        <div class="max-w-prose-wide space-y-2">
+          {% for exam in exams.recent %}
+          <div class="relative rounded-xl border bg-ink-850 hover:bg-ink-800 hover:border-ink-600
+                      transition-colors p-4 border-l-4 cursor-pointer select-none"
+               style="border-left-color:#3B82F6"
+               role="button" tabindex="0"
+               @click="compareMode
+                 ? toggleSelection({{ exam.id }}, '{{ exam.type }}')
+                 : (window.location.href = '{% url 'coach:student_exam_detail' student.id exam.id %}')"
+               @keydown.enter.prevent="$el.click()">
+            <div class="flex items-center gap-4">
+              <div x-show="compareMode"
+                   x-transition:enter="transition ease-out duration-150"
+                   x-transition:enter-start="opacity-0 -translate-x-1"
+                   x-transition:enter-end="opacity-100 translate-x-0"
+                   class="shrink-0" x-cloak>
+                <div class="w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center"
+                     :class="selected.some(s => s.id === {{ exam.id }}) ? 'bg-steel-500 border-steel-500' : 'border-ink-600'">
+                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                       x-show="selected.some(s => s.id === {{ exam.id }})">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[10px] font-bold text-steel-400 uppercase tracking-wider">{{ exam.type }}</span>
+                  <span class="text-[10px] text-ink-500">·</span>
+                  <span class="text-[11px] text-ink-400 truncate">{{ exam.publisher }}</span>
+                </div>
+                <p class="text-sm font-semibold text-ink-100">{{ exam.date|date:"d M Y" }}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-lg font-bold text-ink-50 tnum leading-none">{{ exam.net|floatformat:2 }}</p>
+                {% if exam.delta is not None %}
+                <div class="mt-0.5 flex justify-end">
+                  {% if exam.delta > 0 %}<span class="text-[11px] font-bold text-emerald-500 tnum">▲ +{{ exam.delta|floatformat:2 }}</span>
+                  {% elif exam.delta < 0 %}<span class="text-[11px] font-bold text-ruby-500 tnum">▼ {{ exam.delta|floatformat:2 }}</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+              <svg x-show="!compareMode" class="w-4 h-4 text-ink-500 shrink-0" fill="none"
+                   stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <use href="#das-icon-chev-right"/>
+              </svg>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-sm text-ink-500 text-center py-4">Son 30 günde deneme yok.</p>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if exams.archive %}
+      <section>
+        <h2 class="text-[10px] uppercase tracking-wider text-ink-500 font-bold mb-4">Arşiv</h2>
+        <div class="max-w-prose-wide space-y-3">
+          {% for month in exams.archive %}
+          <details class="group rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+            <summary class="flex items-center justify-between p-4 cursor-pointer list-none
+                            select-none hover:bg-ink-800 transition-colors">
+              <div class="flex items-center gap-3">
+                <span class="font-semibold text-ink-100">{{ month.month_label }}</span>
+                <span class="text-[11px] font-bold text-ink-500 bg-ink-800 border border-ink-700
+                             px-2 py-0.5 rounded-full tnum">{{ month.count }}</span>
+              </div>
+              <svg class="w-4 h-4 text-ink-500 transition-transform duration-200 group-open:rotate-180"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <use href="#das-icon-chev-down"/>
+              </svg>
+            </summary>
+            <div class="px-4 pb-4 space-y-2 border-t border-ink-700 pt-3">
+              {% for exam in month.exams %}
+              <div class="relative rounded-xl border bg-ink-800 hover:bg-ink-750
+                          transition-colors p-3.5 border-l-4 cursor-pointer select-none"
+                   style="border-left-color:#3B82F6; border-color:#2a3142"
+                   role="button" tabindex="0"
+                   @click="compareMode
+                     ? toggleSelection({{ exam.id }}, '{{ exam.type }}')
+                     : (window.location.href = '{% url 'coach:student_exam_detail' student.id exam.id %}')"
+                   @keydown.enter.prevent="$el.click()">
+                <div class="flex items-center gap-4">
+                  <div x-show="compareMode" class="shrink-0" x-cloak>
+                    <div class="w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center"
+                         :class="selected.some(s => s.id === {{ exam.id }}) ? 'bg-steel-500 border-steel-500' : 'border-ink-600'">
+                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                           x-show="selected.some(s => s.id === {{ exam.id }})">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-[10px] font-bold text-steel-400 uppercase tracking-wider">{{ exam.type }}</span>
+                      <span class="text-[10px] text-ink-500">·</span>
+                      <span class="text-[11px] text-ink-400 truncate">{{ exam.publisher }}</span>
+                    </div>
+                    <p class="text-sm font-medium text-ink-100">{{ exam.date|date:"d M Y" }}</p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="text-base font-bold text-ink-50 tnum">{{ exam.net|floatformat:2 }}</p>
+                    {% if exam.delta is not None %}
+                    <div class="flex justify-end mt-0.5">
+                      {% if exam.delta > 0 %}<span class="text-[11px] font-bold text-emerald-500 tnum">▲ +{{ exam.delta|floatformat:2 }}</span>
+                      {% elif exam.delta < 0 %}<span class="text-[11px] font-bold text-ruby-500 tnum">▼ {{ exam.delta|floatformat:2 }}</span>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  <svg x-show="!compareMode" class="w-4 h-4 text-ink-500 shrink-0" fill="none"
+                       stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#das-icon-chev-right"/>
+                  </svg>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# ── Sort sheet (mobile bottom sheet) ── #}
+  <div x-show="sortOpen" class="fixed inset-0 z-50 overflow-hidden" x-cloak>
+    <div class="absolute inset-0 bg-ink-950/70 backdrop-blur-sm" @click="sortOpen = false"></div>
+    <div class="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-ink-700 bg-ink-900 shadow-2xl"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full">
+      <div class="flex justify-center pt-3 pb-1">
+        <div class="w-10 h-1 bg-ink-700 rounded-full"></div>
+      </div>
+      <div class="px-6 pb-2 pt-4">
+        <h3 class="text-sm font-semibold text-ink-100 mb-4">Sırala</h3>
+        <div class="space-y-1">
+          {% for val, label in sort_choices %}
+          <button @click="setSort('{{ val }}')"
+                  class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-colors"
+                  :class="activeSort === '{{ val }}' ? 'bg-steel-tint text-steel-300 font-semibold' : 'text-ink-200 hover:bg-ink-800'">
+            {{ label }}
+            <svg x-show="activeSort === '{{ val }}'" class="w-4 h-4 text-steel-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-ink-700 mt-2 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <button @click="sortOpen = false"
+                class="w-full h-11 rounded-xl bg-ink-800 text-ink-200 font-medium text-sm">
+          Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Trial exam topic error accordion (coach view) ── #}
+  {% if trial_topics %}
+  <div class="mt-6 mb-4">
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden max-w-prose-wide">
+
+      <div class="px-4 md:px-6 py-3 border-b border-ink-700 flex items-center justify-between">
+        <h2 class="text-xs font-semibold text-ink-400 uppercase tracking-wider">En Çok Hata Yapılan Konular</h2>
+        <span class="text-[10px] text-ink-500 font-medium">
+          {% if filters.period %}Son {{ filters.period }} gün · {% endif %}{{ student.full_name }}
+        </span>
+      </div>
+
+      {% for topic in trial_topics %}
+      <div class="border-b border-ink-700 last:border-0" x-data="{ expanded: false }">
+        <button @click="expanded = !expanded"
+                class="w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left
+                       hover:bg-ink-800 active:bg-ink-800"
+                :class="expanded && 'bg-ink-800'">
+          <div class="w-8 h-8 rounded-lg bg-ruby-tint flex items-center justify-center
+                      text-ruby-500 font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-ink-100 truncate">{{ topic.name }}</p>
+            <p class="text-[10px] text-ink-400 mt-0.5">
+              {{ topic.subject }} · {{ topic.errors }} hata · {{ topic.exams|length }} sınav
+            </p>
+          </div>
+          <svg class="w-4 h-4 text-ink-500 shrink-0 transition-transform duration-200"
+               :class="expanded && 'rotate-180'"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <use href="#das-icon-chev-down"/>
+          </svg>
+        </button>
+        <div x-show="expanded" x-collapse>
+          <div class="pb-2 space-y-1 px-3">
+            {% for exam in topic.exams %}
+            <a href="{{ exam.url }}"
+               class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                      border-l-2 border-steel-500/50 bg-ink-900/50
+                      hover:bg-ink-800 hover:text-ink-100
+                      text-ink-400 transition-colors">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold truncate text-ink-100">{{ exam.name }}</p>
+                <p class="text-[10px] text-ink-500 mt-0.5">{{ exam.date }}</p>
+              </div>
+              <span class="text-[10px] font-bold text-ruby-500 shrink-0">{{ exam.errors }}Y</span>
+              <svg class="w-3 h-3 shrink-0 text-ink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <use href="#das-icon-chev-right"/>
+              </svg>
+            </a>
+            {% empty %}
+            <p class="text-xs text-ink-500 px-3 pb-2">Sınav detayı bulunamadı.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Compare sticky CTA ── #}
+  <div x-show="compareMode"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed inset-x-0 bottom-0 z-[45] px-4 pt-4
+              pb-[calc(env(safe-area-inset-bottom)+1rem)]
+              bg-gradient-to-t from-ink-950 via-ink-950/95 to-transparent"
+       x-cloak>
+    <div class="max-w-md mx-auto flex items-center gap-4">
+      <div class="flex flex-col min-w-0 shrink-0">
+        <span class="text-[10px] font-bold text-ink-400 uppercase tracking-wider">Karşılaştırma</span>
+        <span class="text-sm font-bold text-ink-100" x-text="selected.length + '/2 seçildi'"></span>
+      </div>
+      <button class="flex-grow py-3.5 rounded-2xl font-bold transition-colors flex items-center justify-center gap-2 text-sm"
+              :class="selected.length === 2
+                ? 'bg-steel-500 hover:bg-steel-400 text-white shadow-card-lg'
+                : 'bg-ink-800 text-ink-500 cursor-not-allowed'"
+              :disabled="selected.length < 2"
+              @click="if(selected.length === 2) goCompare()">
+        <span x-text="selected.length === 2 ? 'Karşılaştır →' : '1 deneme daha seç'"></span>
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function coachCompareModeState(studentId) {
+  return {
+    compareMode: false,
+    selected: [],
+
+    init() { document.body.classList.remove('compare-active'); },
+    destroy() { document.body.classList.remove('compare-active'); },
+
+    toggleCompareMode() {
+      this.compareMode = !this.compareMode;
+      if (!this.compareMode) this.selected = [];
+      document.body.classList.toggle('compare-active', this.compareMode);
+    },
+
+    toggleSelection(id, type) {
+      if (!this.compareMode) return;
+      const idx = this.selected.findIndex(s => s.id === id);
+      if (idx > -1) { this.selected.splice(idx, 1); return; }
+      if (this.selected.length > 0 && this.selected[0].type !== type) {
+        alert('Yalnızca aynı türdeki denemeleri karşılaştırabilirsin (örn. TYT–TYT).');
+        return;
+      }
+      if (this.selected.length >= 2) this.selected.shift();
+      this.selected.push({ id, type });
+    },
+
+    goCompare() {
+      if (this.selected.length !== 2) return;
+      window.location.href = `/coach/student/${studentId}/compare/?exam1=${this.selected[0].id}&exam2=${this.selected[1].id}`;
+    },
+
+    sortOpen:    false,
+    activePeriod: '{{ filters.period|default:"" }}',
+    activeSort:   '{{ filters.sort|default:"date" }}',
+
+    applyFilters() {
+      const p = new URLSearchParams(window.location.search);
+      this.activePeriod ? p.set('period', this.activePeriod) : p.delete('period');
+      this.activeSort !== 'date' ? p.set('sort', this.activeSort) : p.delete('sort');
+      window.location.search = p.toString();
+    },
+
+    setSort(val)   { this.activeSort = val; this.sortOpen = false; this.applyFilters(); },
+    setPeriod(val) { this.activePeriod = val; this.applyFilters(); },
+  };
+}
+</script>
+{% endblock %}

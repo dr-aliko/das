@@ -1,0 +1,81 @@
+{% load i18n %}
+{# DAS-328: Delete Confirmation Modal — deliberate destructive action with loading guard #}
+<div x-data="{ show: false, deleting: false }"
+     @open-delete-modal.window="show = true; deleting = false"
+     x-show="show" x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0 scale-95"
+     x-transition:enter-end="opacity-100 scale-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100 scale-100"
+     x-transition:leave-end="opacity-0 scale-95"
+     class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+     @keydown.escape.window="!deleting && (show = false)">
+
+  {# Backdrop — locked during delete #}
+  <div @click="!deleting && (show = false)"
+       class="absolute inset-0 bg-slate-900/70 backdrop-blur-md"></div>
+
+  {# Modal card #}
+  <div class="relative w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center"
+       style="background:var(--surface-1);"
+       @click.stop>
+
+    {# Warning icon #}
+    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+         style="background:rgba(239,68,68,.12); color:#ef4444;">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 14c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </div>
+
+    <h3 class="text-xl font-black mb-2" style="color:var(--heading)">
+      {% trans "Denemeyi Sil?" %}
+    </h3>
+    <p class="text-sm px-2 mb-2 leading-relaxed" style="color:var(--muted)">
+      {% blocktrans with name=exam.custom_name %}<strong style="color:var(--body)">{{ name }}</strong> adlı deneme ve tüm konu hata verileri kalıcı olarak silinecek.{% endblocktrans %}
+    </p>
+    <p class="text-xs mb-8 font-bold uppercase tracking-wide" style="color:var(--down)">
+      {% trans "Bu işlem geri alınamaz." %}
+    </p>
+
+    <div class="space-y-3">
+
+      {# Destructive submit form #}
+      <form action="{% url 'student:exam_delete' exam.id %}" method="POST"
+            @submit.prevent="if(!deleting){ deleting = true; $el.submit(); }">
+        {% csrf_token %}
+        <button type="submit"
+                :disabled="deleting"
+                class="w-full py-4 rounded-2xl font-bold text-sm text-white
+                       transition-all active:scale-[0.98]
+                       disabled:opacity-70 disabled:cursor-not-allowed"
+                style="background:#ef4444; box-shadow:0 4px 16px rgba(239,68,68,.25);">
+          <span x-show="!deleting">{% trans "Evet, Kalıcı Olarak Sil" %}</span>
+          <span x-show="deleting"
+                class="flex items-center justify-center gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10"
+                      stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {% trans "Siliniyor…" %}
+          </span>
+        </button>
+      </form>
+
+      {# Cancel — locked during delete #}
+      <button @click="!deleting && (show = false)"
+              :disabled="deleting"
+              class="w-full py-4 rounded-2xl font-bold text-sm
+                     transition-opacity active:opacity-70
+                     disabled:opacity-40 disabled:cursor-not-allowed"
+              style="background:var(--surface-2); color:var(--body);">
+        {% trans "Vazgeç" %}
+      </button>
+
+    </div>
+  </div>
+</div>

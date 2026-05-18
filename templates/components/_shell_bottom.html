@@ -1,0 +1,21 @@
+<nav class="v2-bottom-nav lg:hidden fixed inset-x-0 bottom-0 z-40
+            bg-surface-1 border-t border-border-soft
+            pb-[env(safe-area-inset-bottom)]"
+     role="navigation" aria-label="Ana menü">
+  {% if user.is_student %}
+  <div class="grid grid-cols-5 h-16">
+    {% include "components/_shell_tab.html" with href="/student/" label="Panel" icon="das-icon-panel" %}
+    {% include "components/_shell_tab.html" with href="/student/denemeler/" label="Denemeler" icon="das-icon-exam" %}
+    {% include "components/_shell_tab.html" with href="/student/tasks/" label="Görevler" icon="das-icon-task" %}
+    {% include "components/_shell_tab.html" with href="/brans/" label="Branş" icon="das-icon-trending-up" %}
+    {% include "components/_shell_tab.html" with href="/profil/" label="Profil" icon="das-icon-user" %}
+  </div>
+  {% else %}
+  <div class="grid grid-cols-4 h-16">
+    {% include "components/_shell_tab.html" with href="/coach/" label="Öğrenciler" icon="das-icon-user" %}
+    {% include "components/_shell_tab.html" with href="/coach/tasks/" label="Görevler" icon="das-icon-task" %}
+    {% include "components/_shell_tab.html" with href="/coach/brans/" label="Branş" icon="das-icon-book" %}
+    {% include "components/_shell_tab.html" with href="/profil/" label="Profil" icon="das-icon-user" %}
+  </div>
+  {% endif %}
+</nav>

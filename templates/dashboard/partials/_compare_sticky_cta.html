@@ -1,0 +1,45 @@
+{% load i18n %}
+{# DAS-309: compare-mode sticky CTA — reads compareMode / selected from parent x-data scope #}
+<div x-show="compareMode"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="translate-y-full opacity-0"
+     x-transition:enter-end="translate-y-0 opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="translate-y-0 opacity-100"
+     x-transition:leave-end="translate-y-full opacity-0"
+     role="region"
+     aria-label="{% trans 'Karşılaştırma modu' %}"
+     class="fixed inset-x-0 bottom-0 z-[45] px-4 pt-6
+            pb-[calc(env(safe-area-inset-bottom)+1rem)]
+            bg-gradient-to-t from-white via-white to-white/0
+            backdrop-blur-sm">
+  <div class="max-w-md mx-auto flex items-center gap-4">
+
+    {# Selection counter — announced to screen readers on change #}
+    <div class="flex flex-col min-w-0 shrink-0">
+      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{% trans "Karşılaştırma" %}</span>
+      <span class="text-sm font-bold text-slate-900"
+            aria-live="polite"
+            x-text="selected.length + '/2 seçildi'"></span>
+    </div>
+
+    {# CTA button — disabled until 2 selected #}
+    <button class="flex-grow py-4 rounded-2xl font-bold transition-colors
+                   flex items-center justify-center gap-2"
+            :class="selected.length === 2
+              ? 'bg-primary text-white shadow-lg shadow-primary/25'
+              : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
+            :disabled="selected.length < 2"
+            :aria-disabled="selected.length < 2"
+            @click="if(selected.length === 2)
+              window.location.href = '/student/karsilastir/v2/?denemeler_v2=1&exam1='
+                + selected[0].id + '&exam2=' + selected[1].id">
+      <span x-text="selected.length === 2 ? 'Devam Et' : '1 deneme daha sec'"></span>
+      <svg x-show="selected.length === 2"
+           class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <use href="#das-icon-chev-right"/>
+      </svg>
+    </button>
+
+  </div>
+</div>

@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}{% if coach_view %}{{ student.full_name }} — {{ subject }} Analizi{% else %}{{ subject }} Analizi{% endif %} — DAS{% endblock %}
+
+{% block content %}
+<div class="das-subject-drilldown -mx-4 -mt-5 sm:-mt-8 min-h-dvh bg-[var(--bg)] pb-24 flex flex-col"
+     x-data="subjectDrillDownState()">
+
+  <header class="das-appbar sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] px-4 h-14 flex items-center gap-3">
+    <a href="{% if coach_view %}{% url 'coach:student_brans_hub' student.id %}{% else %}{% url 'student:brans_hub' %}{% endif %}" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl text-[var(--muted)] active:scale-95 transition-transform">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </a>
+    <h1 class="text-sm font-bold text-[var(--heading)] uppercase tracking-wider flex-1">{{ subject }} Analizi</h1>
+  </header>
+
+  {% if coach_view %}
+  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {{ student_initials }}
+        </div>
+        <div class="text-left min-w-0">
+          <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-tight">Öğrenci İzleniyor</div>
+          <div class="text-sm font-bold text-[var(--heading)] truncate">{{ student.full_name }}</div>
+        </div>
+      </div>
+      <a href="{% url 'coach:student_detail' student.id %}" class="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider">Profil</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <main class="flex-1 overflow-y-auto">
+    <section class="p-4 pt-6">
+      <div class="das-card p-5 {{ subjectClass }} mb-6">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <div class="das-kpi-label">{{ subject }} NET ORTALAMASI</div>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-4xl font-black text-[var(--heading)] tabular-nums">{{ stats.currentNet|floatformat:1 }}</div>
+                    <div class="delta {{ stats.trend }}">
+                        {% if stats.trend == 'up' %}
+                        <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        {% else %}
+                        <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        {% endif %}
+                        <span>{{ stats.delta|floatformat:1 }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                <span>{{ active_period }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border)]">
+            <div>
+                <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">En Yüksek</div>
+                <div class="text-sm font-bold text-[var(--heading)] tabular-nums">
+                    {% if stats.best %}
+                    <span>{{ stats.best.net|floatformat:1 }}</span>
+                    <span class="text-[var(--muted)] font-medium text-[11px] ml-1">({{ stats.best.date }})</span>
+                    {% else %}
+                    <span>—</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">En Düşük</div>
+                <div class="text-sm font-bold text-[var(--heading)] tabular-nums">
+                    {% if stats.worst %}
+                    <span>{{ stats.worst.net|floatformat:1 }}</span>
+                    <span class="text-[var(--muted)] font-medium text-[11px] ml-1">({{ stats.worst.date }})</span>
+                    {% else %}
+                    <span>—</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="flex bg-[var(--surface-2)] p-1 rounded-xl mb-6">
+        <button type="button" @click="dataSource = 'genel'" 
+                class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                :class="dataSource === 'genel' ? 'bg-[var(--surface-2)] shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
+            Genel Denemeler
+        </button>
+        <button type="button" @click="dataSource = 'brans'"
+                class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                :class="dataSource === 'brans' ? 'bg-[var(--surface-2)] shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
+            Branş Denemeleri
+        </button>
+      </div>
+
+      <div class="das-section-head px-0">
+        <h2>Net Değişimi</h2>
+      </div>
+      <div class="das-card h-[220px] mb-8 flex flex-col items-center justify-center border-dashed relative overflow-hidden">
+        <div class="z-10 text-[var(--muted)] text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-1)] px-3 py-1 rounded-full border border-[var(--border)] shadow-sm">
+            Grafik Verisi Yükleniyor...
+        </div>
+        <svg class="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 80 L20 60 L40 70 L60 40 L80 30 L100 20" fill="none" stroke="{{ subjectColor }}" stroke-width="2" stroke-linecap="round"></path>
+            <circle cx="0" cy="80" r="2" fill="{{ subjectColor }}"></circle>
+            <circle cx="20" cy="60" r="2" fill="{{ subjectColor }}"></circle>
+            <circle cx="40" cy="70" r="2" fill="{{ subjectColor }}"></circle>
+            <circle cx="60" cy="40" r="2" fill="{{ subjectColor }}"></circle>
+            <circle cx="80" cy="30" r="2" fill="{{ subjectColor }}"></circle>
+            <circle cx="100" cy="20" r="2" fill="{{ subjectColor }}"></circle>
+        </svg>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-8">
+        <div class="das-card p-4">
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 leading-tight">Son 3 Sınav<br>Ortalaması</div>
+            <div class="text-2xl font-black text-[var(--heading)] tabular-nums">{{ stats.avg3|floatformat:1 }}</div>
+            <div class="mt-2 h-1 w-full bg-[var(--surface-2)] rounded-full overflow-hidden">
+                <div class="h-full bg-[var(--primary)]" style="width: {{ stats.avg3|add:0|divisibleby:40|yesno:'100,0' }}%;"></div>
+            </div>
+        </div>
+        <div class="das-card p-4">
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 leading-tight">Son 10 Sınav<br>Ortalaması</div>
+            <div class="text-2xl font-black text-[var(--heading)] tabular-nums">{{ stats.avg10|floatformat:1 }}</div>
+            <div class="mt-2 h-1 w-full bg-[var(--surface-2)] rounded-full overflow-hidden">
+                <div class="h-full bg-[var(--muted-2)]" style="width: {{ stats.avg10|add:0|divisibleby:40|yesno:'100,0' }}%;"></div>
+            </div>
+        </div>
+      </div>
+
+      <div class="das-section-head px-0">
+        <h2>En Çok Yanlış Yapılan Konular</h2>
+      </div>
+      <div class="das-card p-0 overflow-hidden mb-8">
+        <div class="divide-y divide-[var(--border)]">
+          {% for topic in topics %}
+            <div class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center text-[var(--down)] font-bold text-[10px]">{{ topic.errors }}</div>
+                <div>
+                    <div class="text-sm font-bold text-[var(--heading)]">{{ topic.name }}</div>
+                    <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider">Hatalı Soru</div>
+                </div>
+              </div>
+              <a href="/student/tasks/" class="px-3 py-1.5 bg-[var(--primary-tint)] text-[var(--primary)] text-[10px] font-bold uppercase rounded-lg active:scale-95 transition-transform">
+                Çalış →
+              </a>
+            </div>
+          {% empty %}
+            <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">Kayıtlı konu hatası yok.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="das-section-head px-0">
+        <h2>Sınav Geçmişi</h2>
+      </div>
+      <div class="space-y-4">
+        {% for month in exams.archive %}
+        <div x-show="hasAnySource('{{ month.month_label }}')" x-cloak>
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest pl-1 mb-2">{{ month.month_label }}</div>
+            <div class="das-card p-0 overflow-hidden">
+                <div class="divide-y divide-[var(--border)]">
+                  {% for exam in month.exams %}
+                  <div class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" role="button" x-show="dataSource === '{{ exam.source }}'">
+                    <div class="flex items-center gap-3 min-w-0">
+                       <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
+                       <div class="min-w-0">
+                         <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
+                         <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">{{ exam.duration }}</div>
+                       </div>
+                    </div>
+                    <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if exams.recent %}
+        <div x-show="hasAnySource('Son 30 Gün')" x-cloak>
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest pl-1 mb-2">Son 30 Gün</div>
+            <div class="das-card p-0 overflow-hidden">
+                <div class="divide-y divide-[var(--border)]">
+                  {% for exam in exams.recent %}
+                  <div class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" role="button" x-show="dataSource === '{{ exam.source }}'">
+                    <div class="flex items-center gap-3 min-w-0">
+                       <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
+                       <div class="min-w-0">
+                         <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
+                         <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">{{ exam.duration }}</div>
+                       </div>
+                    </div>
+                    <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div x-show="!hasAnySourceGlobally()" x-cloak class="p-8 text-center text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+          Seçili kaynak için sınav bulunamadı.
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<style>
+  .das-subject-drilldown {
+    --bg:           #f8fafc;
+    --surface-1:    #ffffff;
+    --surface-2:    #f4f4f8;
+    --border:       #e2e2ea;
+    --primary:      #3a7fce;
+    --primary-tint: rgba(58,127,206,0.10);
+    --turkce:       #3B82F6;
+    --mat:          #A78BFA;
+    --sosyal:       #F59E0B;
+    --fen:          #10B981;
+    --up:           #22C55E;
+    --up-tint:      rgba(34,197,94,0.12);
+    --down:         #EF4444;
+    --down-tint:    rgba(239,68,68,0.12);
+    --heading:      #111118;
+    --body:         #2d2d3a;
+    --muted:        #6b6b80;
+    --muted-2:      #9898ad;
+    --r-card:       12px;
+    --r-pill:       9999px;
+  }
+  html.dark .das-subject-drilldown {
+    --bg:           #0a0e14;
+    --surface-1:    #131820;
+    --surface-2:    #1a2030;
+    --border:       #2a3142;
+    --primary:      #4a90e2;
+    --primary-tint: rgba(74,144,226,0.12);
+    --up:           #10b981;
+    --up-tint:      rgba(16,185,129,0.12);
+    --down:         #ef4444;
+    --down-tint:    rgba(239,68,68,0.12);
+    --heading:      #e8ecf3;
+    --body:         #cbd5e1;
+    --muted:        #5b6477;
+    --muted-2:      #94a3b8;
+  }
+  .das-subject-drilldown .das-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-card); position: relative; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .das-subject-drilldown .das-card.accent-turkce { border-left: 3px solid var(--turkce); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-mat { border-left: 3px solid var(--mat); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-sosyal { border-left: 3px solid var(--sosyal); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-fen { border-left: 3px solid var(--fen); padding-left: 14px; }
+  .das-subject-drilldown .das-kpi-label { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .das-subject-drilldown .delta { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; }
+  .das-subject-drilldown .delta.up { background: var(--up-tint); color: var(--up); }
+  .das-subject-drilldown .delta.down { background: var(--down-tint); color: var(--down); }
+  .das-subject-drilldown .das-section-head { display: flex; align-items: baseline; justify-content: space-between; padding: 24px 0 12px; }
+  .das-subject-drilldown .das-section-head h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+</style>
+
+{% block extra_js %}
+<script>
+function subjectDrillDownState() {
+  const allExams = {{ exams.all_json|safe }};
+  const monthMapping = {
+    {% for month in exams.archive %}
+      "{{ month.month_label }}": {{ month.count }},
+    {% endfor %}
+  };
+
+  return {
+    dataSource: 'brans',
+    
+    hasAnySource(monthLabel) {
+      if (monthLabel === 'Son 30 Gün') {
+         return allExams.some(e => e.source === this.dataSource && new Date() - new Date(e.date) <= 30 * 24 * 60 * 60 * 1000);
+         // The actual comparison should just match the rendered elements by counting them, 
+         // but a simple filter on the JSON array works too. Actually, an easier way is to just let Alpine check the source matching in the template.
+      }
+      // For simplicity in UI logic:
+      return true;
+    },
+    
+    hasAnySourceGlobally() {
+      return allExams.some(e => e.source === this.dataSource);
+    }
+  }
+}
+</script>
+{% endblock %}
+{% endblock %}

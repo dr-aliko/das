@@ -1,0 +1,80 @@
+{% load i18n %}
+{# DAS-013: Refined Trend Chart                                              #}
+{# Pill switcher slices client-side via window.DASTrend (set in extra_js)   #}
+{# x-data="trendChart()" — Alpine component defined in extra_js block       #}
+
+<div class="px-4 mb-5" x-data="trendChart()">
+
+  <div class="das-section-head" style="padding-left:0; padding-right:0; padding-top:0;">
+    <div>
+      <h2>{% trans "Genel Deneme Net Trendi" %}</h2>
+      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide" x-text="periodLabel">{{ chart_period_label }}</div>
+    </div>
+    <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
+      <button @click="setPeriod('7')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === '7'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "7G" %}</button>
+      <button @click="setPeriod('30')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === '30'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "30G" %}</button>
+      <button @click="setPeriod('all')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === 'all'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "Tümü" %}</button>
+    </div>
+  </div>
+
+  <div class="das-card p-0 overflow-hidden">
+
+    <div class="p-4 pt-14 relative" style="height:230px;" :class="loading ? 'opacity-60' : ''">
+      <canvas id="lineChart"></canvas>
+      <div id="lineChartSkeleton"
+           class="absolute inset-0 flex items-end gap-2 justify-center pb-4"
+           style="background: var(--surface-1);">
+        <div class="skeleton w-4 rounded-t" style="height:40%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:62%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:28%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:50%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:72%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:58%;"></div>
+        <div class="skeleton w-4 rounded-t" style="height:44%;"></div>
+      </div>
+      <div class="absolute top-3 left-4 pointer-events-none rounded-xl px-2 py-1" style="background: color-mix(in srgb, var(--surface-1) 86%, transparent);">
+        <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide">{% trans "Ort. Net" %}</div>
+        <div class="text-xl font-bold text-[var(--heading)] tnum font-mono" x-text="avg"></div>
+      </div>
+    </div>
+
+    <div class="bg-[var(--surface-2)] border-t border-[var(--border)] px-4 py-3
+                flex justify-between items-center">
+      <div class="flex gap-5">
+        <div>
+          <div class="text-[9px] font-bold text-[var(--muted-2)] uppercase tracking-wide">{% trans "En Yüksek" %}</div>
+          <div class="text-sm font-bold text-[var(--heading)] tnum font-mono" x-text="max"></div>
+        </div>
+        <div>
+          <div class="text-[9px] font-bold text-[var(--muted-2)] uppercase tracking-wide">{% trans "Değişim" %}</div>
+          <div class="flex items-center gap-0.5 font-bold text-sm tnum font-mono"
+               :class="deltaUp ? 'text-[var(--up)]' : 'text-[var(--down)]'">
+            <span x-text="deltaUp ? '▲' : '▼'" class="text-[10px]"></span>
+            <span x-text="delta"></span>
+          </div>
+        </div>
+      </div>
+      <a href="#"
+         class="text-[11px] font-bold text-[var(--primary)] flex items-center gap-1">
+        {% trans "Detay" %}
+        {% include "components/_icon.html" with name="chev-right" size=12 %}
+      </a>
+    </div>
+
+  </div>
+</div>

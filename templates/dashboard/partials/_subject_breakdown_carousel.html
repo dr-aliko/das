@@ -1,0 +1,45 @@
+{% load i18n %}
+{# DAS-011: Subject Breakdown Carousel                                       #}
+{# Mobile: horizontal snap-scroll  |  Desktop (lg): 4-col static grid       #}
+{# Context: subjects[] = {key, name, net, delta, accuracy}                  #}
+
+<div class="mb-5">
+  <div class="das-section-head px-4" style="padding-top:0;">
+    <h2>{% trans "Ders Performansı" %}</h2>
+    <span class="text-[11px] text-[var(--muted)]">{% trans "son deneme" %}</span>
+  </div>
+
+  <div class="das-carousel
+              flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-4
+              lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:snap-none">
+    {% for subject in subjects %}
+    <div class="das-card accent-{{ subject.key }} das-carousel-card snap-start
+                flex flex-col justify-between h-32 lg:min-w-0">
+
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="das-kpi-label mb-0.5">{{ subject.name }}</div>
+          <div class="das-kpi-value" style="font-size:22px;">{{ subject.net|floatformat:1 }}</div>
+        </div>
+        {% if subject.delta is not None %}
+        <span class="delta {% if subject.delta > 0 %}up{% elif subject.delta < 0 %}down{% else %}flat{% endif %} text-[10px]">
+          {% if subject.delta > 0 %}+{% endif %}{{ subject.delta|floatformat:1 }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="mt-auto">
+        <div class="flex justify-between items-end mb-1.5">
+          <span class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide">{% trans "Doğruluk" %}</span>
+          <span class="text-[11px] font-bold text-[var(--heading)] tnum font-mono">{{ subject.accuracy }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill"
+               style="width: {{ subject.accuracy }}%; background: var(--{{ subject.key }});"></div>
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+</div>

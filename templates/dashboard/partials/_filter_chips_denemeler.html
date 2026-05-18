@@ -1,0 +1,63 @@
+{% load i18n %}
+{# DAS-305: two-row scrollable filter strip #}
+<div class="v2-filter-strip sticky top-0 z-30 bg-white border-b border-slate-100 shadow-sm py-2 space-y-2">
+
+  {# Row 1: period window chips #}
+  <div class="flex overflow-x-auto gap-2 px-4 no-scrollbar overscroll-x-contain">
+    {% with p=filters.period|default:"" %}
+    <button @click="setPeriod('')"
+            :class="activePeriod === '' ? 'das-filter-chip active' : 'das-filter-chip'"
+            class="flex-shrink-0">{% trans "Tümü" %}</button>
+    <button @click="setPeriod('7')"
+            :class="activePeriod === '7' ? 'das-filter-chip active' : 'das-filter-chip'"
+            class="flex-shrink-0">{% trans "7 Gün" %}</button>
+    <button @click="setPeriod('30')"
+            :class="activePeriod === '30' ? 'das-filter-chip active' : 'das-filter-chip'"
+            class="flex-shrink-0">{% trans "30 Gün" %}</button>
+    <button @click="setPeriod('90')"
+            :class="activePeriod === '90' ? 'das-filter-chip active' : 'das-filter-chip'"
+            class="flex-shrink-0">{% trans "3 Ay" %}</button>
+    <button @click="setPeriod('365')"
+            :class="activePeriod === '365' ? 'das-filter-chip active' : 'das-filter-chip'"
+            class="flex-shrink-0">{% trans "1 Yıl" %}</button>
+    {% endwith %}
+  </div>
+
+  {# Row 2: sort indicator + advanced filter trigger #}
+  <div class="flex items-center gap-2 px-4 overflow-x-auto no-scrollbar overscroll-x-contain">
+    {# Current sort chip — tapping opens sort sheet #}
+    <button @click="sortOpen = true"
+            class="das-filter-chip flex-shrink-0 flex items-center gap-1"
+            :class="activeSort !== 'date' ? 'active' : ''">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>
+      </svg>
+      <span x-text="{date:'Tarih', net:'Net', publisher:'Yayın'}[activeSort] || 'Sırala'"></span>
+    </button>
+
+    {# Divider #}
+    <div class="w-px h-4 bg-slate-200 flex-shrink-0"></div>
+
+    {# Advanced filter trigger #}
+    <button @click="filterOpen = true"
+            class="das-filter-chip flex-shrink-0 flex items-center gap-1.5"
+            :class="activeFilterCount > 0 ? 'active' : ''">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+      </svg>
+      {% trans "Filtrele" %}
+      <span x-show="activeFilterCount > 0"
+            x-text="activeFilterCount"
+            class="w-4 h-4 bg-primary text-white rounded-full text-[9px] flex items-center justify-center font-bold">
+      </span>
+    </button>
+  </div>
+
+</div>
+
+<style>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>

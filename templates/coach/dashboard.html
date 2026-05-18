@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Koç Paneli — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-800">Öğrenci Listesi</h1>
+    <p class="text-gray-500 text-sm mt-0.5">Tüm öğrencilerin deneme durumlarını görüntüle.</p>
+  </div>
+
+  {% if student_data %}
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-100">
+        <tr>
+          <th class="text-left px-6 py-3 font-semibold text-gray-600">Öğrenci</th>
+          <th class="text-left px-4 py-3 font-semibold text-gray-600">Son Sınav</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Sınav Sayısı</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Son Net</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for item in student_data %}
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-6 py-4">
+            <div class="font-medium text-gray-800">{{ item.student.full_name }}</div>
+            <div class="text-xs text-gray-400">{{ item.student.email }}</div>
+          </td>
+          <td class="px-4 py-4 text-gray-600">
+            {% if item.last_exam %}
+              <div>{{ item.last_exam.custom_name }}</div>
+              <div class="text-xs text-gray-400">{{ item.last_exam.exam_date }}</div>
+            {% else %}
+              <span class="text-gray-300 italic">Henüz sınav yok</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-4 text-center font-semibold text-gray-700">{{ item.exam_count }}</td>
+          <td class="px-4 py-4 text-center">
+            {% if item.last_exam %}
+              <span class="font-bold text-indigo-700 text-base">
+                {{ item.last_exam.total_net|floatformat:2 }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-4 text-right">
+            <a href="/coach/student/{{ item.student.id }}/"
+              class="text-indigo-600 hover:text-indigo-800 font-medium text-xs hover:underline">
+              Detay →
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="bg-gray-50 border border-gray-100 rounded-2xl p-10 text-center text-gray-400">
+    Henüz kayıtlı öğrenci yok.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+/* ============================================================
+   DAS tokens.css — CSS Custom Property Foundation
+   DAS-003
+   Source: _artifacts/implementation/DAS-003/tokens.css
+
+   THEMING STRATEGY
+   ────────────────
+   :root defines the light-compatible baseline (app is currently
+   light-theme dominant — no visual change until .das-dark is used).
+
+   .das-dark scopes the dark palette. Apply to any ancestor:
+     Phase 1:  <div class="das-dark">{{ dashboard section }}</div>
+     Phase 4+: <html class="das-dark">
+   ============================================================ */
+
+
+/* ── Light-compatible baseline ─────────────────────────────────────────── */
+:root {
+
+  /* Backgrounds — neutral at :root; dark values in .das-dark */
+  --bg:           transparent;
+  --surface-1:    #ffffff;
+  --surface-2:    #f4f4f8;
+  --surface-3:    #e8e8ef;
+
+  /* Borders */
+  --border:        #e2e2ea;
+  --border-strong: #c8c8d8;
+
+  /* Brand primary */
+  --primary:       #6D5BFF;
+  --primary-soft:  #4F44B8;
+  --primary-glow:  #9C8BFF;
+  --primary-tint:  rgba(109, 91, 255, 0.10);
+
+  /* Subject palette — constant across all themes */
+  --turkce:  #3B82F6;
+  --mat:     #A78BFA;
+  --sosyal:  #F59E0B;
+  --fen:     #10B981;
+
+  /* Semantic status */
+  --up:        #22C55E;
+  --up-tint:   rgba(34, 197, 94, 0.12);
+  --down:      #EF4444;
+  --down-tint: rgba(239, 68, 68, 0.12);
+
+  /* Typography */
+  --heading:  #111118;
+  --body:     #2d2d3a;
+  --muted:    #6b6b80;
+  --muted-2:  #9898ad;
+
+  /* Border radius */
+  --r-card:  14px;
+  --r-chip:  8px;
+  --r-pill:  9999px;
+
+  /* Spacing (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+
+  /* Shadows */
+  --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-fab:     0 6px 20px rgba(109, 91, 255, 0.45);
+
+  /* Transitions */
+  --t-fast:   120ms;
+  --t-base:   200ms;
+  --t-slow:   300ms;
+  --ease-out: cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+
+/* ── Dark theme scope ───────────────────────────────────────────────────── */
+.das-dark {
+  --bg:           #0B0B12;
+  --surface-1:    #15151F;
+  --surface-2:    #1E1E2C;
+  --surface-3:    #262635;
+
+  --border:        #262635;
+  --border-strong: #2F2F42;
+
+  --heading:  #FFFFFF;
+  --body:     #E5E5F0;
+  --muted:    #8A8AA3;
+  --muted-2:  #5E5E78;
+
+  --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+
+/* ── Forced dark via media query (disabled until full migration) ─────────── */
+/*
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:           #0B0B12;
+    --surface-1:    #15151F;
+    --surface-2:    #1E1E2C;
+    --surface-3:    #262635;
+    --border:        #262635;
+    --border-strong: #2F2F42;
+    --heading:  #FFFFFF;
+    --body:     #E5E5F0;
+    --muted:    #8A8AA3;
+    --muted-2:  #5E5E78;
+    --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+}
+*/

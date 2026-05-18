@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sınav Sil — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+  <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+    <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <svg class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </div>
+    <h1 class="text-xl font-bold text-gray-800 mb-2">Sınavı Sil</h1>
+    <p class="text-gray-500 text-sm mb-1">
+      <strong class="text-gray-800">{{ exam.custom_name }}</strong> silinecek.
+    </p>
+    <p class="text-gray-400 text-xs mb-6">Bu işlem geri alınamaz. Tüm sonuçlar ve hata analizleri de silinir.</p>
+
+    <form method="post" class="flex gap-3 justify-center">
+      {% csrf_token %}
+      <a href="/student/exam/{{ exam.id }}/"
+        class="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition font-medium">
+        Vazgeç
+      </a>
+      <button type="submit"
+        class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition">
+        Evet, Sil
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

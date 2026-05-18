@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Karşılaştırma" %} — DAS{% endblock %}
+
+{% block content %}
+{% comment %}DAS-361/363/364: Compare V2 — mobile diverging-bar + desktop legacy radar.
+Flagged behind denemeler_v2. SSR data via window._DAS_CMP + DAS_COLORS() bridge.
+Container query: <800px → compare-mobile (bars+rows), >=800px → compare-desktop (radar).{% endcomment %}
+
+{% if comparison %}
+<script>
+  window._DAS_CMP = {{ chart_json|safe }};
+</script>
+{% endif %}
+
+{# ── Page header ── #}
+<div class="flex items-center gap-3 pt-2 mb-5">
+  <a href="{% url 'student:denemeler_list' %}?denemeler_v2=1"
+     class="p-2 rounded-xl transition hover:opacity-70"
+     style="color:var(--muted)" aria-label="{% trans 'Geri' %}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-xl font-black" style="color:var(--heading)">{% trans "Karşılaştırma" %}</h1>
+    {% if comparison %}
+    <p class="text-xs font-medium mt-0.5" style="color:var(--muted)">
+      {{ comparison.exam_a.exam_date|date:"d M Y" }}
+      <span aria-hidden="true"> → </span>
+      {{ comparison.exam_b.exam_date|date:"d M Y" }}
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% if not comparison %}
+{# ── No exams selected — empty state ── #}
+<div class="rounded-card p-12 text-center"
+     style="background:var(--surface-1); border:1.5px dashed var(--border-strong);">
+  <div class="text-4xl mb-4" aria-hidden="true">⚖️</div>
+  <p class="text-base font-bold mb-2" style="color:var(--body)">{% trans "İki deneme seç" %}</p>
+  <p class="text-sm mb-6" style="color:var(--muted)">
+    {% trans "Denemeler listesinden 2 denemeye tik at, ardından \"Karşılaştır\" butonuna bas." %}
+  </p>
+  <a href="{% url 'student:denemeler_list' %}?denemeler_v2=1"
+     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm
+            bg-primary text-white transition active:opacity-80">
+    {% trans "Denemelere Dön" %}
+  </a>
+</div>
+
+{% else %}
+{# ── Container-query wrapper (DAS-363) ── #}
+<div class="compare-cq-root" style="container-type: inline-size;">
+
+  {# ══ MOBILE LAYOUT (< 800px container) ══════════════════════════════ #}
+  <div class="compare-mobile space-y-4">
+
+    {# Hero: A → B with total delta chip #}
+    <div class="rounded-card p-5 text-center"
+         style="background:var(--surface-1); border:1px solid var(--border);">
+      <div class="flex items-center justify-center gap-6 mb-4">
+        <div class="text-center">
+          <span class="text-[10px] font-bold uppercase tracking-widest block mb-1"
+                style="color:var(--muted)">{{ comparison.exam_a.custom_name|truncatechars:20 }}</span>
+          <span class="text-3xl font-black tabular-nums"
+                style="color:var(--heading)">{{ chart_data.net_a|floatformat:2 }}</span>
+        </div>
+        <svg class="w-5 h-5 shrink-0" style="color:var(--border-strong)"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+        </svg>
+        <div class="text-center">
+          <span class="text-[10px] font-bold uppercase tracking-widest block mb-1"
+                style="color:var(--muted)">{{ comparison.exam_b.custom_name|truncatechars:20 }}</span>
+          <span class="text-3xl font-black tabular-nums"
+                style="color:{% if chart_data.total_delta >= 0 %}var(--up){% else %}var(--down){% endif %}">
+            {{ chart_data.net_b|floatformat:2 }}
+          </span>
+        </div>
+      </div>
+
+      {# Delta chip #}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
+                   text-xs font-black tabular-nums"
+            style="background:var({% if chart_data.total_delta >= 0 %}--up-tint{% else %}--down-tint{% endif %});
+                   color:var({% if chart_data.total_delta >= 0 %}--up{% else %}--down{% endif %});">
+        {% if chart_data.total_delta >= 0 %}
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+          </svg>
+          +{{ chart_data.total_delta|floatformat:2 }} {% trans "Net Artış" %}
+        {% else %}
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          {{ chart_data.total_delta|floatformat:2 }} {% trans "Net Düşüş" %}
+        {% endif %}
+      </span>
+    </div>
+
+    {# Diverging-bar chart (DAS-361) #}
+    <div class="rounded-card p-4"
+         style="background:var(--surface-1); border:1px solid var(--border);">
+      <div class="flex justify-between items-end mb-4">
+        <div>
+          <h3 class="text-sm font-bold" style="color:var(--heading)">{% trans "Ders Bazlı Karşılaştırma" %}</h3>
+          <p class="text-[10px] font-medium mt-0.5" style="color:var(--muted)">
+            {% trans "İyi (sağ) / Kötü (sol)" %}
+          </p>
+        </div>
+        <span class="text-xs font-bold" style="color:var(--primary)">{% trans "Net Farkı" %}</span>
+      </div>
+      <div class="relative" style="height: 220px;">
+        <canvas id="compareDivergingChart" aria-label="{% trans 'Ders bazlı net farkı grafiği' %}"
+                role="img"></canvas>
+      </div>
+    </div>
+
+    {# Subject rows — DAS-362 expandable (DAS-362) #}
+    <div class="space-y-3">
+      {% for row in subject_rows %}
+        {% include "dashboard/partials/_compare_subject_row.html" with row=row %}
+      {% endfor %}
+    </div>
+
+    {# Trend cross-link — DAS-364 #}
+    <div class="text-center py-3">
+      <a href="{% url 'student:dashboard' %}?v2=1"
+         class="inline-flex items-center gap-1.5 text-xs font-bold transition-opacity hover:opacity-70"
+         style="color:var(--primary)">
+        {% trans "…veya tüm trendi gör" %}
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+        </svg>
+      </a>
+    </div>
+
+    {# Closed gaps section (reused from V1) #}
+    {% if comparison.closed_gaps %}
+    <div class="rounded-card p-5"
+         style="background:var(--surface-1); border:1px solid var(--border);">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+             style="background:var(--up-tint);">
+          <svg class="w-5 h-5 text-up" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-bold text-sm" style="color:var(--heading)">{% trans "Kapanan Eksikler" %}</p>
+          <p class="text-xs mt-0.5" style="color:var(--muted)">
+            {% trans "A'da hatalı, B'de doğru konular" %}
+            <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold"
+                  style="background:var(--up-tint); color:var(--up)">
+              {{ comparison.closed_gaps|length }}
+            </span>
+          </p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {% for topic in comparison.closed_gaps %}
+        <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+             style="background:var(--up-tint); border:1px solid rgba(34,197,94,.2);">
+          <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-up"
+               style="background:var(--up);">
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs font-semibold truncate" style="color:var(--heading)">{{ topic.name }}</p>
+            <p class="text-[10px]" style="color:var(--muted)">{{ topic.subject.display_name }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /compare-mobile #}
+
+  {# ══ DESKTOP LAYOUT (≥ 800px container) — preserves legacy radar chart ══ #}
+  <div class="compare-desktop" style="display:none;">
+    <div class="rounded-card p-6"
+         style="background:var(--surface-1); border:1px solid var(--border);">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-black" style="color:var(--heading)">{% trans "Detaylı Karşılaştırma" %}</h2>
+        <div class="flex gap-6 text-right">
+          <div>
+            <span class="text-xs font-bold uppercase block" style="color:var(--muted)">{% trans "A Sınavı" %}</span>
+            <span class="text-xl font-black tabular-nums"
+                  style="color:var(--heading)">{{ chart_data.net_a|floatformat:2 }}</span>
+          </div>
+          <div>
+            <span class="text-xs font-bold uppercase block" style="color:var(--muted)">{% trans "B Sınavı" %}</span>
+            <span class="text-xl font-black tabular-nums"
+                  style="color:{% if chart_data.total_delta >= 0 %}var(--up){% else %}var(--down){% endif %}">
+              {{ chart_data.net_b|floatformat:2 }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {# Legacy radar + delta table — identical to V1 compare.html #}
+      <div class="grid grid-cols-2 gap-8">
+        <div class="flex flex-col items-center justify-center rounded-xl border"
+             style="height:400px; background:var(--surface-2); border-color:var(--border);">
+          <canvas id="radarChartDesktop"></canvas>
+        </div>
+
+        {# Delta table #}
+        <div class="overflow-hidden rounded-xl border" style="border-color:var(--border);">
+          <div class="px-5 py-3 border-b flex items-center justify-between"
+               style="background:var(--surface-2); border-color:var(--border);">
+            <span class="font-bold text-sm" style="color:var(--heading)">{% trans "Net & Süre Değişimi" %}</span>
+            <div class="flex gap-3 text-xs" style="color:var(--muted)">
+              <span><span class="font-bold" style="color:var(--primary)">A</span> {% trans "Önceki" %}</span>
+              <span><span class="font-bold text-up">B</span> {% trans "Güncel" %}</span>
+            </div>
+          </div>
+          <div style="background:var(--surface-1);">
+            {% for d in comparison.deltas %}
+            <div class="flex items-center px-5 py-3 gap-3 border-b last:border-0"
+                 style="border-color:var(--border);">
+              <div class="w-20 shrink-0 text-xs font-semibold" style="color:var(--body)">
+                {% if d.subject.name|slice:":4" == "TYT " %}{{ d.subject.name|slice:"4:" }}
+                {% else %}{{ d.subject.name }}{% endif %}
+              </div>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="text-xs font-medium tabular-nums" style="color:var(--primary)">
+                  {{ d.net_a|floatformat:2 }}
+                </span>
+                <svg class="w-3 h-3 shrink-0" style="color:var(--border-strong)"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                </svg>
+                <span class="text-xs font-medium tabular-nums text-up">
+                  {{ d.net_b|floatformat:2 }}
+                </span>
+                {% if d.net_delta > 0 %}
+                <span class="px-1.5 py-0.5 rounded text-xs font-bold tabular-nums text-up"
+                      style="background:var(--up-tint);">+{{ d.net_delta|floatformat:2 }}</span>
+                {% elif d.net_delta < 0 %}
+                <span class="px-1.5 py-0.5 rounded text-xs font-bold tabular-nums text-down"
+                      style="background:var(--down-tint);">{{ d.net_delta|floatformat:2 }}</span>
+                {% else %}
+                <span class="px-1.5 py-0.5 rounded text-xs" style="color:var(--muted-2);">= 0</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {# Closed gaps — desktop (mirrors mobile section above) #}
+  {% if comparison.closed_gaps %}
+  <div class="mt-5 rounded-card p-6"
+       style="background:var(--surface-1); border:1px solid var(--border);">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+           style="background:var(--up-tint);">
+        <svg class="w-5 h-5" style="color:var(--up)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="font-bold text-base" style="color:var(--heading)">{% trans "Kapanan Eksikler — Rövanş!" %}</p>
+        <p class="text-xs mt-0.5" style="color:var(--muted)">
+          {% trans "A sınavında hatalı, B sınavında doğru konular" %}
+          <span class="ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold"
+                style="background:var(--up-tint); color:var(--up)">
+            {{ comparison.closed_gaps|length }}
+          </span>
+        </p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+      {% for topic in comparison.closed_gaps %}
+      <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+           style="background:var(--up-tint); border:1px solid rgba(34,197,94,.2);">
+        <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+             style="background:var(--up);">
+          <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold truncate" style="color:var(--heading)">{{ topic.name }}</p>
+          <p class="text-[10px]" style="color:var(--muted)">{{ topic.subject.display_name }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="mt-5 rounded-card px-5 py-8 text-center"
+       style="background:var(--surface-1); border:1px solid var(--border);">
+    <div class="text-3xl mb-2" aria-hidden="true">📊</div>
+    <p class="text-sm font-medium" style="color:var(--muted)">{% trans "Bu iki sınav arasında kapanan eksik bulunamadı." %}</p>
+  </div>
+  {% endif %}
+
+  </div>{# /compare-desktop #}
+
+</div>{# /compare-cq-root #}
+{% endif %}{# /has comparison #}
+
+<style>
+/* DAS-363: Container query — swaps layouts at 800px container width.
+   .compare-desktop is hidden by default; container query reveals it.
+   @media print preserves the desktop view for printing. */
+@container (min-width: 800px) {
+  .compare-mobile  { display: none !important; }
+  .compare-desktop { display: block !important; }
+}
+@media print {
+  .compare-mobile  { display: none !important; }
+  .compare-desktop { display: block !important; }
+}
+
+/* Reduced-motion: disable all chart animations */
+@media (prefers-reduced-motion: reduce) {
+  /* Chart.js reads window.matchMedia at config time — handled in JS */
+}
+</style>
+
+{% endblock %}
+
+
+{% block extra_js %}
+{% if comparison %}
+<script>
+(function () {
+  'use strict';
+
+  var data = window._DAS_CMP;
+  if (!data) return;
+
+  /* ── Reduced-motion guard ─────────────────────────────────────── */
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var animDuration  = reducedMotion ? 0 : 600;
+
+  /* ── DAS_COLORS — live token resolution (DAS-003 bridge) ───────── */
+  var c = window.DAS.DAS_COLORS();
+
+  /* ── Subject color array — matches _TYT_DISPLAY_SUBJECTS order ─── */
+  /* [Türkçe, Matematik, Sosyal, Fen] */
+  var subjectColors = [c.turkce, c.mat, c.sosyal, c.fen];
+
+  /* ── Positive/negative split background colors for diverging bar ── */
+  /* Each bar is colored by its own subject color (positive = subject,
+     negative = same subject at 60% opacity to signal loss). */
+  var barColors = data.deltas.map(function (v, i) {
+    var base = subjectColors[i] || c.primary;
+    return v >= 0 ? base : window.DAS.withAlpha(base, 0.55);
+  });
+
+  /* ── 1. Mobile diverging-bar chart ─────────────────────────────── */
+  var mobileCanvas = document.getElementById('compareDivergingChart');
+  if (mobileCanvas) {
+    new Chart(mobileCanvas, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data:            data.deltas,
+          backgroundColor: barColors,
+          borderRadius:    5,
+          barThickness:    22,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        animation: { duration: animDuration },
+        plugins: {
+          legend:  { display: false },
+          tooltip: { enabled: false },
+        },
+        scales: {
+          x: {
+            grid: {
+              color:     window.DAS.withAlpha(c.border, 0.6),
+              drawTicks: false,
+            },
+            border: { display: false },
+            ticks: {
+              color: c.muted,
+              font:  { family: 'Inter', size: 10, weight: '700' },
+              callback: function (val) { return val > 0 ? '+' + val : val; },
+            },
+          },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: c.heading,
+              font:  { family: 'Inter', size: 11, weight: '600' },
+              padding: 4,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /* ── 2. Desktop radar chart (DAS-363 preservation) ─────────────── */
+  var desktopCanvas = document.getElementById('radarChartDesktop');
+  if (desktopCanvas) {
+    var radarData = {{ comparison.radar_json|safe }};
+    var maxVal = Math.max.apply(null, radarData.data_a.concat(radarData.data_b).concat([1]));
+    var step   = maxVal <= 10 ? 2 : maxVal <= 30 ? 5 : 10;
+
+    new Chart(desktopCanvas, {
+      type: 'radar',
+      data: {
+        labels: radarData.labels,
+        datasets: [
+          {
+            label: radarData.label_a,
+            data:  radarData.data_a.map(function (v) { return Math.max(0, v); }),
+            borderColor:       c.primary,
+            backgroundColor:   window.DAS.withAlpha(c.primary, 0.1),
+            borderWidth:       2,
+            pointBackgroundColor: c.primary,
+            pointRadius:       4,
+          },
+          {
+            label: radarData.label_b,
+            data:  radarData.data_b.map(function (v) { return Math.max(0, v); }),
+            borderColor:       c.up,
+            backgroundColor:   window.DAS.withAlpha(c.up, 0.1),
+            borderWidth:       2,
+            pointBackgroundColor: c.up,
+            pointRadius:       4,
+          },
+        ],
+      },
+      options: {
+        responsive:  true,
+        animation:   { duration: animDuration },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels:   { color: c.muted, font: { size: 11 }, boxWidth: 10 },
+          },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return ' ' + ctx.dataset.label + ': ' + ctx.raw.toFixed(2);
+              },
+            },
+          },
+        },
+        scales: {
+          r: {
+            min: 0,
+            suggestedMax: maxVal + step,
+            ticks: {
+              stepSize:       step,
+              font:           { size: 9 },
+              backdropColor:  'transparent',
+              color:          c.muted,
+            },
+            pointLabels: {
+              font:  { size: 11 },
+              color: c.heading,
+            },
+            grid:       { color: window.DAS.withAlpha(c.border, 0.6) },
+            angleLines: { color: window.DAS.withAlpha(c.border, 0.6) },
+          },
+        },
+      },
+    });
+  }
+}());
+</script>
+{% endif %}
+{% endblock %}

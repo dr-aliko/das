@@ -1,0 +1,365 @@
+{# DAS-512-522 + DAS-5.3: Task & Student Bottom Sheets (shared partial) #}
+{# Lives inside the parent Alpine x-data scope. Uses: #}
+{#   showAddSheet, showEditSheet, editingTask, taskForm, #}
+{#   dersler, listeler, videolar, #}
+{#   showStudentSheet, students, selectedStudent, #}
+{#   saveMobileTask(), deleteMobileTask(), loadListeler(), loadVideolar() #}
+
+<!-- 1. Add / Edit Task Sheet -->
+<div x-show="showAddSheet || showEditSheet"
+     class="fixed inset-0 z-50 flex items-end justify-center"
+     x-cloak>
+
+    <!-- Backdrop -->
+    <div x-show="showAddSheet || showEditSheet"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="showAddSheet = false; showEditSheet = false; editingTask = null"
+         class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+    <!-- Sheet panel -->
+    <div x-show="showAddSheet || showEditSheet"
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full max-w-lg bg-[var(--surface-1)] rounded-t-[24px] shadow-2xl max-h-[92vh] flex flex-col">
+
+        <!-- Handle -->
+        <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mt-4 mb-4 shrink-0"></div>
+
+        <!-- Header -->
+        <div class="px-6 pb-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
+            <h3 class="text-xl font-black text-[var(--heading)]"
+                x-text="showEditSheet ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h3>
+            <button @click="showAddSheet = false; showEditSheet = false; editingTask = null"
+                    class="w-8 h-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--heading)] rounded-xl transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Scrollable body -->
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+
+            <!-- ── Activity type toggle ── -->
+            <div>
+                <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">AKTİVİTE</label>
+                <div class="flex gap-2">
+                    <template x-for="at in [
+                        { key: 'soru_cozumu',   label: 'Soru Çözümü' },
+                        { key: 'tekrar',        label: 'Tekrar' },
+                        { key: 'konu_anlatimi', label: 'Konu Anlatımı' }
+                    ]" :key="at.key">
+                        <button type="button"
+                                @click="taskForm.aktivite_tipi = at.key; taskForm.error = ''"
+                                class="flex-1 py-2 rounded-xl text-[11px] font-bold border transition-colors"
+                                :class="taskForm.aktivite_tipi === at.key
+                                    ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                    : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'"
+                                x-text="at.label"></button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 A. Soru Çözümü / Tekrar fields
+                 ══════════════════════════════════════════════ -->
+            <div x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'" class="space-y-5">
+
+                <!-- Task title -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">GÖREV BAŞLIĞI</label>
+                    <input type="text"
+                           x-model="taskForm.ders_title"
+                           placeholder="Örn: Limit soru çözümü…"
+                           class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--muted-2)]">
+                </div>
+
+                <!-- Subject colour chips (visual accent) -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">DERS</label>
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="sub in [
+                            { name: 'Türkçe',    key: 'turkce', color: 'var(--turkce)' },
+                            { name: 'Matematik', key: 'mat',    color: 'var(--mat)' },
+                            { name: 'Sosyal',    key: 'sosyal', color: 'var(--sosyal)' },
+                            { name: 'Fen',       key: 'fen',    color: 'var(--fen)' },
+                            { name: 'Genel',     key: 'primary',color: 'var(--primary)' }
+                        ]" :key="sub.key">
+                            <button type="button"
+                                    @click="taskForm.subject = sub.key"
+                                    class="das-filter-chip h-9"
+                                    :class="taskForm.subject === sub.key ? 'active' : ''">
+                                <span class="inline-block w-2 h-2 rounded-full mr-1.5 shrink-0"
+                                      :style="{ backgroundColor: sub.color }"></span>
+                                <span x-text="sub.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Date & Duration -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">TARİH</label>
+                        <input type="date" x-model="taskForm.tarih"
+                               class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-3 text-xs font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">SÜRE (dk)</label>
+                        <input type="number" min="0" x-model.number="taskForm.ozel_sure_dk" placeholder="45"
+                               class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-3 text-xs font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--muted-2)]">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">AÇIKLAMA</label>
+                    <textarea x-model="taskForm.aciklama" rows="3"
+                              placeholder="Kaynak, konu veya ek not…"
+                              class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--muted-2)] resize-none"></textarea>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 B. Konu Anlatımı — progressive disclosure
+                 ══════════════════════════════════════════════ -->
+            <div x-show="taskForm.aktivite_tipi === 'konu_anlatimi'" class="space-y-5">
+
+                <!-- Date (always visible) -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">TARİH</label>
+                    <input type="date" x-model="taskForm.tarih"
+                           class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-3 text-xs font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors">
+                </div>
+
+                <!-- Step 1: Exam type chips -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">SINAV TİPİ</label>
+                    <div class="flex gap-2">
+                        <template x-for="tip in ['TYT', 'AYT']" :key="tip">
+                            <button type="button"
+                                    @click="taskForm.sinav_tipi = tip; taskForm.konu_ders_id = ''; taskForm.liste_id = ''; taskForm.selectedVideos = []; listeler = []; videolar = []"
+                                    class="flex-1 py-2 rounded-xl text-sm font-bold border transition-colors"
+                                    :class="taskForm.sinav_tipi === tip
+                                        ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'"
+                                    x-text="tip"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Step 2: Ders picker — scrollable list from API -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">DERS</label>
+
+                    <!-- Loading state -->
+                    <div x-show="dersler.length === 0" class="text-[var(--muted)] text-xs px-1">
+                        Dersler yükleniyor…
+                    </div>
+
+                    <div x-show="dersler.length > 0"
+                         class="space-y-1.5 max-h-36 overflow-y-auto"
+                         style="-ms-overflow-style:none;scrollbar-width:none;">
+                        <template x-for="d in dersler" :key="d.id">
+                            <button type="button"
+                                    @click="taskForm.konu_ders_id = String(d.id); taskForm.liste_id = ''; taskForm.selectedVideos = []; videolar = []; loadListeler()"
+                                    class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors"
+                                    :class="taskForm.konu_ders_id === String(d.id)
+                                        ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--heading)] active:bg-[var(--surface-1)]'"
+                                    x-text="d.ad"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Step 3: Playlist picker — appears after ders selection -->
+                <div x-show="taskForm.konu_ders_id" class="space-y-2">
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider px-1">OYNATMA LİSTESİ</label>
+
+                    <div x-show="listeler.length === 0 && taskForm.konu_ders_id"
+                         class="text-[var(--muted)] text-xs px-1">
+                        Liste yükleniyor…
+                    </div>
+
+                    <div x-show="listeler.length > 0"
+                         class="space-y-1.5 max-h-32 overflow-y-auto"
+                         style="-ms-overflow-style:none;scrollbar-width:none;">
+                        <template x-for="l in listeler" :key="l.id">
+                            <button type="button"
+                                    @click="taskForm.liste_id = String(l.id); taskForm.selectedVideos = []; loadVideolar()"
+                                    class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors"
+                                    :class="taskForm.liste_id === String(l.id)
+                                        ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--heading)] active:bg-[var(--surface-1)]'"
+                                    x-text="l.baslik"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Step 4: Video list with checkboxes — appears after playlist selection -->
+                <div x-show="taskForm.liste_id" class="space-y-2">
+                    <div class="flex items-center justify-between px-1">
+                        <label class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                            VİDEOLAR
+                        </label>
+                        <span class="text-[10px] font-bold text-[var(--primary)]"
+                              x-show="taskForm.selectedVideos.length"
+                              x-text="taskForm.selectedVideos.length + ' seçili'"></span>
+                    </div>
+
+                    <div x-show="videolar.length === 0 && taskForm.liste_id"
+                         class="text-[var(--muted)] text-xs px-1">
+                        Videolar yükleniyor…
+                    </div>
+
+                    <div class="space-y-1.5 max-h-48 overflow-y-auto rounded-xl border border-[var(--border)]"
+                         style="-ms-overflow-style:none;scrollbar-width:none;">
+                        <template x-for="v in videolar" :key="v.id">
+                            <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors"
+                                   :class="taskForm.selectedVideos.includes(String(v.id))
+                                       ? 'bg-[var(--primary-tint)]'
+                                       : 'hover:bg-[var(--surface-2)]'">
+                                <input type="checkbox"
+                                       :value="String(v.id)"
+                                       :checked="taskForm.selectedVideos.includes(String(v.id))"
+                                       @change="
+                                           const sid = String(v.id);
+                                           if ($event.target.checked) {
+                                               taskForm.selectedVideos = [...taskForm.selectedVideos, sid];
+                                           } else {
+                                               taskForm.selectedVideos = taskForm.selectedVideos.filter(x => x !== sid);
+                                           }
+                                           updateSure();
+                                       "
+                                       class="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--primary)] focus:ring-0 accent-indigo-600 shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-semibold text-[var(--heading)] leading-snug"
+                                         x-text="v.baslik"></div>
+                                </div>
+                                <span class="text-[10px] font-bold text-[var(--muted)] shrink-0"
+                                      x-text="v.sure_dk + ' dk'"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Auto-computed duration display for konu_anlatimi -->
+                <div x-show="taskForm.ozel_sure_dk > 0" class="flex items-center gap-2 px-1">
+                    <svg class="w-4 h-4 text-[var(--primary)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-xs font-bold text-[var(--heading)]">
+                        Toplam süre: <span x-text="taskForm.ozel_sure_dk"></span> dk
+                    </span>
+                </div>
+
+                <!-- Optional extra note -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">EK NOT (OPSİYONEL)</label>
+                    <input type="text" x-model="taskForm.konu_not" placeholder="Ek not…"
+                           class="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold text-[var(--heading)] focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-[var(--muted-2)]">
+                </div>
+            </div>
+
+            <!-- Error message -->
+            <p x-show="taskForm.error"
+               x-text="taskForm.error"
+               class="text-red-500 text-xs bg-red-50 border border-red-200 rounded-xl px-3 py-2"></p>
+
+        </div>
+
+        <!-- Sticky footer -->
+        <div class="px-6 pt-4 pb-6 border-t border-[var(--border)] flex gap-3 shrink-0 bg-[var(--surface-1)]">
+            <button type="button"
+                    @click="showAddSheet = false; showEditSheet = false; editingTask = null"
+                    class="flex-1 px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--muted)] text-sm font-bold active:scale-95 transition-transform">
+                İptal
+            </button>
+            <button type="button"
+                    @click="saveMobileTask()"
+                    :disabled="taskForm.aktivite_tipi === 'konu_anlatimi'
+                        ? taskForm.selectedVideos.length === 0
+                        : !taskForm.ders_title.trim()"
+                    class="flex-[2] px-4 py-3 rounded-xl bg-[var(--primary)] disabled:opacity-40 text-white text-sm font-bold active:scale-95 transition-transform shadow-lg shadow-indigo-500/20">
+                Kaydet
+            </button>
+        </div>
+
+        <!-- Delete (edit mode only) -->
+        <template x-if="showEditSheet && editingTask">
+            <div class="px-6 pb-4 text-center shrink-0">
+                <button type="button"
+                        @click="deleteMobileTask(editingTask.id)"
+                        class="text-red-500 text-xs font-bold uppercase tracking-widest">
+                    Görevi Sil
+                </button>
+            </div>
+        </template>
+
+    </div>
+</div>
+
+<!-- 2. Student Picker Sheet (coach only) -->
+<div x-show="showStudentSheet"
+     class="fixed inset-0 z-50 flex items-end justify-center"
+     x-cloak>
+
+    <div x-show="showStudentSheet"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="showStudentSheet = false"
+         class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+    <div x-show="showStudentSheet"
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full max-w-lg bg-[var(--surface-1)] rounded-t-[24px] shadow-2xl p-6 pb-12 max-h-[80vh] flex flex-col">
+
+        <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mb-6 shrink-0"></div>
+        <h3 class="text-xl font-black text-[var(--heading)] mb-4 shrink-0">Öğrenci Seçin</h3>
+
+        <div class="flex-1 overflow-y-auto space-y-2" style="-ms-overflow-style:none;scrollbar-width:none;">
+            <template x-for="s in students" :key="s.id">
+                <button type="button"
+                        @click="selectedStudent = s; showStudentSheet = false; loadWeek()"
+                        class="w-full p-3 rounded-xl border flex items-center justify-between transition-colors"
+                        :class="selectedStudent && selectedStudent.id === s.id
+                            ? 'bg-[var(--primary-tint)] border-[var(--primary)]'
+                            : 'bg-[var(--surface-1)] border-[var(--border)] active:bg-[var(--surface-2)]'">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white"
+                             x-text="s.initials"></div>
+                        <div class="text-sm font-bold text-[var(--heading)] text-left" x-text="s.full_name"></div>
+                    </div>
+                    <div x-show="selectedStudent && selectedStudent.id === s.id"
+                         class="text-[var(--primary)] shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </div>
+                </button>
+            </template>
+            <div x-show="students.length === 0"
+                 class="py-8 text-center text-[var(--muted)] text-sm">
+                Öğrenci bulunamadı.
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Branş Denemesi Sil — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+    <div class="text-4xl mb-4">🗑️</div>
+    <h1 class="text-xl font-bold text-gray-800 mb-2">Bu kaydı silmek istiyor musun?</h1>
+    <p class="text-gray-500 text-sm mb-1">
+      <span class="font-medium text-gray-700">{{ entry.ders.display_name }}</span>
+    </p>
+    <p class="text-gray-400 text-sm mb-6">{{ entry.tarih|date:"d.m.Y" }} &nbsp;·&nbsp; Net: {{ entry.net }}</p>
+
+    <form method="post" class="flex gap-3 justify-center">
+      {% csrf_token %}
+      <button type="submit"
+              class="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2.5 rounded-lg transition">
+        Evet, Sil
+      </button>
+      <a href="{% url 'brans_hub' %}"
+         class="border border-gray-200 text-gray-600 font-medium px-6 py-2.5 rounded-lg hover:bg-gray-50 transition">
+        Vazgeç
+      </a>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

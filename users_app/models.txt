@@ -1,0 +1,86 @@
+import secrets
+
+from django.conf import settings
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, full_name, role, password=None):
+        if not email:
+            raise ValueError('Email zorunludur')
+        user = self.model(email=self.normalize_email(email), full_name=full_name, role=role)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, full_name, role='coach', password=None):
+        user = self.create_user(email, full_name, role, password)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(using=self._db)
+        return user
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = [('student', 'Öğrenci'), ('coach', 'Koç')]
+
+    email = models.EmailField(unique=True)
+    full_name = models.CharField(max_length=150)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='student')
+    coach = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='coached_students',
+        limit_choices_to={'role': 'coach'},
+    )
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['full_name']
+
+    objects = UserManager()
+
+    class Meta:
+        verbose_name = 'Kullanıcı'
+        verbose_name_plural = 'Kullanıcılar'
+
+    def __str__(self):
+        return f'{self.full_name} ({self.get_role_display()})'
+
+    @property
+    def is_student(self):
+        return self.role == 'student'
+
+    @property
+    def is_coach(self):
+        return self.role == 'coach'
+
+
+class StudentInvite(models.Model):
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_invites',
+        limit_choices_to={'role': 'coach'},
+    )
+    email     = models.EmailField(unique=True)
+    full_name = models.CharField(max_length=150, blank=True)
+    token     = models.CharField(max_length=64, unique=True)
+    is_used   = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Öğrenci Daveti'
+        verbose_name_plural = 'Öğrenci Davetleri'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.email} ← {self.coach.full_name}'
+
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)  # 256-bit entropy, URL-safe

@@ -1,0 +1,70 @@
+/* ============================================================
+   DAS-402: Theme CSS Architecture
+   Graduating .das-dark to an app-wide theme system.
+   ============================================================ */
+
+:root {
+  /* Internal Dark Mode Tokens — used for mapping */
+  --dark-bg:           #0B0B12;
+  --dark-surface-1:    #15151F;
+  --dark-surface-2:    #1E1E2C;
+  --dark-surface-3:    #262635;
+  --dark-border:        #262635;
+  --dark-border-strong: #2F2F42;
+  --dark-heading:      #FFFFFF;
+  --dark-body:         #E5E5F0;
+  --dark-muted:        #8A8AA3;
+  --dark-muted-2:      #5E5E78;
+  --dark-shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
+  --dark-shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* 1. Backward Compatibility: Explicit .das-dark scope */
+.das-dark {
+  --bg:           var(--dark-bg);
+  --surface-1:    var(--dark-surface-1);
+  --surface-2:    var(--dark-surface-2);
+  --surface-3:    var(--dark-surface-3);
+  --border:        var(--dark-border);
+  --border-strong: var(--dark-border-strong);
+  --heading:      var(--dark-heading);
+  --body:         var(--dark-body);
+  --muted:        var(--dark-muted);
+  --muted-2:      var(--dark-muted-2);
+  --shadow-card:    var(--dark-shadow-card);
+  --shadow-card-md: var(--dark-shadow-card-md);
+}
+
+/* 2. App-wide forced dark theme */
+.das-theme-dark {
+  --bg:           var(--dark-bg);
+  --surface-1:    var(--dark-surface-1);
+  --surface-2:    var(--dark-surface-2);
+  --surface-3:    var(--dark-surface-3);
+  --border:        var(--dark-border);
+  --border-strong: var(--dark-border-strong);
+  --heading:      var(--dark-heading);
+  --body:         var(--dark-body);
+  --muted:        var(--dark-muted);
+  --muted-2:      var(--dark-muted-2);
+  --shadow-card:    var(--dark-shadow-card);
+  --shadow-card-md: var(--dark-shadow-card-md);
+}
+
+/* 3. OS-respecting Auto theme applied to <html> */
+@media (prefers-color-scheme: dark) {
+  .das-theme-auto {
+    --bg:           var(--dark-bg);
+    --surface-1:    var(--dark-surface-1);
+    --surface-2:    var(--dark-surface-2);
+    --surface-3:    var(--dark-surface-3);
+    --border:        var(--dark-border);
+    --border-strong: var(--dark-border-strong);
+    --heading:      var(--dark-heading);
+    --body:         var(--dark-body);
+    --muted:        var(--dark-muted);
+    --muted-2:      var(--dark-muted-2);
+    --shadow-card:    var(--dark-shadow-card);
+    --shadow-card-md: var(--dark-shadow-card-md);
+  }
+}

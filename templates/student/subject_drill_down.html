@@ -1,0 +1,953 @@
+{% extends "base.html" %}
+
+{% block title %}{% if coach_view %}{{ student.full_name }} — {{ subject }} Analizi{% else %}{{ subject }} Analizi{% endif %} — DAS{% endblock %}
+
+{% block content %}
+<div class="das-subject-drilldown -mx-4 -mt-5 sm:-mt-8 min-h-dvh bg-[var(--bg)] pb-24 flex flex-col"
+     x-data="subjectDrillDownState()">
+
+  <header class="das-appbar sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] px-4 h-14 flex items-center gap-3">
+    <a href="{% if coach_view %}{% url 'coach:student_brans_hub' student.id %}{% else %}{% url 'brans_hub' %}{% endif %}" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl text-[var(--muted)] active:scale-95 transition-transform">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </a>
+    <h1 class="text-sm font-bold text-[var(--heading)] uppercase tracking-wider flex-1">{{ subject }} Analizi</h1>
+    <div class="relative ml-auto shrink-0" x-data="{ open: false }">
+      <button @click="open = !open"
+              type="button"
+              class="w-10 h-10 flex items-center justify-center rounded-xl text-[var(--muted)] active:scale-95 transition-transform"
+              :class="open ? 'bg-[var(--surface-2)] text-[var(--primary)]' : ''"
+              aria-label="Dışa aktar menüsünü aç">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
+        </svg>
+      </button>
+      <div x-show="open"
+           @click.away="open = false"
+           x-transition:enter="transition ease-out duration-100"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           class="absolute right-0 mt-2 w-48 bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden z-50"
+           x-cloak>
+        <div class="p-2 space-y-1">
+          <a :href="exportUrl('xlsx')"
+             @click="open = false"
+             class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left">
+            <svg class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Excel Olarak İndir
+          </a>
+          <button @click="exportHTML(); open = false"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left">
+            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            HTML Olarak İndir
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {% if coach_view %}
+  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {{ student_initials }}
+        </div>
+        <div class="text-left min-w-0">
+          <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-tight">Öğrenci İzleniyor</div>
+          <div class="text-sm font-bold text-[var(--heading)] truncate">{{ student.full_name }}</div>
+        </div>
+      </div>
+      <a href="{% url 'coach:student_detail' student.id %}" class="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider">Profil</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <main class="flex-1 overflow-y-auto">
+    <section class="p-4 pt-5">
+
+      {# ── Period filter chips ─────────────────────────────────────────── #}
+      <div class="flex gap-2 overflow-x-auto -mx-4 px-4 no-scrollbar pb-2 mb-5">
+        {% for period in period_choices %}
+        <a href="?period={{ period|urlencode }}"
+           class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold whitespace-nowrap inline-flex items-center transition-colors
+                  {% if period == active_period %}das-period-chip-active{% else %}das-period-chip{% endif %}">
+          {{ period }}
+        </a>
+        {% endfor %}
+      </div>
+
+      <div class="das-card p-5 {{ subjectClass }} mb-6">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <div class="das-kpi-label">{{ subject }} NET ORTALAMASI</div>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-4xl font-black text-[var(--heading)] tabular-nums" x-text="formatNet(activeStats().currentNet)">{{ stats.currentNet|floatformat:1 }}</div>
+                    <div class="delta" :class="activeStats().trend">
+                        <svg x-show="activeStats().trend === 'up'" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        <svg x-show="activeStats().trend === 'down'" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span x-text="formatSigned(activeStats().delta)">{{ stats.delta|floatformat:1 }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                <span>{{ active_period }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border)]">
+            <div>
+                <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">En Yüksek</div>
+                <div class="text-sm font-bold text-[var(--heading)] tabular-nums">
+                    <template x-if="activeStats().best"><span><span x-text="formatNet(activeStats().best.net)">{{ stats.best.net|floatformat:1 }}</span><span class="text-[var(--muted)] font-medium text-[11px] ml-1" x-text="'(' + activeStats().best.date + ')'">({{ stats.best.date }})</span></span></template>
+                    <template x-if="!activeStats().best"><span>—</span></template>
+                </div>
+            </div>
+            <div>
+                <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-1">En Düşük</div>
+                <div class="text-sm font-bold text-[var(--heading)] tabular-nums">
+                    <template x-if="activeStats().worst"><span><span x-text="formatNet(activeStats().worst.net)">{{ stats.worst.net|floatformat:1 }}</span><span class="text-[var(--muted)] font-medium text-[11px] ml-1" x-text="'(' + activeStats().worst.date + ')'">({{ stats.worst.date }})</span></span></template>
+                    <template x-if="!activeStats().worst"><span>—</span></template>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="flex bg-[var(--surface-2)] p-1 rounded-xl mb-6">
+        <button type="button" @click="dataSource = 'genel'; selected = []" 
+                class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                :class="dataSource === 'genel' ? 'bg-[var(--surface-1)] shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
+            Genel Denemeler
+        </button>
+        <button type="button" @click="dataSource = 'brans'; selected = []" 
+                class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+                :class="dataSource === 'brans' ? 'bg-white shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
+            Branş Denemeleri
+        </button>
+      </div>
+
+      <div class="das-section-head px-0">
+        <h2>Net Değişimi</h2>
+      </div>
+      <div class="das-card h-[220px] mb-8 flex flex-col items-center justify-center border-dashed relative overflow-hidden">
+        <div x-show="filteredChartPoints().length < 2" class="z-10 text-[var(--muted)] text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-1)] px-3 py-1 rounded-full border border-[var(--border)] shadow-sm">
+            Seçili kaynak için grafik verisi yok
+        </div>
+        <svg class="absolute inset-0 w-full h-full opacity-80" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path :d="chartPath()" fill="none" stroke="{{ subjectColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            <template x-for="point in normalizedChartPoints()" :key="point.key">
+              <circle :cx="point.x" :cy="point.y" r="2" fill="{{ subjectColor }}"></circle>
+            </template>
+        </svg>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-8">
+        <div class="das-card p-4">
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 leading-tight">Son 3 Sınav<br>Ortalaması</div>
+            <div class="text-2xl font-black text-[var(--heading)] tabular-nums" x-text="formatNet(activeStats().avg3)">{{ stats.avg3|floatformat:1 }}</div>
+            <div class="mt-2 h-1 w-full bg-[var(--surface-2)] rounded-full overflow-hidden">
+                <div class="h-full bg-[var(--primary)]" :style="barWidth(activeStats().avg3)"></div>
+            </div>
+        </div>
+        <div class="das-card p-4">
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 leading-tight">Son 10 Sınav<br>Ortalaması</div>
+            <div class="text-2xl font-black text-[var(--heading)] tabular-nums" x-text="formatNet(activeStats().avg10)">{{ stats.avg10|floatformat:1 }}</div>
+            <div class="mt-2 h-1 w-full bg-[var(--surface-2)] rounded-full overflow-hidden">
+                <div class="h-full bg-[var(--muted-2)]" :style="barWidth(activeStats().avg10)"></div>
+            </div>
+        </div>
+      </div>
+
+      {% if not coach_view %}
+
+      {# ── Topic accordion (student) ────────────────────────────────── #}
+      <div class="das-section-head px-0">
+        <h2>En Çok Yanlış Yapılan Konular</h2>
+        <span class="text-[10px] font-bold text-[var(--muted)] uppercase">{{ active_period }}</span>
+      </div>
+      <div class="das-card p-0 overflow-hidden mb-6">
+        {% for topic in topics %}
+        <div class="border-b border-[var(--border)] last:border-0" x-data="{ expanded: false }">
+          <button @click="expanded = !expanded"
+                  class="w-full flex items-center gap-3 p-4 transition-colors text-left
+                         hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
+                  :class="expanded && 'bg-[var(--surface-2)]'">
+            <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
+                        text-[var(--down)] font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
+            <div class="flex-1 min-w-0 text-left">
+              <div class="text-sm font-bold text-[var(--heading)] truncate">{{ topic.name }}</div>
+              <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider">
+                {{ topic.errors }} hata · {{ topic.exams|length }} sınav
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
+                 :class="expanded && 'rotate-180'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <use href="#das-icon-chev-down"/>
+            </svg>
+          </button>
+          <div x-show="expanded" x-collapse>
+            <div class="pb-2 space-y-1 px-3">
+              {% for exam in topic.exams %}
+              {% if exam.url %}
+              <a href="{{ exam.url }}"
+                 class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                        border-l-2 border-[var(--primary)] bg-[var(--bg)]
+                        hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
+                        text-[var(--muted)] transition-colors">
+              {% else %}
+              <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                          border-l-2 border-[var(--border)] bg-[var(--bg)]
+                          text-[var(--muted)]">
+              {% endif %}
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-semibold truncate text-[var(--heading)]">{{ exam.name }}</p>
+                  <p class="text-[10px] text-[var(--muted)] mt-0.5">
+                    {{ exam.date }}{% if exam.source == 'brans' %} · Branş{% else %} · Genel{% endif %}
+                  </p>
+                </div>
+                <span class="text-[10px] font-bold text-[var(--down)] shrink-0">{{ exam.errors }}Y</span>
+                {% if exam.url %}
+                <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <use href="#das-icon-chev-right"/>
+                </svg>
+                {% endif %}
+              {% if exam.url %}</a>{% else %}</div>{% endif %}
+              {% empty %}
+              <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+          Bu dönemde konu hatası bulunamadı.
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ── Task panel ────────────────────────────────────────────────── #}
+      <div class="das-section-head px-0">
+        <h2>Görev Takibi</h2>
+        <span class="text-[11px] font-bold text-[var(--primary)] uppercase">{{ subject }}</span>
+      </div>
+
+      <div class="das-card p-4 mb-8" x-data="branchTasks()" x-init="init()">
+
+
+        <div class="grid grid-cols-3 gap-1 mb-4 text-xs font-medium">
+          <button @click="tab='radar'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='radar'
+                    ? 'bg-[var(--down-tint)] text-[var(--down)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            🔴 Konular <span x-text="'(' + radar.length + ')'"></span>
+          </button>
+          <button @click="tab='active'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='active'
+                    ? 'bg-[var(--primary-tint)] text-[var(--primary)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            📌 Aktif <span x-text="'(' + active.length + ')'"></span>
+          </button>
+          <button @click="tab='done'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='done'
+                    ? 'bg-[var(--up-tint)] text-[var(--up)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            ✅ Bitti <span x-text="'(' + completed.length + ')'"></span>
+          </button>
+        </div>
+
+        <div x-show="tab==='radar'" x-cloak>
+          <template x-if="radar.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in radar" :key="t.id">
+                <div class="flex items-start gap-2 p-3 rounded-lg" style="background:var(--surface-2);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-[var(--heading)] truncate" x-text="t.name"></div>
+                    <div class="text-[10px] text-[var(--muted)] mt-0.5" x-text="t.errors > 0 ? t.errors + ' hata' : ''"></div>
+                  </div>
+                  <div class="flex flex-col gap-0.5 shrink-0">
+                    <button @click="assign(t, false)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--primary)] hover:bg-[var(--primary-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--primary)">
+                      Ata →
+                    </button>
+                    <button @click="assign(t, true)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--up)] hover:bg-[var(--up-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--up)">
+                      Bitti ✓
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="radar.length === 0">
+            <div class="text-center py-8">
+              <div class="text-3xl mb-2">🎯</div>
+              <p class="text-sm text-[var(--muted)]">Bu branşta tüm hatalı konular atandı!</p>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="tab==='active'" x-cloak>
+          <template x-if="active.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in active" :key="t.id">
+                <div class="flex items-center gap-2 p-3 rounded-lg border" style="background:var(--primary-tint); border-color:var(--primary);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-[var(--heading)] truncate" x-text="t.name"></div>
+                    <div class="text-[10px] text-[var(--muted)] mt-0.5"
+                         x-text="t.byCoach ? 'Koç tarafından atandı' : 'Kendin atadın'"></div>
+                    <template x-if="t.created_at">
+                      <div class="flex items-center gap-1 mt-1 text-[10px]" style="color:var(--muted-2)">
+                        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        <span x-text="'Eklendi: ' + t.created_at"></span>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="flex flex-col gap-0.5 shrink-0">
+                    <button @click="complete(t)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--up)] hover:bg-[var(--up-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--up)">
+                      Bitti ✓
+                    </button>
+                    <button @click="cancel(t)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--down)] hover:bg-[var(--down-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--down)">
+                      İptal
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="active.length === 0">
+            <p class="text-sm text-[var(--muted)] text-center py-6">Aktif görev yok.</p>
+          </template>
+        </div>
+
+        <div x-show="tab==='done'" x-cloak>
+          <template x-if="completed.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in completed" :key="t.id">
+                <div class="flex items-center gap-2 p-3 rounded-lg border" style="background:var(--up-tint); border-color:rgba(34,197,94,0.3);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-[var(--heading)] truncate line-through opacity-70" x-text="t.name"></div>
+                    <template x-if="t.created_at || t.completed_at">
+                      <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[10px]" style="color:var(--muted-2)">
+                        <span x-show="t.created_at" x-text="'Eklendi: ' + (t.created_at||'')"></span>
+                        <span x-show="t.created_at && t.completed_at" aria-hidden="true">·</span>
+                        <span x-show="t.completed_at" x-text="'Bitti: ' + (t.completed_at||'')"></span>
+                        <span x-show="t.cycle_days !== null && t.cycle_days !== undefined"
+                              class="text-emerald-500/80 font-medium"
+                              x-text="'(' + (t.cycle_days === 0 ? 'aynı gün' : t.cycle_days + ' günde') + ')'"></span>
+                      </div>
+                    </template>
+                  </div>
+                  <button @click="undo(t)"
+                          class="text-xs px-2 py-1 rounded border text-[var(--muted)] hover:bg-[var(--surface-2)] whitespace-nowrap transition shrink-0"
+                          style="border-color:var(--border)">
+                    Geri Al
+                  </button>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="completed.length === 0">
+            <p class="text-sm text-[var(--muted)] text-center py-6">Henüz tamamlanan yok.</p>
+          </template>
+        </div>
+
+      </div>
+
+      {% else %}
+
+      <div class="das-section-head px-0">
+        <h2>En Çok Yanlış Yapılan Konular</h2>
+        <span class="text-[10px] font-bold text-[var(--muted)] uppercase">{{ active_period }}</span>
+      </div>
+      <div class="das-card p-0 overflow-hidden mb-6">
+        {% for topic in topics %}
+        <div class="border-b border-[var(--border)] last:border-0" x-data="{ expanded: false }">
+          <button @click="expanded = !expanded"
+                  class="w-full flex items-center gap-3 p-4 transition-colors text-left
+                         hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
+                  :class="expanded && 'bg-[var(--surface-2)]'">
+            <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
+                        text-[var(--down)] font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
+            <div class="flex-1 min-w-0 text-left">
+              <div class="text-sm font-bold text-[var(--heading)] truncate">{{ topic.name }}</div>
+              <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider">
+                {{ topic.errors }} hata · {{ topic.exams|length }} sınav
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
+                 :class="expanded && 'rotate-180'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <use href="#das-icon-chev-down"/>
+            </svg>
+          </button>
+          <div x-show="expanded" x-collapse>
+            <div class="pb-2 space-y-1 px-3">
+              {% for exam in topic.exams %}
+              {% if exam.url %}
+              <a href="{{ exam.url }}"
+                 class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                        border-l-2 border-[var(--primary)] bg-[var(--bg)]
+                        hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
+                        text-[var(--muted)] transition-colors">
+              {% else %}
+              <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                          border-l-2 border-[var(--border)] bg-[var(--bg)] text-[var(--muted)]">
+              {% endif %}
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-semibold truncate text-[var(--heading)]">{{ exam.name }}</p>
+                  <p class="text-[10px] text-[var(--muted)] mt-0.5">
+                    {{ exam.date }}{% if exam.source == 'brans' %} · Branş{% else %} · Genel{% endif %}
+                  </p>
+                </div>
+                <span class="text-[10px] font-bold text-[var(--down)] shrink-0">{{ exam.errors }}Y</span>
+                {% if exam.url %}
+                <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <use href="#das-icon-chev-right"/>
+                </svg>
+                {% endif %}
+              {% if exam.url %}</a>{% else %}</div>{% endif %}
+              {% empty %}
+              <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+          Bu dönemde konu hatası bulunamadı.
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="das-section-head px-0">
+        <h2>Branş Görev Takibi</h2>
+        <span class="text-[11px] font-bold text-[var(--primary)] uppercase">{{ subject }}</span>
+      </div>
+      <div class="das-card p-4 mb-8"
+           x-data="coachBranchTasks({{ student.id }})" x-init="init()">
+
+        <p class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-3">
+          {{ student.full_name }} için branş görevleri
+        </p>
+
+        <div class="grid grid-cols-3 gap-1 mb-4 text-xs font-medium">
+          <button @click="tab='radar'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='radar' ? 'bg-[var(--down-tint)] text-[var(--down)]' : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            🔴 Konular <span x-text="'(' + radar.length + ')'"></span>
+          </button>
+          <button @click="tab='active'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='active' ? 'bg-[var(--primary-tint)] text-[var(--primary)]' : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            📌 Aktif <span x-text="'(' + active.length + ')'"></span>
+          </button>
+          <button @click="tab='done'"
+                  class="py-1.5 rounded-md transition-colors text-left px-2"
+                  :class="tab==='done' ? 'bg-[var(--up-tint)] text-[var(--up)]' : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+            ✅ Bitti <span x-text="'(' + completed.length + ')'"></span>
+          </button>
+        </div>
+
+        <div x-show="tab==='radar'" x-cloak>
+          <template x-if="radar.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in radar" :key="t.id">
+                <div class="flex items-start gap-2 p-3 rounded-lg" style="background:var(--surface-2);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-[var(--heading)] truncate" x-text="t.name"></div>
+                    <div class="text-[10px] text-[var(--muted)] mt-0.5" x-text="t.errors > 0 ? t.errors + ' hata' : ''"></div>
+                  </div>
+                  <div class="flex flex-col gap-0.5 shrink-0">
+                    <button @click="assign(t, false)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--primary)] hover:bg-[var(--primary-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--primary)">Ata →</button>
+                    <button @click="assign(t, true)"
+                            class="text-xs px-2 py-1 rounded border text-[var(--up)] hover:bg-[var(--up-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--up)">Bitti ✓</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="radar.length === 0">
+            <div class="text-center py-8">
+              <div class="text-3xl mb-2">🎯</div>
+              <p class="text-sm text-[var(--muted)]">Bu branşta tüm hatalı konular atandı!</p>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="tab==='active'" x-cloak>
+          <template x-if="active.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in active" :key="t.id">
+                <div class="flex items-center gap-2 p-3 rounded-lg border" style="background:var(--primary-tint); border-color:var(--primary);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-[var(--heading)] truncate" x-text="t.name"></div>
+                    <div class="text-[10px] text-[var(--muted)] mt-0.5">Koç tarafından atandı</div>
+                  </div>
+                  <div class="flex flex-col gap-0.5 shrink-0">
+                    <button @click="action(t, 'complete')"
+                            class="text-xs px-2 py-1 rounded border text-[var(--up)] hover:bg-[var(--up-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--up)">Bitti ✓</button>
+                    <button @click="action(t, 'cancel_assignment')"
+                            class="text-xs px-2 py-1 rounded border text-[var(--down)] hover:bg-[var(--down-tint)] whitespace-nowrap transition"
+                            style="border-color:var(--down)">İptal</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="active.length === 0">
+            <p class="text-sm text-[var(--muted)] text-center py-6">Aktif branş görevi yok.</p>
+          </template>
+        </div>
+
+        <div x-show="tab==='done'" x-cloak>
+          <template x-if="completed.length > 0">
+            <div class="space-y-1.5">
+              <template x-for="t in completed" :key="t.id">
+                <div class="flex items-center gap-2 p-3 rounded-lg border" style="background:var(--up-tint); border-color:rgba(34,197,94,0.3);">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-[var(--heading)] truncate line-through opacity-70" x-text="t.name"></div>
+                  </div>
+                  <button @click="action(t, 'undo_complete')"
+                          class="text-xs px-2 py-1 rounded border text-[var(--muted)] hover:bg-[var(--surface-2)] whitespace-nowrap transition shrink-0"
+                          style="border-color:var(--border)">Geri Al</button>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="completed.length === 0">
+            <p class="text-sm text-[var(--muted)] text-center py-6">Henüz tamamlanan yok.</p>
+          </template>
+        </div>
+
+      </div>
+
+      {% endif %}
+
+      <div class="das-section-head px-0">
+        <h2>Sınav Geçmişi</h2>
+        <button type="button"
+                @click="compareMode = !compareMode; selected = []; compareOpen = false"
+                class="text-[11px] font-bold text-[var(--primary)] uppercase"
+                x-text="compareMode ? 'Bitti' : 'Düzenle / Karşılaştır'">Düzenle / Karşılaştır</button>
+      </div>
+      <div class="space-y-4">
+        {% for month in exams.archive %}
+        <div x-show="hasAnySource('{{ month.month_label }}')" x-cloak>
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest pl-1 mb-2">{{ month.month_label }}</div>
+            <div class="das-card p-0 overflow-hidden">
+                <div class="divide-y divide-[var(--border)]">
+                  {% for exam in month.exams %}
+                  <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
+                    <div class="flex items-center gap-3 min-w-0">
+                       <input type="checkbox"
+                              x-show="compareMode"
+                              x-model="selected"
+                              value="{{ exam.compare_key }}"
+                              @click.stop
+                              :disabled="selected.length >= 2 && !selected.includes('{{ exam.compare_key }}')"
+                              class="w-4 h-4 rounded border-[var(--border)] text-[var(--primary)] accent-indigo-600 disabled:opacity-30 shrink-0">
+                       <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
+                       <div class="min-w-0">
+                         <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
+                         <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">{{ exam.duration }}</div>
+                       </div>
+                    </div>
+                    <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
+                  </a>
+                  {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if exams.recent %}
+        <div x-show="hasAnySource('Son 30 Gün')" x-cloak>
+            <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest pl-1 mb-2">Son 30 Gün</div>
+            <div class="das-card p-0 overflow-hidden">
+                <div class="divide-y divide-[var(--border)]">
+                  {% for exam in exams.recent %}
+                  <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
+                    <div class="flex items-center gap-3 min-w-0">
+                       <input type="checkbox"
+                              x-show="compareMode"
+                              x-model="selected"
+                              value="{{ exam.compare_key }}"
+                              @click.stop
+                              :disabled="selected.length >= 2 && !selected.includes('{{ exam.compare_key }}')"
+                              class="w-4 h-4 rounded border-[var(--border)] text-[var(--primary)] accent-indigo-600 disabled:opacity-30 shrink-0">
+                       <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
+                       <div class="min-w-0">
+                         <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
+                         <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">{{ exam.duration }}</div>
+                       </div>
+                    </div>
+                    <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
+                  </a>
+                  {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div x-show="!hasAnySourceGlobally()" x-cloak class="p-8 text-center text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+          Seçili kaynak için sınav bulunamadı.
+        </div>
+      </div>
+
+      <div x-show="compareMode && selected.length === 2" x-cloak
+           class="fixed bottom-24 left-4 right-4 z-40 das-card px-4 py-3 flex items-center justify-between shadow-xl"
+           x-transition.opacity>
+        <span class="text-xs font-bold text-[var(--heading)]">2 kayıt seçildi</span>
+        <button type="button" @click="compareOpen = true" class="px-4 py-2 bg-[var(--primary)] text-white rounded-xl text-xs font-bold">Karşılaştır →</button>
+      </div>
+
+      <div x-show="compareOpen && compareMode" x-cloak class="fixed inset-0 z-50" aria-modal="true">
+        <div class="absolute inset-0 bg-black/40" @click="compareOpen = false"></div>
+        <div class="absolute inset-x-0 bottom-0 bg-[var(--surface-1)] rounded-t-3xl border-t border-[var(--border)] shadow-2xl max-h-[88vh] overflow-y-auto"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="translate-y-full"
+             x-transition:enter-end="translate-y-0">
+          <div class="p-4 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--surface-1)] z-10">
+            <div>
+              <h3 class="text-sm font-black text-[var(--heading)] uppercase tracking-wider">{{ subject }} Karşılaştırma</h3>
+              <p class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">İki sınav seç</p>
+            </div>
+            <button type="button" @click="compareOpen = false" class="w-10 h-10 rounded-xl bg-[var(--surface-2)] text-[var(--muted)]">×</button>
+          </div>
+
+          <div class="p-4 space-y-4">
+            <template x-if="selected.length !== 2">
+              <div class="das-card p-4 text-center">
+                <p class="text-sm font-bold text-[var(--heading)] mb-1" x-text="selected.length + '/2 kayıt seçildi'"></p>
+                <p class="text-xs text-[var(--muted)]">Sınav geçmişinden iki kayıt seçerek karşılaştır.</p>
+              </div>
+            </template>
+
+            <template x-if="selected.length === 2">
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <template x-for="(entry, idx) in selectedEntries()" :key="entry.key">
+                    <div class="das-card p-4">
+                      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider" x-text="idx === 0 ? 'Eski' : 'Yeni'"></div>
+                      <div class="text-sm font-black text-[var(--heading)] mt-1" x-text="entry.type"></div>
+                      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5" x-text="entry.date + ' • ' + entry.duration"></div>
+                      <div class="text-2xl font-black text-[var(--primary)] tabular-nums mt-3" x-text="entry.net.toFixed(2)"></div>
+                    </div>
+                  </template>
+                </div>
+
+                <div class="das-card p-4">
+                  <h4 class="text-xs font-black text-[var(--muted)] uppercase tracking-wider mb-3">Değişim (Yeni - Eski)</h4>
+                  <div class="grid grid-cols-2 gap-3 text-center">
+                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('net') >= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('net'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Net</div></div>
+                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('correct') >= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('correct'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Doğru</div></div>
+                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('wrong') <= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('wrong'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Yanlış</div></div>
+                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('blank') <= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('blank'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Boş</div></div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<style>
+  .das-subject-drilldown {
+    --bg:           #f8fafc;
+    --surface-1:    #ffffff;
+    --surface-2:    #f4f4f8;
+    --border:       #e2e2ea;
+    --primary:      #3a7fce;
+    --primary-tint: rgba(58,127,206,0.10);
+    --turkce:       #3B82F6;
+    --mat:          #A78BFA;
+    --sosyal:       #F59E0B;
+    --fen:          #10B981;
+    --fizik:        #06B6D4;
+    --kimya:        #F97316;
+    --biyoloji:     #84CC16;
+    --up:           #22C55E;
+    --up-tint:      rgba(34,197,94,0.12);
+    --down:         #EF4444;
+    --down-tint:    rgba(239,68,68,0.12);
+    --heading:      #111118;
+    --body:         #2d2d3a;
+    --muted:        #6b6b80;
+    --muted-2:      #9898ad;
+    --r-card:       14px;
+    --r-pill:       9999px;
+  }
+  html.dark .das-subject-drilldown {
+    --bg:           #0a0e14;
+    --surface-1:    #131820;
+    --surface-2:    #1a2030;
+    --border:       #2a3142;
+    --primary:      #4a90e2;
+    --primary-tint: rgba(74,144,226,0.12);
+    --up:           #10b981;
+    --up-tint:      rgba(16,185,129,0.12);
+    --down:         #ef4444;
+    --down-tint:    rgba(239,68,68,0.12);
+    --heading:      #e8ecf3;
+    --body:         #cbd5e1;
+    --muted:        #5b6477;
+    --muted-2:      #94a3b8;
+  }
+  .das-subject-drilldown .das-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-card); position: relative; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .das-subject-drilldown .das-card.accent-turkce { border-left: 3px solid var(--turkce); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-mat { border-left: 3px solid var(--mat); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-sosyal { border-left: 3px solid var(--sosyal); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-fen { border-left: 3px solid var(--fen); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-fizik { border-left: 3px solid var(--fizik); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-kimya { border-left: 3px solid var(--kimya); padding-left: 14px; }
+  .das-subject-drilldown .das-card.accent-biyoloji { border-left: 3px solid var(--biyoloji); padding-left: 14px; }
+  .das-subject-drilldown .das-kpi-label { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .das-subject-drilldown .delta { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; }
+  .das-subject-drilldown .delta.up { background: var(--up-tint); color: var(--up); }
+  .das-subject-drilldown .delta.down { background: var(--down-tint); color: var(--down); }
+  .das-subject-drilldown .das-section-head { display: flex; align-items: baseline; justify-content: space-between; padding: 24px 0 12px; }
+  .das-subject-drilldown .das-section-head h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+  .das-subject-drilldown .das-period-chip { background:var(--surface-2); border:1px solid var(--border); color:var(--body); }
+  .das-subject-drilldown .das-period-chip:hover { border-color:var(--primary); color:var(--primary); }
+  .das-subject-drilldown .das-period-chip-active { background:var(--primary-tint); border:1px solid var(--primary); color:var(--primary); font-weight:700; }
+</style>
+
+{% block extra_js %}
+<script>
+function coachBranchTasks(studentId) {
+  const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+  const base = `/coach/student/${studentId}`;
+
+  return {
+    tab: 'radar',
+    radar:     {{ branch_radar_json|safe }},
+    active:    {{ branch_active_json|safe }},
+    completed: {{ branch_completed_json|safe }},
+
+    async assign(t, direct) {
+      const r = await fetch(`${base}/brans-task-assign/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({topic_id: t.id, direct_complete: direct}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.radar = this.radar.filter(item => item.id !== t.id);
+      if (direct) {
+        this.completed.unshift({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || ''});
+      } else {
+        this.active.push({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || '', byCoach: true});
+      }
+    },
+
+    async action(t, actionType) {
+      const r = await fetch(`${base}/brans-task-action/${t.id}/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({action: actionType}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      if (actionType === 'complete') {
+        this.active = this.active.filter(a => a.id !== t.id);
+        this.completed.unshift({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || ''});
+      } else if (actionType === 'cancel_assignment') {
+        this.active = this.active.filter(a => a.id !== t.id);
+        if (t.topic_id) {
+          this.radar.unshift({id: t.topic_id, name: t.name, errors: 0, sub: t.sub || ''});
+        }
+      } else if (actionType === 'undo_complete') {
+        this.completed = this.completed.filter(c => c.id !== t.id);
+        this.active.push({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || '', byCoach: true});
+      }
+    },
+
+    init() {
+      if (this.radar.length === 0 && this.active.length > 0) this.tab = 'active';
+      else if (this.radar.length === 0 && this.active.length === 0 && this.completed.length > 0) this.tab = 'done';
+    },
+  };
+}
+
+function branchTasks() {
+  const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+
+  return {
+    tab: 'radar',
+    radar:     {{ branch_radar_json|safe }},
+    active:    {{ branch_active_json|safe }},
+    completed: {{ branch_completed_json|safe }},
+
+    async assign(t, direct) {
+      const r = await fetch('/student/self-assign/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({topic_id: t.id, direct_complete: direct, task_source: 'branch'}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.radar = this.radar.filter(item => item.id !== t.id);
+      if (direct) {
+        this.completed.unshift({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || ''});
+      } else {
+        this.active.push({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || '', byCoach: false});
+      }
+    },
+
+    async complete(t) {
+      const r = await fetch(`/student/task/${t.id}/complete/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF()},
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.active = this.active.filter(a => a.id !== t.id);
+      this.completed.unshift({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || ''});
+    },
+
+    async cancel(t) {
+      const r = await fetch(`/student/task/${t.id}/action/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({action: 'cancel_assignment'}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.active = this.active.filter(a => a.id !== t.id);
+      if (t.topic_id) {
+        this.radar.unshift({id: t.topic_id, name: t.name, errors: 0, sub: t.sub || ''});
+      }
+    },
+
+    async undo(t) {
+      const r = await fetch(`/student/task/${t.id}/action/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({action: 'undo_complete'}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.completed = this.completed.filter(c => c.id !== t.id);
+      this.active.push({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || '', byCoach: false});
+    },
+
+    init() {
+      if (this.radar.length === 0 && this.active.length > 0) this.tab = 'active';
+      else if (this.radar.length === 0 && this.active.length === 0 && this.completed.length > 0) this.tab = 'done';
+    },
+  };
+}
+
+function subjectDrillDownState() {
+  const allExams = {{ exams.all_json|safe }};
+  const statsBySource = {{ stats_by_source_json|safe }};
+  const chartPoints = {{ chart_points_json|safe }};
+
+  return {
+    dataSource: 'brans',
+    compareMode: false,
+    compareOpen: false,
+    selected: [],
+    exportPeriod: '{{ export_period|escapejs }}',
+    studentId: '{% if coach_view %}{{ student.id }}{% endif %}',
+    subjectSlug: '{{ subjectSlug|escapejs }}',
+
+    exportUrl(ext) {
+      const params = new URLSearchParams({ period: this.exportPeriod });
+      if (this.studentId) params.set('student_id', this.studentId);
+      if (this.subjectSlug) params.set('subject', this.subjectSlug);
+      return `/brans/export.${ext}?${params.toString()}`;
+    },
+
+    exportHTML() {
+      window.location.href = this.exportUrl('html');
+    },
+
+    selectedEntries() {
+      return this.selected.map(key => allExams.find(e => e.key === key)).filter(Boolean);
+    },
+
+    compareDelta(field) {
+      const entries = this.selectedEntries();
+      if (entries.length !== 2) return 0;
+      return Number((Number(entries[1][field] || 0) - Number(entries[0][field] || 0)).toFixed(2));
+    },
+
+    signed(value) {
+      return `${value > 0 ? '+' : ''}${value}`;
+    },
+
+    activeStats() {
+      return statsBySource[this.dataSource] || statsBySource.all;
+    },
+
+    formatNet(value) {
+      return Number(value || 0).toFixed(1);
+    },
+
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number > 0 ? '+' : ''}${number.toFixed(1)}`;
+    },
+
+    barWidth(value) {
+      const pct = Math.max(0, Math.min(100, (Number(value || 0) / 40) * 100));
+      return `width: ${pct}%`;
+    },
+
+    filteredChartPoints() {
+      return chartPoints.filter(point => point.source === this.dataSource);
+    },
+
+    normalizedChartPoints() {
+      const points = this.filteredChartPoints();
+      if (!points.length) return [];
+      const nets = points.map(point => Number(point.net));
+      const min = Math.min(...nets);
+      const max = Math.max(...nets);
+      const span = max - min || 1;
+      return points.map((point, index) => ({
+        key: `${point.source}-${point.isoDate}-${index}`,
+        x: points.length === 1 ? 50 : (index / (points.length - 1)) * 100,
+        y: 88 - ((Number(point.net) - min) / span) * 76,
+      }));
+    },
+
+    chartPath() {
+      const points = this.normalizedChartPoints();
+      if (!points.length) return '';
+      if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+      return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+    },
+    
+    hasAnySource(monthLabel) {
+      return allExams.some(e => e.source === this.dataSource && e.monthLabel === monthLabel);
+    },
+    
+    hasAnySourceGlobally() {
+      return allExams.some(e => e.source === this.dataSource);
+    }
+  }
+}
+</script>
+{% endblock %}
+{% endblock %}

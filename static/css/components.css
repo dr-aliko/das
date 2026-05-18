@@ -1,0 +1,537 @@
+/* ============================================================
+   DAS Component System
+   Source: _artifacts/implementation/DAS-004/components_card_system.css
+
+   REQUIRES: tokens.css (DAS-003) loaded before this file.
+   No existing templates reference these classes yet —
+   zero visual regression risk until migration begins.
+   ============================================================ */
+
+
+/* ── Base card shell ────────────────────────────────────────────────────── */
+
+.das-card {
+  background:    var(--surface-1);
+  border:        1px solid var(--border);
+  border-radius: var(--r-card);
+  padding:       var(--s-4);
+  position:      relative;
+  box-shadow:    var(--shadow-card);
+  transition:
+    background    var(--t-fast) var(--ease-out),
+    border-color  var(--t-fast) var(--ease-out);
+}
+
+/* Interactive cards (clickable rows, tappable KPIs) */
+.das-card[role="button"],
+.das-card[tabindex] {
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.das-card[role="button"]:hover,
+.das-card[tabindex]:hover {
+  border-color: var(--border-strong);
+  background:   var(--surface-2);
+}
+
+.das-card[role="button"]:active,
+.das-card[tabindex]:active {
+  transform: scale(0.995);
+  transition-duration: 60ms;
+}
+
+
+/* ── Card sub-elements ──────────────────────────────────────────────────── */
+
+.das-card-head {
+  display:         flex;
+  align-items:     baseline;
+  justify-content: space-between;
+  gap:             var(--s-3);
+  margin-bottom:   var(--s-3);
+}
+
+.das-card-title {
+  font-size:      15px;
+  font-weight:    600;
+  color:          var(--heading);
+  line-height:    1.3;
+  letter-spacing: -0.01em;
+}
+
+.das-card-meta {
+  font-size:   12px;
+  font-weight: 500;
+  color:       var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Hairline below head — use ONLY for dense list/table bodies */
+.das-card-divider {
+  height:     1px;
+  background: var(--border);
+  margin:     0 calc(var(--s-4) * -1) var(--s-3);
+}
+
+.das-card-body {
+  /* No default styles — content defines itself */
+}
+
+.das-card-foot {
+  display:         flex;
+  align-items:     center;
+  justify-content: flex-end;
+  gap:             var(--s-2);
+  margin-top:      var(--s-3);
+  padding-top:     var(--s-3);
+  border-top:      1px solid var(--border);
+}
+
+.das-card-foot a,
+.das-card-foot .das-card-link {
+  font-size:       13px;
+  font-weight:     500;
+  color:           var(--primary-glow);
+  text-decoration: none;
+}
+
+.das-card-foot a:hover,
+.das-card-foot .das-card-link:hover {
+  text-decoration:        underline;
+  text-underline-offset:  3px;
+}
+
+
+/* ── Subject accent variants (left border, no fills) ────────────────────── */
+
+.das-card.accent-turkce  { border-left: 3px solid var(--turkce); }
+.das-card.accent-mat     { border-left: 3px solid var(--mat); }
+.das-card.accent-sosyal  { border-left: 3px solid var(--sosyal); }
+.das-card.accent-fen     { border-left: 3px solid var(--fen); }
+.das-card.accent-primary { border-left: 3px solid var(--primary); }
+.das-card.accent-down    { border-left: 3px solid var(--down); }
+
+/* Compensate left padding so content stays at 16px from content edge */
+.das-card[class*="accent-"] {
+  padding-left: calc(var(--s-4) - 2px);
+}
+
+
+/* ── Section header ─────────────────────────────────────────────────────── */
+
+.das-section-head {
+  display:         flex;
+  align-items:     baseline;
+  justify-content: space-between;
+  gap:             var(--s-3);
+  padding:         var(--s-5) var(--s-4) var(--s-3);
+}
+
+.das-section-head h2,
+.das-section-title {
+  margin:          0;
+  font-size:       13px;
+  font-weight:     600;
+  letter-spacing:  0.04em;
+  text-transform:  uppercase;
+  color:           var(--muted);
+  line-height:     1;
+}
+
+.das-section-head a,
+.das-section-link {
+  font-size:       13px;
+  font-weight:     500;
+  color:           var(--primary-glow);
+  text-decoration: none;
+  white-space:     nowrap;
+}
+
+.das-section-head a:hover,
+.das-section-link:hover {
+  text-decoration:       underline;
+  text-underline-offset: 3px;
+}
+
+
+/* ── Delta chip ─────────────────────────────────────────────────────────── */
+
+.delta {
+  display:              inline-flex;
+  align-items:          center;
+  gap:                  3px;
+  padding:              2px 7px;
+  border-radius:        var(--r-pill);
+  font-size:            11px;
+  font-weight:          600;
+  font-variant-numeric: tabular-nums;
+  line-height:          1.4;
+  white-space:          nowrap;
+  flex-shrink:          0;
+}
+
+.delta.up   { background: var(--up-tint);   color: var(--up); }
+.delta.down { background: var(--down-tint); color: var(--down); }
+.delta.flat { background: var(--surface-3); color: var(--muted); }
+
+.delta svg {
+  width:       10px;
+  height:      10px;
+  flex-shrink: 0;
+}
+
+
+/* ── Filter chip row ────────────────────────────────────────────────────── */
+
+.das-filter-row {
+  display:                   flex;
+  gap:                       var(--s-2);
+  overflow-x:                auto;
+  padding:                   var(--s-3) var(--s-4);
+  scrollbar-width:           none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.das-filter-row::-webkit-scrollbar { display: none; }
+
+.das-filter-chip {
+  flex-shrink:                 0;
+  display:                     inline-flex;
+  align-items:                 center;
+  gap:                         5px;
+  min-height:                  44px;
+  padding:                     6px 12px;
+  border-radius:               var(--r-pill);
+  background:                  var(--surface-2);
+  border:                      1px solid var(--border);
+  color:                       var(--body);
+  font-size:                   12px;
+  font-weight:                 500;
+  cursor:                      pointer;
+  white-space:                 nowrap;
+  font-family:                 inherit;
+  transition:                  background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.das-filter-chip:hover {
+  border-color: var(--border-strong);
+  background:   var(--surface-3);
+}
+
+.das-filter-chip.active {
+  background:   var(--primary-tint);
+  border-color: var(--primary);
+  color:        var(--primary-glow);
+}
+
+.das-filter-chip .swatch {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.das-filter-row .row-divider {
+  width:       1px;
+  background:  var(--border-strong);
+  align-self:  stretch;
+  margin:      4px 2px;
+  flex-shrink: 0;
+}
+
+
+/* ── KPI value / label ──────────────────────────────────────────────────── */
+
+.das-kpi-value {
+  font-size:            26px;
+  font-weight:          700;
+  letter-spacing:       -0.02em;
+  color:                var(--heading);
+  font-variant-numeric: tabular-nums;
+  line-height:          1.05;
+}
+
+.das-kpi-label {
+  font-size:      10px;
+  font-weight:    600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color:          var(--muted);
+  margin-bottom:  var(--s-1);
+}
+
+
+/* ── Exam row (compact list pattern) ────────────────────────────────────── */
+
+.das-exam-row {
+  display:       flex;
+  align-items:   center;
+  gap:           var(--s-3);
+  padding:       var(--s-3) 0;
+  border-bottom: 1px solid var(--border);
+  min-height:    44px;
+  cursor:        pointer;
+}
+
+.das-exam-row:last-child {
+  border-bottom: none;
+}
+
+.das-exam-row:hover {
+  background:    var(--surface-2);
+  margin:        0 calc(var(--s-4) * -1);
+  padding-left:  var(--s-4);
+  padding-right: var(--s-4);
+  border-radius: var(--r-chip);
+}
+
+.das-exam-row .leading-dot {
+  width:         8px;
+  height:        8px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.das-exam-row .exam-title {
+  font-size:     14px;
+  font-weight:   600;
+  color:         var(--heading);
+  margin-bottom: 2px;
+  overflow:      hidden;
+  text-overflow: ellipsis;
+  white-space:   nowrap;
+}
+
+.das-exam-row .exam-meta {
+  font-size: 12px;
+  color:     var(--muted);
+}
+
+.das-exam-row .exam-net {
+  font-size:            16px;
+  font-weight:          700;
+  color:                var(--heading);
+  font-variant-numeric: tabular-nums;
+  letter-spacing:       -0.01em;
+  text-align:           right;
+  white-space:          nowrap;
+}
+
+
+/* ── Card stack (standard vertical card list) ───────────────────────────── */
+
+.das-card-stack {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--s-3);
+  padding:        0 var(--s-4);
+}
+
+
+/* ── DAS-011: Subject Breakdown Carousel ───────────────────────────────── */
+
+.das-carousel {
+  scrollbar-width:      none;
+  -ms-overflow-style:   none;
+  scroll-behavior:      smooth;
+}
+.das-carousel::-webkit-scrollbar { display: none; }
+
+.das-carousel-card { min-width: 240px; }
+
+.progress-track {
+  height:        6px;
+  background:    var(--surface-3);
+  border-radius: var(--r-pill);
+  overflow:      hidden;
+}
+
+.progress-fill {
+  height:        100%;
+  border-radius: var(--r-pill);
+  transition:    width var(--t-base) ease-out;
+}
+
+
+/* ── DAS-014: Skeleton loaders ──────────────────────────────────────────── */
+/* Prefixed das- to avoid collision with Tailwind's built-in animate-pulse. */
+/* DAS-007 motion guard below zeroes animation-duration for reduce-motion.  */
+
+@keyframes das-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.skeleton {
+  background:    var(--surface-3);
+  border-radius: 4px;
+  animation:     das-pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+
+/* ── DAS-007: prefers-reduced-motion guard ──────────────────────────────── */
+/* Zeroes all transitions/animations for users who prefer reduced motion.   */
+/* !important overrides inline styles and component-level animation props.  */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-delay:           -1ms !important;
+    animation-duration:        1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment:     initial !important;
+    scroll-behavior:           auto !important;
+    transition-duration:       0s !important;
+    transition-delay:          0s !important;
+  }
+}
+
+/* ── DAS-015 / 016 / 017 / 018: V2 app shell ────────────────────────── */
+
+/* dvh fallback for browsers that don't support 100dvh (Chrome < 108). */
+@supports not (height: 100dvh) {
+  .min-h-dvh { min-height: 100vh; }
+}
+
+/* Lift floating compare bars above bottom nav + FAB under V2 shell.
+   body.v2-shell class is absent for V1 users — their bars stay at bottom-6. */
+body.v2-shell .shell-floating-bar {
+  bottom: calc(env(safe-area-inset-bottom) + 5rem) !important;
+}
+@media (min-width: 1024px) {
+  body.v2-shell .shell-floating-bar {
+    bottom: 1.5rem !important;
+  }
+}
+
+/* Bottom-nav tab cell (DAS-016) */
+.das-nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  touch-action: manipulation;
+  text-decoration: none;
+}
+.das-nav-tab svg { width: 22px; height: 22px; }
+.das-nav-tab.active { color: var(--primary); }
+.das-nav-tab.active svg { stroke-width: 2.25; }
+.das-nav-tab:active { background: var(--surface-2); }
+
+/* Desktop tab cell (DAS-018) */
+.das-dtab {
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, .85);
+  text-decoration: none;
+}
+.das-dtab:hover { border-bottom-color: rgba(255, 255, 255, .35); }
+.das-dtab.active { border-bottom-color: #fff; color: #fff; }
+
+/* DAS-305: filter strip sticks below V2 app bar (h-14 = 3.5rem) */
+body.v2-shell .v2-filter-strip {
+  top: calc(3.5rem + env(safe-area-inset-top));
+}
+
+/* DAS-321: detail page contextual top bar clears V2 app bar */
+body.v2-shell .v2-detail-topbar {
+  top: calc(3.5rem + env(safe-area-inset-top));
+}
+
+/* DAS-308: compare mode — suppress shell chrome so CTA has a clear floor */
+body.compare-active .v2-bottom-nav,
+body.compare-active .v2-fab {
+  display: none !important;
+}
+
+/* ── DAS Theme Stabilization ─────────────────────────────────────────────────
+   Problem: three-way palette mismatch — Tailwind config uses dark hex values
+   (surface-1:#15151F), tokens.css :root uses light hex (#ffffff), and the
+   legacy html.dark inline overrides (base.html:83-119, loaded AFTER this file)
+   use a third palette (#111827/#1f2937). Result: body dark, das-card white,
+   bottom-nav dark = irreconcilably mixed surfaces in V2.
+
+   Fix: activate DAS dark token palette unconditionally on body.v2-shell, map
+   Tailwind light-palette utility classes to dark token equivalents, then use
+   higher-specificity selectors (0,3,2 vs 0,2,1) to override the conflicting
+   inline html.dark rules regardless of source-order.
+
+   Rollback: remove this entire block. V1 pages never have body.v2-shell so
+   they are completely unaffected. */
+
+/* 1 ── Activate dark token palette for all var() usages in V2 shell ─────── */
+body.v2-shell {
+  --surface-1:      #15151F;
+  --surface-2:      #1E1E2C;
+  --surface-3:      #262635;
+  --border:         #262635;
+  --border-strong:  #2F2F42;
+  --heading:        #FFFFFF;
+  --body:           #E5E5F0;
+  --muted:          #8A8AA3;
+  --muted-2:        #5E5E78;
+  --shadow-card:    0 1px 3px rgba(0, 0, 0, .4);
+  --shadow-card-md: 0 4px 16px rgba(0, 0, 0, .5);
+  background-color: #0B0B12;
+  color: #E5E5F0;
+}
+
+/* 2 ── Map Tailwind light utilities to dark token equivalents ─────────────── */
+body.v2-shell .bg-white,
+body.v2-shell .bg-white\/70            { background-color: var(--surface-1) !important; }
+body.v2-shell .bg-gray-50,
+body.v2-shell .bg-slate-50             { background-color: var(--surface-2) !important; }
+body.v2-shell .bg-gray-100,
+body.v2-shell .bg-slate-100            { background-color: var(--surface-3) !important; }
+body.v2-shell .border-slate-100,
+body.v2-shell .border-slate-200,
+body.v2-shell .border-gray-100,
+body.v2-shell .border-gray-200         { border-color: var(--border) !important; }
+body.v2-shell .text-slate-900,
+body.v2-shell .text-gray-800,
+body.v2-shell .text-gray-700           { color: var(--heading) !important; }
+body.v2-shell .text-slate-700,
+body.v2-shell .text-slate-600,
+body.v2-shell .text-gray-600           { color: var(--body) !important; }
+body.v2-shell .text-slate-500,
+body.v2-shell .text-gray-500,
+body.v2-shell .text-slate-400,
+body.v2-shell .text-gray-400           { color: var(--muted) !important; }
+body.v2-shell .divide-gray-100 > * + * { border-color: var(--border) !important; }
+
+body.v2-shell input:not([type="checkbox"]):not([type="radio"]),
+body.v2-shell select,
+body.v2-shell textarea {
+  background-color: var(--surface-2) !important;
+  color: var(--body) !important;
+  border-color: var(--border-strong) !important;
+}
+
+/* 3 ── Higher-specificity overrides beat inline html.dark rules ───────────── */
+html.dark body.v2-shell       { background-color: #0B0B12 !important; color: #E5E5F0 !important; }
+html.dark body.v2-shell main  { background-color: transparent !important; }
+html.dark body.v2-shell nav.v2-bottom-nav { background-color: var(--surface-1) !important; }
+
+html.dark body.v2-shell .bg-white,
+html.dark body.v2-shell .bg-white\/70     { background-color: var(--surface-1) !important; }
+html.dark body.v2-shell .bg-gray-50,
+html.dark body.v2-shell .bg-slate-50      { background-color: var(--surface-2) !important; }
+html.dark body.v2-shell .bg-gray-100,
+html.dark body.v2-shell .bg-slate-100     { background-color: var(--surface-3) !important; }
+html.dark body.v2-shell .border-slate-100,
+html.dark body.v2-shell .border-slate-200,
+html.dark body.v2-shell .border-gray-100,
+html.dark body.v2-shell .border-gray-200  { border-color: var(--border) !important; }
+html.dark body.v2-shell .divide-gray-100 > * + * { border-color: var(--border) !important; }

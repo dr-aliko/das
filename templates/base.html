@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="tr" class="das-theme-{% if user.is_authenticated %}{{ user.theme|default:'auto' }}{% else %}auto{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  {# ── PWA ── #}
+  {% load static %}
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="apple-touch-icon" href="{% static 'img/icons/apple-touch-icon.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/icons/icon-192.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="DAS">
+
+  {# ── DAS-002: Inter font ── #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  {# ── DAS-002: tabular-nums + optical feature utility ── #}
+  <link rel="stylesheet" href="{% static 'css/tnum.css' %}">
+
+  {# ── DAS-003: CSS custom property foundation (must precede Tailwind CDN) ── #}
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  {# ── DAS-402: Global theme system (.das-theme-auto/light/dark on <html>) ── #}
+  <link rel="stylesheet" href="{% static 'css/theme_system.css' %}">
+
+  <title>{% block title %}DAS — Deneme Analiz Sistemi{% endblock %}</title>
+  {% block extra_css %}{% endblock %}
+  {# ── DAS-001: Tailwind CSS (built via CLI — see tailwind.config.js) ── #}
+  <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {# ── DAS-004: card system, delta chips, filter chips, KPI, exam row ── #}
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  {# ── DAS-003: Chart.js token bridge (window.DAS.getCssVar / DAS_COLORS) ── #}
+  <script src="{% static 'js/das-tokens.js' %}"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+
+    /* Dark mode overrides ─── applied when <html class="dark"> */
+    html.dark body { background-color: #111827; color: #f9fafb; }
+    html.dark nav  { background-color: #1e3a5f !important; }
+    html.dark .v2-app-bar { background-color: #4f44b8 !important; }
+    html.dark main { background-color: #111827; }
+
+    /* Cards, columns, modals */
+    html.dark .bg-white  { background-color: #1f2937 !important; }
+    html.dark .bg-gray-50 { background-color: #374151 !important; }
+    html.dark .bg-slate-50 { background-color: #1e2d3d !important; }
+    html.dark .bg-slate-100 { background-color: #283748 !important; }
+    html.dark .bg-gray-100 { background-color: #374151 !important; }
+    html.dark .bg-white\/70 { background-color: rgba(31,41,55,.7) !important; }
+
+    /* Borders */
+    html.dark .border-gray-100 { border-color: #374151 !important; }
+    html.dark .border-gray-200 { border-color: #4b5563 !important; }
+    html.dark .border-slate-200 { border-color: #374151 !important; }
+
+    /* Text */
+    html.dark .text-gray-800 { color: #f3f4f6 !important; }
+    html.dark .text-gray-700 { color: #e5e7eb !important; }
+    html.dark .text-gray-600 { color: #d1d5db !important; }
+    html.dark .text-gray-500 { color: #9ca3af !important; }
+    html.dark .text-gray-400 { color: #6b7280 !important; }
+
+    /* Form controls */
+    html.dark input, html.dark select, html.dark textarea {
+      background-color: #374151 !important;
+      color: #f9fafb !important;
+      border-color: #4b5563 !important;
+    }
+    html.dark .divide-gray-100 > * + * { border-color: #374151 !important; }
+
+    /* ── Phase 7 light-mode: ink-* palette responds to html:not(.dark) ──── */
+    /* Backgrounds */
+    html:not(.dark) .bg-ink-950 { background-color: #f8fafc; }
+    html:not(.dark) .bg-ink-900 { background-color: #ffffff; }
+    html:not(.dark) .bg-ink-850 { background-color: #ffffff; }
+    html:not(.dark) .bg-ink-800 { background-color: #f4f4f8; }
+    html:not(.dark) .bg-ink-750 { background-color: #e8e8ef; }
+    /* Borders & dividers */
+    html:not(.dark) .border-ink-700 { border-color: #e2e2ea !important; }
+    html:not(.dark) .border-ink-600 { border-color: #c8c8d8 !important; }
+    html:not(.dark) .divide-ink-700 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e2ea; }
+    /* Text — light-mode equivalents for the dark ink scale */
+    html:not(.dark) .text-white   { color: #111118; }
+    html:not(.dark) .text-ink-50  { color: #111118; }
+    html:not(.dark) .text-ink-100 { color: #111118; }
+    html:not(.dark) .text-ink-200 { color: #2d2d3a; }
+    html:not(.dark) .text-ink-400 { color: #6b6b80; }
+    html:not(.dark) .text-ink-500 { color: #9898ad; }
+    html:not(.dark) .text-ink-600 { color: #b8b8c8; }
+    /* Steel accent — darken for legibility on white backgrounds */
+    html:not(.dark) .text-steel-300 { color: #2c66ad; }
+    html:not(.dark) .text-steel-400 { color: #3a7fce; }
+    /* Hover backgrounds */
+    html:not(.dark) .hover\:bg-ink-800:hover     { background-color: #f4f4f8 !important; }
+    html:not(.dark) .hover\:bg-ink-750:hover     { background-color: #e8e8ef !important; }
+    html:not(.dark) .hover\:border-ink-600:hover { border-color: #c8c8d8 !important; }
+    html:not(.dark) .hover\:text-white:hover     { color: #111118 !important; }
+    /* opacity-modifier variants used on nav hover */
+    html:not(.dark) .hover\:bg-ink-800\/60:hover { background-color: rgba(244,244,248,0.6) !important; }
+
+    /* ── Privacy Mode — blur student PII for screensharing (coach only) ── */
+    html.privacy-mode .pii {
+      filter: blur(6px);
+      user-select: none;
+      transition: filter 0.15s ease;
+    }
+    html.privacy-mode .pii:hover {
+      filter: blur(0);
+    }
+  </style>
+
+  <!-- Apply dark class before Alpine/render to prevent flash -->
+  <script>
+    (function(){
+      var s = localStorage.getItem('theme');
+      var pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (s === 'dark' || (!s && pd)) document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <!-- Apply privacy mode class before paint to avoid flash-of-PII -->
+  <script>
+    (function(){
+      if (localStorage.getItem('das_privacy') === '1')
+        document.documentElement.classList.add('privacy-mode');
+    })();
+  </script>
+</head>
+<body class="font-sans bg-gray-50 min-h-dvh overscroll-none{% if v2_shell %} v2-shell{% endif %}">
+
+{# ── DAS-005: SVG icon sprite (display:none — zero layout impact) ── #}
+{% include "components/_das_icons_sprite.html" %}
+
+{% if user.is_authenticated and not v2_shell %}
+<nav class="bg-indigo-700 text-white shadow-md">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="/" class="font-bold text-xl tracking-tight">DAS</a>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-6 text-sm">
+      {% if user.is_student %}
+        <a href="/student/" class="hover:text-indigo-200">Panelim</a>
+        <a href="/student/tasks/" class="hover:text-indigo-200">Görevlerim</a>
+        <a href="/student/brans/" class="hover:text-indigo-200">Branş</a>
+        <a href="/student/exam/new/" class="hover:text-indigo-200">Yeni Sınav</a>
+        <a href="/student/ranking/" class="hover:text-indigo-200 flex items-center gap-1 opacity-60" title="Yakında">
+          Sıralama
+          <span class="text-[10px] bg-indigo-500 text-white px-1 py-0.5 rounded font-medium">Yakında</span>
+        </a>
+      {% else %}
+        <a href="/coach/" class="hover:text-indigo-200">Öğrenciler</a>
+        <a href="/coach/tasks/" class="hover:text-indigo-200">Görevler</a>
+        <a href="/coach/brans/" class="hover:text-indigo-200">Branş</a>
+        <a href="/auth/invite-students/" class="hover:text-indigo-200">Davetler</a>
+      {% endif %}
+      <span class="text-indigo-300 max-w-[8rem] truncate sm:max-w-none">{{ user.full_name }}</span>
+      <button id="dm-btn" onclick="toggleDM()" title="Tema değiştir"
+              class="opacity-70 hover:opacity-100 transition text-base leading-none px-1">🌙</button>
+      <a href="/auth/logout/" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-md">Çıkış</a>
+    </div>
+  </div>
+</nav>
+{% endif %}
+{% if user.is_authenticated and v2_shell %}
+  {# Mobile bar: hidden on desktop when desktop_v2 is active #}
+  <div{% if desktop_v2 %} class="md:hidden"{% endif %}>{% include "components/_shell_top.html" %}</div>
+  {# Desktop bar: only rendered when desktop_v2 flag is on #}
+  {% if desktop_v2 %}{% include "components/_shell_top_desktop.html" %}{% endif %}
+{% endif %}
+
+<main class="{% if desktop_v2 %}max-w-page md:px-6{% else %}max-w-7xl{% endif %} mx-auto px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-8{% endif %}">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-3 rounded-lg
+        {% if message.tags == 'error' %}bg-red-100 text-red-700 border border-red-200
+        {% elif message.tags == 'success' %}bg-green-100 text-green-700 border border-green-200
+        {% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+<script>
+  // Dark mode toggle (global, no Alpine dependency)
+  function toggleDM() {
+    var d = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', d ? 'dark' : 'light');
+    var btn = document.getElementById('dm-btn');
+    if (btn) btn.textContent = d ? '☀️' : '🌙';
+    window.dispatchEvent(new CustomEvent('darkmode-change', { detail: { isDark: d } }));
+  }
+  // Set initial button icon
+  (function(){
+    var btn = document.getElementById('dm-btn');
+    if (btn) btn.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+  })();
+
+  // Global toast notification (used by AJAX destructive actions)
+  window.dasToast = function(message, type) {
+    var colors = { ruby: '#ef4444', emerald: '#10b981', amber: '#f59e0b', steel: '#4a90e2' };
+    var color = colors[type] || colors.steel;
+    var el = document.createElement('div');
+    el.textContent = message;
+    el.style.cssText = [
+      'position:fixed', 'bottom:1.5rem', 'right:1.5rem', 'z-index:9999',
+      'padding:.625rem 1rem', 'border-radius:.75rem',
+      'background:' + color, 'color:#fff',
+      'font-size:.8125rem', 'font-weight:600',
+      'box-shadow:0 4px 16px rgba(0,0,0,.4)',
+      'pointer-events:none',
+      'transition:opacity .3s ease, transform .3s ease',
+      'opacity:0', 'transform:translateY(.5rem)',
+    ].join(';');
+    document.body.appendChild(el);
+    requestAnimationFrame(function() {
+      el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+    });
+    setTimeout(function() {
+      el.style.opacity = '0'; el.style.transform = 'translateY(.5rem)';
+      setTimeout(function() { el.remove(); }, 320);
+    }, 2800);
+  };
+
+  // Privacy Mode toggle — blurs student PII for screensharing
+  function togglePrivacy() {
+    var on = document.documentElement.classList.toggle('privacy-mode');
+    localStorage.setItem('das_privacy', on ? '1' : '0');
+    ['privacy-btn-profile'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.setAttribute('data-active', on ? '1' : '0');
+    });
+    var statusEl = document.getElementById('privacy-status-profile');
+    if (statusEl) {
+      statusEl.textContent = on ? 'Açık' : 'Kapalı';
+      statusEl.className = on ? 'text-xs text-amber-500 font-semibold' : 'text-xs text-ink-300';
+    }
+  }
+  // Sync button state with current privacy-mode class on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function() {
+    var on = document.documentElement.classList.contains('privacy-mode');
+    ['privacy-btn-profile'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.setAttribute('data-active', on ? '1' : '0');
+    });
+    var statusEl = document.getElementById('privacy-status-profile');
+    if (statusEl) {
+      statusEl.textContent = on ? 'Açık' : 'Kapalı';
+      statusEl.className = on ? 'text-xs text-amber-500 font-semibold' : 'text-xs text-ink-300';
+    }
+  });
+</script>
+<script>
+  // ── PWA Service Worker registration ──────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+        .catch(function (err) {
+          console.warn('SW registration failed:', err);
+        });
+    });
+  }
+</script>
+{% if user.is_authenticated and v2_shell %}{% include "components/_shell_bottom.html" %}{% if not shell_hide_fab %}{% include "components/_shell_fab.html" %}{% endif %}{% endif %}
+</body>
+</html>

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ exam.publisher.name }} — DAS{% endblock %}
+
+{% block content %}
+
+{# ── Mobile nav bar — fixed to viewport, outside Alpine scope ─────── #}
+<div class="fixed top-0 left-0 right-0 z-50 lg:hidden
+            px-4 py-3 flex items-center justify-between border-b"
+     style="background:var(--surface-1); border-color:var(--border);">
+  <a href="{% url 'student:denemeler_list' %}"
+     class="p-2 -ml-2 transition-colors"
+     style="color:var(--muted)" aria-label="{% trans 'Geri' %}">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </a>
+  <h1 class="font-bold text-sm truncate px-2" style="color:var(--heading)">
+    {{ exam.custom_name }}
+  </h1>
+  <div class="w-10"></div>
+</div>
+
+<div class="min-h-dvh pt-[52px] lg:pt-0 pb-[calc(env(safe-area-inset-bottom)+6rem)]"
+     x-data="examDetailState({
+       examId: {{ exam.id }},
+       net:    {{ net_total }},
+       notes:  '{{ exam.student_note|default:""|escapejs }}',
+       subjects: {
+         {% for s in subject_breakdown %}'{{ s.id }}': {
+           name:  '{{ s.name|escapejs }}',
+           color: '{{ s.color }}',
+           d: {{ s.correct }}, y: {{ s.wrong }}, b: {{ s.blank }},
+           total: {{ s.question_count }},
+           net:   {{ s.net }}
+         }{% if not forloop.last %},{% endif %}
+         {% endfor %}
+       }
+     })"
+     @keydown.escape.window="if(!edit.saving){ showEditSheet=false; showCompareSheet=false; }">
+
+  {# ── Page body ───────────────────────────────────────────────────── #}
+  <div class="max-w-xl md:max-w-3xl lg:max-w-7xl mx-auto
+              px-4 md:px-6 lg:px-8 py-4 lg:py-6
+              space-y-5 lg:space-y-0
+              lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8">
+
+    {# Hero — main col on desktop #}
+    <div class="lg:col-span-8 lg:row-start-1">
+      {% include "dashboard/partials/_detail_hero.html" %}
+    </div>
+
+    {# Actions — right rail on desktop #}
+    <div class="lg:col-span-4 lg:row-start-1 lg:col-start-9">
+      {% include "dashboard/partials/_detail_actions.html" %}
+    </div>
+
+    {# Subject analysis — full-width band on desktop #}
+    {% if subject_breakdown %}
+    <div class="lg:col-span-12 lg:row-start-2">
+      {% include "dashboard/partials/_detail_subject_scroller.html" %}
+    </div>
+    {% endif %}
+
+    {# Topic errors — main col; Notes — sticky right rail #}
+    {% if has_topic_errors %}
+    <div class="lg:col-span-8 lg:row-start-3">
+      {% include "dashboard/partials/_detail_topic_errors.html" %}
+    </div>
+    {% endif %}
+
+    <div class="lg:col-span-4 lg:row-start-3 lg:col-start-9 lg:sticky lg:top-24 lg:self-start">
+      {% include "dashboard/partials/_detail_notes.html" %}
+    </div>
+
+  </div>
+
+  {% include "dashboard/partials/_detail_edit_sheet.html" %}
+  {% include "dashboard/partials/_detail_compare_sheet.html" %}
+  {% include "dashboard/partials/_detail_delete_modal.html" %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function examDetailState(cfg) {
+  return {
+    /* ── identity ────────────────────────────────────────────────────── */
+    examId:      cfg.examId,
+
+    /* ── hero net (updated after successful mutation) ────────────────── */
+    displayNet:  cfg.net,
+
+    /* ── notes (DAS-325) ─────────────────────────────────────────────── */
+    examNotes:   cfg.notes,
+    initialNotes: cfg.notes,
+    isSaving:    false,
+
+    /* ── sheet visibility ────────────────────────────────────────────── */
+    showEditSheet:    false,
+    showCompareSheet: false,
+    activeSubject:    null,
+
+    /* ── subject index — keyed by ExamResult.id ─────────────────────── */
+    subjectIndex: cfg.subjects,
+
+    /* ── edit sheet state (DAS-326) ─────────────────────────────────── */
+    edit: {
+      d: 0, y: 0, total: 40,
+      name: '', color: '',
+      resultId: null,
+      origD: 0, origY: 0,
+      saving: false, error: null,
+    },
+
+    /* ── computed via getters (reactive in Alpine 3) ─────────────────── */
+    get editBlank()  { return Math.max(0, this.edit.total - this.edit.d - this.edit.y); },
+    /* Mirror of ExamResult.save(): round(correct - wrong * 0.25, 2) */
+    get editNet()    { return Math.round((this.edit.d - this.edit.y * 0.25) * 100) / 100; },
+    get editValid()  { return this.edit.d >= 0 && this.edit.y >= 0
+                              && (this.edit.d + this.edit.y) <= this.edit.total; },
+    get editDirty()  { return this.edit.d !== this.edit.origD
+                              || this.edit.y !== this.edit.origY; },
+
+    /* ── helpers ─────────────────────────────────────────────────────── */
+    fmtNet(v, dec) {
+      dec = dec == null ? 2 : dec;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: dec,
+                                         maximumFractionDigits: dec });
+    },
+    getCsrf() {
+      const m = document.cookie.match(/csrftoken=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    },
+
+    /* ── open edit sheet ─────────────────────────────────────────────── */
+    openEditSheet(resultId) {
+      const s = this.subjectIndex[String(resultId)];
+      if (!s) return;
+      this.edit = {
+        d: s.d, y: s.y, total: s.total,
+        name: s.name, color: s.color,
+        resultId: resultId,
+        origD: s.d, origY: s.y,
+        saving: false, error: null,
+      };
+      this.activeSubject = resultId;
+      this.showEditSheet = true;
+    },
+
+    /* ── save mutation (DAS-326) ─────────────────────────────────────── */
+    async saveEdit() {
+      if (!this.editValid || !this.editDirty || this.edit.saving) return;
+
+      this.edit.saving = true;
+      this.edit.error  = null;
+
+      /* Optimistic update — adjust displayNet immediately */
+      const oldNet = Math.round((this.edit.origD - this.edit.origY * 0.25) * 100) / 100;
+      const newNet = this.editNet;
+      const optimisticTotal = Math.round((this.displayNet - oldNet + newNet) * 100) / 100;
+      this.displayNet = optimisticTotal;
+
+      try {
+        const url  = `/student/exam/${this.examId}/result/${this.edit.resultId}/`;
+        const resp = await fetch(url, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken':  this.getCsrf() },
+          body: JSON.stringify({
+            correct: this.edit.d,
+            wrong:   this.edit.y,
+            blank:   this.editBlank,
+          }),
+        });
+        const json = await resp.json();
+
+        if (!resp.ok) {
+          /* Server rejected — rollback and surface error */
+          this.displayNet = Math.round((this.displayNet - newNet + oldNet) * 100) / 100;
+          this.edit.error = json.detail || 'Kayıt başarısız oldu.';
+        } else {
+          /* Confirmed by server — use authoritative values */
+          this.displayNet = json.total_net;
+          const sid = String(this.edit.resultId);
+          this.subjectIndex[sid].d   = this.edit.d;
+          this.subjectIndex[sid].y   = this.edit.y;
+          this.subjectIndex[sid].b   = this.editBlank;
+          this.subjectIndex[sid].net = json.net_score;
+          this.showEditSheet = false;
+        }
+      } catch (_e) {
+        /* Network failure — rollback */
+        this.displayNet = Math.round((this.displayNet - newNet + oldNet) * 100) / 100;
+        this.edit.error = 'Bağlantı hatası. Lütfen tekrar dene.';
+      } finally {
+        this.edit.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

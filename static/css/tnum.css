@@ -1,0 +1,34 @@
+/* DAS-002 — Inter optical features + tabular-nums utility
+ * Source: _artifacts/implementation/DAS-002/tnum_utility.css
+ */
+
+/* ── Explicit utility class ────────────────────────────────────────────────── */
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'cv02' 1, 'cv11' 1;
+}
+
+
+/* ── Auto-apply to known numeric contexts ─────────────────────────────────── */
+
+.das-kpi-value,
+.delta,
+.exam-net,
+.spark-label {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+
+/* ── Inter optical variants for body text ─────────────────────────────────── */
+/*
+ * cv02 — open-form 'a'  (clearer at small sizes)
+ * cv11 — single-story 'g' (more legible at 11–13px)
+ */
+
+body {
+  font-feature-settings: 'cv02' 1, 'cv11' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

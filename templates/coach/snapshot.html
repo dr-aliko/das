@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ student.full_name }} — Koç Görünümü — DAS{% endblock %}
+
+{% block content %}
+
+<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+  <div class="px-4 md:px-6 py-3 border-b border-ink-700
+              bg-gradient-to-r from-steel-tint to-transparent
+              flex items-center gap-3">
+    <a href="{% url 'coach:dashboard' %}"
+       class="shrink-0 text-steel-400 hover:text-steel-300 transition-colors inline-flex items-center gap-1 text-sm font-medium">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6"/>
+      </svg>
+      <span class="hidden sm:inline">Öğrencilerim</span>
+    </a>
+    <span class="text-ink-600">/</span>
+
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="pii w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0
+                  {% if status == 'iyi' %}bg-gradient-to-br from-steel-500 to-steel-700
+                  {% elif status == 'dusus' %}bg-gradient-to-br from-amber-400 to-orange-500
+                  {% else %}bg-ink-700{% endif %}">
+        {{ student.full_name|first|upper }}
+      </div>
+      <span class="pii font-semibold text-ink-100 truncate">{{ student.full_name }}</span>
+      {% if student.grade %}
+      <span class="pii shrink-0 text-xs text-ink-500">· {{ student.grade }}</span>
+      {% endif %}
+      {% if status == 'iyi' %}
+      <span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İYİ</span>
+      {% elif status == 'dusus' %}
+      <span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-amber-tint text-amber-500 font-semibold">DÜŞÜŞ</span>
+      {% else %}
+      <span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-ruby-tint text-ruby-500 font-semibold">PASİF</span>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <a href="{% url 'coach:student_brans_hub' student.id %}"
+         class="h-8 px-3 rounded-md bg-steel-500 hover:bg-steel-400 text-white text-xs font-medium
+                inline-flex items-center gap-1.5 transition-colors">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75"
+             stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+        </svg>
+        Rapor
+      </a>
+      <a href="/coach/tasks/?student={{ student.id }}"
+         class="hidden sm:inline-flex h-8 px-3 rounded-md bg-ink-800 border border-ink-700
+                hover:bg-ink-750 text-ink-200 text-xs font-medium items-center gap-1.5 transition-colors">
+        Görev Ver
+      </a>
+    </div>
+  </div>
+
+  <div class="p-4 md:p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <div class="lg:col-span-8 space-y-4">
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Net Ort.</p>
+            <div class="mt-1 flex items-baseline gap-2">
+              <p class="text-2xl font-bold text-ink-50 tnum">{{ stats.avg_net|floatformat:1 }}</p>
+              {% if stats.avg_net_delta is not None %}
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold tnum
+                           {% if stats.avg_net_delta > 0 %}bg-emerald-tint text-emerald-500{% else %}bg-ruby-tint text-ruby-500{% endif %}">
+                {% if stats.avg_net_delta > 0 %}▲{% else %}▼{% endif %}
+                {% if stats.avg_net_delta > 0 %}+{% endif %}{{ stats.avg_net_delta|floatformat:1 }}
+              </span>
+              {% endif %}
+            </div>
+            <p class="text-[11px] text-ink-500 mt-1">{{ stats.selected_period }}</p>
+          </div>
+
+          <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Son Deneme</p>
+            <div class="mt-1 flex items-baseline gap-2">
+              <p class="text-2xl font-bold text-steel-400 tnum">{{ stats.last_net|floatformat:1 }}</p>
+              {% if stats.last_net_delta is not None %}
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold tnum
+                           {% if stats.last_net_delta > 0 %}bg-emerald-tint text-emerald-500{% else %}bg-ruby-tint text-ruby-500{% endif %}">
+                {% if stats.last_net_delta > 0 %}▲{% else %}▼{% endif %}
+                {% if stats.last_net_delta > 0 %}+{% endif %}{{ stats.last_net_delta|floatformat:1 }}
+              </span>
+              {% endif %}
+            </div>
+            <p class="text-[11px] text-ink-500 mt-1 truncate">{{ stats.last_exam_title|default:"—"|truncatechars:16 }}</p>
+          </div>
+
+          <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Deneme</p>
+            <p class="mt-1 text-2xl font-bold text-ink-50 tnum">{{ stats.exam_count }}</p>
+            <p class="text-[11px] text-ink-500 mt-1">toplam</p>
+          </div>
+
+          <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Gri Konu</p>
+            <p class="mt-1 text-2xl font-bold text-amber-500 tnum">{{ stats.radar_count }}</p>
+            <p class="text-[11px] text-ink-500 mt-1">çalışılmayı bekliyor</p>
+          </div>
+        </div>
+
+        {% if subjects %}
+        <div class="rounded-xl border border-ink-700 bg-ink-850">
+          <div class="px-4 py-3 flex items-center justify-between border-b border-ink-700">
+            <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Ders Performansı</h3>
+            <span class="text-[11px] text-ink-500">son deneme</span>
+          </div>
+          <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for subj in subjects %}
+            <div class="rounded-lg border-l-4 bg-ink-800 p-3"
+                 style="border-color:var(--{{ subj.key }})">
+              <div class="flex items-center justify-between">
+                <p class="text-[10px] uppercase tracking-wider text-ink-400 font-semibold">{{ subj.name }}</p>
+                {% if subj.delta is not None %}
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tnum
+                             {% if subj.delta > 0 %}bg-emerald-tint text-emerald-500{% elif subj.delta < 0 %}bg-ruby-tint text-ruby-500{% else %}bg-ink-750 text-ink-400{% endif %}">
+                  {% if subj.delta > 0 %}+{% endif %}{{ subj.delta|floatformat:1 }}
+                </span>
+                {% endif %}
+              </div>
+              <p class="mt-1.5 text-xl font-bold text-ink-50 tnum">{{ subj.net|floatformat:2 }}</p>
+              <div class="mt-2 flex items-center justify-between">
+                <p class="text-[10px] uppercase text-ink-500 font-semibold">Doğruluk</p>
+                <p class="text-xs font-semibold text-ink-200 tnum">{{ subj.accuracy }}%</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4"
+             x-data="coachTrialTasks({{ student.id }})" x-init="init()">
+
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-steel-400 inline-block"></span>
+            <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Görev Takibi</h3>
+            <span class="ml-auto text-[11px] text-ink-500">{{ student.full_name }}</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1 mb-4 text-xs font-medium">
+            <button @click="tab='radar'"
+                    class="py-1.5 rounded-md transition-colors text-left px-2"
+                    :class="tab==='radar' ? 'bg-ruby-tint text-ruby-500' : 'text-ink-500 hover:bg-ink-800'">
+              🔴 Radar <span x-text="'(' + radar.length + ')'"></span>
+            </button>
+            <button @click="tab='active'"
+                    class="py-1.5 rounded-md transition-colors text-left px-2"
+                    :class="tab==='active' ? 'bg-steel-tint text-steel-400' : 'text-ink-500 hover:bg-ink-800'">
+              📌 Aktif <span x-text="'(' + active.length + ')'"></span>
+            </button>
+            <button @click="tab='done'"
+                    class="py-1.5 rounded-md transition-colors text-left px-2"
+                    :class="tab==='done' ? 'bg-emerald-tint text-emerald-500' : 'text-ink-500 hover:bg-ink-800'">
+              ✅ Bitti <span x-text="'(' + completed.length + ')'"></span>
+            </button>
+          </div>
+
+          <div x-show="tab==='radar'" x-cloak>
+            <template x-if="radar.length > 0">
+              <div class="space-y-1.5">
+                <template x-for="t in radar" :key="t.id">
+                  <div class="flex items-start gap-2 p-2 rounded-lg bg-ink-800">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100 truncate" x-text="t.name"></div>
+                      <div class="flex items-center gap-1 flex-wrap mt-0.5">
+                        <span class="text-xs text-ink-400" x-text="t.subject ? t.subject.slice(4) : ''"></span>
+                        <span x-show="t.wrong > 0"
+                              class="text-xs px-1 py-0.5 rounded bg-ruby-tint text-ruby-500"
+                              x-text="t.wrong + 'Y'"></span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-0.5 shrink-0">
+                      <button @click="assign(t, false)"
+                              class="text-xs px-1.5 py-0.5 rounded border border-steel-500/50
+                                     text-steel-400 hover:bg-steel-tint whitespace-nowrap transition">
+                        Ata →
+                      </button>
+                      <button @click="assign(t, true)"
+                              class="text-xs px-1.5 py-0.5 rounded border border-emerald-500/50
+                                     text-emerald-400 hover:bg-emerald-tint whitespace-nowrap transition">
+                        Bitti ✓
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="radar.length === 0">
+              <div class="text-center py-6">
+                <div class="text-3xl mb-2">🎯</div>
+                <p class="text-sm text-ink-400">Tüm konular görevlendirildi!</p>
+              </div>
+            </template>
+          </div>
+
+          <div x-show="tab==='active'" x-cloak>
+            <template x-if="active.length > 0">
+              <div class="space-y-1.5">
+                <template x-for="t in active" :key="t.id">
+                  <div class="flex items-center gap-2 p-2 rounded-lg border border-steel-500/30 bg-steel-tint">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100 truncate" x-text="t.name"></div>
+                      <div class="text-xs text-ink-400 mt-0.5"
+                           x-text="t.byCoach ? 'Koç atadı' : 'Öğrenci atadı'"></div>
+                      <template x-if="t.created_at">
+                        <div class="flex items-center gap-1 mt-1 text-[10px] text-ink-500">
+                          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                          <span x-text="'Eklendi: ' + t.created_at"></span>
+                        </div>
+                      </template>
+                    </div>
+                    <div class="flex flex-col gap-0.5 shrink-0">
+                      <button @click="complete(t)"
+                              class="text-xs px-1.5 py-0.5 rounded border border-emerald-500/50
+                                     text-emerald-400 hover:bg-emerald-tint whitespace-nowrap transition">
+                        Bitti ✓
+                      </button>
+                      <button @click="cancel(t)"
+                              class="text-xs px-1.5 py-0.5 rounded border border-ruby-500/50
+                                     text-ruby-500 hover:bg-ruby-tint whitespace-nowrap transition">
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="active.length === 0">
+              <p class="text-sm text-ink-400 text-center py-4">Aktif görev yok.</p>
+            </template>
+          </div>
+
+          <div x-show="tab==='done'" x-cloak>
+            <template x-if="completed.length > 0">
+              <div class="space-y-1.5">
+                <template x-for="t in completed" :key="t.id">
+                  <div class="flex items-center gap-2 p-2 rounded-lg border border-emerald-500/20 bg-emerald-tint">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-200 truncate line-through opacity-70"
+                           x-text="t.name"></div>
+                      <template x-if="t.created_at || t.completed_at">
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1 text-[10px] text-ink-500">
+                          <span x-show="t.created_at" x-text="'Eklendi: ' + (t.created_at||'')"></span>
+                          <span x-show="t.created_at && t.completed_at" aria-hidden="true">·</span>
+                          <span x-show="t.completed_at" x-text="'Bitti: ' + (t.completed_at||'')"></span>
+                          <span x-show="t.cycle_days !== null && t.cycle_days !== undefined"
+                                class="text-emerald-500/80 font-medium"
+                                x-text="'(' + (t.cycle_days === 0 ? 'aynı gün' : t.cycle_days + ' günde') + ')'"></span>
+                        </div>
+                      </template>
+                    </div>
+                    <button @click="undo(t)"
+                            class="text-xs px-1.5 py-0.5 rounded border border-ink-600
+                                   text-ink-400 hover:bg-ink-750 whitespace-nowrap transition shrink-0">
+                      Geri Al
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="completed.length === 0">
+              <p class="text-sm text-ink-400 text-center py-4">Henüz tamamlanan yok.</p>
+            </template>
+          </div>
+
+        </div>
+
+      </div>
+
+      <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-20 lg:self-start">
+
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+          <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider mb-3">Öğrenci Bilgisi</h3>
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center justify-between text-ink-300">
+              <span>Sınıf</span>
+              <span class="text-ink-100 font-medium">{{ student.grade|default:"—" }}</span>
+            </div>
+            <div class="flex items-center justify-between text-ink-300">
+              <span>Toplam Sınav</span>
+              <span class="text-ink-100 font-semibold tnum">{{ stats.exam_count }}</span>
+            </div>
+            <div class="flex items-center justify-between text-ink-300">
+              <span>Net Ortalaması</span>
+              <span class="text-ink-100 font-semibold tnum">{{ stats.avg_net|floatformat:1 }}</span>
+            </div>
+            <div class="flex items-center justify-between text-ink-300">
+              <span>Gri Konu</span>
+              <span class="text-amber-500 font-semibold tnum">{{ stats.radar_count }}</span>
+            </div>
+            <div class="flex items-center justify-between text-ink-300">
+              <span>Durum</span>
+              <span class="font-semibold
+                {% if status == 'iyi' %}text-emerald-500
+                {% elif status == 'dusus' %}text-amber-500
+                {% else %}text-ruby-500{% endif %}">
+                {% if status == 'iyi' %}İyi{% elif status == 'dusus' %}Düşüş{% else %}Pasif{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {% if subjects %}
+        <div class="rounded-xl border border-ink-700 bg-ink-850">
+          <div class="px-4 py-3 border-b border-ink-700">
+            <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Net Özeti</h3>
+          </div>
+          <div class="divide-y divide-ink-700">
+            {% for subj in subjects %}
+            <div class="px-4 py-2.5 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full shrink-0" style="background:var(--{{ subj.key }})"></span>
+                <span class="text-xs font-medium text-ink-200">{{ subj.name }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-ink-100 tnum">{{ subj.net|floatformat:2 }}</span>
+                {% if subj.delta is not None %}
+                <span class="text-[10px] font-semibold tnum
+                             {% if subj.delta > 0 %}text-emerald-500{% elif subj.delta < 0 %}text-ruby-500{% else %}text-ink-500{% endif %}">
+                  {% if subj.delta > 0 %}▲{% elif subj.delta < 0 %}▼{% endif %}
+                  {{ subj.delta|floatformat:1 }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if student.current_streak > 0 or student_badges %}
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+          <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">Seri & Başarılar</h3>
+          <div class="flex items-center gap-4 mb-3">
+            <div class="text-center">
+              <p class="text-[10px] text-ink-500 uppercase tracking-wider font-semibold">Güncel Seri</p>
+              <p class="text-xl font-bold text-amber-400 tnum mt-0.5">🔥 {{ student.current_streak }}g</p>
+            </div>
+            <div class="text-center">
+              <p class="text-[10px] text-ink-500 uppercase tracking-wider font-semibold">En Uzun</p>
+              <p class="text-xl font-bold text-ink-300 tnum mt-0.5">{{ student.longest_streak }}g</p>
+            </div>
+          </div>
+          {% if student_badges %}
+          <div class="flex flex-wrap gap-1.5 pt-3 border-t border-ink-700">
+            {% for badge in student_badges %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-tint
+                         border border-emerald-500/20 text-[10px] font-semibold text-emerald-400">
+              {{ badge.icon }} {{ badge.label }}
+            </span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <a href="{% url 'coach:student_brans_hub' student.id %}"
+           class="flex items-center justify-between p-4 rounded-xl border border-steel-500/30
+                  bg-steel-tint hover:bg-steel-500/20 transition-colors">
+          <div>
+            <p class="text-sm font-semibold text-steel-400">Branş Raporu</p>
+            <p class="text-xs text-ink-500 mt-0.5">Konu bazlı detaylı analiz</p>
+          </div>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+               class="text-ink-500 shrink-0" viewBox="0 0 24 24">
+            <path d="M9 6l6 6-6 6"/>
+          </svg>
+        </a>
+
+      </aside>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function coachTrialTasks(studentId) {
+  const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+
+  return {
+    tab: 'radar',
+    radar:     {{ trial_radar_json|safe }},
+    active:    {{ trial_active_json|safe }},
+    completed: {{ trial_completed_json|safe }},
+
+    async assign(t, direct) {
+      const r = await fetch('/coach/assign-task/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({topic_id: t.id, student_id: studentId, direct_complete: direct}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.radar = this.radar.filter(item => item.id !== t.id);
+      if (direct) {
+        this.completed.unshift({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || ''});
+      } else {
+        this.active.push({id: d.task_id, topic_id: t.id, name: t.name, sub: t.sub || '', byCoach: true});
+      }
+    },
+
+    async complete(t) {
+      const r = await fetch(`/coach/task/${t.id}/complete/`, {
+        method: 'POST', headers: {'X-CSRFToken': CSRF()},
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.active = this.active.filter(a => a.id !== t.id);
+      this.completed.unshift({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || ''});
+    },
+
+    async cancel(t) {
+      const r = await fetch(`/coach/task/${t.id}/action/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({action: 'cancel_assignment'}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.active = this.active.filter(a => a.id !== t.id);
+      if (t.topic_id) {
+        this.radar.unshift({id: t.topic_id, name: t.name, subject: t.subject || '', sub: t.sub || '', wrong: 0, blank: 0});
+      }
+    },
+
+    async undo(t) {
+      const r = await fetch(`/coach/task/${t.id}/action/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF()},
+        body: JSON.stringify({action: 'undo_complete'}),
+      });
+      const d = await r.json();
+      if (!d.ok) return;
+      this.completed = this.completed.filter(c => c.id !== t.id);
+      this.active.push({id: t.id, topic_id: t.topic_id, name: t.name, sub: t.sub || '', byCoach: true});
+    },
+
+    init() {
+      if (this.radar.length === 0 && this.active.length > 0) this.tab = 'active';
+      else if (this.radar.length === 0 && this.active.length === 0 && this.completed.length > 0) this.tab = 'done';
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Konu Hataları — DAS{% endblock %}
+
+{% block content %}
+<script>
+window._BRANS_TOPICS   = {{ topics_json|safe }};
+window._BRANS_EXISTING = {{ existing_json|safe }};
+window._BRANS_YANLIS   = {{ entry.yanlis }};
+</script>
+
+<div class="max-w-3xl mx-auto" x-data="bransErrorForm()">
+
+  {# ── Header ── #}
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="{{ back_url }}" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <span class="text-xs font-semibold text-indigo-500 uppercase tracking-widest">Konu Hataları</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-800">
+      {{ entry.ders.display_name }}
+    </h1>
+    <p class="text-gray-500 text-sm mt-1">
+      {{ entry.tarih|date:"d.m.Y" }} &nbsp;·&nbsp; Net: {{ entry.net }}
+    </p>
+
+    {# Live tracking counter #}
+    <div class="mt-3 flex items-center gap-3">
+      <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+        <div class="bg-indigo-500 h-2 rounded-full transition-all"
+             :style="{ width: Math.min(100, trackedPct()) + '%' }"></div>
+      </div>
+      <span class="text-xs font-semibold whitespace-nowrap"
+            :class="overLimit() ? 'text-red-500' : 'text-gray-500'"
+            x-text="trackedTotal() + ' / {{ entry.yanlis }} yanlış takip edildi'">
+      </span>
+    </div>
+    <p x-show="overLimit()" x-cloak class="text-xs text-red-500 mt-1 font-medium">
+      Toplam takip edilen yanlış, deneme yanlış sayısını (<strong>{{ entry.yanlis }}</strong>) aşıyor.
+    </p>
+    <p x-show="!overLimit() && rows.length > 0 && trackedTotal() < {{ entry.yanlis }}" x-cloak
+       class="text-xs text-amber-500 mt-1">
+      Kalan <span x-text="{{ entry.yanlis }} - trackedTotal()"></span> yanlış henüz konuya atanmadı.
+    </p>
+  </div>
+
+  <form method="post" @submit.prevent="submit($event)">
+    {% csrf_token %}
+    <input type="hidden" name="errors_json" x-ref="errorsInput">
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+    {# ── Added rows list ── #}
+    <div class="space-y-2 mb-4" x-show="rows.length > 0" x-cloak>
+      <div class="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 mb-1">
+        <div class="col-span-7">Konu</div>
+        <div class="col-span-3 text-center text-red-400">Yanlış</div>
+        <div class="col-span-2"></div>
+      </div>
+
+      <template x-for="(row, idx) in rows" :key="idx">
+        <div class="grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-xl px-3 py-2.5 shadow-sm">
+          <div class="col-span-7 min-w-0">
+            <div class="text-sm font-medium text-gray-800 truncate" x-text="row.topicName || '—'"></div>
+            <div x-show="row.subCat" class="text-xs text-gray-400 truncate" x-text="row.subCat"></div>
+          </div>
+          <div class="col-span-3">
+            <input type="number" x-model.number="row.yanlisSayisi" min="1" max="{{ entry.yanlis }}"
+                   @input="row.yanlisSayisi = Math.max(1, row.yanlisSayisi)"
+                   class="w-full border border-red-200 bg-red-50 rounded-lg px-2 py-1.5 text-center text-sm
+                          focus:outline-none focus:ring-2 focus:ring-red-400">
+          </div>
+          <div class="col-span-2 flex justify-end">
+            <button type="button" @click="rows.splice(idx, 1)"
+                    class="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    {# ── Topic add panel ── #}
+    <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 mb-6">
+      <h2 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+        <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Konu Ekle
+      </h2>
+
+      <div class="space-y-3">
+
+        {# Sub-category chips (only for subjects that have them) #}
+        <div x-show="subCats().length > 0" x-cloak>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Alt Ders</label>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="sc in subCats()" :key="sc">
+              <button type="button"
+                      @click="newRow.subCat = (newRow.subCat === sc ? '' : sc); newRow.topicId = null; newRow.search = ''"
+                      :class="newRow.subCat === sc
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'"
+                      class="px-3 py-1.5 rounded-lg border text-sm font-medium transition"
+                      x-text="sc">
+              </button>
+            </template>
+          </div>
+        </div>
+
+        {# Topic search (shown directly if no sub-cats, else after sub-cat pick) #}
+        <div x-show="subCats().length === 0 || newRow.subCat" x-cloak>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Konu</label>
+          <input type="text" x-model="newRow.search" placeholder="Konu ara..."
+                 class="w-full border border-gray-300 rounded-t-lg px-3 py-2
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+          <div class="border border-t-0 border-gray-300 rounded-b-lg overflow-y-auto" style="max-height:180px">
+            <template x-for="t in filteredTopics()" :key="t.id">
+              <div @click="selectTopic(t)"
+                   :class="newRow.topicId === t.id
+                     ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                     : 'hover:bg-gray-50 text-gray-700'"
+                   class="px-3 py-2 text-sm cursor-pointer border-b border-gray-100 last:border-0 transition"
+                   x-text="t.name">
+              </div>
+            </template>
+            <div x-show="filteredTopics().length === 0"
+                 class="px-3 py-3 text-sm text-gray-400 text-center">Konu bulunamadı</div>
+          </div>
+        </div>
+
+        {# Wrong count input #}
+        <div x-show="newRow.topicId" x-cloak>
+          <label class="block text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Yanlış Sayısı</label>
+          <input type="number" x-model.number="newRow.yanlisSayisi" min="1" max="{{ entry.yanlis }}"
+                 class="w-full border border-red-200 bg-red-50 rounded-lg px-3 py-2.5 text-center text-sm
+                        focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+
+        <button type="button" @click="addRow()"
+                :disabled="!canAdd()"
+                :class="canAdd() ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+                class="w-full py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Listeye Ekle
+        </button>
+      </div>
+    </div>
+
+    {# ── Footer buttons ── #}
+    <div class="flex gap-3 justify-end">
+      <a href="{{ back_url }}"
+         class="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition font-medium">
+        Atla
+      </a>
+      <button type="submit"
+              :disabled="overLimit()"
+              :class="overLimit() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+              class="px-7 py-2.5 font-semibold rounded-lg transition shadow-sm flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Kaydet (<span x-text="rows.length"></span> konu)
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function bransErrorForm() {
+  const allTopics = window._BRANS_TOPICS   || [];
+  const existing  = window._BRANS_EXISTING || [];
+  const maxYanlis = window._BRANS_YANLIS   || 0;
+
+  return {
+    allTopics,
+    rows: existing.map(e => ({
+      topicId:      e.topicId,
+      topicName:    e.topicName,
+      subCat:       e.subCat,
+      yanlisSayisi: e.yanlisSayisi,
+    })),
+    newRow: { topicId: null, topicName: '', subCat: '', search: '', yanlisSayisi: 1 },
+
+    subCats() {
+      const cats = [...new Set(
+        allTopics.filter(t => t.sub_category).map(t => t.sub_category)
+      )];
+      return cats.sort();
+    },
+
+    filteredTopics() {
+      return allTopics.filter(t => {
+        if (this.subCats().length > 0 && t.sub_category !== this.newRow.subCat) return false;
+        if (this.newRow.search && !t.name.toLowerCase().includes(this.newRow.search.toLowerCase())) return false;
+        return true;
+      });
+    },
+
+    selectTopic(t) {
+      this.newRow.topicId   = t.id;
+      this.newRow.topicName = t.name;
+    },
+
+    canAdd() {
+      return this.newRow.topicId && this.newRow.yanlisSayisi > 0;
+    },
+
+    addRow() {
+      if (!this.canAdd()) return;
+      const existing = this.rows.find(r => r.topicId === this.newRow.topicId);
+      if (existing) {
+        existing.yanlisSayisi += this.newRow.yanlisSayisi;
+      } else {
+        this.rows.push({ ...this.newRow });
+      }
+      this.newRow.topicId   = null;
+      this.newRow.topicName = '';
+      this.newRow.search    = '';
+      this.newRow.yanlisSayisi = 1;
+    },
+
+    trackedTotal() {
+      return this.rows.reduce((s, r) => s + (r.yanlisSayisi || 0), 0);
+    },
+
+    trackedPct() {
+      return maxYanlis > 0 ? (this.trackedTotal() / maxYanlis) * 100 : 0;
+    },
+
+    overLimit() {
+      return this.trackedTotal() > maxYanlis;
+    },
+
+    submit(e) {
+      if (this.overLimit()) return;
+      this.$refs.errorsInput.value = JSON.stringify(this.rows);
+      e.target.submit();
+    },
+  };
+}
+</script>
+{% endblock %}

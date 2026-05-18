@@ -1,0 +1,105 @@
+{% load i18n %}
+{% comment %}DAS-362: Per-Subject Expandable Compare Row
+   Native details/summary widget. Safe under .das-dark.
+   Pass context via: include ".../_compare_subject_row.html" with row=row
+   row keys: name, color_var, net_a, net_b, delta,
+             correct_a, wrong_a, blank_a, correct_b, wrong_b, blank_b{% endcomment %}
+
+<details class="rounded-card overflow-hidden group"
+         style="background:var(--surface-1); border:1px solid var(--border);">
+
+  <summary class="flex items-center justify-between p-4 cursor-pointer
+                  list-none select-none"
+            style="list-style:none;">
+
+    {# Subject accent + label #}
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-1.5 h-8 rounded-full shrink-0"
+           style="background: var({{ row.color_var }});"></div>
+      <div class="min-w-0">
+        <h4 class="text-sm font-bold truncate"
+            style="color:var(--heading)">{{ row.name }}</h4>
+        <div class="flex gap-2 text-[10px] font-medium mt-0.5"
+             style="color:var(--muted)">
+          <span class="tabular-nums">A: {{ row.net_a|floatformat:2 }}</span>
+          <span style="color:var(--border-strong)">·</span>
+          <span class="tabular-nums">B: {{ row.net_b|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+
+    {# Delta chip + chevron #}
+    <div class="flex items-center gap-3 shrink-0 ml-2">
+      <span class="px-2 py-0.5 rounded-md text-[10px] font-black tabular-nums"
+            style="background: var({% if row.delta >= 0 %}--up-tint{% else %}--down-tint{% endif %});
+                   color: var({% if row.delta >= 0 %}--up{% else %}--down{% endif %});">
+        {% if row.delta >= 0 %}+{% endif %}{{ row.delta|floatformat:2 }}
+      </span>
+      <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180"
+           style="color:var(--muted)"
+           fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+  </summary>
+
+  {# Expanded D/Y/B detail #}
+  <div class="px-4 pb-4 pt-3 border-t" style="border-color:var(--border);">
+    <div class="grid grid-cols-2 gap-3">
+
+      {# Exam A #}
+      <div class="p-3 rounded-xl" style="background:var(--surface-2); border:1px solid var(--border);">
+        <span class="text-[9px] font-bold uppercase tracking-widest block mb-2"
+              style="color:var(--muted)">{% trans "A Sınavı" %}</span>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <span class="text-[10px] font-bold block text-up">D</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.correct_a }}</span>
+          </div>
+          <div class="text-center">
+            <span class="text-[10px] font-bold block text-down">Y</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.wrong_a }}</span>
+          </div>
+          <div class="text-center">
+            <span class="text-[10px] font-bold block" style="color:var(--muted)">B</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.blank_a }}</span>
+          </div>
+        </div>
+      </div>
+
+      {# Exam B #}
+      <div class="p-3 rounded-xl" style="background:var(--surface-2); border:1px solid var(--border);">
+        <span class="text-[9px] font-bold uppercase tracking-widest block mb-2"
+              style="color:var(--muted)">{% trans "B Sınavı" %}</span>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <span class="text-[10px] font-bold block text-up">D</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.correct_b }}</span>
+          </div>
+          <div class="text-center">
+            <span class="text-[10px] font-bold block text-down">Y</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.wrong_b }}</span>
+          </div>
+          <div class="text-center">
+            <span class="text-[10px] font-bold block" style="color:var(--muted)">B</span>
+            <span class="text-sm font-black tabular-nums"
+                  style="color:var(--heading)">{{ row.blank_b }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</details>
+
+{# One-time style — remove default disclosure triangle (safe to repeat, idempotent) #}
+<style>
+  summary::-webkit-details-marker { display: none; }
+  details > summary { list-style: none; }
+</style>

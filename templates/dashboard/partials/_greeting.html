@@ -1,0 +1,26 @@
+{% load i18n %}
+{% comment %}
+   DAS-008 — Dashboard Greeting
+   Context: user, stats (exam_count, last_exam_date, selected_period), period
+   Outer Alpine x-data required: dashPeriod
+{% endcomment %}
+<div class="das-greeting flex items-start justify-between px-4 pt-5 pb-3">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-bold tracking-tight text-[var(--heading)] leading-tight">
+      Merhaba, {{ user.full_name }} 👋
+    </h1>
+    <p class="text-sm text-[var(--muted)] mt-0.5">
+      {{ stats.exam_count }} sınav
+      {% if stats.last_exam_date %}· son: {{ stats.last_exam_date }}{% endif %}
+    </p>
+  </div>
+
+  <a href="/student/exam/new/"
+     class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 ml-3
+            bg-[var(--primary)] text-white text-xs font-semibold
+            rounded-[var(--r-chip)] shadow-[var(--fab)]
+            active:scale-95 transition-transform">
+    {% include "components/_icon.html" with name="plus" size=14 %}
+    {% trans "Yeni Sınav" %}
+  </a>
+</div>

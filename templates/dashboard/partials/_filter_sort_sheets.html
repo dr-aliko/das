@@ -1,0 +1,149 @@
+{% load i18n %}
+{# DAS-306: Advanced filter sheet #}
+<div x-show="filterOpen"
+     class="fixed inset-0 z-50 overflow-hidden"
+     x-cloak>
+  {# Backdrop #}
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+       x-show="filterOpen"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="filterOpen = false">
+  </div>
+
+  {# Sheet #}
+  <div class="absolute inset-x-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl flex flex-col"
+       x-show="filterOpen"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-y-full"
+       x-transition:enter-end="translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-y-0"
+       x-transition:leave-end="translate-y-full">
+
+    {# Drag handle #}
+    <div class="flex justify-center pt-3 pb-1">
+      <div class="w-10 h-1 bg-slate-200 rounded-full"></div>
+    </div>
+
+    {# Header #}
+    <div class="px-5 pb-3 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-900">{% trans "Filtrele" %}</h3>
+      <button @click="filterOpen = false" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    {# Body #}
+    <div class="flex-1 overflow-y-auto px-5 pb-32 space-y-8">
+
+      {# Options #}
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{% trans "Seçenekler" %}</p>
+        <label class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl cursor-pointer">
+          <span class="font-semibold text-slate-700 text-sm">{% trans "Sadece notlu denemeler" %}</span>
+          <input type="checkbox"
+                 x-model="activeHasNote"
+                 class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+        </label>
+      </div>
+
+      {# Subject filter — visual, wired to backend in a later phase #}
+      <div class="opacity-50 pointer-events-none">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+          {% trans "Ders (Yakında)" %}
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <span class="px-4 py-2 rounded-xl border-2 border-slate-100 bg-white text-slate-500 font-semibold text-sm">{% trans "Türkçe" %}</span>
+          <span class="px-4 py-2 rounded-xl border-2 border-slate-100 bg-white text-slate-500 font-semibold text-sm">{% trans "Matematik" %}</span>
+          <span class="px-4 py-2 rounded-xl border-2 border-slate-100 bg-white text-slate-500 font-semibold text-sm">{% trans "Sosyal" %}</span>
+          <span class="px-4 py-2 rounded-xl border-2 border-slate-100 bg-white text-slate-500 font-semibold text-sm">{% trans "Fen" %}</span>
+        </div>
+      </div>
+
+    </div>
+
+    {# Footer — fixed inside sheet #}
+    <div class="absolute bottom-0 inset-x-0 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]
+                bg-white border-t border-slate-100 flex gap-3">
+      <button @click="resetFilters()"
+              class="flex-1 py-3.5 text-slate-500 font-bold text-sm rounded-2xl hover:bg-slate-50 transition-colors">
+        {% trans "Sıfırla" %}
+      </button>
+      <button @click="filterOpen = false; applyFilters()"
+              class="flex-[2] py-3.5 bg-primary text-white rounded-2xl font-bold text-sm">
+        {% trans "Uygula" %}
+      </button>
+    </div>
+  </div>
+</div>
+
+{# DAS-307: Sort sheet #}
+<div x-show="sortOpen"
+     class="fixed inset-0 z-50 overflow-hidden"
+     x-cloak>
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+       x-show="sortOpen"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="sortOpen = false">
+  </div>
+
+  <div class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl"
+       x-show="sortOpen"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-y-full"
+       x-transition:enter-end="translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-y-0"
+       x-transition:leave-end="translate-y-full">
+
+    <div class="flex justify-center pt-3 pb-1">
+      <div class="w-10 h-1 bg-slate-200 rounded-full"></div>
+    </div>
+
+    <div class="px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-2">
+      <h3 class="text-lg font-bold text-slate-900 mb-5">{% trans "Sırala" %}</h3>
+      <div class="space-y-2">
+
+        <button @click="setSort('date')"
+                class="w-full flex items-center justify-between p-4 rounded-2xl font-semibold text-sm transition-colors"
+                :class="activeSort === 'date' ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-50'">
+          <span>{% trans "Tarih (Yeni → Eski)" %}</span>
+          <svg x-show="activeSort === 'date'" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+        <button @click="setSort('net')"
+                class="w-full flex items-center justify-between p-4 rounded-2xl font-semibold text-sm transition-colors"
+                :class="activeSort === 'net' ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-50'">
+          <span>{% trans "Net (Yüksek → Düşük)" %}</span>
+          <svg x-show="activeSort === 'net'" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+        <button @click="setSort('publisher')"
+                class="w-full flex items-center justify-between p-4 rounded-2xl font-semibold text-sm transition-colors"
+                :class="activeSort === 'publisher' ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-50'">
+          <span>{% trans "Yayın Adı (A → Z)" %}</span>
+          <svg x-show="activeSort === 'publisher'" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,11 @@
+<header class="v2-app-bar sticky top-0 z-30 bg-primary text-white pt-[env(safe-area-inset-top)] shadow-md">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+    <a href="/" class="font-bold text-xl tracking-tight text-white">DAS</a>
+    <div class="flex items-center gap-3 text-sm">
+      <span class="max-w-[8rem] truncate opacity-80 text-white">{{ user.full_name }}</span>
+      <a href="/auth/logout/"
+         class="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-md transition">Çıkış</a>
+    </div>
+  </div>
+  {% include "components/_shell_desktop_tabs.html" %}
+</header>

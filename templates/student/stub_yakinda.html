@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — DAS{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto text-center py-16 px-4">
+  <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+    <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <use href="#das-icon-zap"/>
+    </svg>
+  </div>
+  <h1 class="text-2xl font-bold text-gray-800">{{ title }}</h1>
+  <p class="mt-2 text-sm text-gray-500">Bu bölüm yakında geliyor.</p>
+  <a href="{{ back }}"
+     class="inline-block mt-6 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold">
+    Geri dön
+  </a>
+</div>
+{% endblock %}

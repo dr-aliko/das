@@ -1,0 +1,63 @@
+{% load i18n %}
+{# DAS-323: Subject Breakdown horizontal scroller #}
+<div class="space-y-3">
+  <div class="flex justify-between items-end px-1 lg:mb-1">
+    <h3 class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">
+      {% trans "Ders Analizi" %}
+    </h3>
+    <span class="text-[10px] font-medium md:hidden" style="color:var(--muted-2)">{% trans "Kaydırın →" %}</span>
+  </div>
+
+  <div class="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4
+              snap-x snap-mandatory no-scrollbar overscroll-x-contain
+              md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:snap-none
+              lg:grid-cols-3 xl:grid-cols-4">
+    {% for subject in subject_breakdown %}
+    <div @click="openEditSheet({{ subject.id }})"
+         class="flex-shrink-0 w-[160px] das-card p-4 snap-start cursor-pointer
+                md:w-auto md:p-5
+                active:scale-95 transition-transform"
+         style="border-left: 4px solid {{ subject.color }};">
+
+      <div class="text-[10px] font-bold uppercase mb-1" style="color:var(--muted)">
+        {{ subject.name }}
+      </div>
+
+      <div class="flex items-baseline gap-1 mb-2">
+        {# x-text keeps the displayed net live after a mutation #}
+        <span class="text-2xl font-black tabular-nums" style="color:var(--heading)"
+              x-text="subjectIndex['{{ subject.id }}']
+                ? fmtNet(subjectIndex['{{ subject.id }}'].net, 1)
+                : '{{ subject.net|floatformat:1 }}'">
+          {{ subject.net|floatformat:1 }}
+        </span>
+        <span class="text-[10px] font-bold uppercase" style="color:var(--muted)">{% trans "Net" %}</span>
+      </div>
+
+      {# Accuracy bar #}
+      <div class="h-1 w-full rounded-full overflow-hidden mb-3" style="background:var(--surface-3);">
+        <div class="h-full rounded-full"
+             style="width: {{ subject.accuracy_percent }}%;
+                    background-color: {{ subject.color }};"></div>
+      </div>
+
+      {# D / Y / B counts #}
+      <div class="grid grid-cols-3 gap-1 text-center">
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold text-up">{{ subject.correct }}</span>
+          <span class="text-[8px] font-bold uppercase" style="color:var(--muted-2)">D</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold text-down">{{ subject.wrong }}</span>
+          <span class="text-[8px] font-bold uppercase" style="color:var(--muted-2)">Y</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold" style="color:var(--muted)">{{ subject.blank }}</span>
+          <span class="text-[8px] font-bold uppercase" style="color:var(--muted-2)">B</span>
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+</div>
