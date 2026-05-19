@@ -1,0 +1,3 @@
+-r requirements-base.txt
+# psycopg2-binary is intentionally excluded — it requires pg_config (not available on Windows).
+# Local dev uses the SQLite default (DATABASE_URL unset in .env → db.sqlite3).

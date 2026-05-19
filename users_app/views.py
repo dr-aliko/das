@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from django.core.mail import EmailMultiAlternatives
-from ratelimit.decorators import ratelimit
+from django_ratelimit.decorators import ratelimit
 
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, StudentAchievement, StudentInvite, User

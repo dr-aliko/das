@@ -129,16 +129,17 @@ CSRF_TRUSTED_ORIGINS = config(
 
 # Production security headers — only active when DEBUG=False
 if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER      = True
-    SECURE_CONTENT_TYPE_NOSNIFF    = True
-    X_FRAME_OPTIONS                = 'DENY'
-    SESSION_COOKIE_SECURE          = True
-    CSRF_COOKIE_SECURE             = True
-    SECURE_SSL_REDIRECT            = True
-    SECURE_HSTS_SECONDS            = 31536000
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD            = True
-    SECURE_REFERRER_POLICY         = 'same-origin'
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+else:
+    # Lokalde geliştirme yaparken HTTPS zorlamasını devre dışı bırak
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 # External task catalog API (dersler / oynatma listeleri / videolar)
 # Used only for konu_anlatimi create/refresh flow. Edit hydration uses meta.videos instead.
