@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, StudentAchievement, StudentInvite, User
@@ -57,24 +57,31 @@ def awaiting_approval_view(request):
 
 def _send_invite_email(invite, request):
     from django.urls import reverse
+    from django.template.loader import render_to_string
+
     path = reverse('users_app:invite_register', args=[invite.token])
     invite_link = f'https://vagus.tr{path}'
-    send_mail(
-        subject='Vagus\'a Davetlisiniz - Hesap Aktivasyonu',
-        message=(
-            f'Vagus Platformuna Hoş Geldiniz!\n\n'
-            f'Deneme analizlerinizi detaylı bir şekilde gerçekleştirmek, eksik konularınızı nokta atışı '
-            f'tespit ederek netlerinizi artırmak için tasarlanan Vagus dünyasına davetlisiniz.\n\n'
-            f'Hesabınızı aktifleştirmek ve sisteme giriş yapmak için lütfen aşağıdaki bağlantıya tıklayın:\n'
-            f'{invite_link}\n\n'
-            f'Önemli Not: Güvenliğiniz amacıyla bu aktivasyon bağlantısı tek kullanımlıktır.\n\n'
-            f'Başarılar dileriz,\n'
-            f'Vagus Ekibi'
-        ),
-        from_email=None,          # uses DEFAULT_FROM_EMAIL from settings
-        recipient_list=[invite.email],
-        fail_silently=False,
+
+    plain_text = (
+        f'Vagus Platformuna Hoş Geldiniz!\n\n'
+        f'Deneme analizlerinizi detaylı bir şekilde gerçekleştirmek, eksik konularınızı nokta atışı '
+        f'tespit ederek netlerinizi artırmak için tasarlanan Vagus dünyasına davetlisiniz.\n\n'
+        f'Hesabınızı aktifleştirmek ve sisteme giriş yapmak için lütfen aşağıdaki bağlantıya tıklayın:\n'
+        f'{invite_link}\n\n'
+        f'Önemli Not: Güvenliğiniz amacıyla bu aktivasyon bağlantısı tek kullanımlıktır.\n\n'
+        f'Başarılar dileriz,\n'
+        f'Vagus Ekibi'
     )
+    html_body = render_to_string('emails/invite.html', {'invite_link': invite_link})
+
+    email = EmailMultiAlternatives(
+        subject='Vagus\'a Davetlisiniz - Hesap Aktivasyonu',
+        body=plain_text,
+        from_email=None,          # uses DEFAULT_FROM_EMAIL from settings
+        to=[invite.email],
+    )
+    email.attach_alternative(html_body, 'text/html')
+    email.send()
 
 
 def coach_invite_view(request):
