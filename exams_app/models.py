@@ -148,7 +148,7 @@ class StudentTask(models.Model):
     repetition_count = models.IntegerField(default=0)
     easiness_factor = models.FloatField(default=2.5)
     interval_days = models.IntegerField(default=0)
-    next_review_date = models.DateField(null=True, blank=True)
+    next_review_date = models.DateField(null=True, blank=True, db_index=True)
 
     class Meta:
         verbose_name = 'Görev'

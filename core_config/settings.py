@@ -5,7 +5,7 @@ from decouple import config, Csv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 INSTALLED_APPS = [
@@ -60,7 +60,8 @@ WSGI_APPLICATION = 'core_config.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=60,
     )
 }
 
@@ -114,17 +115,30 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Trust Nginx's X-Forwarded-Proto header so request.is_secure() and secure
+# cookies work correctly behind TLS termination. Safe in local dev (ignored when
+# no such header is present).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Allow form posts from our production domain. Override via env if needed.
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://vagus.tr,https://www.vagus.tr',
+    cast=Csv(),
+)
+
 # Production security headers — only active when DEBUG=False
 if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER     = True
-    SECURE_CONTENT_TYPE_NOSNIFF   = True
-    X_FRAME_OPTIONS               = 'DENY'
-    SESSION_COOKIE_SECURE         = True
-    CSRF_COOKIE_SECURE            = True
-    # Uncomment after confirming SSL is live on the VPS:
-    # SECURE_HSTS_SECONDS           = 31536000
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_SSL_REDIRECT           = True
+    SECURE_BROWSER_XSS_FILTER      = True
+    SECURE_CONTENT_TYPE_NOSNIFF    = True
+    X_FRAME_OPTIONS                = 'DENY'
+    SESSION_COOKIE_SECURE          = True
+    CSRF_COOKIE_SECURE             = True
+    SECURE_SSL_REDIRECT            = True
+    SECURE_HSTS_SECONDS            = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD            = True
+    SECURE_REFERRER_POLICY         = 'same-origin'
 
 # External task catalog API (dersler / oynatma listeleri / videolar)
 # Used only for konu_anlatimi create/refresh flow. Edit hydration uses meta.videos instead.
