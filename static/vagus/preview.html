@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vagus — Brand Asset Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0e14;
+    --card: #131820;
+    --card-2: #1a2030;
+    --border: #2a3142;
+    --border-strong: #3a4356;
+    --muted: #94a3b8;
+    --muted-2: #5b6477;
+    --body: #cbd5e1;
+    --heading: #ffffff;
+    --indigo: #6366F1;
+    --indigo-deep: #4F46E5;
+    --indigo-bright: #818CF8;
+    --violet: #8B5CF6;
+    --violet-deep: #7C3AED;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--body);
+    font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  .container { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+  /* Header */
+  header { padding: 80px 0 32px;
+    background:
+      radial-gradient(ellipse 800px 400px at 50% -100px, rgba(99,102,241,0.18), transparent 60%);
+    border-bottom: 1px solid var(--border); }
+  .eyebrow {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+    color: var(--indigo-bright); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px;
+  }
+  h1 { margin: 0 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--heading); }
+  header p { margin: 0; max-width: 640px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+  section { padding: 56px 0 24px; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); margin: 0 0 8px; }
+  .section-title { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--heading); }
+  .section-sub { margin: 0 0 28px; color: var(--muted); font-size: 13px; max-width: 640px; line-height: 1.6; }
+
+  /* Asset grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .asset {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .asset-display {
+    height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015), transparent), var(--card-2);
+    border-bottom: 1px solid var(--border);
+    padding: 24px;
+  }
+  .asset-display.light { background: #F8FAFC; }
+  .asset-display.checker {
+    background-image:
+      linear-gradient(45deg, #1a2030 25%, transparent 25%),
+      linear-gradient(-45deg, #1a2030 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #1a2030 75%),
+      linear-gradient(-45deg, transparent 75%, #1a2030 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-color: #131820;
+  }
+  .asset-meta { padding: 14px 18px 16px; }
+  .asset-meta .name { font-size: 13px; font-weight: 600; color: var(--heading); margin-bottom: 2px; }
+  .asset-meta .path { font-size: 11px; color: var(--muted-2); font-family: 'Menlo','SF Mono',monospace; }
+  .asset-meta .desc { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 6px; }
+
+  /* Image-natural-size display for raster assets */
+  .raster-row {
+    display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap;
+    padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  }
+  .raster-row figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .raster-row figcaption { font-size: 10px; color: var(--muted-2); font-family: 'Menlo','SF Mono',monospace; }
+  .raster-row img { display: block; image-rendering: -webkit-optimize-contrast; }
+
+  /* Navbar context demo */
+  .navbar-demo {
+    background: #0f141c;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .navbar-demo-bar {
+    display: flex; align-items: center; gap: 28px;
+    padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+  }
+  .navbar-demo-bar .lockup {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--indigo-bright);
+  }
+  .navbar-demo-bar .lockup span {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.025em; color: var(--heading);
+  }
+  .navbar-demo-bar nav { display: flex; gap: 4px; margin-left: 16px; }
+  .navbar-demo-bar nav a {
+    padding: 6px 12px; font-size: 13px; color: var(--muted);
+    text-decoration: none; border-radius: 7px; font-weight: 500;
+  }
+  .navbar-demo-bar nav a.active { background: var(--card-2); color: var(--heading); }
+  .navbar-demo-bar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .navbar-demo-bar .cta { padding: 7px 14px; background: var(--indigo); color: white;
+    font-size: 13px; font-weight: 600; border-radius: 8px; }
+  .navbar-demo-body { padding: 36px 24px; color: var(--muted-2); font-size: 12px; text-align: center; }
+
+  /* OG card preview */
+  .og-wrap {
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    background: #000;
+  }
+  .og-wrap img { display: block; width: 100%; height: auto; }
+
+  /* Browser tab simulator */
+  .tab-sim {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--body);
+  }
+  .tab-sim img { width: 16px; height: 16px; }
+
+  /* Color swatches */
+  .palette { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .swatch { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .swatch-color { height: 60px; }
+  .swatch-meta { padding: 10px 12px; }
+  .swatch-meta .n { font-size: 12px; font-weight: 600; color: var(--heading); }
+  .swatch-meta .h { font-size: 10px; color: var(--muted-2); font-family: 'Menlo',monospace; }
+
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--border); margin-top: 56px;
+    text-align: center; color: var(--muted-2); font-size: 12px; }
+  code { font-family: 'Menlo','SF Mono',monospace; font-size: 11px;
+    background: var(--card-2); padding: 1px 6px; border-radius: 4px;
+    border: 1px solid var(--border); color: var(--indigo-bright); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="eyebrow">Production assets · v1.0</div>
+    <h1>Vagus brand package</h1>
+    <p>Every file in the <code>vagus-brand/</code> folder, displayed at native scale. Use this page as the visual contract during integration — if anything below looks wrong in your deployed environment, the integration is wrong, not the asset.</p>
+  </div>
+</header>
+
+<!-- ────────── 1. Vector marks ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">01 · Vector marks</p>
+    <h2 class="section-title">SVG · the canonical source</h2>
+    <p class="section-sub">All raster output below is generated from these. The first (<code>currentColor</code>) is the one you'll use most — color it via CSS at the parent.</p>
+
+    <div class="grid">
+      <div class="asset">
+        <div class="asset-display">
+          <img src="svg/vagus-mark.svg" width="88" height="88" style="color: var(--indigo-bright)" alt="Vagus mark currentColor" />
+        </div>
+        <div class="asset-meta">
+          <div class="name">vagus-mark.svg</div>
+          <div class="path">svg/vagus-mark.svg</div>
+          <p class="desc"><code>currentColor</code> stroke. Inherits color from parent. The default for in-app use.</p>
+        </div>
+      </div>
+      <div class="asset">
+        <div class="asset-display">
+          <img src="svg/vagus-mark-indigo.svg" width="88" height="88" alt="Vagus mark indigo" />
+        </div>
+        <div class="asset-meta">
+          <div class="name">vagus-mark-indigo.svg</div>
+          <div class="path">svg/vagus-mark-indigo.svg</div>
+          <p class="desc">Solid <code>#6366F1</code>. Use in contexts where currentColor doesn't apply (emails, PDFs).</p>
+        </div>
+      </div>
+      <div class="asset">
+        <div class="asset-display">
+          <img src="svg/vagus-mark-white.svg" width="88" height="88" alt="Vagus mark white" />
+        </div>
+        <div class="asset-meta">
+          <div class="name">vagus-mark-white.svg</div>
+          <div class="path">svg/vagus-mark-white.svg</div>
+          <p class="desc">White on dark surfaces. Locked color.</p>
+        </div>
+      </div>
+      <div class="asset">
+        <div class="asset-display light">
+          <img src="svg/vagus-mark-black.svg" width="88" height="88" alt="Vagus mark black" />
+        </div>
+        <div class="asset-meta">
+          <div class="name">vagus-mark-black.svg</div>
+          <div class="path">svg/vagus-mark-black.svg</div>
+          <p class="desc">Near-black on light surfaces. For print, light-mode emails.</p>
+        </div>
+      </div>
+      <div class="asset" style="grid-column: span 2;">
+        <div class="asset-display light" style="height: 160px;">
+          <img src="svg/vagus-lockup.svg" height="60" alt="Vagus lockup" />
+        </div>
+        <div class="asset-meta">
+          <div class="name">vagus-lockup.svg</div>
+          <div class="path">svg/vagus-lockup.svg</div>
+          <p class="desc">Horizontal lockup — mark + "Vagus" wordmark in Inter 700. Drop-in for marketing pages, email headers.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────── 2. Favicons ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">02 · Favicons</p>
+    <h2 class="section-title">Browser tab</h2>
+    <p class="section-sub">Modern browsers will use <code>favicon.svg</code> (which adapts to dark mode automatically). Raster fallbacks shipped for legacy environments.</p>
+
+    <div class="raster-row">
+      <figure>
+        <span class="tab-sim">
+          <img src="favicon/favicon-16.png" width="16" height="16" alt="favicon 16px" />
+          Vagus · Panel
+        </span>
+        <figcaption>tab @ 16px (raster)</figcaption>
+      </figure>
+      <figure>
+        <img src="favicon/favicon-16.png" width="16" height="16" alt="" />
+        <figcaption>favicon-16.png</figcaption>
+      </figure>
+      <figure>
+        <img src="favicon/favicon-32.png" width="32" height="32" alt="" />
+        <figcaption>favicon-32.png</figcaption>
+      </figure>
+      <figure>
+        <img src="favicon/favicon-48.png" width="48" height="48" alt="" />
+        <figcaption>favicon-48.png</figcaption>
+      </figure>
+      <figure>
+        <img src="favicon/favicon.svg" width="48" height="48" alt="" />
+        <figcaption>favicon.svg · scalable</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ────────── 3. PWA icons ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">03 · PWA & mobile</p>
+    <h2 class="section-title">Home Screen icons</h2>
+    <p class="section-sub">Standard icons render with rounded corners as-shipped. Maskable icons fill the canvas — the OS clips them to circle/squircle/whatever shape the device prefers. Both ship at 192 and 512.</p>
+
+    <div class="raster-row">
+      <figure>
+        <img src="pwa/icon-192.png" width="120" height="120" alt="" style="border-radius: 27px;" />
+        <figcaption>icon-192.png · standard</figcaption>
+      </figure>
+      <figure>
+        <img src="pwa/icon-512.png" width="120" height="120" alt="" style="border-radius: 27px;" />
+        <figcaption>icon-512.png · standard</figcaption>
+      </figure>
+      <figure>
+        <img src="pwa/icon-maskable-192.png" width="120" height="120" alt="" style="border-radius: 50%;" />
+        <figcaption>maskable-192 · circle-clipped</figcaption>
+      </figure>
+      <figure>
+        <img src="pwa/icon-maskable-512.png" width="120" height="120" alt="" style="border-radius: 27px;" />
+        <figcaption>maskable-512 · squircle-clipped</figcaption>
+      </figure>
+      <figure>
+        <img src="pwa/apple-touch-icon.png" width="120" height="120" alt="" style="border-radius: 23%;" />
+        <figcaption>apple-touch · iOS</figcaption>
+      </figure>
+    </div>
+
+    <p class="section-sub" style="margin-top: 18px;">
+      <strong style="color: var(--heading);">Why two flavors?</strong> Standard icons assume the OS shows them as-is. Maskable icons assume the OS will <em>clip</em> them — so they need a full-bleed background and the mark sized inside the inner 80% "safe zone." Above, you can see the same maskable rendered as a circle (Android Adaptive) and a squircle (PWA) — the mark stays comfortably visible in both.
+    </p>
+  </div>
+</section>
+
+<!-- ────────── 4. Open Graph card ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">04 · Social</p>
+    <h2 class="section-title">Open Graph card · 1200×630</h2>
+    <p class="section-sub">Used as <code>&lt;meta property="og:image"&gt;</code>. Appears in Twitter, LinkedIn, Facebook, Slack, iMessage link previews. Source HTML at <code>social/og-card.html</code> if you need to re-render with new copy.</p>
+
+    <div class="og-wrap">
+      <img src="social/og-card.png" alt="Vagus Open Graph card" />
+    </div>
+  </div>
+</section>
+
+<!-- ────────── 5. Navbar context ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">05 · In context</p>
+    <h2 class="section-title">Navbar lockup</h2>
+    <p class="section-sub">How the mark sits in your existing top nav at production size. Mark color uses <code>indigo-400</code> for legibility on dark; wordmark stays pure white.</p>
+
+    <div class="navbar-demo">
+      <div class="navbar-demo-bar">
+        <span class="lockup">
+          <img src="svg/vagus-mark.svg" width="28" height="28" alt="" style="color: var(--indigo-bright);" />
+          <span>Vagus</span>
+        </span>
+        <nav>
+          <a href="#" class="active">Panel</a>
+          <a href="#">Denemeler</a>
+          <a href="#">Görevler</a>
+          <a href="#">Branş</a>
+          <a href="#">Profil</a>
+        </nav>
+        <div class="right">
+          <span class="cta">+ Yeni Sınav</span>
+        </div>
+      </div>
+      <div class="navbar-demo-body">— Page content —</div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────── 6. Palette ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">06 · Color</p>
+    <h2 class="section-title">Brand palette</h2>
+    <p class="section-sub">Maps cleanly to Tailwind defaults — no custom color config required to get started. Add the tokens to <code>theme.extend.colors</code> when you want semantic names.</p>
+
+    <div class="palette">
+      <div class="swatch"><div class="swatch-color" style="background:#6366F1"></div><div class="swatch-meta"><div class="n">Vagus Indigo</div><div class="h">#6366F1 · indigo-500</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#4F46E5"></div><div class="swatch-meta"><div class="n">Indigo Deep</div><div class="h">#4F46E5 · indigo-600</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#818CF8"></div><div class="swatch-meta"><div class="n">Indigo Bright</div><div class="h">#818CF8 · indigo-400</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#8B5CF6"></div><div class="swatch-meta"><div class="n">Violet</div><div class="h">#8B5CF6 · violet-500</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#7C3AED"></div><div class="swatch-meta"><div class="n">Violet Deep</div><div class="h">#7C3AED · violet-600</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)"></div><div class="swatch-meta"><div class="n">Brand Gradient</div><div class="h">indigo-600 → violet-600</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#0a0e14"></div><div class="swatch-meta"><div class="n">Ink Background</div><div class="h">#0a0e14</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────── 7. Integration checklist ────────── -->
+<section>
+  <div class="container">
+    <p class="section-label">07 · Integration</p>
+    <h2 class="section-title">Drop-in checklist</h2>
+    <p class="section-sub">Full instructions in <code>USAGE.md</code>. Quick version:</p>
+
+    <ol style="color: var(--body); font-size: 14px; line-height: 1.8; padding-left: 20px;">
+      <li>Copy <code>vagus-brand/</code> into <code>static/vagus/</code>. Run <code>collectstatic</code>.</li>
+      <li>Add the favicon + apple-touch-icon + manifest links from <code>USAGE.md §2</code> to <code>base.html</code> <code>&lt;head&gt;</code>.</li>
+      <li>Add <code>&lt;meta name="theme-color" content="#6366F1"&gt;</code>.</li>
+      <li>Add OG / Twitter card meta tags pointing at <code>og-card.png</code> (use absolute URL).</li>
+      <li>Replace the old DAS wordmark in the navbar with <code>{% include "vagus/svg/vagus-mark.svg" %}</code> + "Vagus" text.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  Vagus brand package · v1.0 · May 2026
+</footer>
+
+</body>
+</html>

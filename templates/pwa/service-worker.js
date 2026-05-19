@@ -1,16 +1,16 @@
 {% load static %}
-// DAS — Service Worker
+// Vagus — Service Worker
 // Bump CACHE_NAME on every deploy that changes precached assets.
-const CACHE_NAME = 'das-shell-v1';
+const CACHE_NAME = 'vagus-shell-v1';
 
 // Assets fetched and stored on install.
 // Only same-origin, version-stable resources belong here.
 const PRECACHE = [
   '/offline/',
-  "{% static 'img/icons/icon-192.png' %}",
-  "{% static 'img/icons/icon-512.png' %}",
-  "{% static 'img/icons/icon-maskable-512.png' %}",
-  "{% static 'img/icons/apple-touch-icon.png' %}",
+  "{% static 'vagus/pwa/icon-192.png' %}",
+  "{% static 'vagus/pwa/icon-512.png' %}",
+  "{% static 'vagus/pwa/icon-maskable-512.png' %}",
+  "{% static 'vagus/pwa/apple-touch-icon.png' %}",
   "{% static 'js/student_tasks_panel.js' %}",
   "{% static 'js/tasks_panel.js' %}",
 ];

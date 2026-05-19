@@ -1,0 +1,10 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 28" role="img" aria-label="Vagus">
+  <title>Vagus</title>
+  
+  <g transform="translate(0 2) scale(1)" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"></path>
+  </g>
+  
+  <text x="32" y="21" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="22" letter-spacing="-0.6" fill="#0F172A">Vagus</text>
+</svg>

@@ -1,32 +1,18 @@
 {% load static %}{
-  "name": "DAS — Deneme Analiz Sistemi",
-  "short_name": "DAS",
-  "description": "TYT branş ve deneme sınav sonuçlarını takip edin.",
+  "name": "Vagus",
+  "short_name": "Vagus",
+  "description": "Smarter exam analytics for serious students. Track every exam. Master every topic.",
   "lang": "tr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#4f46e5",
-  "background_color": "#f9fafb",
+  "theme_color": "#6366F1",
+  "background_color": "#0a0e14",
   "icons": [
-    {
-      "src": "{% static 'img/icons/icon-192.png' %}",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "{% static 'img/icons/icon-512.png' %}",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "{% static 'img/icons/icon-maskable-512.png' %}",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "{% static 'vagus/pwa/icon-192.png' %}",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "{% static 'vagus/pwa/icon-512.png' %}",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "{% static 'vagus/pwa/icon-maskable-192.png' %}", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "{% static 'vagus/pwa/icon-maskable-512.png' %}", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

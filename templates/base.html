@@ -4,15 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-  {# ── PWA ── #}
+  {# ── Favicons ── #}
   {% load static %}
+  <link rel="icon" type="image/svg+xml" href="{% static 'vagus/favicon/favicon.svg' %}" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'vagus/favicon/favicon-32.png' %}" />
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'vagus/favicon/favicon-16.png' %}" />
+
+  {# ── PWA ── #}
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'vagus/pwa/apple-touch-icon.png' %}" />
   <link rel="manifest" href="{% url 'manifest' %}">
-  <meta name="theme-color" content="#4f46e5">
-  <link rel="apple-touch-icon" href="{% static 'img/icons/apple-touch-icon.png' %}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/icons/icon-192.png' %}">
+  <meta name="theme-color" content="#6366F1" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="DAS">
+  <meta name="apple-mobile-web-app-title" content="Vagus">
+
+  {# ── Open Graph / Twitter cards ── #}
+  <meta property="og:title" content="Vagus — Smarter Exam Analytics" />
+  <meta property="og:description" content="Track every exam. Master every topic." />
+  <meta property="og:image" content="https://vagus.tr{% static 'vagus/social/og-card.png' %}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://vagus.tr{% static 'vagus/social/og-card.png' %}" />
 
   {# ── DAS-002: Inter font ── #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +41,7 @@
   {# ── DAS-402: Global theme system (.das-theme-auto/light/dark on <html>) ── #}
   <link rel="stylesheet" href="{% static 'css/theme_system.css' %}">
 
-  <title>{% block title %}DAS — Deneme Analiz Sistemi{% endblock %}</title>
+  <title>{% block title %}Vagus — Deneme Analiz Sistemi{% endblock %}</title>
   {% block extra_css %}{% endblock %}
   {# ── DAS-001: Tailwind CSS (built via CLI — see tailwind.config.js) ── #}
   <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
@@ -140,7 +154,10 @@
 {% if user.is_authenticated and not v2_shell %}
 <nav class="bg-indigo-700 text-white shadow-md">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="/" class="font-bold text-xl tracking-tight">DAS</a>
+    <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-white">
+      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+      Vagus
+    </a>
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-6 text-sm">
       {% if user.is_student %}
         <a href="/student/" class="hover:text-indigo-200">Panelim</a>
