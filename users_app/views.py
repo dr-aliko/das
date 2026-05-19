@@ -57,16 +57,19 @@ def awaiting_approval_view(request):
 
 def _send_invite_email(invite, request):
     from django.urls import reverse
-    url = request.build_absolute_uri(
-        reverse('users_app:invite_register', args=[invite.token])
-    )
+    path = reverse('users_app:invite_register', args=[invite.token])
+    invite_link = f'https://vagus.tr{path}'
     send_mail(
-        subject='DAS — Koç programına davet edildiniz',
+        subject='Vagus\'a Davetlisiniz - Hesap Aktivasyonu',
         message=(
-            f'Merhaba{" " + invite.full_name if invite.full_name else ""},\n\n'
-            f'{invite.coach.full_name} sizi DAS platformuna davet etti.\n\n'
-            f'Kaydolmak için aşağıdaki bağlantıya tıklayın:\n{url}\n\n'
-            f'Bu davet bir kez kullanılabilir.'
+            f'Vagus Platformuna Hoş Geldiniz!\n\n'
+            f'Deneme analizlerinizi detaylı bir şekilde gerçekleştirmek, eksik konularınızı nokta atışı '
+            f'tespit ederek netlerinizi artırmak için tasarlanan Vagus dünyasına davetlisiniz.\n\n'
+            f'Hesabınızı aktifleştirmek ve sisteme giriş yapmak için lütfen aşağıdaki bağlantıya tıklayın:\n'
+            f'{invite_link}\n\n'
+            f'Önemli Not: Güvenliğiniz amacıyla bu aktivasyon bağlantısı tek kullanımlıktır.\n\n'
+            f'Başarılar dileriz,\n'
+            f'Vagus Ekibi'
         ),
         from_email=None,          # uses DEFAULT_FROM_EMAIL from settings
         recipient_list=[invite.email],
