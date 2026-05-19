@@ -171,3 +171,66 @@ DESKTOP_V2_DEFAULT = config('DESKTOP_V2_DEFAULT', default=True, cast=bool)
 # Set DAS_FAST_ENTRY=true in .env to serve /student/exam/new/ as the v2 stepper create.
 # Off by default; /student/exam/new/v2/ is always available for direct testing.
 DAS_FAST_ENTRY = config('DAS_FAST_ENTRY', default=False, cast=bool)
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Console handler is always active (captured by Gunicorn/systemd on prod).
+# File handler activates only when DJANGO_LOG_FILE is set in the environment,
+# so local dev never needs the /var/log/ directory to exist.
+_LOG_FILE = config('DJANGO_LOG_FILE', default='')
+_LOG_HANDLERS = ['console'] + (['file'] if _LOG_FILE else [])
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'level': 'WARNING',
+        },
+    },
+    'root': {
+        'handlers': _LOG_HANDLERS,
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': _LOG_HANDLERS,
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': _LOG_HANDLERS,
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
+if _LOG_FILE:
+    LOGGING['handlers']['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': _LOG_FILE,
+        'maxBytes': 10 * 1024 * 1024,  # 10 MB per file
+        'backupCount': 5,
+        'formatter': 'verbose',
+        'level': 'ERROR',
+    }
+
+# ── Sentry — error tracking ───────────────────────────────────────────────────
+# Activates only in production (DEBUG=False) when SENTRY_DSN is provided.
+# Set SENTRY_DSN in your production .env. Leave unset locally.
+SENTRY_DSN = config('SENTRY_DSN', default='')
+if not DEBUG and SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,   # capture 10% of requests for performance tracing
+        send_default_pii=False,   # never send personally identifiable info to Sentry
+    )

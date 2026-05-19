@@ -11,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from django.core.mail import EmailMultiAlternatives
+from ratelimit.decorators import ratelimit
 
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, StudentAchievement, StudentInvite, User
@@ -84,6 +85,7 @@ def _send_invite_email(invite, request):
     email.send()
 
 
+@ratelimit(key='user_or_ip', rate='20/d', block=True)
 def coach_invite_view(request):
     from users_app.decorators import coach_required
     # Apply decorator programmatically so the function can be referenced by name in urls.py
