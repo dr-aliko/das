@@ -1,0 +1,24 @@
+{% if first_run %}
+<div x-data="{ open: true }" x-show="open" x-cloak
+     class="mb-6 rounded-2xl p-5 flex items-start gap-4 relative overflow-hidden border border-indigo-100 bg-indigo-50">
+  <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow shadow-indigo-500/30">
+    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2"
+         viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+  </div>
+  <div class="flex-1 min-w-0">
+    <p class="font-bold text-indigo-900 text-sm">Vagus'a hoş geldiniz!</p>
+    <p class="text-indigo-700 text-xs mt-1">Öğrencilerinizi platforma davet ederek başlayın. Davet e-postası otomatik gönderilir.</p>
+    <a href="/auth/invite-students/"
+       class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition">
+      Öğrenci Davet Et →
+    </a>
+  </div>
+  <button @click="open = false" class="shrink-0 p-1.5 rounded-lg hover:bg-indigo-100 transition">
+    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</div>
+{% endif %}

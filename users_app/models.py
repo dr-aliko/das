@@ -40,7 +40,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
     denemeler_v2 = models.BooleanField(default=False)
-    brans_v2 = models.BooleanField(default=False)
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default='auto')
     grade = models.CharField(max_length=50, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

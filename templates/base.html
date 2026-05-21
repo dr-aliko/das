@@ -164,10 +164,6 @@
         <a href="/student/tasks/" class="hover:text-indigo-200">Görevlerim</a>
         <a href="/student/brans/" class="hover:text-indigo-200">Branş</a>
         <a href="/student/exam/new/" class="hover:text-indigo-200">Yeni Sınav</a>
-        <a href="/student/ranking/" class="hover:text-indigo-200 flex items-center gap-1 opacity-60" title="Yakında">
-          Sıralama
-          <span class="text-[10px] bg-indigo-500 text-white px-1 py-0.5 rounded font-medium">Yakında</span>
-        </a>
       {% else %}
         <a href="/coach/" class="hover:text-indigo-200">Öğrenciler</a>
         <a href="/coach/tasks/" class="hover:text-indigo-200">Görevler</a>
@@ -285,6 +281,9 @@
     });
   }
 </script>
+{% include "components/_a2hs_banner.html" %}
+{% include "components/_a2hs_ios_hint.html" %}
+<script defer src="{% static 'js/a2hs.js' %}"></script>
 {% if user.is_authenticated and v2_shell %}{% include "components/_shell_bottom.html" %}{% if not shell_hide_fab %}{% include "components/_shell_fab.html" %}{% endif %}{% endif %}
 </body>
 </html>

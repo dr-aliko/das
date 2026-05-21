@@ -38,20 +38,5 @@
     </svg>
   </span>
 
-  <div class="row-divider"></div>
-
-  {# ── Type filters (Alpine visual state, future data filter) ── #}
-  <button type="button"
-          class="das-filter-chip"
-          :class="dashType === 'all' ? 'active' : ''"
-          @click="dashType = 'all'">{% trans "Tümü" %}</button>
-
-  <button type="button"
-          class="das-filter-chip"
-          :class="dashType === 'TYT' ? 'active' : ''"
-          @click="dashType = 'TYT'">
-    <span class="swatch bg-[var(--turkce)]"></span>
-    TYT
-  </button>
 
 </div>

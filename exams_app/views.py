@@ -74,7 +74,6 @@ def _build_v2_stats(exam_list, period):
             'max_net': 0, 'net_trend': None,
             'exam_count': 0, 'last_exam_title': '',
             'last_exam_date': '', 'selected_period': _v2_period_label(period),
-            'weekly_hours': 0,
         }
     # Exam.total_net is currently a method, but tolerate @property / field
     # without forcing a model change. Django templates already auto-call methods.
@@ -101,7 +100,6 @@ def _build_v2_stats(exam_list, period):
         'last_exam_title': last.custom_name,
         'last_exam_date': last_exam_date,
         'selected_period': _v2_period_label(period),
-        'weekly_hours': 0,
     }
 
 def _build_v2_subjects(exam_list):
@@ -637,7 +635,6 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
     ])
 
     return {
-        'brans_v2': True,
         'v2_shell': True,
         'shell_hide_fab': True,
         'shell_active': 'Branş',
@@ -814,7 +811,6 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
     })
 
     return {
-        'brans_v2': True,
         'v2_shell': True,
         'shell_hide_fab': True,
         'shell_active': 'Branş',
@@ -1241,6 +1237,7 @@ def student_dashboard(request):
         ctx['stats'] = v2_stats
         ctx['subjects'] = _build_v2_subjects(exam_list)
 
+    ctx['first_run'] = request.session.pop('first_run', False)
     template = 'student/dashboard_v2.html' if dashboard_v2 else 'student/dashboard.html'
     return render(request, template, ctx)
 
@@ -2004,6 +2001,7 @@ def coach_dashboard(request):
         'inbox_alerts':   inbox_alerts,
         'inbox_unread':   inbox_unread,
         'inbox_students': inbox_students,
+        'first_run':      request.session.pop('first_run', False),
     })
 
 

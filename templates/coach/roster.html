@@ -4,6 +4,7 @@
 {% block title %}Öğrencilerim — DAS{% endblock %}
 
 {% block content %}
+{% include "coach/partials/_first_run_coach.html" %}
 <div x-data="{ activeFilter: 'tumu', inboxOpen: false, selectedStudent: '' }"
      @keydown.escape.window="inboxOpen = false; selectedStudent = ''">
 

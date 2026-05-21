@@ -1,0 +1,30 @@
+{# iOS Safari "tap Share → Add to Home Screen" hint. Revealed by a2hs.js; hidden by default. #}
+<div id="a2hs-ios-hint" hidden
+     class="fixed bottom-20 inset-x-3 z-50 lg:bottom-6 lg:right-4 lg:left-auto lg:w-80
+            rounded-2xl border border-indigo-100 bg-white shadow-xl shadow-indigo-500/10 overflow-hidden">
+  <div class="px-4 py-3 flex items-start gap-3">
+    <div class="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
+      <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="1.75"
+           viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+      </svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-gray-800 font-semibold text-sm leading-tight">Ana ekrana ekle</p>
+      <p class="text-gray-500 text-xs mt-1">
+        Safari'de
+        <svg class="inline w-3.5 h-3.5 text-blue-500 mx-0.5 align-middle" fill="none" stroke="currentColor"
+             stroke-width="2" viewBox="0 0 24 24">
+          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="font-medium">"Paylaş"</span> → <span class="font-medium">"Ana Ekrana Ekle"</span> adımlarını izle.
+      </p>
+    </div>
+    <button id="a2hs-ios-dismiss-btn"
+            class="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 transition mt-0.5">
+      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>

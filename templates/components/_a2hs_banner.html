@@ -1,0 +1,31 @@
+{# Chromium Add-to-Home-Screen install banner. Revealed by a2hs.js; hidden by default. #}
+<div id="a2hs-banner" hidden
+     class="fixed bottom-20 inset-x-3 z-50 lg:bottom-6 lg:right-4 lg:left-auto lg:w-80
+            rounded-2xl shadow-2xl shadow-black/30 overflow-hidden"
+     style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+  <div class="px-4 py-3 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2"
+           viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 18.5A6.5 6.5 0 1 0 5.5 12 6.5 6.5 0 0 0 12 18.5z"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-white font-semibold text-sm leading-tight">Vagus'u yükle</p>
+      <p class="text-white/70 text-xs mt-0.5">Hızlı erişim için ana ekrana ekle</p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="a2hs-install-btn"
+              class="px-3 py-1.5 bg-white text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-50 transition">
+        Yükle
+      </button>
+      <button id="a2hs-dismiss-btn"
+              class="p-1.5 rounded-lg hover:bg-white/20 transition">
+        <svg class="w-4 h-4 text-white/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

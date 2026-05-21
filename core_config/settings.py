@@ -17,7 +17,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users_app',
     'exams_app',
-    'analytics_app',
     'tasks_app',
     'django_q',
 ]
@@ -186,11 +185,6 @@ V2_DEFAULT = config('V2_DEFAULT', default=False, cast=bool)
 # Per-user toggle: ?desktop_v2=1 / ?desktop_v2=0, cookie das_desktop_v2.
 DESKTOP_V2_ENABLED = config('DESKTOP_V2_ENABLED', default=True, cast=bool)
 DESKTOP_V2_DEFAULT = config('DESKTOP_V2_DEFAULT', default=True, cast=bool)
-
-# DAS-350: Fast-entry create flow (Phase 3.3).
-# Set DAS_FAST_ENTRY=true in .env to serve /student/exam/new/ as the v2 stepper create.
-# Off by default; /student/exam/new/v2/ is always available for direct testing.
-DAS_FAST_ENTRY = config('DAS_FAST_ENTRY', default=False, cast=bool)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 # Console handler is always active (captured by Gunicorn/systemd on prod).

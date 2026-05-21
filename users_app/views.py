@@ -21,6 +21,14 @@ class CustomLoginView(LoginView):
     form_class = EmailAuthenticationForm
     template_name = 'auth/login.html'
 
+    def form_valid(self, form):
+        user = form.get_user()
+        is_first_login = user.last_login is None
+        response = super().form_valid(form)
+        if user.is_coach and is_first_login:
+            self.request.session['first_run'] = True
+        return response
+
     def get_success_url(self):
         user = self.request.user
         if user.is_coach:
@@ -138,6 +146,7 @@ def invite_register_view(request, token):
             invite.save(update_fields=['is_used'])
 
             login(request, user)
+            request.session['first_run'] = True
             messages.success(request, f'Hoş geldin, {user.full_name}!')
             return redirect('/student/')
     else:
@@ -153,24 +162,10 @@ def logout_view(request):
 
 def home_redirect(request):
     if not request.user.is_authenticated:
-        return redirect('/auth/login/')
+        return render(request, 'landing.html')
     if request.user.is_coach:
         return redirect('/coach/')
     return redirect('/student/')
-
-
-# ── V2 shell stubs ────────────────────────────────────────────────────────────
-
-@login_required
-def yakinda_analiz(request):
-    return render(request, 'student/stub_yakinda.html',
-                  {'title': 'Analiz', 'back': '/student/'})
-
-
-@login_required
-def yakinda_profil(request):
-    return render(request, 'student/stub_yakinda.html',
-                  {'title': 'Profil', 'back': '/student/'})
 
 
 # ──────────────────────────────────────────────

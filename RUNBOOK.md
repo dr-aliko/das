@@ -102,3 +102,37 @@ sudo systemctl reload nginx
 
 curl -i https://vagus.tr/healthz/
 ```
+
+---
+
+## Appendix A — Service worker version bumps
+
+Any deploy that changes files listed in `templates/pwa/service-worker.js`'s `PRECACHE` array (icons, JS bundles, the offline page) **must** also bump the `CACHE_NAME` constant in that file (e.g. `vagus-shell-v2` → `vagus-shell-v3`). The activate handler deletes all caches with a different name, forcing returning users to re-download changed assets.
+
+## Appendix B — First-run session flags
+
+`invite_register_view` and `CustomLoginView.form_valid` write `request.session['first_run'] = True` on a new user's first landing. The respective dashboards (`student_dashboard`, `coach_dashboard`) pop this key and pass it as `first_run` to the template, where it controls a one-time welcome banner. No special production handling is needed — Django's session backend (database-backed by default) persists it until popped.
+
+## Appendix C — Common incidents
+
+### qcluster: `relation "django_q_ormq" does not exist`
+The django_q migrations were not applied to the database the worker is connecting to. Fix:
+```bash
+set -a; source /srv/das/.env; set +a
+python manage.py verify_environment   # confirm DATABASE_URL is loaded and vendor=postgresql
+python manage.py migrate django_q
+sudo systemctl restart vagus-qcluster
+```
+
+### dbshell opens SQLite instead of PostgreSQL
+`DATABASE_URL` is not in the shell environment. Run `set -a; source /srv/das/.env; set +a` first, then retry the command.
+
+### A2HS banner does not appear
+The browser either: (a) already has the app installed (`display-mode: standalone`), (b) the user dismissed it within the past 14 days (`a2hs_dismissed_until` key in localStorage), or (c) `beforeinstallprompt` hasn't fired yet (can take a few seconds after page load). Check the browser's DevTools → Application → Manifest for installability criteria.
+
+## Appendix D — Sentry
+
+Sentry is only activated in production (`DEBUG=False` AND `SENTRY_DSN` is non-empty). Local development never sends events. To verify Sentry is wired correctly after a deploy, check the Sentry dashboard for the first error or trigger a test event:
+```bash
+python manage.py shell -c "import sentry_sdk; sentry_sdk.capture_message('test from VPS')"
+```
