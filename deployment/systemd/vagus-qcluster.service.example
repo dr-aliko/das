@@ -1,0 +1,31 @@
+# Vagus Django-Q2 cluster worker — systemd unit example.
+#
+# Install:
+#   sudo cp deployment/systemd/vagus-qcluster.service.example /etc/systemd/system/vagus-qcluster.service
+#   sudo mkdir -p /var/log/vagus && sudo chown www-data:www-data /var/log/vagus
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now vagus-qcluster
+#
+# Inspect:
+#   sudo systemctl status vagus-qcluster
+#   sudo journalctl -u vagus-qcluster -f
+
+[Unit]
+Description=Vagus Django-Q2 cluster worker
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/das
+EnvironmentFile=/srv/das/.env
+ExecStart=/srv/das/.venv/bin/python /srv/das/manage.py qcluster
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/vagus/qcluster.log
+StandardError=append:/var/log/vagus/qcluster-error.log
+
+[Install]
+WantedBy=multi-user.target

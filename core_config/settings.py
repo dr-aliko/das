@@ -58,13 +58,31 @@ WSGI_APPLICATION = 'core_config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# Production: set DATABASE_URL in /srv/das/.env (loaded by systemd via EnvironmentFile)
+#   e.g. DATABASE_URL=postgres://vagus:***@127.0.0.1:5432/vagus_prod
+# Local dev: leave DATABASE_URL unset → falls back to SQLite at BASE_DIR/db.sqlite3.
+#
+# We route DATABASE_URL through python-decouple (NOT dj_database_url.config() directly)
+# so it can be sourced from either:
+#   1. The shell environment (set by systemd EnvironmentFile= or `source .env`), OR
+#   2. The .env file found via cwd walk-up from BASE_DIR.
+# dj_database_url.config() only checks os.environ, which silently fails over to
+# SQLite when manual `manage.py` commands are run in a shell that hasn't sourced .env.
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=60,
-    )
-}
+DATABASE_URL = config('DATABASE_URL', default='').strip()
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60),
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'CONN_MAX_AGE': 60,
+        }
+    }
 
 
 # Password validation

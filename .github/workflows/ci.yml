@@ -43,7 +43,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt psycopg2-binary==2.9.10
 
+      - name: Django config check
+        run: python manage.py check
+
       - name: Run migrations
+        # Migrates every installed app, including django_q. If a future PR
+        # forgets to register an app or breaks a migration, this step catches it.
         run: python manage.py migrate --noinput
 
       - name: Run tests
