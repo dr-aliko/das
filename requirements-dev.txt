@@ -1,3 +1,7 @@
 -r requirements-base.txt
 # psycopg2-binary is intentionally excluded — it requires pg_config (not available on Windows).
 # Local dev uses the SQLite default (DATABASE_URL unset in .env → db.sqlite3).
+pytest==8.3.3
+pytest-django==4.9.0
+pytest-cov==5.0.0
+model_bakery==1.20.0

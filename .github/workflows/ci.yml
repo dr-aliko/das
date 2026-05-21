@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: vagus_test
+          POSTGRES_USER: vagus
+          POSTGRES_PASSWORD: vagus
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://vagus:vagus@localhost:5432/vagus_test
+      SECRET_KEY: ci-secret-key-not-for-production
+      DEBUG: 'False'
+      ALLOWED_HOSTS: 'vagus.tr,www.vagus.tr'
+      CSRF_TRUSTED_ORIGINS: 'https://vagus.tr,https://www.vagus.tr'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt psycopg2-binary==2.9.10
+
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        run: pytest --cov=. --cov-report=term-missing
+
+      - name: Django deploy check
+        run: python manage.py check --deploy --fail-level WARNING

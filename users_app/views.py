@@ -57,32 +57,8 @@ def awaiting_approval_view(request):
 # ── Coach invite management ───────────────────────────────────────────────────
 
 def _send_invite_email(invite, request):
-    from django.urls import reverse
-    from django.template.loader import render_to_string
-
-    path = reverse('users_app:invite_register', args=[invite.token])
-    invite_link = f'https://vagus.tr{path}'
-
-    plain_text = (
-        f'Vagus Platformuna Hoş Geldiniz!\n\n'
-        f'Deneme analizlerinizi detaylı bir şekilde gerçekleştirmek, eksik konularınızı nokta atışı '
-        f'tespit ederek netlerinizi artırmak için tasarlanan Vagus dünyasına davetlisiniz.\n\n'
-        f'Hesabınızı aktifleştirmek ve sisteme giriş yapmak için lütfen aşağıdaki bağlantıya tıklayın:\n'
-        f'{invite_link}\n\n'
-        f'Önemli Not: Güvenliğiniz amacıyla bu aktivasyon bağlantısı tek kullanımlıktır.\n\n'
-        f'Başarılar dileriz,\n'
-        f'Vagus Ekibi'
-    )
-    html_body = render_to_string('emails/invite.html', {'invite_link': invite_link})
-
-    email = EmailMultiAlternatives(
-        subject='Vagus\'a Davetlisiniz - Hesap Aktivasyonu',
-        body=plain_text,
-        from_email=None,          # uses DEFAULT_FROM_EMAIL from settings
-        to=[invite.email],
-    )
-    email.attach_alternative(html_body, 'text/html')
-    email.send()
+    from django_q.tasks import async_task
+    async_task('users_app.tasks.send_invite_email_task', invite.id)
 
 
 @ratelimit(key='user_or_ip', rate='20/d', block=True)

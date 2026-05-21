@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
+from core_config.views import healthz_view
 from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_subject_detail_student
 from users_app.views import home_redirect, yakinda_analiz, yakinda_profil, profil_view, theme_save, activity_calendar_api
 
 urlpatterns = [
+    path('healthz/', healthz_view, name='healthz'),
     path('manifest.webmanifest',
          TemplateView.as_view(template_name='pwa/manifest.webmanifest',
                               content_type='application/manifest+json'),

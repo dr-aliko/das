@@ -13,23 +13,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from users_app.services.alert_engine import generate_alerts_for_coach
+        from users_app.tasks import generate_all_coach_alerts
 
-        coaches = (
-            User.objects.filter(id=options['coach_id'], role='coach')
-            if options['coach_id']
-            else User.objects.filter(role='coach', is_active=True)
-        )
-
-        total_created = total_updated = 0
-        for coach in coaches:
+        if options['coach_id']:
+            coach = User.objects.get(id=options['coach_id'], role='coach')
             created, updated = generate_alerts_for_coach(coach)
-            total_created += created
-            total_updated += updated
-            self.stdout.write(
-                f'  {coach.full_name}: +{created} new, {updated} refreshed'
-            )
-
-        self.stdout.write(self.style.SUCCESS(
-            f'Done. {total_created} created, {total_updated} refreshed '
-            f'across {coaches.count()} coach(es).'
-        ))
+            self.stdout.write(f'  {coach.full_name}: +{created} new, {updated} refreshed')
+            self.stdout.write(self.style.SUCCESS(
+                f'Done. {created} created, {updated} refreshed.'
+            ))
+        else:
+            created, updated = generate_all_coach_alerts()
+            self.stdout.write(self.style.SUCCESS(
+                f'Done. {created} created, {updated} refreshed.'
+            ))

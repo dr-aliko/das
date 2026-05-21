@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'exams_app',
     'analytics_app',
     'tasks_app',
+    'django_q',
 ]
 
 MIDDLEWARE = [
@@ -223,6 +224,20 @@ if _LOG_FILE:
         'formatter': 'verbose',
         'level': 'ERROR',
     }
+
+# ── Django-Q2 — async task queue (ORM broker, no Redis required) ──────────────
+Q_CLUSTER = {
+    'name': 'vagus',
+    'workers': 2,
+    'recycle': 500,
+    'timeout': 60,
+    'retry': 120,
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',
+    # Set Q_SYNC=True in .env to run tasks synchronously (useful for dev/testing).
+    'sync': config('Q_SYNC', default=False, cast=bool),
+}
 
 # ── Sentry — error tracking ───────────────────────────────────────────────────
 # Activates only in production (DEBUG=False) when SENTRY_DSN is provided.
