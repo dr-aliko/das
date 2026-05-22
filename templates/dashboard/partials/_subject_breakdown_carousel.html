@@ -1,6 +1,5 @@
 {% load i18n %}
-{# DAS-011: Subject Breakdown Carousel                                       #}
-{# Mobile: horizontal snap-scroll  |  Desktop (lg): 4-col static grid       #}
+{# DAS-011: Subject Breakdown                                                #}
 {# Context: subjects[] = {key, name, net, delta, accuracy}                  #}
 
 <div class="mb-5">
@@ -9,12 +8,9 @@
     <span class="text-[11px] text-[var(--muted)]">{% trans "son deneme" %}</span>
   </div>
 
-  <div class="das-carousel
-              flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-4
-              lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:snap-none">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 pb-4">
     {% for subject in subjects %}
-    <div class="das-card accent-{{ subject.key }} das-carousel-card snap-start
-                flex flex-col justify-between min-h-32 h-32 lg:min-w-0">
+    <div class="das-card accent-{{ subject.key }} flex flex-col justify-between">
 
       <div class="flex justify-between items-start">
         <div>
