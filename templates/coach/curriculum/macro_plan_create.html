@@ -6,37 +6,46 @@
 {% block content %}
 <div class="max-w-xl mx-auto py-2"
      x-data="{
-       selectedStudent: null,
-       students: {{ coached_students|length }},
        hasTyt: false,
        hasAyt: false,
        sinav: 'TYT',
-       noDate: false,
+       needsDate: false,
+       inlineDate: '',
+       studentSelected: false,
        checkDates() {
          const sel = document.getElementById('student-select');
          const opt = sel.options[sel.selectedIndex];
+         this.studentSelected = !!sel.value;
          this.hasTyt = opt.dataset.tyt !== '';
          this.hasAyt = opt.dataset.ayt !== '';
-         this.noDate = (this.sinav === 'TYT' && !this.hasTyt)
-                    || (this.sinav === 'AYT' && !this.hasAyt)
-                    || (this.sinav === 'BOTH' && !this.hasTyt && !this.hasAyt);
+         this.needsDate = this.studentSelected && (
+                          (this.sinav === 'TYT'  && !this.hasTyt)
+                       || (this.sinav === 'AYT'  && !this.hasAyt)
+                       || (this.sinav === 'BOTH' && !this.hasTyt && !this.hasAyt));
+         this.inlineDate = '';
        }
      }">
 
   <div class="mb-6 flex items-center gap-3">
-    <a href="{% url 'curriculum:list' %}" class="w-10 h-10 flex items-center justify-center rounded-xl bg-ink-800 hover:bg-ink-750 transition text-ink-400">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <a href="{% url 'curriculum:list' %}"
+       class="w-10 h-10 flex items-center justify-center rounded-xl bg-ink-800 hover:bg-ink-750 transition text-ink-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </a>
     <h1 class="text-lg font-bold text-ink-50">Yeni Müfredat Planı</h1>
   </div>
 
   {% if messages %}
     {% for message in messages %}
-    <div class="mb-4 px-4 py-3 rounded-xl bg-ruby-tint border border-ruby-500/30 text-ruby-400 text-sm">{{ message }}</div>
+    <div class="mb-4 px-4 py-3 rounded-xl bg-ruby-tint border border-ruby-500/30 text-ruby-400 text-sm">
+      {{ message }}
+    </div>
     {% endfor %}
   {% endif %}
 
-  <form method="post" class="space-y-5" @submit.prevent="noDate ? null : $el.submit()">
+  <form method="post" class="space-y-5"
+        @submit.prevent="(!needsDate || inlineDate) ? $el.submit() : null">
     {% csrf_token %}
 
     {# Student select #}
@@ -44,7 +53,6 @@
       <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Öğrenci</label>
       <select id="student-select" name="student_id" required
               @change="checkDates()"
-              x-ref="studentSelect"
               class="w-full rounded-xl border border-ink-700 bg-ink-800 px-4 py-3 text-ink-100 text-sm
                      focus:outline-none focus:ring-2 focus:ring-primary/50">
         <option value="" data-tyt="" data-ayt="">— Seçiniz —</option>
@@ -63,26 +71,42 @@
     <div>
       <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Sınav Türü</label>
       <div class="flex gap-2">
-        {% for val, label in plan.SINAV_CHOICES|default:"" %}{% endfor %}
         <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
-               :class="sinav === 'TYT' ? 'border-primary bg-primary/10' : ''">
+               :class="sinav === 'TYT' ? 'border-primary bg-primary/10 text-ink-50' : 'text-ink-400'">
           <input type="radio" name="sinav_tipi" value="TYT" class="sr-only" x-model="sinav" @change="checkDates()"> TYT
         </label>
         <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
-               :class="sinav === 'AYT' ? 'border-primary bg-primary/10' : ''">
+               :class="sinav === 'AYT' ? 'border-primary bg-primary/10 text-ink-50' : 'text-ink-400'">
           <input type="radio" name="sinav_tipi" value="AYT" class="sr-only" x-model="sinav" @change="checkDates()"> AYT
         </label>
         <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
-               :class="sinav === 'BOTH' ? 'border-primary bg-primary/10' : ''">
+               :class="sinav === 'BOTH' ? 'border-primary bg-primary/10 text-ink-50' : 'text-ink-400'">
           <input type="radio" name="sinav_tipi" value="BOTH" class="sr-only" x-model="sinav" @change="checkDates()"> Her İkisi
         </label>
       </div>
     </div>
 
-    {# No date warning #}
-    <div x-show="noDate" x-cloak
-         class="px-4 py-3 rounded-xl bg-amber-tint border border-amber-500/30 text-amber-400 text-sm">
-      Bu öğrenci için sınav tarihi tanımlı değil. Planı oluşturmadan önce sınav tarihini girin.
+    {# Inline date input — revealed when selected student has no target date #}
+    <div x-show="needsDate" x-cloak
+         class="rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-4 space-y-3">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="text-sm font-semibold text-amber-300">Bu öğrenci için sınav tarihi girilmemiş</p>
+      </div>
+      <p class="text-xs text-amber-400/80">Planı oluşturmak için tarihi buraya girin — profil sayfasına gitmenize gerek yok.</p>
+      <div>
+        <label class="block text-xs font-semibold text-amber-300 mb-1.5"
+               x-text="sinav === 'AYT' ? 'AYT Sınav Tarihi' : 'TYT Sınav Tarihi'">TYT Sınav Tarihi</label>
+        <input type="date"
+               name="inline_target_date"
+               x-model="inlineDate"
+               :min="new Date().toISOString().split('T')[0]"
+               class="w-full rounded-xl border border-amber-500/40 bg-ink-800 px-4 py-3 text-ink-100 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+      </div>
     </div>
 
     {# Algorithm #}
@@ -108,8 +132,8 @@
     </div>
 
     <button type="submit"
-            :disabled="noDate"
-            :class="noDate ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-soft'"
+            :disabled="needsDate && !inlineDate"
+            :class="(needsDate && !inlineDate) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-soft'"
             class="w-full min-h-[44px] bg-primary text-white font-semibold rounded-xl py-3 transition">
       Planı Oluştur
     </button>

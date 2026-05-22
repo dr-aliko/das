@@ -59,22 +59,30 @@ def macro_plan_create(request):
 
         student = get_object_or_404(User, id=student_id, role='student')
 
-        # Determine target date
+        # Determine target date — prefer existing stored date; fall back to inline input
         if sinav_tipi == 'AYT':
             target_date = student.ayt_target_date
         else:
             target_date = student.tyt_target_date
 
         if not target_date:
-            messages.error(
-                request,
-                f'{student.full_name} için sınav tarihi girilmemiş. Önce sınav tarihini ayarlayın.'
-            )
-            return render(request, 'coach/curriculum/macro_plan_create.html', {
-                'coached_students': coached_students,
-                'v2_shell': True,
-                'shell_active': 'Müfredat',
-            })
+            inline = request.POST.get('inline_target_date', '').strip()
+            if not inline:
+                messages.error(request, 'Sınav tarihi girilmedi.')
+                return redirect('curriculum:create')
+            from datetime import datetime
+            try:
+                target_date = datetime.strptime(inline, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, 'Geçersiz tarih formatı.')
+                return redirect('curriculum:create')
+            # Persist the inline date so the coach doesn't need to re-enter it next time
+            if sinav_tipi == 'AYT':
+                student.ayt_target_date = target_date
+                student.save(update_fields=['ayt_target_date'])
+            else:
+                student.tyt_target_date = target_date
+                student.save(update_fields=['tyt_target_date'])
 
         if target_date <= date.today():
             messages.error(request, 'Sınav tarihi geçmişte olamaz.')

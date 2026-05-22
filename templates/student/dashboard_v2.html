@@ -242,11 +242,11 @@ function studentTasks() {
                     </div>
                     <div class="flex flex-col gap-0.5 shrink-0">
                       <button @click="selfAssign(t, false)"
-                        class="text-xs px-3 py-2.5 min-h-[44px] rounded-lg border border-steel-500/50 text-steel-400 hover:bg-steel-tint whitespace-nowrap transition">
+                        class="text-xs px-2.5 py-1.5 rounded-lg border border-steel-500/50 text-steel-400 hover:bg-steel-tint whitespace-nowrap transition">
                         {% trans "Ata →" %}
                       </button>
                       <button @click="selfAssign(t, true)"
-                        class="text-xs px-3 py-2.5 min-h-[44px] rounded-lg border border-emerald-600 text-emerald-400 hover:bg-emerald-900/30 whitespace-nowrap transition">
+                        class="text-xs px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-400 hover:bg-emerald-900/30 whitespace-nowrap transition">
                         {% trans "Bitti ✓" %}
                       </button>
                     </div>
@@ -284,8 +284,8 @@ function studentTasks() {
                       </template>
                     </div>
                     <div class="flex flex-col gap-0.5 shrink-0">
-                      <button @click="completeTask(t)" class="text-xs px-3 py-2.5 min-h-[44px] rounded-lg border border-emerald-600 text-emerald-400 hover:bg-emerald-900/20 whitespace-nowrap transition">{% trans "Bitti ✓" %}</button>
-                      <button @click="cancelTask(t)"   class="text-xs px-3 py-2.5 min-h-[44px] rounded-lg border border-red-700 text-red-400 hover:bg-red-900/20 whitespace-nowrap transition">{% trans "İptal" %}</button>
+                      <button @click="completeTask(t)" class="text-xs px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-400 hover:bg-emerald-900/20 whitespace-nowrap transition">{% trans "Bitti ✓" %}</button>
+                      <button @click="cancelTask(t)"   class="text-xs px-2.5 py-1.5 rounded-lg border border-red-700 text-red-400 hover:bg-red-900/20 whitespace-nowrap transition">{% trans "İptal" %}</button>
                     </div>
                   </div>
                 </template>
@@ -318,7 +318,7 @@ function studentTasks() {
                           </template>
                         </div>
                         <button @click="undoComplete(t)"
-                          class="text-xs px-3 py-2.5 min-h-[44px] rounded-lg border border-ink-600 text-ink-400 hover:bg-ink-750 whitespace-nowrap transition shrink-0">
+                          class="text-xs px-2.5 py-1.5 rounded-lg border border-ink-600 text-ink-400 hover:bg-ink-750 whitespace-nowrap transition shrink-0">
                           {% trans "Geri Al" %}
                         </button>
                       </div>
@@ -475,7 +475,7 @@ window.DASInitCharts = function(d, sd, hasExams) {
       interaction: { mode: 'index', intersect: false },
       onClick(_, el) { if (el.length) nav(el[0].index); },
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
         tooltip: { callbacks: {
           title: i => _s.examNames[i[0].dataIndex] + ' (' + _s.labels[i[0].dataIndex] + ')',
           footer: i => 'Toplam: ' + i.reduce((s, x) => s + x.parsed.y, 0).toFixed(2),
@@ -505,7 +505,7 @@ window.DASInitCharts = function(d, sd, hasExams) {
     data: { labels: d.labels, datasets: d.subjects.map(s => ({ label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false })) },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       onClick(_, el) { if(el.length) nav(el[0].index); },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
         tooltip: { callbacks: { title: i => _examNames[i[0].dataIndex] + ' (' + d.labels[i[0].dataIndex] + ')', footer: i => 'Toplam: ' + i.reduce((s,x)=>s+x.parsed.y,0).toFixed(2) } } },
       scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#8A8AA3', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
                 y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } } } }
@@ -529,7 +529,7 @@ window.DASInitCharts = function(d, sd, hasExams) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
           tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
         },
         scales: {

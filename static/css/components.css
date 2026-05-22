@@ -343,6 +343,12 @@
 
 .das-carousel-card { min-width: 240px; }
 
+/* On desktop the carousel becomes a grid — cards must shrink to fit their cells.
+   This media query must live here (after tailwind.min.css) so it wins the cascade. */
+@media (min-width: 1024px) {
+  .das-carousel-card { min-width: 0; }
+}
+
 .progress-track {
   height:        6px;
   background:    var(--surface-3);

@@ -58,6 +58,68 @@
     </div>
   </div>
 
+  {# ── Hedef Sınav Tarihi ── always-visible card for the coach #}
+  <div class="mx-4 md:mx-6 mt-4 rounded-2xl border-2
+              {% if not student.tyt_target_date and not student.ayt_target_date %}border-amber-500/40 bg-amber-500/5{% else %}border-steel-500/20 bg-steel-tint/40{% endif %}
+              p-4"
+       x-data="{ saved: false, saveError: false }">
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+      <div class="flex items-center gap-2">
+        {% if not student.tyt_target_date and not student.ayt_target_date %}
+        <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <p class="text-xs font-bold text-amber-300">Hedef Sınav Tarihi</p>
+          <p class="text-[10px] text-amber-400/70">Müfredat planı oluşturmak için tarih gerekli</p>
+        </div>
+        {% else %}
+        <svg class="w-4 h-4 text-steel-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="text-xs font-bold text-steel-300">Hedef Sınav Tarihi</p>
+        {% endif %}
+      </div>
+      <a href="{% url 'curriculum:list' %}?student={{ student.id }}"
+         class="flex items-center gap-1 text-[10px] font-semibold text-steel-400 hover:text-steel-300 transition-colors">
+        Müfredat Planı →
+      </a>
+    </div>
+    <form class="flex flex-wrap gap-3 items-end"
+          @submit.prevent="
+            fetch('{% url 'curriculum:set_exam_dates' student.id %}', {
+              method: 'POST',
+              headers: {'X-CSRFToken': '{{ csrf_token }}'},
+              body: new FormData($el),
+            }).then(r => r.json())
+              .then(d => { if(d.ok){ saved=true; saveError=false; setTimeout(()=>saved=false,2500); } else { saveError=true; } })
+              .catch(()=>{ saveError=true; });
+          ">
+      <div>
+        <label class="block text-[10px] font-semibold text-ink-400 mb-1 uppercase tracking-wider">TYT</label>
+        <input type="date" name="tyt_target_date"
+               value="{{ student.tyt_target_date|date:'Y-m-d'|default:'' }}"
+               class="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-ink-100 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-steel-500/50">
+      </div>
+      <div>
+        <label class="block text-[10px] font-semibold text-ink-400 mb-1 uppercase tracking-wider">AYT</label>
+        <input type="date" name="ayt_target_date"
+               value="{{ student.ayt_target_date|date:'Y-m-d'|default:'' }}"
+               class="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-ink-100 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-steel-500/50">
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit"
+                class="px-4 py-2 min-h-[36px] bg-steel-500 hover:bg-steel-400 text-white text-xs font-bold rounded-lg transition">
+          Kaydet
+        </button>
+        <span x-show="saved" x-cloak class="text-emerald-400 text-xs font-semibold">✓ Kaydedildi</span>
+        <span x-show="saveError" x-cloak class="text-ruby-400 text-xs">Hata</span>
+      </div>
+    </form>
+  </div>
+
   <div class="p-4 md:p-6">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
