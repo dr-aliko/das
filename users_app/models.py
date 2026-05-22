@@ -47,6 +47,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     current_streak     = models.PositiveIntegerField(default=0)
     longest_streak     = models.PositiveIntegerField(default=0)
     last_activity_date = models.DateField(null=True, blank=True)
+    tyt_target_date    = models.DateField(null=True, blank=True)
+    ayt_target_date    = models.DateField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['full_name']

@@ -535,3 +535,8 @@ html.dark body.v2-shell .border-slate-200,
 html.dark body.v2-shell .border-gray-100,
 html.dark body.v2-shell .border-gray-200  { border-color: var(--border) !important; }
 html.dark body.v2-shell .divide-gray-100 > * + * { border-color: var(--border) !important; }
+
+/* Prevent iOS Safari auto-zoom on inputs smaller than 16px */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}

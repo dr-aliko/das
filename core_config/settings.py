@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'exams_app',
     'tasks_app',
     'django_q',
+    'curriculum_app',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ plan.title|default:"Müfredat Planı" }} — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-2 space-y-6">
+
+  {# Top bar #}
+  <div class="flex items-start gap-3 flex-wrap">
+    <a href="{% url 'curriculum:list' %}"
+       class="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-ink-800 hover:bg-ink-750 transition text-ink-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-lg font-bold text-ink-50 truncate">{{ plan.title|default:"Müfredat Planı" }}</h1>
+      <div class="flex flex-wrap items-center gap-2 mt-1">
+        <span class="text-xs text-ink-400">{{ plan.student.full_name }}</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary-glow">{{ plan.sinav_tipi }}</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] bg-ink-800 text-ink-400">{{ plan.get_algorithm_display }}</span>
+        <span class="text-xs text-ink-500">Hedef: {{ plan.target_date|date:"d.m.Y" }}</span>
+        <span class="text-xs text-ink-500">{{ plan.months_remaining }} ay kaldı</span>
+        <span class="text-xs text-ink-500">{{ plan.total_topics }} konu</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0" x-data="{ confirmDelete: false, confirmRegen: false }">
+      <form method="post" action="{% url 'curriculum:regenerate' plan.pk %}" x-show="!confirmDelete">
+        {% csrf_token %}
+        <button type="button" @click="confirmRegen = !confirmRegen"
+                class="px-3 py-2.5 min-h-[44px] rounded-xl border border-ink-700 bg-ink-800 hover:bg-ink-750
+                       text-xs text-ink-300 transition flex items-center gap-1.5">
+          🔄 Yeniden Oluştur
+        </button>
+        <div x-show="confirmRegen" x-cloak class="absolute right-0 top-12 z-30 bg-ink-850 border border-ink-700 rounded-xl p-4 shadow-card-lg text-sm text-ink-200 w-56">
+          <p class="mb-3">Mevcut plan silinerek yeniden oluşturulacak. Devam?</p>
+          <div class="flex gap-2">
+            <button type="submit" class="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold">Evet</button>
+            <button type="button" @click="confirmRegen = false" class="flex-1 py-2 bg-ink-800 text-ink-300 rounded-lg text-xs">İptal</button>
+          </div>
+        </div>
+      </form>
+      <form method="post" action="{% url 'curriculum:delete' plan.pk %}" x-show="!confirmRegen">
+        {% csrf_token %}
+        <button type="button" @click="confirmDelete = !confirmDelete"
+                class="px-3 py-2.5 min-h-[44px] rounded-xl border border-ruby-500/30 bg-ruby-tint hover:bg-ruby-500/20
+                       text-xs text-ruby-400 transition">
+          Sil
+        </button>
+        <div x-show="confirmDelete" x-cloak class="absolute right-0 top-12 z-30 bg-ink-850 border border-ruby-500/30 rounded-xl p-4 shadow-card-lg text-sm text-ink-200 w-56">
+          <p class="mb-3">Bu plan kalıcı olarak silinecek. Emin misin?</p>
+          <div class="flex gap-2">
+            <button type="submit" class="flex-1 py-2 bg-ruby-500 text-white rounded-lg text-xs font-bold">Sil</button>
+            <button type="button" @click="confirmDelete = false" class="flex-1 py-2 bg-ink-800 text-ink-300 rounded-lg text-xs">İptal</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if plan.regenerated_at %}
+  <p class="text-[10px] text-ink-600">Son oluşturma: {{ plan.regenerated_at|date:"d.m.Y H:i" }}</p>
+  {% endif %}
+
+  {# Note: this is a reference roadmap. Actual daily tasks are created in the weekly planner. #}
+  <div class="px-4 py-3 rounded-xl border border-steel-500/20 bg-steel-tint text-steel-300 text-xs">
+    Bu tablo bir referans takvimdir. Günlük görevler mevcut haftalık planlayıcıdan manuel oluşturulur.
+  </div>
+
+  {# Month timeline — horizontal scroll on desktop, vertical stack on mobile #}
+  {% if buckets %}
+  <div class="flex gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-3 lg:overflow-x-visible">
+    {% for bucket in buckets %}
+    <div class="shrink-0 w-64 lg:w-auto rounded-2xl border border-ink-700 bg-ink-900 overflow-hidden flex flex-col">
+      {# Bucket header #}
+      <div class="px-4 py-3 bg-ink-850 border-b border-ink-700 flex items-center justify-between">
+        <p class="text-sm font-bold text-ink-100">{{ bucket.label }}</p>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-ink-800 text-ink-400">{{ bucket.topic_count }} konu</span>
+      </div>
+
+      {# Topics grouped by subject #}
+      <div class="p-3 flex-1 space-y-3">
+        {% regroup bucket.topics.all by topic.subject as subject_groups %}
+        {% for group in subject_groups %}
+        <div>
+          <p class="text-[9px] font-bold uppercase tracking-wider mb-1.5"
+             style="color: var(--{% if 'Türkçe' in group.grouper.name %}turkce{% elif 'Matematik' in group.grouper.name %}mat{% elif 'Sosyal' in group.grouper.name %}sosyal{% else %}fen{% endif %})">
+            {{ group.grouper.name }}
+          </p>
+          <div class="flex flex-wrap gap-1">
+            {% for entry in group.list %}
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-ink-800 text-ink-300 leading-tight">
+              {{ entry.topic.name }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-xs text-ink-500 italic">Bu ay için konu yok</p>
+        {% endfor %}
+      </div>
+
+      {# Progress bar — % of total topics #}
+      {% if plan.total_topics > 0 %}
+      <div class="px-3 pb-3">
+        <div class="h-1 bg-ink-800 rounded-full overflow-hidden">
+          <div class="h-full bg-primary rounded-full"
+               style="width: {{ bucket.topic_count|floatformat:0 }}%">
+          </div>
+        </div>
+        <p class="text-[9px] text-ink-600 mt-1 text-right">{{ bucket.topic_count }} / {{ plan.total_topics }}</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="text-center py-16 text-ink-400">
+    <p class="text-sm">Plan henüz oluşturulmamış veya tüm konular tamamlandı.</p>
+    <form method="post" action="{% url 'curriculum:regenerate' plan.pk %}" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="px-6 py-3 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-soft transition">
+        Planı Oluştur
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

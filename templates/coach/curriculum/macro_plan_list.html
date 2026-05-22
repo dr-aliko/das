@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Müfredat Planları — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 py-2">
+
+  {# Header #}
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-ink-50">Müfredat Planları</h1>
+      <p class="text-xs text-ink-400 mt-0.5">Konu dağılım takvimi — koç referansı</p>
+    </div>
+    <a href="{% url 'curriculum:create' %}"
+       class="px-4 py-2.5 min-h-[44px] bg-primary text-white text-sm font-semibold rounded-xl
+              hover:bg-primary-soft transition flex items-center gap-2">
+      + Yeni Plan
+    </a>
+  </div>
+
+  {# Student filter #}
+  {% if coached_students %}
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'curriculum:list' %}"
+       class="px-3 py-1.5 rounded-full text-xs font-semibold transition
+              {% if not student_filter %}bg-primary text-white{% else %}bg-ink-800 text-ink-400 hover:bg-ink-750{% endif %}">
+      Tümü
+    </a>
+    {% for s in coached_students %}
+    <a href="?student={{ s.id }}"
+       class="px-3 py-1.5 rounded-full text-xs font-semibold transition
+              {% if student_filter == s.id|stringformat:'d' %}bg-primary text-white{% else %}bg-ink-800 text-ink-400 hover:bg-ink-750{% endif %}">
+      {{ s.full_name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Plan cards #}
+  {% if plans %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for plan in plans %}
+    <a href="{% url 'curriculum:detail' plan.pk %}"
+       class="block rounded-2xl border border-ink-700 bg-ink-900 p-5 hover:bg-ink-850
+              hover:border-ink-600 transition-colors group">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-ink-100 truncate">{{ plan.title|default:plan.student.full_name }}</p>
+          <p class="text-xs text-ink-400 mt-0.5">{{ plan.student.full_name }}</p>
+        </div>
+        <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary-glow">
+          {{ plan.sinav_tipi }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 text-center mb-4">
+        <div class="rounded-xl bg-ink-800 py-2 px-1">
+          <p class="text-base font-bold text-ink-100">{{ plan.total_topics }}</p>
+          <p class="text-[10px] text-ink-500">Konu</p>
+        </div>
+        <div class="rounded-xl bg-ink-800 py-2 px-1">
+          <p class="text-base font-bold text-ink-100">{{ plan.months_remaining }}</p>
+          <p class="text-[10px] text-ink-500">Ay kaldı</p>
+        </div>
+        <div class="rounded-xl bg-ink-800 py-2 px-1">
+          <p class="text-base font-bold text-ink-100">{{ plan.buckets.count }}</p>
+          <p class="text-[10px] text-ink-500">Ay dilimi</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between text-[10px] text-ink-500">
+        <span>Hedef: {{ plan.target_date|date:"d.m.Y" }}</span>
+        <span class="px-2 py-0.5 rounded-full bg-ink-800">{{ plan.get_algorithm_display }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-16 text-ink-400">
+    <p class="text-lg font-semibold text-ink-300">Henüz plan yok</p>
+    <p class="text-sm mt-1">Öğrencileriniz için otomatik konu dağılımı oluşturun.</p>
+    <a href="{% url 'curriculum:create' %}"
+       class="inline-block mt-4 px-6 py-3 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-soft transition">
+      İlk Planı Oluştur
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

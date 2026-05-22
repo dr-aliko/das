@@ -24,6 +24,7 @@ urlpatterns = [
     path('auth/', include('users_app.urls', namespace='users_app')),
     path('student/', include('exams_app.student_urls', namespace='student')),
     path('coach/', include('exams_app.coach_urls', namespace='coach')),
+    path('coach/curriculum/', include('curriculum_app.urls', namespace='curriculum')),
     path('coach/tasks/', include('tasks_app.urls', namespace='tasks')),
     path('student/tasks/', include('tasks_app.student_urls', namespace='student_tasks')),
     path('brans/', brans_hub_student, name='brans_hub'),

@@ -26,7 +26,7 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
   {# ── Page header ── #}
   <div class="flex items-center gap-3 pt-1">
     <a href="{% if is_edit %}{% url 'student:exam_detail_v2' exam_id=exam.id %}{% else %}/student/denemeler/{% endif %}"
-       class="p-2 rounded-xl transition hover:opacity-70"
+       class="p-3 rounded-xl transition hover:opacity-70"
        style="color:var(--muted)"
        aria-label="{% trans 'Geri' %}">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -51,7 +51,7 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
     </div>
     <div class="flex items-center gap-2">
       <button type="button" @click="restoreDraft()"
-              class="text-xs font-bold px-3 py-1.5 rounded-lg transition active:opacity-70"
+              class="text-xs font-bold px-3 py-2.5 min-h-[44px] rounded-lg transition active:opacity-70"
               style="background:var(--primary); color:white;">
         {% trans "Geri Yükle" %}
       </button>
@@ -116,7 +116,7 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
       </div>
 
       {# Date + duration (2-col on mobile too — both compact) #}
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 xs:grid-cols-2 gap-3">
         <div>
           <label for="id_exam_date"
                  class="block text-sm font-bold mb-1.5"
@@ -173,7 +173,7 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
         <h2 class="text-xs font-bold uppercase tracking-widest"
             style="color:var(--muted)">{% trans "Ders Sonuçları" %}</h2>
         <button type="button" @click="resetAll()"
-                class="text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:opacity-70"
+                class="text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg transition hover:opacity-70"
                 style="color:var(--muted)">
           {% trans "Sıfırla" %}
         </button>

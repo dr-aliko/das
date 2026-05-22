@@ -52,7 +52,11 @@
       "Bash(.venv/Scripts/python.exe -c \"import py_compile; py_compile.compile\\('exams_app/views.py', doraise=True\\); print\\('views.py: OK'\\)\")",
       "Bash(dir C:\\\\Users\\\\kayaa\\\\OneDrive\\\\Masaüstü\\\\projem\\\\users_app\\\\migrations *)",
       "Bash(.venv\\\\Scripts\\\\python.exe -c \"import exams_app.views\")",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(.venv/Scripts/python manage.py makemigrations users_app --name user_target_exam_dates)",
+      "Bash(.venv/Scripts/python manage.py makemigrations curriculum_app --name initial)",
+      "Bash(.venv/Scripts/python manage.py migrate --noinput)",
+      "Bash(.venv/Scripts/python -m pytest curriculum_app/tests/ -v --tb=short)"
     ]
   }
 }

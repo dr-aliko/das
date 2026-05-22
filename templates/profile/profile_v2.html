@@ -3,7 +3,7 @@
 {% block title %}{% trans "Profil" %} — DAS{% endblock %}
 
 {% block content %}
-<div class="min-h-dvh pb-[calc(env(safe-area-inset-bottom)+6rem)]"
+<div class="min-h-dvh"
      x-data="profileState('{{ user.theme }}')"
      @keydown.escape.window="showThemeSheet = false; showLogoutModal = false">
 
@@ -26,7 +26,7 @@
             </p>
             {% if user.grade %}<p class="text-xs text-ink-500 mt-0.5">{{ user.grade }}</p>{% endif %}
           </div>
-          <button class="ml-auto w-9 h-9 rounded-lg bg-ink-800 hover:bg-ink-750
+          <button class="ml-auto w-11 h-11 rounded-lg bg-ink-800 hover:bg-ink-750
                          text-ink-300 hover:text-white flex items-center justify-center
                          transition-colors shrink-0"
                   aria-label="{% trans 'Ayarlar' %}">
@@ -90,7 +90,7 @@
             <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Son 7 Gün</p>
             <button @click="open()"
                     class="flex items-center gap-1 text-[10px] text-steel-400 hover:text-steel-300
-                           font-semibold transition-colors">
+                           font-semibold transition-colors min-h-[44px] px-2">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75"
                    viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -130,7 +130,7 @@
               <div class="flex items-center justify-between mb-4">
                 <button @click="fetch(offset + 1)"
                         :disabled="loading"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg
+                        class="w-11 h-11 flex items-center justify-center rounded-lg
                                text-ink-400 hover:bg-ink-800 hover:text-ink-100
                                disabled:opacity-30 transition-colors">
                   <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
@@ -142,7 +142,7 @@
                 </div>
                 <button @click="offset > 0 ? fetch(offset - 1) : null"
                         :disabled="loading || offset === 0"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg
+                        class="w-11 h-11 flex items-center justify-center rounded-lg
                                text-ink-400 hover:bg-ink-800 hover:text-ink-100
                                disabled:opacity-30 transition-colors">
                   <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
@@ -192,7 +192,7 @@
         {% endif %}
 
         <button @click="showLogoutModal = true"
-                class="mt-4 w-full h-9 rounded-lg bg-ruby-tint hover:bg-ruby-500/20
+                class="mt-4 w-full min-h-[44px] rounded-lg bg-ruby-tint hover:bg-ruby-500/20
                        text-ruby-500 text-sm font-semibold
                        inline-flex items-center justify-center gap-2 transition-colors">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"

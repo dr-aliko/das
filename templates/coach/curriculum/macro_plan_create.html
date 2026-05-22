@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Yeni Müfredat Planı — DAS{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto py-2"
+     x-data="{
+       selectedStudent: null,
+       students: {{ coached_students|length }},
+       hasTyt: false,
+       hasAyt: false,
+       sinav: 'TYT',
+       noDate: false,
+       checkDates() {
+         const sel = document.getElementById('student-select');
+         const opt = sel.options[sel.selectedIndex];
+         this.hasTyt = opt.dataset.tyt !== '';
+         this.hasAyt = opt.dataset.ayt !== '';
+         this.noDate = (this.sinav === 'TYT' && !this.hasTyt)
+                    || (this.sinav === 'AYT' && !this.hasAyt)
+                    || (this.sinav === 'BOTH' && !this.hasTyt && !this.hasAyt);
+       }
+     }">
+
+  <div class="mb-6 flex items-center gap-3">
+    <a href="{% url 'curriculum:list' %}" class="w-10 h-10 flex items-center justify-center rounded-xl bg-ink-800 hover:bg-ink-750 transition text-ink-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1 class="text-lg font-bold text-ink-50">Yeni Müfredat Planı</h1>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="mb-4 px-4 py-3 rounded-xl bg-ruby-tint border border-ruby-500/30 text-ruby-400 text-sm">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="space-y-5" @submit.prevent="noDate ? null : $el.submit()">
+    {% csrf_token %}
+
+    {# Student select #}
+    <div>
+      <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Öğrenci</label>
+      <select id="student-select" name="student_id" required
+              @change="checkDates()"
+              x-ref="studentSelect"
+              class="w-full rounded-xl border border-ink-700 bg-ink-800 px-4 py-3 text-ink-100 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-primary/50">
+        <option value="" data-tyt="" data-ayt="">— Seçiniz —</option>
+        {% for s in coached_students %}
+        <option value="{{ s.id }}"
+                data-tyt="{{ s.tyt_target_date|default:'' }}"
+                data-ayt="{{ s.ayt_target_date|default:'' }}">
+          {{ s.full_name }}
+          {% if s.tyt_target_date %}(TYT: {{ s.tyt_target_date|date:"d.m.Y" }}){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Exam type #}
+    <div>
+      <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Sınav Türü</label>
+      <div class="flex gap-2">
+        {% for val, label in plan.SINAV_CHOICES|default:"" %}{% endfor %}
+        <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
+               :class="sinav === 'TYT' ? 'border-primary bg-primary/10' : ''">
+          <input type="radio" name="sinav_tipi" value="TYT" class="sr-only" x-model="sinav" @change="checkDates()"> TYT
+        </label>
+        <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
+               :class="sinav === 'AYT' ? 'border-primary bg-primary/10' : ''">
+          <input type="radio" name="sinav_tipi" value="AYT" class="sr-only" x-model="sinav" @change="checkDates()"> AYT
+        </label>
+        <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition"
+               :class="sinav === 'BOTH' ? 'border-primary bg-primary/10' : ''">
+          <input type="radio" name="sinav_tipi" value="BOTH" class="sr-only" x-model="sinav" @change="checkDates()"> Her İkisi
+        </label>
+      </div>
+    </div>
+
+    {# No date warning #}
+    <div x-show="noDate" x-cloak
+         class="px-4 py-3 rounded-xl bg-amber-tint border border-amber-500/30 text-amber-400 text-sm">
+      Bu öğrenci için sınav tarihi tanımlı değil. Planı oluşturmadan önce sınav tarihini girin.
+    </div>
+
+    {# Algorithm #}
+    <div>
+      <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Dağılım Yöntemi</label>
+      <div class="space-y-2">
+        {% for val, lbl in algo_choices %}
+        <label class="flex items-start gap-3 p-4 rounded-xl border border-ink-700 bg-ink-800 cursor-pointer hover:bg-ink-750 transition">
+          <input type="radio" name="algorithm" value="{{ val }}" {% if forloop.first %}checked{% endif %}
+                 class="mt-0.5 accent-primary">
+          <span class="text-sm text-ink-100 font-medium">{{ lbl }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Optional title #}
+    <div>
+      <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Plan Adı (opsiyonel)</label>
+      <input type="text" name="title" placeholder="Ör: Ahmet — TYT Güz Planı"
+             class="w-full rounded-xl border border-ink-700 bg-ink-800 px-4 py-3 text-ink-100 text-sm
+                    focus:outline-none focus:ring-2 focus:ring-primary/50">
+    </div>
+
+    <button type="submit"
+            :disabled="noDate"
+            :class="noDate ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-soft'"
+            class="w-full min-h-[44px] bg-primary text-white font-semibold rounded-xl py-3 transition">
+      Planı Oluştur
+    </button>
+  </form>
+</div>
+{% endblock %}

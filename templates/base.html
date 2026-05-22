@@ -185,7 +185,7 @@
   {% if desktop_v2 %}{% include "components/_shell_top_desktop.html" %}{% endif %}
 {% endif %}
 
-<main class="{% if desktop_v2 %}max-w-page md:px-6{% else %}max-w-7xl{% endif %} mx-auto px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-8{% endif %}">
+<main class="{% if desktop_v2 %}max-w-page md:px-6{% else %}max-w-7xl{% endif %} mx-auto px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+{% if shell_hide_fab %}5rem{% else %}9rem{% endif %})] lg:pb-8{% endif %}">
   {% if messages %}
     {% for message in messages %}
       <div class="mb-4 px-4 py-3 rounded-lg

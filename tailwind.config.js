@@ -60,6 +60,9 @@ module.exports = {
         ruby:    { 500: '#ef4444', tint: 'rgba(239,68,68,0.12)' },
         amber:   { 500: '#f59e0b', tint: 'rgba(245,158,11,0.12)' },
       },
+      screens: {
+        xs: '360px',
+      },
       maxWidth: {
         'page':       '1400px',
         'prose-wide': '1100px',
