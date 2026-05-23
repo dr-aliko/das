@@ -90,12 +90,14 @@
     html.dark .divide-gray-100 > * + * { border-color: #374151 !important; }
 
     /* ── Phase 7 light-mode: ink-* palette responds to html:not(.dark) ──── */
-    /* Backgrounds */
-    html:not(.dark) .bg-ink-950 { background-color: #f8fafc; }
-    html:not(.dark) .bg-ink-900 { background-color: #ffffff; }
-    html:not(.dark) .bg-ink-850 { background-color: #ffffff; }
-    html:not(.dark) .bg-ink-800 { background-color: #f4f4f8; }
+    /* Backgrounds — layered so each nesting level is visually distinct */
+    html:not(.dark) .bg-ink-950 { background-color: #ffffff; }
+    html:not(.dark) .bg-ink-900 { background-color: #fafafe; }
+    html:not(.dark) .bg-ink-850 { background-color: #f4f4f8; }
+    html:not(.dark) .bg-ink-800 { background-color: #eef0f6; }
     html:not(.dark) .bg-ink-750 { background-color: #e8e8ef; }
+    /* Opacity-modified ink backgrounds */
+    html:not(.dark) .bg-ink-900\/50 { background-color: rgba(250,250,254,0.6); }
     /* Borders & dividers */
     html:not(.dark) .border-ink-700 { border-color: #e2e2ea !important; }
     html:not(.dark) .border-ink-600 { border-color: #c8c8d8 !important; }
@@ -111,13 +113,28 @@
     /* Steel accent — darken for legibility on white backgrounds */
     html:not(.dark) .text-steel-300 { color: #2c66ad; }
     html:not(.dark) .text-steel-400 { color: #3a7fce; }
+    /* Dark-palette text utilities — remap for white backgrounds */
+    html:not(.dark) .text-red-400     { color: #b91c1c; }
+    html:not(.dark) .text-emerald-400 { color: #047857; }
+    html:not(.dark) .text-indigo-300  { color: #3730a3; }
+    /* Dark-palette badge/chip backgrounds — remap to soft tints on white */
+    html:not(.dark) .bg-red-900\/30        { background-color: rgba(239,68,68,0.10);   }
+    html:not(.dark) .bg-red-900\/20        { background-color: rgba(239,68,68,0.08);   }
+    html:not(.dark) .bg-emerald-900\/30    { background-color: rgba(16,185,129,0.12);  }
+    html:not(.dark) .bg-emerald-900\/20    { background-color: rgba(16,185,129,0.10);  }
+    html:not(.dark) .bg-emerald-900\/10    { background-color: rgba(16,185,129,0.08);  }
+    html:not(.dark) .bg-indigo-900\/40     { background-color: rgba(99,102,241,0.12);  }
+    /* Dark-palette borders — remap to light tints */
+    html:not(.dark) .border-emerald-800\/30 { border-color: rgba(16,185,129,0.25) !important; }
+    html:not(.dark) .border-red-700         { border-color: #fecaca !important; }
+    html:not(.dark) .border-emerald-600     { border-color: #6ee7b7 !important; }
     /* Hover backgrounds */
-    html:not(.dark) .hover\:bg-ink-800:hover     { background-color: #f4f4f8 !important; }
+    html:not(.dark) .hover\:bg-ink-800:hover     { background-color: #eef0f6 !important; }
     html:not(.dark) .hover\:bg-ink-750:hover     { background-color: #e8e8ef !important; }
     html:not(.dark) .hover\:border-ink-600:hover { border-color: #c8c8d8 !important; }
     html:not(.dark) .hover\:text-white:hover     { color: #111118 !important; }
     /* opacity-modifier variants used on nav hover */
-    html:not(.dark) .hover\:bg-ink-800\/60:hover { background-color: rgba(244,244,248,0.6) !important; }
+    html:not(.dark) .hover\:bg-ink-800\/60:hover { background-color: rgba(238,240,246,0.6) !important; }
 
     /* ── Privacy Mode — blur student PII for screensharing (coach only) ── */
     html.privacy-mode .pii {
@@ -130,12 +147,27 @@
     }
   </style>
 
-  <!-- Apply dark class before Alpine/render to prevent flash -->
+  <!-- Harmonize html.dark + das-theme-* before paint to prevent flash -->
   <script>
     (function(){
-      var s = localStorage.getItem('theme');
+      var html = document.documentElement;
+      var saved = localStorage.getItem('theme');
       var pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (s === 'dark' || (!s && pd)) document.documentElement.classList.add('dark');
+      var effective;
+      if (saved === 'dark' || saved === 'light') {
+        effective = saved;
+      } else if (html.classList.contains('das-theme-dark')) {
+        effective = 'dark';
+      } else if (html.classList.contains('das-theme-light')) {
+        effective = 'light';
+      } else {
+        effective = pd ? 'dark' : 'light';
+      }
+      html.classList.toggle('dark', effective === 'dark');
+      if (saved === 'dark' || saved === 'light') {
+        html.classList.remove('das-theme-auto', 'das-theme-light', 'das-theme-dark');
+        html.classList.add('das-theme-' + effective);
+      }
     })();
   </script>
   <!-- Apply privacy mode class before paint to avoid flash-of-PII -->
@@ -202,10 +234,14 @@
 
 {% block extra_js %}{% endblock %}
 <script>
-  // Dark mode toggle (global, no Alpine dependency)
+  // Dark mode toggle — syncs both html.dark and das-theme-* so both CSS
+  // systems stay in lockstep.
   function toggleDM() {
-    var d = document.documentElement.classList.toggle('dark');
+    var html = document.documentElement;
+    var d = html.classList.toggle('dark');
     localStorage.setItem('theme', d ? 'dark' : 'light');
+    html.classList.remove('das-theme-auto', 'das-theme-light', 'das-theme-dark');
+    html.classList.add('das-theme-' + (d ? 'dark' : 'light'));
     var btn = document.getElementById('dm-btn');
     if (btn) btn.textContent = d ? '☀️' : '🌙';
     window.dispatchEvent(new CustomEvent('darkmode-change', { detail: { isDark: d } }));

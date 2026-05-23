@@ -463,22 +463,18 @@ body.compare-active .v2-fab {
 }
 
 /* ── DAS Theme Stabilization ─────────────────────────────────────────────────
-   Problem: three-way palette mismatch — Tailwind config uses dark hex values
-   (surface-1:#15151F), tokens.css :root uses light hex (#ffffff), and the
-   legacy html.dark inline overrides (base.html:83-119, loaded AFTER this file)
-   use a third palette (#111827/#1f2937). Result: body dark, das-card white,
-   bottom-nav dark = irreconcilably mixed surfaces in V2.
+   V2 shell is now theme-aware: dark tokens are gated on html.dark so that
+   light mode can use the :root baseline from tokens.css.
 
-   Fix: activate DAS dark token palette unconditionally on body.v2-shell, map
-   Tailwind light-palette utility classes to dark token equivalents, then use
-   higher-specificity selectors (0,3,2 vs 0,2,1) to override the conflicting
-   inline html.dark rules regardless of source-order.
+   Light path: body.v2-shell has no token overrides → inherits :root defaults
+   (--surface-1:#ffffff, --surface-2:#f4f4f8, etc.) and body bg falls back to
+   the Tailwind bg-gray-50 class on <body>.
 
    Rollback: remove this entire block. V1 pages never have body.v2-shell so
    they are completely unaffected. */
 
-/* 1 ── Activate dark token palette for all var() usages in V2 shell ─────── */
-body.v2-shell {
+/* ── Dark-mode V2 shell: activate dark tokens + remap light utilities ─────── */
+html.dark body.v2-shell {
   --surface-1:      #15151F;
   --surface-2:      #1E1E2C;
   --surface-3:      #262635;
@@ -493,40 +489,6 @@ body.v2-shell {
   background-color: #0B0B12;
   color: #E5E5F0;
 }
-
-/* 2 ── Map Tailwind light utilities to dark token equivalents ─────────────── */
-body.v2-shell .bg-white,
-body.v2-shell .bg-white\/70            { background-color: var(--surface-1) !important; }
-body.v2-shell .bg-gray-50,
-body.v2-shell .bg-slate-50             { background-color: var(--surface-2) !important; }
-body.v2-shell .bg-gray-100,
-body.v2-shell .bg-slate-100            { background-color: var(--surface-3) !important; }
-body.v2-shell .border-slate-100,
-body.v2-shell .border-slate-200,
-body.v2-shell .border-gray-100,
-body.v2-shell .border-gray-200         { border-color: var(--border) !important; }
-body.v2-shell .text-slate-900,
-body.v2-shell .text-gray-800,
-body.v2-shell .text-gray-700           { color: var(--heading) !important; }
-body.v2-shell .text-slate-700,
-body.v2-shell .text-slate-600,
-body.v2-shell .text-gray-600           { color: var(--body) !important; }
-body.v2-shell .text-slate-500,
-body.v2-shell .text-gray-500,
-body.v2-shell .text-slate-400,
-body.v2-shell .text-gray-400           { color: var(--muted) !important; }
-body.v2-shell .divide-gray-100 > * + * { border-color: var(--border) !important; }
-
-body.v2-shell input:not([type="checkbox"]):not([type="radio"]),
-body.v2-shell select,
-body.v2-shell textarea {
-  background-color: var(--surface-2) !important;
-  color: var(--body) !important;
-  border-color: var(--border-strong) !important;
-}
-
-/* 3 ── Higher-specificity overrides beat inline html.dark rules ───────────── */
-html.dark body.v2-shell       { background-color: #0B0B12 !important; color: #E5E5F0 !important; }
 html.dark body.v2-shell main  { background-color: transparent !important; }
 html.dark body.v2-shell nav.v2-bottom-nav { background-color: var(--surface-1) !important; }
 
@@ -540,7 +502,25 @@ html.dark body.v2-shell .border-slate-100,
 html.dark body.v2-shell .border-slate-200,
 html.dark body.v2-shell .border-gray-100,
 html.dark body.v2-shell .border-gray-200  { border-color: var(--border) !important; }
+html.dark body.v2-shell .text-slate-900,
+html.dark body.v2-shell .text-gray-800,
+html.dark body.v2-shell .text-gray-700    { color: var(--heading) !important; }
+html.dark body.v2-shell .text-slate-700,
+html.dark body.v2-shell .text-slate-600,
+html.dark body.v2-shell .text-gray-600    { color: var(--body) !important; }
+html.dark body.v2-shell .text-slate-500,
+html.dark body.v2-shell .text-gray-500,
+html.dark body.v2-shell .text-slate-400,
+html.dark body.v2-shell .text-gray-400    { color: var(--muted) !important; }
 html.dark body.v2-shell .divide-gray-100 > * + * { border-color: var(--border) !important; }
+
+html.dark body.v2-shell input:not([type="checkbox"]):not([type="radio"]),
+html.dark body.v2-shell select,
+html.dark body.v2-shell textarea {
+  background-color: var(--surface-2) !important;
+  color: var(--body) !important;
+  border-color: var(--border-strong) !important;
+}
 
 /* Prevent iOS Safari auto-zoom on inputs smaller than 16px */
 @media (max-width: 768px) {

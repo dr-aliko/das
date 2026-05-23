@@ -157,10 +157,12 @@
       <section>
         <div class="flex items-center justify-between mb-3">
           <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">{% trans "Son 30 Gün" %} · {{ exams.recent|length }} {% trans "deneme" %}</p>
-          {% if exams.recent|length and exams.recent|length < sparse_threshold %}
-            {% include "dashboard/partials/_denemeler_empty_states.html" with state="sparse_banner" %}
-          {% endif %}
         </div>
+        {% if exams.recent|length and exams.recent|length < sparse_threshold %}
+          <div class="max-w-prose-wide mx-auto mb-4">
+            {% include "dashboard/partials/_denemeler_empty_states.html" with state="sparse_banner" %}
+          </div>
+        {% endif %}
 
         <div class="max-w-prose-wide space-y-2">
           {% for exam in exams.recent %}

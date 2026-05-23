@@ -56,7 +56,8 @@
       "Bash(.venv/Scripts/python manage.py makemigrations users_app --name user_target_exam_dates)",
       "Bash(.venv/Scripts/python manage.py makemigrations curriculum_app --name initial)",
       "Bash(.venv/Scripts/python manage.py migrate --noinput)",
-      "Bash(.venv/Scripts/python -m pytest curriculum_app/tests/ -v --tb=short)"
+      "Bash(.venv/Scripts/python -m pytest curriculum_app/tests/ -v --tb=short)",
+      "PowerShell($css = Get-Content -Raw 'C:\\\\Users\\\\kayaa\\\\OneDrive\\\\Masaüstü\\\\Yeni klasör \\(2\\)\\\\projem\\\\static\\\\css\\\\tailwind.min.css'; foreach \\($name in @\\('bg-ink-950','bg-ink-900','bg-ink-850','bg-ink-800','bg-ink-750','border-ink-700','border-ink-600','text-ink-200','text-ink-300','text-ink-400','text-ink-500'\\)\\) { $pat = '\\\\.' + [regex]::Escape\\($name\\) + '\\\\{[^}]+\\\\}'; $m = [regex]::Match\\($css, $pat\\); if \\($m.Success\\) { Write-Output \\($name + ' => ' + $m.Value\\) } else { Write-Output \\($name + ' NOT FOUND'\\) } })"
     ]
   }
 }

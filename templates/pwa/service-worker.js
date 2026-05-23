@@ -1,7 +1,7 @@
 {% load static %}
 // Vagus — Service Worker
 // Bump CACHE_NAME on every deploy that changes precached assets.
-const CACHE_NAME = 'vagus-shell-v2';
+const CACHE_NAME = 'vagus-shell-v3';
 
 // Assets fetched and stored on install.
 // Only same-origin, version-stable resources belong here.
@@ -76,8 +76,28 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── Strategy 2: Same-origin static assets → Cache-first ─────────────────
-  // Serve from cache instantly; on miss, fetch from network and populate cache.
+  // ── Strategy 2a: Static CSS/JS → Network-first ──────────────────────────
+  // Theme/styling fixes ship via CSS deploys, so we must never pin a stale
+  // copy. Try the network; on success cache it; on failure (offline) fall
+  // back to whatever we have cached.
+  if (url.pathname.startsWith('/static/') &&
+      (url.pathname.endsWith('.css') || url.pathname.endsWith('.js'))) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // ── Strategy 2b: Other same-origin static assets → Cache-first ──────────
+  // Images, fonts, icons — version-stable, safe to serve from cache instantly.
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(
       caches.match(request).then(cached => {
