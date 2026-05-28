@@ -1,0 +1,3 @@
+<!-- Shared head + components for all Vagus marketing pages.
+     Each page imports tokens via inline <script>tailwind.config</script>
+     and links to vagus-site/site.css for shared component styles. -->

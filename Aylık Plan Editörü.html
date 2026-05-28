@@ -1,0 +1,1909 @@
+<!doctype html>
+<html lang="tr" class="das-theme-dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DAS · Aylık Plan Editörü</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+      colors: {
+        ink: { 950:'#0a0e14',900:'#0f141c',850:'#131820',800:'#1a2030',
+               750:'#222a3c',700:'#2a3142',600:'#3a4356',500:'#5b6477',
+               400:'#94a3b8',200:'#cbd5e1',100:'#e8ecf3',50:'#ffffff' },
+        steel: { 300:'#9ec5f5',400:'#6ba8f0',500:'#4a90e2',600:'#3a7fce',
+                 700:'#2c66ad',tint:'rgba(74,144,226,0.12)' },
+        emerald: { 500:'#10b981', tint:'rgba(16,185,129,0.12)' },
+        ruby:    { 500:'#ef4444', tint:'rgba(239,68,68,0.12)' },
+        amber:   { 500:'#f59e0b', tint:'rgba(245,158,11,0.12)' },
+      },
+      maxWidth: { page:'1440px' },
+      boxShadow: {
+        card:    '0 1px 0 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.4)',
+        'card-lg':'0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.5)',
+        drag:    '0 24px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(74,144,226,0.4)',
+      },
+    }}
+  };
+</script>
+<style>
+  html, body { background:#06080c; color:#e8ecf3;
+    font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+    font-feature-settings:'cv02','cv11','tnum'; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Subject colors — reused from DAS canonical palette */
+  :root {
+    --mat:#A78BFA; --fizik:#22d3ee; --kimya:#fb923c; --biyo:#10B981;
+    --turkce:#3B82F6; --geo:#fb7185; --tarih:#f87171; --cog:#34d399;
+    --felsefe:#facc15; --din:#a3e635;
+  }
+
+  /* Demo-page chrome only */
+  .demo-section { scroll-margin-top: 32px; }
+  .demo-label {
+    font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+    color:#5b6477; padding:48px 0 14px;
+  }
+  .demo-divider {
+    height:1px; margin:40px 0 0;
+    background:linear-gradient(90deg, transparent, #2a3142 30%, #2a3142 70%, transparent);
+  }
+  .demo-h {
+    font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+    color:#6ba8f0; padding:0 0 24px;
+  }
+
+  /* ── Topic card drag affordance ─────────────────────── */
+  .topic-card { cursor: grab; transition: transform 140ms cubic-bezier(.3,.7,.4,1), box-shadow 140ms; }
+  .topic-card:active { cursor: grabbing; }
+  .topic-card.dragging {
+    opacity: 0.4;
+  }
+  .topic-card.ghost-preview {
+    transform: rotate(-2deg) scale(1.02);
+    box-shadow: 0 24px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(74,144,226,0.4);
+    cursor: grabbing;
+  }
+
+  /* Drop zone hover states */
+  .drop-zone { transition: background-color 120ms, border-color 120ms; }
+  .drop-zone.drop-over {
+    background-color: rgba(74,144,226,0.06) !important;
+    border-color: #4a90e2 !important;
+  }
+  .drop-zone.drop-over .empty-hint { color: #6ba8f0 !important; }
+
+  /* Hide scrollbars on horizontal scrollers */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Custom scroll bar styling for vertical lists */
+  .das-scroll::-webkit-scrollbar { width: 6px; }
+  .das-scroll::-webkit-scrollbar-track { background: transparent; }
+  .das-scroll::-webkit-scrollbar-thumb { background: #2a3142; border-radius: 3px; }
+  .das-scroll::-webkit-scrollbar-thumb:hover { background: #3a4356; }
+
+  /* Phone frame (mobile screen preview) */
+  .phone {
+    width: 390px; height: 844px; flex-shrink: 0;
+    border-radius: 44px;
+    background: #06080c;
+    padding: 12px;
+    box-shadow:
+      0 0 0 10px #1a2030,
+      0 0 0 11px #2a3142,
+      0 40px 80px -20px rgba(0,0,0,0.8);
+    position: relative;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    border-radius: 32px;
+    background: #0a0e14;
+    overflow: hidden;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .phone-notch {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 32px; background: #06080c; border-radius: 999px;
+    z-index: 10;
+  }
+
+  /* DAS sidebar/header — mirror Phase 7 app bar */
+  .das-appbar {
+    height: 56px; background: #0f141c; border-bottom: 1px solid #2a3142;
+    display: flex; align-items: center; padding: 0 24px; gap: 24px;
+  }
+  .das-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; color: white; letter-spacing: -0.01em;
+  }
+  .das-logo-glyph {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: linear-gradient(135deg, #6ba8f0 0%, #2c66ad 100%);
+    position: relative;
+  }
+  .das-logo-glyph::after {
+    content:''; position: absolute; inset: 5px; border-radius: 3px; background: #0f141c;
+  }
+
+  /* "Yardımcı: drag-from-anywhere hint" subtle indicator pulse */
+  @keyframes pulse-hint {
+    0%, 100% { opacity: .35; }
+    50% { opacity: 1; }
+  }
+  .pulse-hint { animation: pulse-hint 1.6s ease-in-out infinite; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ════════════════════════════════════════════════════════════════════
+     Demo guide header (not part of the design — orienting label only)
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="border-b border-ink-700 bg-ink-900/60 backdrop-blur sticky top-0 z-50">
+  <div class="mx-auto max-w-page px-6 h-12 flex items-center gap-5 text-xs">
+    <span class="font-semibold text-white tracking-tight">Aylık Plan Editörü</span>
+    <span class="text-ink-500">DAS coach surface · production design</span>
+    <nav class="ml-auto flex items-center gap-1 text-ink-400">
+      <a href="#entry" class="px-2 py-1 rounded hover:bg-ink-800/60 hover:text-ink-100">Entry · Coach Dashboard</a>
+      <a href="#desktop" class="px-2 py-1 rounded hover:bg-ink-800/60 hover:text-ink-100">Editor</a>
+      <a href="#mobile" class="px-2 py-1 rounded hover:bg-ink-800/60 hover:text-ink-100">Mobile</a>
+      <a href="#states" class="px-2 py-1 rounded hover:bg-ink-800/60 hover:text-ink-100">States</a>
+      <a href="#notes" class="px-2 py-1 rounded hover:bg-ink-800/60 hover:text-ink-100">Notes</a>
+    </nav>
+  </div>
+</div>
+
+<main class="mx-auto max-w-page px-6 pb-24">
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     1. DESKTOP — LIVE INTERACTIVE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<!-- ENTRY POINT — Coach dashboard / student cards -->
+<section id="entry" class="demo-section">
+  <p class="demo-label">Entry point · coach dashboard — student cards open the editor</p>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden shadow-card-lg">
+
+    <!-- DAS app shell — unchanged from existing coach panel -->
+    <div class="das-appbar">
+      <a href="#" class="das-logo"><span class="das-logo-glyph"></span>DAS</a>
+      <nav class="flex items-center gap-1 text-sm">
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg bg-ink-800 text-white font-medium">Öğrenciler</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Görevler</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Branş</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Davet</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-3">
+        <button class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-ink-400 hover:bg-ink-800/60 hover:text-white">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </button>
+        <div class="flex items-center gap-2 pl-3 border-l border-ink-700">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 text-[11px] font-semibold flex items-center justify-center text-white">AK</div>
+          <span class="text-sm text-ink-200 font-medium">Ali Kaya</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page header (coach dashboard) -->
+    <div class="px-8 pt-8 pb-5 border-b border-ink-700">
+      <div class="flex items-end justify-between gap-6">
+        <div>
+          <h1 class="text-2xl font-semibold text-white tracking-tight">Öğrencilerim</h1>
+          <p class="text-sm text-ink-400 mt-1">3 aktif · plan durumları aşağıda. "Aylık Planı Düzenle" ile editor açılır.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input type="text" placeholder="Öğrenci ara..." class="h-9 w-64 pl-9 pr-3 rounded-lg bg-ink-850 border border-ink-700 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500" />
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <button class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold">+ Davet Gönder</button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 mt-5">
+        <button class="h-8 px-3 rounded-full text-xs font-semibold bg-steel-tint border border-steel-500 text-steel-300">Tümü <span class="ml-1 tnum">3</span></button>
+        <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 align-middle"></span>Taslak <span class="ml-1 text-ink-500 tnum">1</span>
+        </button>
+        <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle"></span>Onaylandı <span class="ml-1 text-ink-500 tnum">1</span>
+        </button>
+        <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-steel-400 mr-1.5 align-middle"></span>Haftalık Aktif <span class="ml-1 text-ink-500 tnum">1</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Student cards grid — 3 status variants -->
+    <div class="p-6">
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- Card 1 · Mehmet · Taslak — the one the editor opens for -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 hover:border-ink-600 transition-colors overflow-hidden">
+          <div class="p-4 border-b border-ink-700">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white font-semibold">MY</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h3 class="font-semibold text-ink-100 truncate">Mehmet Yılmaz</h3>
+                  <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-tint text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Taslak
+                  </span>
+                </div>
+                <p class="text-xs text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 space-y-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-steel-400">TYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Haz – 01 Eki</p>
+              </div>
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-emerald-500">AYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Eki – 01 Mar</p>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">TYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">42%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-steel-500 rounded-full" style="width:42%"></div></div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">AYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">18%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:18%"></div></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[10px] text-ink-500 pt-1">
+              <span class="inline-flex items-center gap-1">
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Son düzenleme: 2 saat önce
+              </span>
+              <span class="text-amber-500 font-semibold">3 uyarı</span>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-ink-700 bg-ink-900/40">
+            <a href="#desktop" class="block w-full text-center h-9 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold leading-9 ring-1 ring-steel-400/40">
+              Aylık Planı Düzenle →
+            </a>
+            <div class="flex items-center gap-1 mt-2">
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Haftalık Plan</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Plan Durumu</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Detay</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 · Ahmet · Onaylandı -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 hover:border-ink-600 transition-colors overflow-hidden">
+          <div class="p-4 border-b border-ink-700">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500/60 to-emerald-500/20 flex items-center justify-center text-emerald-500 font-semibold">AY</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h3 class="font-semibold text-ink-100 truncate">Ahmet Yılmaz</h3>
+                  <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-tint text-emerald-500 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Onaylandı
+                  </span>
+                </div>
+                <p class="text-xs text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 space-y-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-steel-400">TYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Haz – 01 Eki</p>
+              </div>
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-emerald-500">AYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Eki – 01 Mar</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">TYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">68%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-steel-500 rounded-full" style="width:68%"></div></div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">AYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">35%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:35%"></div></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-ink-500 pt-1">
+              <span class="inline-flex items-center gap-1">
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Son düzenleme: dün
+              </span>
+              <span class="text-emerald-500 font-semibold">Uyarı yok</span>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-ink-700 bg-ink-900/40">
+            <a href="#desktop" class="block w-full text-center h-9 rounded-lg bg-ink-800 border border-ink-700 text-ink-100 text-sm font-semibold leading-9 hover:bg-ink-750">
+              Aylık Planı Düzenle
+            </a>
+            <div class="flex items-center gap-1 mt-2">
+              <button class="flex-1 h-8 rounded-md bg-steel-tint border border-steel-500/40 text-steel-300 text-[11px] font-semibold hover:bg-steel-500/20">Haftalık Oluştur →</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Plan Durumu</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Detay</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 · Aslı · Haftalık Aktif -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 hover:border-ink-600 transition-colors overflow-hidden">
+          <div class="p-4 border-b border-ink-700">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-full bg-gradient-to-br from-steel-500/60 to-steel-500/20 flex items-center justify-center text-steel-300 font-semibold">AD</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h3 class="font-semibold text-ink-100 truncate">Aslı Demir</h3>
+                  <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-steel-tint text-steel-300 text-[10px] font-bold uppercase tracking-wider border border-steel-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-steel-400"></span>Haftalık Aktif
+                  </span>
+                </div>
+                <p class="text-xs text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 space-y-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-steel-400">TYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Haz – 01 Eki</p>
+              </div>
+              <div class="rounded-md bg-ink-800 border border-ink-700 px-2.5 py-1.5">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-emerald-500">AYT</p>
+                <p class="text-[11px] text-ink-200 font-medium mt-0.5 tnum">01 Eki – 01 Mar</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">TYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">81%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-steel-500 rounded-full" style="width:81%"></div></div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-ink-400 font-medium">AYT ilerleme</span>
+                  <span class="text-ink-100 font-semibold tnum">54%</span>
+                </div>
+                <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:54%"></div></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-ink-500 pt-1">
+              <span class="inline-flex items-center gap-1">
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Haftalık akıyor: bu hafta
+              </span>
+              <span class="text-emerald-500 font-semibold">Öğrenci aktif</span>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-ink-700 bg-ink-900/40">
+            <a href="#desktop" class="block w-full text-center h-9 rounded-lg bg-ink-800 border border-ink-700 text-ink-100 text-sm font-semibold leading-9 hover:bg-ink-750">
+              Yol Haritasını Düzenle
+            </a>
+            <div class="flex items-center gap-1 mt-2">
+              <button class="flex-1 h-8 rounded-md bg-steel-tint border border-steel-500/40 text-steel-300 text-[11px] font-semibold hover:bg-steel-500/20">Haftalık Plan</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Plan Durumu</button>
+              <button class="flex-1 h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium hover:bg-ink-750">Detay</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Annotation pointing at the entry CTA -->
+      <div class="mt-5 px-4 py-3 rounded-lg bg-steel-tint border border-steel-500/30 flex items-center gap-3">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-steel-400 shrink-0"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <p class="text-xs text-steel-300">
+          <strong class="text-white">Entry point:</strong> Aylık Plan Editörü opens from the primary CTA on each student card. No new sidebar item. The editor (next section) inherits the student context from this card.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- EDITOR — opened from a student card; breadcrumb reflects the path -->
+<section id="desktop" class="demo-section">
+  <p class="demo-label">Editor · desktop 1440px · opened from Mehmet Yılmaz's card</p>
+
+  <!-- Rounded "browser window" wrapper to frame the design -->
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden shadow-card-lg">
+
+    <!-- ── DAS app shell — sidebar + appbar ─────────────────────────── -->
+    <div class="das-appbar">
+      <a href="#" class="das-logo">
+        <span class="das-logo-glyph"></span>
+        DAS
+      </a>
+      <nav class="flex items-center gap-1 text-sm">
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg bg-ink-800 text-white font-medium">Öğrenciler</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Görevler</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Branş</a>
+        <a href="#" class="px-3 h-9 inline-flex items-center rounded-lg text-ink-300 hover:bg-ink-800/60 hover:text-white">Davet</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-3">
+        <button class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-ink-400 hover:bg-ink-800/60 hover:text-white">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </button>
+        <div class="flex items-center gap-2 pl-3 border-l border-ink-700">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 text-[11px] font-semibold flex items-center justify-center text-white">AK</div>
+          <span class="text-sm text-ink-200 font-medium">Ali Kaya</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Page header strip ───────────────────────────────────────── -->
+    <div class="px-8 pt-8 pb-6 border-b border-ink-700 bg-gradient-to-b from-ink-900/30 to-transparent">
+      <div class="flex items-start gap-6">
+        <!-- Title block -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 text-xs text-ink-500 mb-2">
+            <a href="#entry" class="hover:text-ink-200">Koç Paneli</a>
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <a href="#entry" class="hover:text-ink-200">Öğrenciler</a>
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <a href="#" class="hover:text-ink-200">Mehmet Yılmaz</a>
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span class="text-ink-300">Aylık Plan Editörü</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-semibold text-white tracking-tight">Aylık Plan Editörü</h1>
+            <span class="px-2 py-0.5 rounded-full bg-amber-tint text-amber-500 text-[11px] font-bold uppercase tracking-wider border border-amber-500/30">Taslak</span>
+          </div>
+          <p class="text-sm text-ink-400 mt-1.5 max-w-2xl">Konuları ders ders seç, aylara sürükle ve öğrencinin yol haritasını oluştur.</p>
+
+          <!-- Student + window strip -->
+          <div class="mt-4 flex items-center gap-3 flex-wrap">
+            <div class="inline-flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 text-[11px] font-semibold flex items-center justify-center text-white">MY</div>
+              <div class="text-left">
+                <div class="text-xs font-semibold text-ink-100 leading-tight">Mehmet Yılmaz</div>
+                <div class="text-[10px] text-ink-500 leading-tight">12. Sınıf · Sayısal</div>
+              </div>
+            </div>
+
+            <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+              <span class="text-[10px] font-bold tracking-wider text-steel-400 uppercase">TYT Penceresi</span>
+              <span class="text-xs text-ink-200 font-medium tnum">01 Haz 2026 — 01 Eki 2026</span>
+              <span class="text-[10px] text-ink-500 tnum">· 4 ay</span>
+            </div>
+
+            <div class="inline-flex items-center gap-3 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+              <span class="text-[10px] font-bold tracking-wider text-emerald-500 uppercase">AYT Penceresi</span>
+              <span class="text-xs text-ink-200 font-medium tnum">01 Eki 2026 — 01 Mar 2027</span>
+              <span class="text-[10px] text-ink-500 tnum">· 5 ay</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action cluster -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button class="h-9 px-3 rounded-lg bg-ink-850 border border-ink-700 text-sm text-ink-200 hover:bg-ink-800 font-medium inline-flex items-center gap-1.5">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Kaydet
+          </button>
+          <button class="h-9 px-3.5 rounded-lg bg-emerald-tint border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/20 text-sm font-semibold inline-flex items-center gap-1.5">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Yol Haritasını Onayla
+          </button>
+          <button class="h-9 px-3.5 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold inline-flex items-center gap-1.5">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+            Haftalık Plana Dönüştür
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Sticky control bar ──────────────────────────────────────── -->
+    <div class="px-8 py-4 border-b border-ink-700 bg-ink-950/95 backdrop-blur sticky top-12 z-20">
+      <div class="flex items-center gap-4 flex-wrap">
+
+        <!-- TYT/AYT segmented -->
+        <div class="inline-flex bg-ink-850 border border-ink-700 rounded-lg p-0.5" role="tablist">
+          <button class="px-4 h-8 rounded-md text-xs font-semibold text-ink-300 hover:text-white">TYT</button>
+          <button class="px-4 h-8 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30">AYT</button>
+        </div>
+
+        <!-- Subject chips -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button class="h-8 px-3 rounded-full text-xs font-semibold bg-steel-tint text-steel-300 border border-steel-500/50 inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--mat)"></span>
+            Matematik
+          </button>
+          <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 text-ink-300 border border-ink-700 hover:bg-ink-800 inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--fizik)"></span>
+            Fizik
+          </button>
+          <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 text-ink-300 border border-ink-700 hover:bg-ink-800 inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--kimya)"></span>
+            Kimya
+          </button>
+          <button class="h-8 px-3 rounded-full text-xs font-medium bg-ink-850 text-ink-300 border border-ink-700 hover:bg-ink-800 inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--biyo)"></span>
+            Biyoloji
+          </button>
+        </div>
+
+        <!-- Search -->
+        <div class="relative ml-2">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" placeholder="Konu ara..." class="h-8 w-56 pl-9 pr-3 rounded-lg bg-ink-850 border border-ink-700 text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500" />
+        </div>
+
+        <!-- Metrics -->
+        <div class="ml-auto flex items-center gap-1.5">
+          <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-ink-500"></span>
+            <span class="text-[11px] text-ink-400 font-medium">Planlanmamış</span>
+            <span class="text-xs font-bold text-ink-100 tnum">4</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-steel-tint border border-steel-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-steel-400"></span>
+            <span class="text-[11px] text-steel-300 font-medium">Planlanan</span>
+            <span class="text-xs font-bold text-steel-300 tnum">7</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-[11px] text-ink-400 font-medium">Halledilmiş</span>
+            <span class="text-xs font-bold text-ink-100 tnum">1</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="text-ink-500"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span class="text-[11px] text-ink-400 font-medium">Toplam saat</span>
+            <span class="text-xs font-bold text-ink-100 tnum">94</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         3-COLUMN WORKSPACE
+         left: Konu Havuzu · center: Aylar · right: Halledilmiş + Uyarılar
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-12 gap-5 px-8 py-6" id="workspace">
+
+      <!-- ── LEFT · Konu Havuzu ──────────────────────────────────── -->
+      <aside class="col-span-3">
+        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+          <div class="px-4 py-3 border-b border-ink-700">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold text-white">Konu Havuzu</h2>
+              <span class="text-[10px] font-bold text-ink-400 bg-ink-800 px-2 py-0.5 rounded-full tnum">4</span>
+            </div>
+            <p class="text-[11px] text-ink-500 mt-0.5 leading-snug">Seçili dersin henüz planlanmamış konuları.</p>
+          </div>
+
+          <div id="pool" class="drop-zone p-3 space-y-2 min-h-[480px] das-scroll overflow-y-auto"
+               style="max-height: calc(100vh - 100px)"
+               data-dropzone="pool">
+
+            <!-- Topic card template -->
+            <div class="topic-card rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750"
+                 draggable="true" data-topic="trigonometri" data-hours="10">
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 text-ink-500 hover:text-ink-300">
+                  <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-ink-100 leading-snug">Trigonometri</div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-400 font-medium tnum">10 saat</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek Öncelik</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded">Bağlayıcı</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="topic-card rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750"
+                 draggable="true" data-topic="logaritma" data-hours="6">
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 text-ink-500"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-ink-100">Logaritma</div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-400 font-medium tnum">6 saat</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="topic-card rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750"
+                 draggable="true" data-topic="diziler" data-hours="6">
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 text-ink-500"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-ink-100">Diziler</div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-400 font-medium tnum">6 saat</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="topic-card rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750"
+                 draggable="true" data-topic="integral" data-hours="14">
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 text-ink-500"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-ink-100">İntegral</div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-400 font-medium tnum">14 saat</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek Öncelik</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drop indicator (visible during drag) -->
+            <div class="empty-hint text-[11px] text-ink-600 text-center py-3 italic">
+              veya buraya geri sürükle
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── CENTER · Monthly board ──────────────────────────────── -->
+      <div class="col-span-6">
+        <div class="flex items-center justify-between mb-3 px-0.5">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-white">Aylık Yol Haritası</h2>
+            <span class="text-[11px] text-ink-500">· AYT penceresi (5 ay)</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="w-7 h-7 rounded-md hover:bg-ink-800 text-ink-400 hover:text-white flex items-center justify-center"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button class="w-7 h-7 rounded-md hover:bg-ink-800 text-ink-400 hover:text-white flex items-center justify-center"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3" id="months">
+
+          <!-- Eylül -->
+          <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+            <div class="px-3.5 py-2.5 border-b border-ink-700">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-white">Eylül 2026</h3>
+                  <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 rounded">TYT + AYT</span>
+                </div>
+                <span class="text-[10px] text-ink-500 tnum">2 konu · 16s</span>
+              </div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">01 Eyl — 30 Eyl</div>
+            </div>
+            <div class="drop-zone p-2.5 space-y-2 min-h-[180px]" data-dropzone="eylul-2026">
+
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="fonksiyonlar" data-hours="8" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Fonksiyonlar</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+                  </div>
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded shrink-0">Bağlayıcı</span>
+                </div>
+              </div>
+
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="polinomlar" data-hours="8" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Polinomlar</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+                  </div>
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded shrink-0">Bağlayıcı</span>
+                </div>
+              </div>
+
+              <div class="empty-hint text-[11px] text-ink-600 text-center py-3 italic">Bu aya konu sürükle</div>
+            </div>
+          </div>
+
+          <!-- Ekim -->
+          <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+            <div class="px-3.5 py-2.5 border-b border-ink-700">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-white">Ekim 2026</h3>
+                  <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                </div>
+                <span class="text-[10px] text-ink-500 tnum">2 konu · 16s</span>
+              </div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">01 Eki — 31 Eki</div>
+            </div>
+            <div class="drop-zone p-2.5 space-y-2 min-h-[180px]" data-dropzone="ekim-2026">
+
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="ikinciderecedenklemler" data-hours="8" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">2. Dereceden Denk. ve Eşitsizlikler</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="parabol" data-hours="8" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Parabol</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kasım -->
+          <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+            <div class="px-3.5 py-2.5 border-b border-ink-700">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-white">Kasım 2026</h3>
+                  <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                </div>
+                <span class="text-[10px] text-ink-500 tnum">2 konu · 18s</span>
+              </div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">01 Kas — 30 Kas</div>
+            </div>
+            <div class="drop-zone p-2.5 space-y-2 min-h-[180px]" data-dropzone="kasim-2026">
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="permolasilik" data-hours="10" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Perm.-Komb.-Olasılık – Binom</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">10 saat</div>
+                  </div>
+                </div>
+              </div>
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="limit" data-hours="8" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Limit</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+                  </div>
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded shrink-0">Bağlayıcı</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aralık · with warning indicator -->
+          <div class="rounded-xl border border-amber-500/40 bg-ink-850 overflow-hidden ring-1 ring-amber-500/20">
+            <div class="px-3.5 py-2.5 border-b border-ink-700 bg-amber-tint/30">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-white">Aralık 2026</h3>
+                  <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500" title="Yoğunluk uyarısı"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <span class="text-[10px] text-amber-500 font-semibold tnum">1 konu · 14s · yoğun</span>
+              </div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">01 Ara — 31 Ara</div>
+            </div>
+            <div class="drop-zone p-2.5 space-y-2 min-h-[180px]" data-dropzone="aralik-2026">
+              <div class="topic-card rounded-lg border-l-2 border-ink-700 bg-ink-800 p-2.5 hover:bg-ink-750" draggable="true" data-topic="turev" data-hours="14" style="border-left-color:var(--mat)">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-ink-100 leading-snug">Türev</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">14 saat</div>
+                  </div>
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded shrink-0">Yüksek</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ocak -->
+          <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden col-span-2">
+            <div class="px-3.5 py-2.5 border-b border-ink-700">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-white">Ocak 2027</h3>
+                  <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                </div>
+                <span class="text-[10px] text-ink-500 tnum">0 konu · 0s</span>
+              </div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">01 Oca — 31 Oca · son AYT ayı</div>
+            </div>
+            <div class="drop-zone p-3 min-h-[88px] flex items-center justify-center" data-dropzone="ocak-2027">
+              <div class="empty-hint text-[11px] text-ink-600 italic">Bu aya konu sürükle</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── RIGHT · Halledilmiş + Uyarılar ──────────────────────── -->
+      <aside class="col-span-3 space-y-4">
+
+        <!-- Halledilmiş -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+          <div class="px-4 py-3 border-b border-ink-700">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-white">Halledilmiş / Gerek Yok</h2>
+              </div>
+              <span class="text-[10px] font-bold text-ink-400 bg-ink-800 px-2 py-0.5 rounded-full tnum">1</span>
+            </div>
+            <p class="text-[11px] text-ink-500 mt-0.5 leading-snug">Öğrencinin bildiği veya plana alınmayacak konuları buraya bırak.</p>
+          </div>
+          <div class="drop-zone p-3 space-y-2 min-h-[140px]" data-dropzone="resolved">
+
+            <div class="topic-card rounded-lg border border-ink-700 bg-ink-900/60 p-2.5 opacity-75 hover:opacity-100 hover:bg-ink-850" draggable="true" data-topic="karmasik" data-hours="8">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-medium text-ink-300 line-through decoration-ink-600">Karmaşık Sayılar</div>
+                  <div class="flex items-center gap-1.5 mt-1">
+                    <span class="text-[10px] text-ink-500">AYT Mat. · 8s</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-ink-700 text-ink-400 px-1.5 py-0.5 rounded">Gerek Yok</span>
+                  </div>
+                </div>
+                <button class="text-ink-500 hover:text-steel-400" title="Plana geri al">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="empty-hint text-[11px] text-ink-600 text-center py-2 italic">veya konu sürükle</div>
+          </div>
+        </div>
+
+        <!-- Plan Uyarıları -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+          <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-semibold text-white">Plan Uyarıları</h2>
+            </div>
+            <span class="text-[10px] font-bold text-amber-500 bg-amber-tint px-2 py-0.5 rounded-full tnum">3</span>
+          </div>
+          <div class="p-2 space-y-1.5">
+
+            <!-- Prereq warning -->
+            <div class="p-2.5 rounded-lg bg-ink-800/60 border-l-2 border-amber-500 hover:bg-ink-800">
+              <div class="flex items-start gap-2">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-amber-500">Ön Koşul</p>
+                  <p class="text-xs text-ink-200 mt-0.5 leading-snug">Türev için <strong class="text-white">Limit</strong> ön koşulu kontrol edilmeli.</p>
+                  <div class="flex items-center gap-2 mt-1.5">
+                    <button class="text-[10px] text-steel-400 hover:text-steel-300 font-semibold">Düzelt →</button>
+                    <button class="text-[10px] text-ink-500 hover:text-ink-300">Yoksay</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Overload warning -->
+            <div class="p-2.5 rounded-lg bg-ink-800/60 border-l-2 border-amber-500 hover:bg-ink-800">
+              <div class="flex items-start gap-2">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-amber-500">Yoğunluk</p>
+                  <p class="text-xs text-ink-200 mt-0.5 leading-snug"><strong class="text-white">Aralık</strong> ayının yoğunluğu yüksek olabilir.</p>
+                  <div class="flex items-center gap-2 mt-1.5">
+                    <button class="text-[10px] text-steel-400 hover:text-steel-300 font-semibold">Aralık'a git →</button>
+                    <button class="text-[10px] text-ink-500 hover:text-ink-300">Yoksay</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skipped warning -->
+            <div class="p-2.5 rounded-lg bg-ink-800/60 border-l-2 border-ink-600 hover:bg-ink-800">
+              <div class="flex items-start gap-2">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-ink-400 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-ink-400">Bilgi</p>
+                  <p class="text-xs text-ink-200 mt-0.5 leading-snug"><strong class="text-white">Karmaşık Sayılar</strong> "Gerek Yok" olarak işaretlenmiş.</p>
+                  <div class="flex items-center gap-2 mt-1.5">
+                    <button class="text-[10px] text-steel-400 hover:text-steel-300 font-semibold">Plana geri al</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Plan kapasitesi mini-widget -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+          <h2 class="text-sm font-semibold text-white">Plan Kapasitesi</h2>
+          <div class="mt-3 space-y-2">
+            <div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-ink-400">Toplam saat</span>
+                <span class="text-ink-100 font-semibold tnum">94 / 160</span>
+              </div>
+              <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-steel-500 to-steel-400 rounded-full" style="width:59%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-ink-400">Konular</span>
+                <span class="text-ink-100 font-semibold tnum">7 / 12</span>
+              </div>
+              <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden">
+                <div class="h-full bg-emerald-500 rounded-full" style="width:58%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Note under desktop -->
+  <p class="text-xs text-ink-500 mt-3 max-w-2xl">
+    <strong class="text-ink-300">Try it:</strong> drag any topic between Konu Havuzu, the month columns, and Halledilmiş. Drop zones highlight in steel-blue as you hover. Card lifts with shadow during drag.
+  </p>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     2. STATES — additional desktop variations (smaller framed views)
+     ═════════════════════════════════════════════════════════════════════════ -->
+<section id="states" class="demo-section">
+  <p class="demo-label">Desktop state · drag focus</p>
+
+  <div class="grid grid-cols-2 gap-4">
+
+    <!-- State A: card being dragged over month column -->
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden shadow-card">
+      <div class="px-4 py-2.5 border-b border-ink-700 flex items-center justify-between">
+        <div class="flex items-center gap-2 text-[11px] font-semibold text-ink-400 uppercase tracking-wider">
+          <span class="w-1.5 h-1.5 rounded-full bg-steel-400 pulse-hint"></span>
+          Drag-focused state
+        </div>
+        <span class="text-[10px] text-ink-500">topic being dragged · target highlighted</span>
+      </div>
+      <div class="p-4 grid grid-cols-2 gap-3 relative">
+
+        <!-- Source: pool with one card faded -->
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-2.5">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-2 px-1">Konu Havuzu</div>
+          <div class="space-y-2">
+            <div class="rounded-lg border border-ink-700 bg-ink-800 p-2.5 opacity-30">
+              <div class="text-xs font-semibold text-ink-100">Trigonometri</div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">10 saat</div>
+            </div>
+            <div class="rounded-lg border border-ink-700 bg-ink-800 p-2.5">
+              <div class="text-xs font-semibold text-ink-100">Logaritma</div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">6 saat</div>
+            </div>
+            <div class="rounded-lg border border-ink-700 bg-ink-800 p-2.5">
+              <div class="text-xs font-semibold text-ink-100">İntegral</div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">14 saat</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target: month column with drop indicator -->
+        <div class="rounded-xl border-2 border-steel-500 bg-steel-tint p-2.5" style="background-color: rgba(74,144,226,0.08);">
+          <div class="flex items-center justify-between mb-2 px-1">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-steel-300">Eylül 2026</div>
+            <span class="text-[9px] text-steel-400">DROP HERE</span>
+          </div>
+          <div class="space-y-2">
+            <div class="rounded-lg border-l-2 bg-ink-800 p-2.5" style="border-left-color:var(--mat)">
+              <div class="text-xs font-semibold text-ink-100">Fonksiyonlar</div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+            </div>
+            <div class="rounded-lg border-l-2 bg-ink-800 p-2.5" style="border-left-color:var(--mat)">
+              <div class="text-xs font-semibold text-ink-100">Polinomlar</div>
+              <div class="text-[10px] text-ink-500 mt-0.5 tnum">8 saat</div>
+            </div>
+            <div class="h-12 rounded-lg border border-dashed border-steel-500/60 flex items-center justify-center">
+              <span class="text-[10px] text-steel-300 font-semibold">Trigonometri burada bırak</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating dragged card (positioned absolute, simulated mid-drag) -->
+        <div class="absolute top-20 left-1/2 -translate-x-4 pointer-events-none rotate-[-3deg]" style="filter: drop-shadow(0 24px 32px rgba(0,0,0,0.6));">
+          <div class="rounded-lg border bg-ink-800 p-2.5 w-44" style="border-color: #4a90e2; box-shadow: 0 0 0 1px rgba(74,144,226,0.6);">
+            <div class="text-xs font-semibold text-ink-100">Trigonometri</div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[10px] text-ink-500">AYT Mat.</span>
+              <span class="text-ink-700">·</span>
+              <span class="text-[10px] text-ink-400 font-medium tnum">10 saat</span>
+            </div>
+            <div class="mt-1.5">
+              <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State B: heavy warnings panel -->
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden shadow-card">
+      <div class="px-4 py-2.5 border-b border-ink-700 flex items-center justify-between">
+        <div class="flex items-center gap-2 text-[11px] font-semibold text-ink-400 uppercase tracking-wider">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+          Warnings populated
+        </div>
+        <span class="text-[10px] text-ink-500">5 advisory items · non-blocking</span>
+      </div>
+      <div class="p-4">
+        <div class="rounded-xl border border-ink-700 bg-ink-850">
+          <div class="px-3.5 py-2.5 border-b border-ink-700 flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-white">Plan Uyarıları</h3>
+            <span class="text-[10px] font-bold text-amber-500 bg-amber-tint px-2 py-0.5 rounded-full tnum">5</span>
+          </div>
+          <div class="p-2 space-y-1.5 text-xs">
+            <div class="p-2 rounded-lg bg-ink-800/60 border-l-2 border-ruby-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-ruby-500 mb-0.5">Eksik Ders</div>
+              <p class="text-ink-200 leading-snug"><strong class="text-white">Fizik</strong> hiçbir aya planlanmamış.</p>
+            </div>
+            <div class="p-2 rounded-lg bg-ink-800/60 border-l-2 border-amber-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-0.5">Ön Koşul</div>
+              <p class="text-ink-200 leading-snug">Türev için <strong class="text-white">Limit</strong> ön koşulu kontrol edilmeli.</p>
+            </div>
+            <div class="p-2 rounded-lg bg-ink-800/60 border-l-2 border-amber-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-0.5">Yoğunluk</div>
+              <p class="text-ink-200 leading-snug">Aralık ayı 28+ saat — kapasiteyi aşıyor olabilir.</p>
+            </div>
+            <div class="p-2 rounded-lg bg-ink-800/60 border-l-2 border-amber-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-0.5">Yüksek Verim</div>
+              <p class="text-ink-200 leading-snug"><strong class="text-white">Türev</strong> AYT'de yüksek puanlı — plana alınmalı.</p>
+            </div>
+            <div class="p-2 rounded-lg bg-ink-800/60 border-l-2 border-ink-600">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-0.5">Bilgi</div>
+              <p class="text-ink-200 leading-snug">Karmaşık Sayılar "Gerek Yok" olarak işaretlenmiş.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     3. MOBILE — four phone frames showing four tab states
+     ═════════════════════════════════════════════════════════════════════════ -->
+<section id="mobile" class="demo-section">
+  <p class="demo-label">Mobile · 390 × 844 · entry → editor → bottom sheet → warnings</p>
+
+  <div class="overflow-x-auto pb-6">
+    <div class="flex gap-6 items-start" style="min-width: max-content;">
+
+      <!-- ─────────── Phone 0 · Coach mobile — student cards entry ─────────── -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+
+            <div class="h-11 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-white">
+              <span class="tnum">9:41</span>
+              <span class="flex items-center gap-1">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx="0.5"/><rect x="3.5" y="4" width="2.5" height="6" rx="0.5"/><rect x="7" y="2" width="2.5" height="8" rx="0.5"/><rect x="10.5" y="0" width="2.5" height="10" rx="0.5"/></svg>
+                <svg width="20" height="10" viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="18" height="9" rx="2"/><rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor"/><rect x="19" y="3" width="2" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+
+            <!-- App bar -->
+            <div class="px-4 pb-3 border-b border-ink-800">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="das-logo-glyph" style="width:22px;height:22px"></span>
+                  <span class="text-sm font-semibold text-white">Öğrencilerim</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button class="w-8 h-8 rounded-md hover:bg-ink-800 text-ink-300 flex items-center justify-center">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  </button>
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 text-[10px] font-semibold flex items-center justify-center text-white">AK</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status chips -->
+            <div class="px-3 py-2.5 border-b border-ink-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button class="shrink-0 h-7 px-2.5 rounded-full text-[10px] font-semibold bg-steel-tint border border-steel-500/50 text-steel-300">Tümü <span class="tnum">3</span></button>
+              <button class="shrink-0 h-7 px-2.5 rounded-full text-[10px] font-medium bg-ink-850 border border-ink-700 text-ink-300">
+                <span class="inline-block w-1 h-1 rounded-full bg-amber-500 mr-1 align-middle"></span>Taslak <span class="tnum">1</span>
+              </button>
+              <button class="shrink-0 h-7 px-2.5 rounded-full text-[10px] font-medium bg-ink-850 border border-ink-700 text-ink-300">
+                <span class="inline-block w-1 h-1 rounded-full bg-emerald-500 mr-1 align-middle"></span>Onaylandı <span class="tnum">1</span>
+              </button>
+              <button class="shrink-0 h-7 px-2.5 rounded-full text-[10px] font-medium bg-ink-850 border border-ink-700 text-ink-300">
+                <span class="inline-block w-1 h-1 rounded-full bg-steel-400 mr-1 align-middle"></span>Aktif <span class="tnum">1</span>
+              </button>
+            </div>
+
+            <!-- Student card list -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-3 das-scroll">
+
+              <!-- Mehmet · Taslak (the entry into editor) -->
+              <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden ring-1 ring-steel-500/20">
+                <div class="p-3 border-b border-ink-700">
+                  <div class="flex items-start gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-semibold">MY</div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-ink-100">Mehmet Yılmaz</h3>
+                        <span class="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-tint text-amber-500 text-[9px] font-bold uppercase tracking-wider border border-amber-500/30">
+                          <span class="w-1 h-1 rounded-full bg-amber-500"></span>Taslak
+                        </span>
+                      </div>
+                      <p class="text-[10px] text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="px-3 py-2.5 space-y-2">
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <div class="rounded-md bg-ink-800 border border-ink-700 px-2 py-1">
+                      <p class="text-[8px] font-bold uppercase tracking-wider text-steel-400">TYT</p>
+                      <p class="text-[10px] text-ink-200 font-medium tnum">01 Haz – 01 Eki</p>
+                    </div>
+                    <div class="rounded-md bg-ink-800 border border-ink-700 px-2 py-1">
+                      <p class="text-[8px] font-bold uppercase tracking-wider text-emerald-500">AYT</p>
+                      <p class="text-[10px] text-ink-200 font-medium tnum">01 Eki – 01 Mar</p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <div>
+                      <div class="flex items-center justify-between text-[9px]">
+                        <span class="text-ink-400">TYT</span>
+                        <span class="text-ink-100 font-semibold tnum">42%</span>
+                      </div>
+                      <div class="mt-0.5 h-1 rounded-full bg-ink-800"><div class="h-full bg-steel-500 rounded-full" style="width:42%"></div></div>
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between text-[9px]">
+                        <span class="text-ink-400">AYT</span>
+                        <span class="text-ink-100 font-semibold tnum">18%</span>
+                      </div>
+                      <div class="mt-0.5 h-1 rounded-full bg-ink-800"><div class="h-full bg-emerald-500 rounded-full" style="width:18%"></div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="px-3 py-2.5 border-t border-ink-700 bg-ink-900/40 space-y-1.5">
+                  <a href="#mobile" class="block w-full text-center h-9 rounded-md bg-steel-500 hover:bg-steel-400 text-white text-xs font-semibold leading-9 ring-1 ring-steel-400/40">
+                    Aylık Planı Düzenle →
+                  </a>
+                  <div class="flex items-center gap-1">
+                    <button class="flex-1 h-7 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[10px] font-medium">Haftalık</button>
+                    <button class="flex-1 h-7 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[10px] font-medium">Durum</button>
+                    <button class="flex-1 h-7 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[10px] font-medium">Detay</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ahmet · Onaylandı (compact) -->
+              <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+                <div class="p-3 border-b border-ink-700">
+                  <div class="flex items-start gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500/60 to-emerald-500/20 flex items-center justify-center text-emerald-500 text-xs font-semibold">AY</div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-ink-100">Ahmet Yılmaz</h3>
+                        <span class="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-tint text-emerald-500 text-[9px] font-bold uppercase tracking-wider border border-emerald-500/30">
+                          <span class="w-1 h-1 rounded-full bg-emerald-500"></span>Onay
+                        </span>
+                      </div>
+                      <p class="text-[10px] text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="px-3 py-2.5 space-y-1.5">
+                  <div>
+                    <div class="flex items-center justify-between text-[9px]"><span class="text-ink-400">TYT</span><span class="text-ink-100 font-semibold tnum">68%</span></div>
+                    <div class="mt-0.5 h-1 rounded-full bg-ink-800"><div class="h-full bg-steel-500 rounded-full" style="width:68%"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between text-[9px]"><span class="text-ink-400">AYT</span><span class="text-ink-100 font-semibold tnum">35%</span></div>
+                    <div class="mt-0.5 h-1 rounded-full bg-ink-800"><div class="h-full bg-emerald-500 rounded-full" style="width:35%"></div></div>
+                  </div>
+                </div>
+                <div class="px-3 py-2.5 border-t border-ink-700 bg-ink-900/40">
+                  <a href="#mobile" class="block w-full text-center h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-100 text-xs font-semibold leading-8">Aylık Planı Düzenle</a>
+                </div>
+              </div>
+
+              <!-- Aslı · Haftalık Aktif (compact) -->
+              <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+                <div class="p-3 border-b border-ink-700">
+                  <div class="flex items-start gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-steel-500/60 to-steel-500/20 flex items-center justify-center text-steel-300 text-xs font-semibold">AD</div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-ink-100">Aslı Demir</h3>
+                        <span class="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-steel-tint text-steel-300 text-[9px] font-bold uppercase tracking-wider border border-steel-500/30">
+                          <span class="w-1 h-1 rounded-full bg-steel-400"></span>Aktif
+                        </span>
+                      </div>
+                      <p class="text-[10px] text-ink-400 mt-0.5">12. Sınıf · Sayısal</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="px-3 py-2.5 space-y-1.5">
+                  <div>
+                    <div class="flex items-center justify-between text-[9px]"><span class="text-ink-400">TYT</span><span class="text-ink-100 font-semibold tnum">81%</span></div>
+                    <div class="mt-0.5 h-1 rounded-full bg-ink-800"><div class="h-full bg-steel-500 rounded-full" style="width:81%"></div></div>
+                  </div>
+                </div>
+                <div class="px-3 py-2.5 border-t border-ink-700 bg-ink-900/40">
+                  <a href="#mobile" class="block w-full text-center h-8 rounded-md bg-ink-800 border border-ink-700 text-ink-100 text-xs font-semibold leading-8">Yol Haritasını Düzenle</a>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="h-6 flex items-center justify-center pb-1">
+              <div class="w-32 h-1 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider">Entry · Öğrenci Kartları</span>
+      </div>
+
+      <!-- ─────────── Phone 1 · Konu Havuzu ─────────── -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+
+            <!-- Status bar -->
+            <div class="h-11 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-white">
+              <span class="tnum">9:41</span>
+              <span class="flex items-center gap-1">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx="0.5"/><rect x="3.5" y="4" width="2.5" height="6" rx="0.5"/><rect x="7" y="2" width="2.5" height="8" rx="0.5"/><rect x="10.5" y="0" width="2.5" height="10" rx="0.5"/></svg>
+                <svg width="20" height="10" viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="18" height="9" rx="2"/><rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor"/><rect x="19" y="3" width="2" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+
+            <!-- App bar -->
+            <div class="px-4 pb-3 border-b border-ink-800">
+              <div class="flex items-center justify-between">
+                <button class="w-9 h-9 rounded-lg hover:bg-ink-800 flex items-center justify-center text-ink-300">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </button>
+                <div class="text-center">
+                  <div class="text-sm font-semibold text-white">Aylık Plan</div>
+                  <div class="text-[10px] text-ink-500">Mehmet Y. · <span class="text-amber-500 font-bold">Taslak</span></div>
+                </div>
+                <button class="h-8 px-3 rounded-lg bg-steel-500 text-white text-xs font-semibold">Kaydet</button>
+              </div>
+            </div>
+
+            <!-- Controls: TYT/AYT + subject + search -->
+            <div class="px-4 py-3 space-y-2.5 border-b border-ink-800">
+              <div class="flex items-center gap-2">
+                <div class="flex bg-ink-850 border border-ink-700 rounded-lg p-0.5">
+                  <button class="px-3 h-7 rounded-md text-[11px] font-semibold text-ink-400">TYT</button>
+                  <button class="px-3 h-7 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30">AYT</button>
+                </div>
+                <button class="flex-1 h-7 px-3 rounded-lg bg-ink-850 border border-ink-700 text-[11px] text-ink-200 font-medium inline-flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background:var(--mat)"></span>
+                    Matematik
+                  </span>
+                  <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+              </div>
+              <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" placeholder="Konu ara..." class="w-full h-8 pl-8 pr-3 rounded-lg bg-ink-850 border border-ink-700 text-[11px] text-ink-100 placeholder:text-ink-500" />
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-ink-800 px-2 text-[11px]">
+              <button class="flex-1 py-2.5 font-semibold text-white border-b-2 border-steel-400">Havuz <span class="text-ink-500 tnum">(4)</span></button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Aylar <span class="text-ink-600 tnum">(5)</span></button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Halled. <span class="text-ink-600 tnum">(1)</span></button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400 inline-flex items-center justify-center gap-0.5">Uyarı <span class="text-amber-500 text-[10px] font-bold bg-amber-tint px-1.5 rounded-full">3</span></button>
+            </div>
+
+            <!-- Topic cards list -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-2 das-scroll">
+
+              <div class="rounded-lg border border-ink-700 bg-ink-850 p-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-white">Trigonometri</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                      <span class="text-ink-700">·</span>
+                      <span class="text-[10px] text-ink-400 tnum">10 saat</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-2">
+                      <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek</span>
+                      <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded">Bağlayıcı</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                  <button class="flex-1 h-8 rounded-md bg-steel-500 text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                    Aya Ekle
+                  </button>
+                  <button class="h-8 px-3 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium">Gerek Yok</button>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-ink-700 bg-ink-850 p-3">
+                <div class="text-sm font-semibold text-white">Logaritma</div>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                  <span class="text-ink-700">·</span>
+                  <span class="text-[10px] text-ink-400 tnum">6 saat</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                  <button class="flex-1 h-8 rounded-md bg-steel-500 text-white text-[11px] font-semibold">+ Aya Ekle</button>
+                  <button class="h-8 px-3 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium">Gerek Yok</button>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-ink-700 bg-ink-850 p-3">
+                <div class="text-sm font-semibold text-white">Diziler</div>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                  <span class="text-ink-700">·</span>
+                  <span class="text-[10px] text-ink-400 tnum">6 saat</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                  <button class="flex-1 h-8 rounded-md bg-steel-500 text-white text-[11px] font-semibold">+ Aya Ekle</button>
+                  <button class="h-8 px-3 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium">Gerek Yok</button>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-ink-700 bg-ink-850 p-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="text-sm font-semibold text-white">İntegral</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                      <span class="text-ink-700">·</span>
+                      <span class="text-[10px] text-ink-400 tnum">14 saat</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-2">
+                      <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                  <button class="flex-1 h-8 rounded-md bg-steel-500 text-white text-[11px] font-semibold">+ Aya Ekle</button>
+                  <button class="h-8 px-3 rounded-md bg-ink-800 border border-ink-700 text-ink-300 text-[11px] font-medium">Gerek Yok</button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Home indicator -->
+            <div class="h-6 flex items-center justify-center pb-1">
+              <div class="w-32 h-1 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider">Tab 1 · Konu Havuzu</span>
+      </div>
+
+      <!-- ─────────── Phone 2 · Aylar ─────────── -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="h-11 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-white">
+              <span class="tnum">9:41</span>
+              <span class="flex items-center gap-1">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx="0.5"/><rect x="3.5" y="4" width="2.5" height="6" rx="0.5"/><rect x="7" y="2" width="2.5" height="8" rx="0.5"/><rect x="10.5" y="0" width="2.5" height="10" rx="0.5"/></svg>
+                <svg width="20" height="10" viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="18" height="9" rx="2"/><rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor"/><rect x="19" y="3" width="2" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+
+            <div class="px-4 pb-3 border-b border-ink-800">
+              <div class="flex items-center justify-between">
+                <button class="w-9 h-9 rounded-lg hover:bg-ink-800 flex items-center justify-center text-ink-300">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </button>
+                <div class="text-center">
+                  <div class="text-sm font-semibold text-white">Aylık Plan</div>
+                  <div class="text-[10px] text-ink-500">Mehmet Y. · <span class="text-amber-500 font-bold">Taslak</span></div>
+                </div>
+                <button class="h-8 px-3 rounded-lg bg-steel-500 text-white text-xs font-semibold">Kaydet</button>
+              </div>
+            </div>
+
+            <div class="px-4 py-3 space-y-2.5 border-b border-ink-800">
+              <div class="flex items-center gap-2">
+                <div class="flex bg-ink-850 border border-ink-700 rounded-lg p-0.5">
+                  <button class="px-3 h-7 rounded-md text-[11px] font-semibold text-ink-400">TYT</button>
+                  <button class="px-3 h-7 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30">AYT</button>
+                </div>
+                <button class="flex-1 h-7 px-3 rounded-lg bg-ink-850 border border-ink-700 text-[11px] text-ink-200 font-medium inline-flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--mat)"></span>Matematik</span>
+                  <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex border-b border-ink-800 px-2 text-[11px]">
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Havuz <span class="text-ink-600 tnum">(4)</span></button>
+              <button class="flex-1 py-2.5 font-semibold text-white border-b-2 border-steel-400">Aylar <span class="text-ink-500 tnum">(5)</span></button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Halled. <span class="text-ink-600 tnum">(1)</span></button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400 inline-flex items-center justify-center gap-0.5">Uyarı <span class="text-amber-500 text-[10px] font-bold bg-amber-tint px-1.5 rounded-full">3</span></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 space-y-2.5 das-scroll">
+
+              <!-- Eylül -->
+              <div class="rounded-lg border border-ink-700 bg-ink-850 overflow-hidden">
+                <div class="px-3 py-2.5 border-b border-ink-800 flex items-center justify-between">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="text-xs font-semibold text-white">Eylül 2026</h3>
+                      <span class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 rounded">TYT+AYT</span>
+                    </div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">2 konu · 16s</div>
+                  </div>
+                </div>
+                <div class="p-2 space-y-1.5">
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-ink-800 border-l-2" style="border-color:var(--mat)">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100">Fonksiyonlar</div>
+                      <div class="text-[10px] text-ink-500 tnum">8 saat</div>
+                    </div>
+                    <button class="text-ink-500 hover:text-ink-200 w-7 h-7 flex items-center justify-center"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+                  </div>
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-ink-800 border-l-2" style="border-color:var(--mat)">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100">Polinomlar</div>
+                      <div class="text-[10px] text-ink-500 tnum">8 saat</div>
+                    </div>
+                    <button class="text-ink-500 hover:text-ink-200 w-7 h-7 flex items-center justify-center"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+                  </div>
+                  <button class="w-full mt-1 py-1.5 rounded-md border border-dashed border-ink-700 text-[10px] text-ink-500 hover:text-ink-200 hover:border-ink-600">+ Konu ekle</button>
+                </div>
+              </div>
+
+              <!-- Ekim -->
+              <div class="rounded-lg border border-ink-700 bg-ink-850 overflow-hidden">
+                <div class="px-3 py-2.5 border-b border-ink-800 flex items-center justify-between">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="text-xs font-semibold text-white">Ekim 2026</h3>
+                      <span class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                    </div>
+                    <div class="text-[10px] text-ink-500 mt-0.5 tnum">2 konu · 16s</div>
+                  </div>
+                </div>
+                <div class="p-2 space-y-1.5">
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-ink-800 border-l-2" style="border-color:var(--mat)">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100 truncate">2. Derece Denk.</div>
+                      <div class="text-[10px] text-ink-500 tnum">8 saat</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-ink-800 border-l-2" style="border-color:var(--mat)">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100">Parabol</div>
+                      <div class="text-[10px] text-ink-500 tnum">8 saat</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Aralık · warning -->
+              <div class="rounded-lg border border-amber-500/40 bg-ink-850 overflow-hidden ring-1 ring-amber-500/15">
+                <div class="px-3 py-2.5 border-b border-ink-800 flex items-center justify-between bg-amber-tint/30">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="text-xs font-semibold text-white">Aralık 2026</h3>
+                      <span class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    </div>
+                    <div class="text-[10px] text-amber-500 font-semibold mt-0.5 tnum">1 konu · 14s · yoğun</div>
+                  </div>
+                </div>
+                <div class="p-2 space-y-1.5">
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-ink-800 border-l-2" style="border-color:var(--mat)">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-medium text-ink-100">Türev</div>
+                      <div class="text-[10px] text-ink-500 tnum">14 saat</div>
+                    </div>
+                    <span class="text-[9px] font-bold uppercase bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Yüksek</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="h-6 flex items-center justify-center pb-1">
+              <div class="w-32 h-1 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider">Tab 2 · Aylar</span>
+      </div>
+
+      <!-- ─────────── Phone 3 · Bottom Sheet (Aya Ekle) ─────────── -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen relative">
+            <!-- Backdrop blur — show pool dimmed underneath -->
+            <div class="absolute inset-0">
+              <div class="h-11 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-white">
+                <span class="tnum">9:41</span>
+                <span class="flex items-center gap-1">
+                  <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx="0.5"/><rect x="3.5" y="4" width="2.5" height="6" rx="0.5"/><rect x="7" y="2" width="2.5" height="8" rx="0.5"/><rect x="10.5" y="0" width="2.5" height="10" rx="0.5"/></svg>
+                  <svg width="20" height="10" viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="18" height="9" rx="2"/><rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor"/><rect x="19" y="3" width="2" height="4" rx="0.5" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="px-4 pb-3 border-b border-ink-800 opacity-30">
+                <div class="flex items-center justify-between">
+                  <button class="w-9 h-9 rounded-lg flex items-center justify-center text-ink-300"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+                  <div class="text-center">
+                    <div class="text-sm font-semibold text-white">Aylık Plan</div>
+                    <div class="text-[10px] text-ink-500">Mehmet Y.</div>
+                  </div>
+                  <button class="h-8 px-3 rounded-lg bg-steel-500 text-white text-xs font-semibold">Kaydet</button>
+                </div>
+              </div>
+              <div class="opacity-20 px-3 pt-4 space-y-2">
+                <div class="rounded-lg border border-ink-700 bg-ink-850 p-3">
+                  <div class="text-sm font-semibold text-white">Trigonometri</div>
+                  <div class="text-[10px] text-ink-400 mt-1">AYT Mat. · 10 saat</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Backdrop overlay -->
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+            <!-- Bottom sheet -->
+            <div class="absolute bottom-0 left-0 right-0 bg-ink-900 rounded-t-3xl border-t border-ink-700 shadow-card-lg">
+              <div class="flex justify-center pt-2 pb-1">
+                <div class="w-10 h-1 rounded-full bg-ink-700"></div>
+              </div>
+              <div class="px-5 pt-3 pb-2">
+                <h3 class="text-base font-semibold text-white">Konu hangi aya eklensin?</h3>
+                <div class="mt-2 p-2.5 rounded-lg bg-ink-850 border border-ink-700">
+                  <div class="text-xs font-semibold text-ink-100">Trigonometri</div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="text-[10px] text-ink-500">AYT Mat.</span>
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-400 tnum">10 saat</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="px-3 pb-2 space-y-1.5 max-h-72 overflow-y-auto das-scroll">
+
+                <button class="w-full text-left p-3 rounded-lg bg-ink-850 hover:bg-ink-800 border border-ink-700 flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium text-white">Eylül 2026</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5">2 konu · 16 saat · TYT+AYT</div>
+                  </div>
+                  <div class="w-5 h-5 rounded-full border-2 border-ink-600"></div>
+                </button>
+
+                <button class="w-full text-left p-3 rounded-lg bg-ink-850 hover:bg-ink-800 border border-ink-700 flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium text-white">Ekim 2026</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5">2 konu · 16 saat · AYT</div>
+                  </div>
+                  <div class="w-5 h-5 rounded-full border-2 border-ink-600"></div>
+                </button>
+
+                <button class="w-full text-left p-3 rounded-lg bg-steel-tint hover:bg-steel-500/20 border border-steel-500 flex items-center justify-between ring-1 ring-steel-500/40">
+                  <div>
+                    <div class="text-sm font-medium text-steel-300">Kasım 2026</div>
+                    <div class="text-[10px] text-steel-400 mt-0.5">2 konu · 18 saat · AYT</div>
+                  </div>
+                  <div class="w-5 h-5 rounded-full bg-steel-500 flex items-center justify-center">
+                    <svg width="11" height="11" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </button>
+
+                <button class="w-full text-left p-3 rounded-lg bg-ink-850 hover:bg-ink-800 border border-amber-500/40 flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium text-white inline-flex items-center gap-1.5">
+                      Aralık 2026
+                      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    </div>
+                    <div class="text-[10px] text-amber-500 mt-0.5">1 konu · 14 saat · yoğun</div>
+                  </div>
+                  <div class="w-5 h-5 rounded-full border-2 border-ink-600"></div>
+                </button>
+
+                <button class="w-full text-left p-3 rounded-lg bg-ink-850 hover:bg-ink-800 border border-ink-700 flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium text-white">Ocak 2027</div>
+                    <div class="text-[10px] text-ink-500 mt-0.5">Boş · AYT son ay</div>
+                  </div>
+                  <div class="w-5 h-5 rounded-full border-2 border-ink-600"></div>
+                </button>
+              </div>
+
+              <div class="p-3 border-t border-ink-800 space-y-2">
+                <button class="w-full h-11 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold">Bu aya ekle</button>
+                <button class="w-full h-9 text-ink-400 text-xs font-medium">İptal</button>
+              </div>
+
+              <div class="h-6 flex items-center justify-center pb-1">
+                <div class="w-32 h-1 rounded-full bg-white/40"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider">Bottom Sheet · Aya Ekle</span>
+      </div>
+
+      <!-- ─────────── Phone 4 · Warnings tab ─────────── -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="h-11 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-white">
+              <span class="tnum">9:41</span>
+              <span class="flex items-center gap-1">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx="0.5"/><rect x="3.5" y="4" width="2.5" height="6" rx="0.5"/><rect x="7" y="2" width="2.5" height="8" rx="0.5"/><rect x="10.5" y="0" width="2.5" height="10" rx="0.5"/></svg>
+                <svg width="20" height="10" viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="18" height="9" rx="2"/><rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor"/><rect x="19" y="3" width="2" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+
+            <div class="px-4 pb-3 border-b border-ink-800">
+              <div class="flex items-center justify-between">
+                <button class="w-9 h-9 rounded-lg hover:bg-ink-800 flex items-center justify-center text-ink-300">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </button>
+                <div class="text-center">
+                  <div class="text-sm font-semibold text-white">Aylık Plan</div>
+                  <div class="text-[10px] text-ink-500">Mehmet Y. · <span class="text-amber-500 font-bold">Taslak</span></div>
+                </div>
+                <button class="h-8 px-3 rounded-lg bg-steel-500 text-white text-xs font-semibold">Kaydet</button>
+              </div>
+            </div>
+
+            <div class="flex border-b border-ink-800 px-2 text-[11px]">
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Havuz</button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Aylar</button>
+              <button class="flex-1 py-2.5 font-medium text-ink-400">Halled.</button>
+              <button class="flex-1 py-2.5 font-semibold text-white border-b-2 border-amber-500 inline-flex items-center justify-center gap-1">Uyarı <span class="text-amber-500 text-[10px] font-bold bg-amber-tint px-1.5 rounded-full">3</span></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 space-y-3 das-scroll">
+
+              <!-- Grouped: severity -->
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-2 px-1">Uyarılar · severity</div>
+
+                <div class="space-y-2">
+                  <div class="rounded-lg border border-ink-700 bg-ink-850 p-3 border-l-2 border-l-amber-500">
+                    <div class="flex items-start gap-2">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                      <div class="flex-1">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-amber-500">Ön Koşul · Aralık</p>
+                        <p class="text-xs text-ink-200 mt-1 leading-snug">Türev için <strong class="text-white">Limit</strong> ön koşulu kontrol edilmeli.</p>
+                        <div class="flex items-center gap-1.5 mt-2.5">
+                          <button class="text-[10px] h-7 px-2.5 rounded-md bg-steel-500 text-white font-semibold">Düzelt</button>
+                          <button class="text-[10px] h-7 px-2.5 rounded-md bg-ink-800 text-ink-300 font-medium">Yoksay</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-lg border border-ink-700 bg-ink-850 p-3 border-l-2 border-l-amber-500">
+                    <div class="flex items-start gap-2">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <div class="flex-1">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-amber-500">Yoğunluk · Aralık</p>
+                        <p class="text-xs text-ink-200 mt-1 leading-snug">Aralık ayının yoğunluğu yüksek olabilir.</p>
+                        <div class="flex items-center gap-1.5 mt-2.5">
+                          <button class="text-[10px] h-7 px-2.5 rounded-md bg-steel-500 text-white font-semibold">Aralık'a git</button>
+                          <button class="text-[10px] h-7 px-2.5 rounded-md bg-ink-800 text-ink-300 font-medium">Yoksay</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-lg border border-ink-700 bg-ink-850 p-3 border-l-2 border-l-ink-600">
+                    <div class="flex items-start gap-2">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-ink-400 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <div class="flex-1">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-ink-400">Bilgi · Mat.</p>
+                        <p class="text-xs text-ink-200 mt-1 leading-snug"><strong class="text-white">Karmaşık Sayılar</strong> "Gerek Yok" olarak işaretlenmiş.</p>
+                        <div class="flex items-center gap-1.5 mt-2.5">
+                          <button class="text-[10px] h-7 px-2.5 rounded-md bg-steel-500 text-white font-semibold">Plana geri al</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-emerald-500/30 bg-emerald-tint/40 p-3 mt-3">
+                <div class="flex items-center gap-2">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" class="text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p class="text-xs font-medium text-emerald-500">Kritik uyarı yok. Plana onay verebilirsin.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="h-6 flex items-center justify-center pb-1">
+              <div class="w-32 h-1 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider">Tab 4 · Uyarılar</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     4. NOTES — design rationale + component reuse
+     ═════════════════════════════════════════════════════════════════════════ -->
+<section id="notes" class="demo-section">
+  <p class="demo-label">Notes · system reuse + decisions</p>
+
+  <div class="grid grid-cols-3 gap-4">
+
+    <div class="rounded-xl border border-ink-700 bg-ink-850 p-5">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-steel-400 mb-2">01 · Reuses</div>
+      <h3 class="text-sm font-semibold text-white mb-2">Existing DAS tokens</h3>
+      <ul class="text-xs text-ink-300 space-y-1.5 leading-relaxed">
+        <li>· App bar + logo (Phase 2 chrome)</li>
+        <li><code class="text-steel-400 bg-ink-900 px-1 rounded">.das-card</code> · all topic/month/warning cards</li>
+        <li><code class="text-steel-400 bg-ink-900 px-1 rounded">ink-*</code> palette · 100% reuse, no new colors</li>
+        <li>Subject-color left-border accents (existing)</li>
+        <li>Steel-blue primary, amber warn, ruby danger, emerald success — unchanged</li>
+        <li>Tabular nums on hours/dates/counts</li>
+        <li>Bottom sheet drag handle pattern (Phase 5)</li>
+        <li>Filter chip pattern (Phase 3)</li>
+      </ul>
+    </div>
+
+    <div class="rounded-xl border border-ink-700 bg-ink-850 p-5">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-2">02 · Decisions</div>
+      <h3 class="text-sm font-semibold text-white mb-2">Why these specifics</h3>
+      <ul class="text-xs text-ink-300 space-y-1.5 leading-relaxed">
+        <li>· <strong class="text-white">3-col workspace</strong>: pool/board/sidebar is the canonical kanban-editor IA. 6/3/3 split keeps the board (working area) widest.</li>
+        <li>· <strong class="text-white">Months 2×3 grid</strong>: 5 AYT months fit cleanly in 2 columns. Horizontal scroll only needed if &gt; 6 months. The 5th month spans both columns.</li>
+        <li>· <strong class="text-white">Warnings as advisory</strong>: amber/ink left-borders distinguish severity; no blocking modals. Coach decides.</li>
+        <li>· <strong class="text-white">Mobile = tabs + sheet</strong>: drag-and-drop dies on phones. Replaced with "+ Aya Ekle" → bottom sheet picker.</li>
+        <li>· <strong class="text-white">Halledilmiş zone</strong>: line-through + opacity makes it feel "removed" without losing the card. Restore is one tap.</li>
+      </ul>
+    </div>
+
+    <div class="rounded-xl border border-ink-700 bg-ink-850 p-5">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-2">03 · Next</div>
+      <h3 class="text-sm font-semibold text-white mb-2">If approved</h3>
+      <ul class="text-xs text-ink-300 space-y-1.5 leading-relaxed">
+        <li>· Ticketize as <code class="text-emerald-500 bg-ink-900 px-1 rounded">DAS-700</code> series under <code class="text-emerald-500 bg-ink-900 px-1 rounded">monthly_plan_v2</code> flag</li>
+        <li>· Phase 7.1: pool + board (read-only)</li>
+        <li>· Phase 7.2: drag-drop + persistence (desktop)</li>
+        <li>· Phase 7.3: bottom-sheet add flow (mobile)</li>
+        <li>· Phase 7.4: warning engine + advisory rules</li>
+        <li>· Phase 7.5: "Haftalık Plana Dönüştür" handoff to weekly system</li>
+        <li>· Phase 7.6: TYT subjects extension (Geometri, Türkçe, Fizik, Kimya, Biyoloji, Tarih, Coğrafya, Felsefe, Din Kültürü)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     INTERACTIVE DRAG/DROP — vanilla HTML5
+     ═════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  const workspace = document.getElementById('workspace');
+  if (!workspace) return;
+
+  let dragged = null;
+
+  workspace.addEventListener('dragstart', function (e) {
+    const card = e.target.closest('.topic-card');
+    if (!card) return;
+    dragged = card;
+    card.classList.add('dragging');
+    // Set drag image to a clone with a slight rotation for tactility
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', card.dataset.topic || ''); } catch (_) {}
+  });
+
+  workspace.addEventListener('dragend', function (e) {
+    const card = e.target.closest('.topic-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.drop-zone.drop-over').forEach(el => el.classList.remove('drop-over'));
+    dragged = null;
+  });
+
+  workspace.addEventListener('dragover', function (e) {
+    const zone = e.target.closest('.drop-zone');
+    if (!zone) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drop-zone.drop-over').forEach(el => {
+      if (el !== zone) el.classList.remove('drop-over');
+    });
+    zone.classList.add('drop-over');
+  });
+
+  workspace.addEventListener('dragleave', function (e) {
+    const zone = e.target.closest('.drop-zone');
+    if (zone && !zone.contains(e.relatedTarget)) {
+      zone.classList.remove('drop-over');
+    }
+  });
+
+  workspace.addEventListener('drop', function (e) {
+    const zone = e.target.closest('.drop-zone');
+    if (!zone || !dragged) return;
+    e.preventDefault();
+    zone.classList.remove('drop-over');
+
+    // Insert before the empty-hint (or at the end if no hint)
+    const hint = zone.querySelector('.empty-hint');
+    if (hint) zone.insertBefore(dragged, hint);
+    else zone.appendChild(dragged);
+
+    // Visual tweak: cards in resolved zone get muted treatment
+    const inResolved = zone.dataset.dropzone === 'resolved';
+    const inPool = zone.dataset.dropzone === 'pool';
+    if (inResolved) {
+      dragged.classList.add('opacity-75');
+    } else {
+      dragged.classList.remove('opacity-75');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

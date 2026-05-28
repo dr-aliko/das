@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>İletişim · Vagus</title>
+<meta name="description" content="Vagus'la iletişime geç. Hemen başla, soru sor, destek al." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="site.css" />
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="container site-nav-inner">
+    <a href="index.html" class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+      Vagus
+    </a>
+    <nav>
+      <a href="index.html">Ana Sayfa</a>
+      <a href="features.html">Özellikler</a>
+      <a href="pricing.html">Fiyatlandırma</a>
+      <a href="about.html">Neden Vagus</a>
+      <a href="contact.html" class="active">İletişim</a>
+    </nav>
+    <div class="site-nav-right">
+      <a href="login.html" class="btn btn-ghost btn-sm">Giriş Yap</a>
+      <a href="#start-form" class="btn btn-primary btn-sm">Hemen Başla</a>
+    </div>
+  </div>
+</header>
+
+<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px; padding-bottom:48px;">
+  <div class="glow-hero" style="opacity:0.5;"></div>
+  <div class="container-narrow" style="text-align:center; position:relative;">
+    <span class="pill">İletişim</span>
+    <h1 class="display" style="margin-top:18px; font-size:clamp(32px,4.5vw,52px);">Başla veya soru sor.</h1>
+    <p class="sub" style="margin: 16px auto 0;">Kayıt formunu doldur, 60 saniye içinde paneline geç. Ya da bize bir soru bırak — 24 saat içinde döneriz.</p>
+  </div>
+</section>
+
+<section class="section-sm" style="padding-top:24px;" id="start-form">
+  <div class="container">
+    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items:flex-start;">
+      <!-- Form -->
+      <form class="card" style="padding:32px;">
+        <div style="margin-bottom: 24px;">
+          <span class="eyebrow">Hızlı Başlangıç</span>
+          <h2 class="h3" style="margin-top:6px; font-size:22px;">Bize biraz kendinden bahset.</h2>
+          <p class="sub-sm" style="margin-top:6px;">14 gün ücretsiz, kredi kartı gerekmez.</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">Ad Soyad</label>
+            <input type="text" placeholder="Elif Yılmaz" style="width:100%; height:42px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none;" />
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">E-posta</label>
+            <input type="email" placeholder="elif@mail.com" style="width:100%; height:42px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none;" />
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">Telefon (isteğe bağlı)</label>
+            <input type="tel" placeholder="+90 5XX XXX XX XX" style="width:100%; height:42px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none;" />
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">Sınıfın</label>
+            <select style="width:100%; height:42px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; cursor:pointer;">
+              <option>11. Sınıf</option>
+              <option selected>12. Sınıf</option>
+              <option>Mezun</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">Alanın</label>
+          <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+            <label style="cursor:pointer; padding:12px 10px; background:rgba(99,102,241,0.10); border:1px solid var(--indigo); border-radius:10px; text-align:center; font-size:13px; color:var(--indigo-bright); font-weight:600;">
+              <input type="radio" name="field" style="display:none;" checked /> Sayısal
+            </label>
+            <label style="cursor:pointer; padding:12px 10px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; text-align:center; font-size:13px; color:var(--body); font-weight:500;">
+              <input type="radio" name="field" style="display:none;" /> Eşit Ağırlık
+            </label>
+            <label style="cursor:pointer; padding:12px 10px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; text-align:center; font-size:13px; color:var(--body); font-weight:500;">
+              <input type="radio" name="field" style="display:none;" /> Sözel
+            </label>
+            <label style="cursor:pointer; padding:12px 10px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; text-align:center; font-size:13px; color:var(--body); font-weight:500;">
+              <input type="radio" name="field" style="display:none;" /> Dil
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;">Şu anki tahmini TYT net'in (isteğe bağlı)</label>
+          <select style="width:100%; height:42px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; cursor:pointer;">
+            <option>Henüz deneme çözmedim</option>
+            <option>0–40</option>
+            <option selected>40–70</option>
+            <option>70–100</option>
+            <option>100+</option>
+          </select>
+        </div>
+
+        <div style="margin-top:18px; display:flex; gap:10px; align-items:flex-start; font-size:12px; color:var(--muted);">
+          <input type="checkbox" checked style="margin-top:2px;" />
+          <span><a href="#" style="color:var(--indigo-bright); text-decoration:underline;">KVKK aydınlatma metnini</a> okudum ve onaylıyorum.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="margin-top:24px; width:100%;">
+          Hemen Başla — 14 Gün Ücretsiz
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <p style="margin-top:14px; font-size:12px; color:var(--muted-2); text-align:center;">Kredi kartı gerekmez · 30 gün para iadesi garantisi</p>
+      </form>
+
+      <!-- Sidebar -->
+      <aside style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card">
+          <div style="font-size:11px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px;">Sorum var</div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <div style="width:36px; height:36px; border-radius:8px; background:var(--indigo-tint); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; color:var(--indigo-bright);">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <div>
+                <div style="font-size:12px; color:var(--muted-2);">E-posta</div>
+                <a href="mailto:hello@vagus.app" style="font-size:14px; font-weight:500; color:var(--heading);">hello@vagus.app</a>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <div style="width:36px; height:36px; border-radius:8px; background:var(--indigo-tint); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; color:var(--indigo-bright);">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              </div>
+              <div>
+                <div style="font-size:12px; color:var(--muted-2);">WhatsApp</div>
+                <a href="#" style="font-size:14px; font-weight:500; color:var(--heading);">+90 532 444 55 66</a>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <div style="width:36px; height:36px; border-radius:8px; background:var(--indigo-tint); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; color:var(--indigo-bright);">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div style="font-size:12px; color:var(--muted-2);">Canlı Sohbet</div>
+                <a href="#" style="font-size:14px; font-weight:500; color:var(--heading);">09:00 – 22:00</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:11px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px;">Veliler için</div>
+          <p style="font-size:13px; color:var(--body); line-height:1.55; margin:0;">Vagus'u çocuğunuz için araştırıyorsanız, planlarımız ve aile paylaşımı hakkında veli rehberimizi okuyun.</p>
+          <a href="#" style="display:inline-block; margin-top:10px; font-size:14px; font-weight:600; color:var(--indigo-bright);">Veli rehberini gör →</a>
+        </div>
+
+        <div class="card">
+          <div style="font-size:11px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px;">Kurum / Dershane misin?</div>
+          <p style="font-size:13px; color:var(--body); line-height:1.55; margin:0;">Kurumsal planlarımız var — 20+ öğrenci için özel fiyatlandırma ve koç paneli erişimi.</p>
+          <a href="mailto:kurumsal@vagus.app" style="display:inline-block; margin-top:10px; font-size:14px; font-weight:600; color:var(--indigo-bright);">kurumsal@vagus.app →</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <a href="index.html" class="brand"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>Vagus</a>
+        <p style="margin-top:14px; font-size:13px; color:var(--muted); max-width:280px; line-height:1.6;">YKS hazırlığında ne çalışacağını, ne zaman çalışacağını ve nasıl geliştiğini net gösteren akıllı çalışma platformu.</p>
+      </div>
+      <div class="footer-col"><h4>Ürün</h4><ul><li><a href="features.html">Özellikler</a></li><li><a href="pricing.html">Fiyatlandırma</a></li><li><a href="contact.html">Hemen Başla</a></li></ul></div>
+      <div class="footer-col"><h4>Şirket</h4><ul><li><a href="about.html">Hakkımızda</a></li><li><a href="about.html">Neden Vagus</a></li><li><a href="contact.html">İletişim</a></li></ul></div>
+      <div class="footer-col"><h4>Hukuki</h4><ul><li><a href="#">Gizlilik</a></li><li><a href="#">Kullanım Şartları</a></li><li><a href="#">KVKK</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Vagus.</span><span>Ankara · Türkiye</span></div>
+  </div>
+</footer>
+
+</body>
+</html>
