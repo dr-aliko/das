@@ -78,6 +78,7 @@ html, body {
   font-feature-settings: 'cv02', 'cv11', 'tnum';
   line-height: 1.55;
 }
+body { overflow-x: hidden; }
 .tnum { font-variant-numeric: tabular-nums; }
 
 a { color: inherit; text-decoration: none; }
@@ -323,16 +324,45 @@ h3.h3, .h3 {
 }
 .cta-band > * { position: relative; }
 
-/* ── Responsive ─────────────────────────────────────── */
-@media (max-width: 880px) {
-  .site-nav nav { display: none; }
-  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
-  .section { padding: 64px 0; }
-  .section-sm { padding: 48px 0; }
+/* ── Layout grids — class-based so media queries can override ── */
+.hero-section { padding-top: 120px; }
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 64px;
+  align-items: center;
 }
-@media (max-width: 560px) {
-  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
-  .footer-bottom { flex-direction: column; gap: 12px; }
+
+.hero-mockup-outer { position: relative; overflow: hidden; }
+
+.hero-mockup-card {
+  transform: perspective(1400px) rotateY(-6deg) rotateX(2deg);
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  text-align: center;
 }
 
 /* ── Horizontal scroll track (coach strip, etc.) ───── */
@@ -348,3 +378,120 @@ h3.h3, .h3 {
 .text-muted   { color: var(--muted); }
 .text-muted-2 { color: var(--muted-2); }
 .text-heading { color: var(--heading); }
+
+/* ── Interior page heroes ───────────────────────────── */
+.page-hero { padding-top: 88px; }
+
+/* ── Feature page: 2-col split sections ─────────────── */
+.feature-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+/* ── Feature page: 3-col smart-layers grid ───────────── */
+.features-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ── Coach list grid ─────────────────────────────────── */
+.coaches-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* ── Coach detail: profile + sticky sidebar ──────────── */
+.coach-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 48px;
+  align-items: flex-start;
+}
+.coach-cta-sticky { position: sticky; top: 100px; }
+
+/* ── Pricing plans grid ──────────────────────────────── */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* ── Money-back guarantee strip ──────────────────────── */
+.guarantee-strip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 880px) {
+  .site-nav nav { display: none; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .section { padding: 64px 0; }
+  .section-sm { padding: 48px 0; }
+
+  /* Home hero: collapse to single column, remove perspective tilt */
+  .hero-section { padding-top: 72px; }
+  .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+  .hero-mockup-card { transform: none; }
+
+  /* Home page grids */
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .testimonials-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+  /* Interior page heroes */
+  .page-hero { padding-top: 64px; }
+
+  /* Feature split sections → 1 col */
+  .feature-split { grid-template-columns: 1fr; gap: 36px; }
+
+  /* Coach list: 3 → 2 cols */
+  .coaches-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Coach detail: sidebar flows below main content */
+  .coach-detail-grid { grid-template-columns: 1fr; gap: 40px; }
+  .coach-cta-sticky { position: static; }
+
+  /* Pricing: 3 → 1 col */
+  .pricing-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  /* Home problem/steps/testimonials → 1 col */
+  .problem-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .testimonials-grid { grid-template-columns: 1fr; }
+
+  /* Feature 3-col smart layers → 1 col */
+  .features-3col { grid-template-columns: 1fr; }
+
+  /* Coach list: 2 → 1 col */
+  .coaches-grid { grid-template-columns: 1fr; }
+
+  /* h3 slightly smaller */
+  h3.h3, .h3 { font-size: 17px; }
+}
+
+@media (max-width: 560px) {
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  .footer-bottom { flex-direction: column; gap: 12px; }
+}
+
+@media (max-width: 480px) {
+  /* Hide login/CTA buttons from nav bar — available in hamburger drawer */
+  .site-nav-right { display: none; }
+  .site-nav-inner { gap: 16px; }
+
+  /* Tighten top padding on all hero types */
+  .hero-section { padding-top: 48px; }
+  .page-hero { padding-top: 48px; }
+
+  /* Guarantee strip: icon stacks above text */
+  .guarantee-strip { grid-template-columns: 1fr; }
+}

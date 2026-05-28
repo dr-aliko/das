@@ -6,7 +6,7 @@
 
 {% block content %}
 
-<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+<section class="section-sm page-hero" style="position:relative; overflow:hidden;">
   <div class="glow-hero" style="opacity:0.6;"></div>
   <div class="container-narrow" style="text-align:center; position:relative;">
     <span class="pill">Özellikler</span>
@@ -18,7 +18,7 @@
 <!-- 01 Deneme Analizi -->
 <section class="section-sm">
   <div class="container">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items:center;">
+    <div class="feature-split">
       <div>
         <span class="eyebrow">01 · Deneme Analizi</span>
         <h2 class="h2">Net'i öğren, hatalarını çöz.</h2>
@@ -58,7 +58,7 @@
 <!-- 02 Aylık Yol Haritası -->
 <section class="section-sm" style="background:var(--bg-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
   <div class="container">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items:center;">
+    <div class="feature-split">
       <div class="card" style="padding:18px;">
         <div style="font-size:11px; color:var(--muted-2); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px;">AYT · 5 ay</div>
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
@@ -112,7 +112,7 @@
 <!-- 03 Haftalık Görevler -->
 <section class="section-sm">
   <div class="container">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items:center;">
+    <div class="feature-split">
       <div>
         <span class="eyebrow">03 · Haftalık Görevler</span>
         <h2 class="h2">Bu hafta neyi, kaç dakikada yapacaksın?</h2>
@@ -172,7 +172,7 @@
       <span class="eyebrow">04 · Akıllı katmanlar</span>
       <h2 class="h2">Sadece bir takvim değil — yanında akıllı bir asistan.</h2>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
+    <div class="features-3col">
       <div class="card">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
           <div style="width:36px; height:36px; border-radius:8px; background:#ff0000; display:flex; align-items:center; justify-content:center;">
@@ -207,7 +207,7 @@
 <!-- 05 Gelişim Grafikleri -->
 <section class="section-sm">
   <div class="container">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items:center;">
+    <div class="feature-split">
       <div>
         <span class="eyebrow">05 · Gelişim Grafikleri</span>
         <h2 class="h2">Geriye değil — ileriye bak.</h2>
@@ -259,7 +259,7 @@
   <div class="container-narrow" style="text-align:center;">
     <h2 class="h2">Bütün özellikleri hemen dene.</h2>
     <p class="sub" style="margin: 14px auto 0;">Kayıt 60 saniye. Kredi kartı gerekmez.</p>
-    <div style="margin-top: 28px; display:flex; gap:12px; justify-content:center;">
+    <div style="margin-top: 28px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
       <a href="{{ site_settings.hero_cta_primary_url }}" class="btn btn-primary btn-lg">Hemen Başla</a>
       <a href="{% url 'marketing:pricing' %}" class="btn btn-ghost btn-lg">Fiyatları Gör</a>
     </div>

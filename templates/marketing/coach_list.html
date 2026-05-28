@@ -7,7 +7,7 @@
 {% block content %}
 
 <!-- Hero -->
-<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+<section class="section-sm page-hero" style="position:relative; overflow:hidden;">
   <div class="glow-hero" style="opacity:0.6;"></div>
   <div class="container-narrow" style="text-align:center; position:relative;">
     <span class="pill">Koçlar</span>
@@ -20,7 +20,7 @@
 <section class="section-sm">
   <div class="container">
     {% if coaches %}
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+    <div class="coaches-grid">
       {% for coach in coaches %}
       <div class="card" style="display:flex; flex-direction:column;">
         <!-- Avatar / Photo -->
@@ -89,7 +89,7 @@
   <div class="container-narrow" style="text-align:center;">
     <h2 class="h2">Koçsuz da güçlü çalışırsın.</h2>
     <p class="sub" style="margin:14px auto 0;">Vagus'u koç olmadan da kullanabilirsin. Sistem, hedefine göre planını otomatik oluşturur.</p>
-    <div style="margin-top:24px; display:flex; gap:12px; justify-content:center;">
+    <div style="margin-top:24px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
       <a href="/auth/register/" class="btn btn-primary btn-lg">Hemen Başla</a>
       <a href="{% url 'marketing:pricing' %}" class="btn btn-ghost btn-lg">Fiyatları Gör</a>
     </div>

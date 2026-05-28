@@ -7,12 +7,12 @@
 {% block content %}
 
 <!-- HERO -->
-<section class="section" style="overflow:hidden; position:relative; padding-top:120px;">
+<section class="section hero-section" style="overflow:hidden; position:relative;">
   <div class="glow-hero"></div>
   <div class="bg-grid"></div>
 
   <div class="container" style="position:relative;">
-    <div style="display:grid; grid-template-columns: 1.05fr 1fr; gap: 64px; align-items:center;">
+    <div class="hero-grid">
       <div>
         <span class="pill">
           <span style="width:6px; height:6px; border-radius:50%; background:var(--indigo-bright);"></span>
@@ -45,9 +45,9 @@
       </div>
 
       <!-- Student dashboard mock -->
-      <div style="position:relative;">
+      <div class="hero-mockup-outer">
         <div style="position:absolute; inset:-40px; background:radial-gradient(ellipse at center, rgba(99,102,241,0.18), transparent 60%); pointer-events:none;"></div>
-        <div class="card surface-dark" style="padding: 0; overflow:hidden; box-shadow: var(--shadow-mock); transform: perspective(1400px) rotateY(-6deg) rotateX(2deg);">
+        <div class="card surface-dark hero-mockup-card" style="padding: 0; overflow:hidden; box-shadow: var(--shadow-mock);">
           <div style="height: 36px; background: var(--bg-2); border-bottom: 1px solid var(--border); display:flex; align-items:center; padding: 0 14px; gap: 6px;">
             <span style="width:8px; height:8px; border-radius:50%; background:#3a4356;"></span>
             <span style="width:8px; height:8px; border-radius:50%; background:#3a4356;"></span>
@@ -124,7 +124,7 @@
       <h2 class="h2">YKS hazırlığında en çok bunlardan yorulursun.</h2>
     </div>
 
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+    <div class="problem-grid">
       <div class="card">
         <div style="display:flex; gap:14px; align-items:flex-start;">
           <div style="width:40px; height:40px; border-radius:10px; background: rgba(239,68,68,0.10); border:1px solid rgba(239,68,68,0.25); display:flex; align-items:center; justify-content:center; color:var(--ruby); flex-shrink:0;">
@@ -187,7 +187,7 @@
       <h2 class="h2">5 adımda sürekli ileri.</h2>
       <p class="sub" style="margin: 14px auto 0;">Bu döngüyü her hafta tekrarlarsın. Vagus zorlu kısımları sana bırakmaz.</p>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px;">
+    <div class="steps-grid">
       {% for step in "12345" %}
       <div class="card" style="height:100%; padding:20px;">
         <div style="width:36px; height:36px; border-radius:10px; background: {% if forloop.last %}linear-gradient(135deg,var(--emerald) 0%,#059669 100%){% else %}linear-gradient(135deg,var(--indigo) 0%,var(--indigo-deep) 100%){% endif %}; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">{{ step }}</div>
@@ -284,7 +284,7 @@
       <span class="eyebrow">Öğrenciler ne diyor</span>
       <h2 class="h2">Net artıkça motivasyon da artıyor.</h2>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+    <div class="testimonials-grid">
       {% for t in testimonials %}
       <div class="card">
         <svg width="22" height="22" fill="var(--indigo-bright)" opacity="0.5" viewBox="0 0 24 24" style="margin-bottom:12px;"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>
@@ -330,7 +330,7 @@
 <!-- STATS -->
 <section class="section-sm" style="background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
   <div class="container">
-    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 24px; text-align:center;">
+    <div class="stats-grid">
       <div>
         <div class="tnum" style="font-size:36px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">12.000+</div>
         <div style="font-size:13px; color:var(--muted-2); margin-top:4px;">Aktif öğrenci</div>

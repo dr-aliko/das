@@ -6,7 +6,7 @@
 
 {% block content %}
 
-<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+<section class="section-sm page-hero" style="position:relative; overflow:hidden;">
   <div class="glow-hero" style="opacity:0.6;"></div>
   <div class="container-narrow" style="text-align:center; position:relative;">
     <span class="pill">Fiyatlandırma</span>
@@ -18,7 +18,7 @@
 <!-- Plans -->
 <section class="section-sm">
   <div class="container">
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+    <div class="pricing-grid">
       {% for plan in plans %}
       <div class="card" style="position:relative; display:flex; flex-direction:column;{% if plan.is_featured %} border-color:rgba(99,102,241,0.5); box-shadow: 0 0 0 1px rgba(99,102,241,0.25), 0 24px 64px -16px rgba(79,70,229,0.25);{% endif %}">
         {% if plan.badge_label %}
@@ -106,7 +106,7 @@
 <!-- Money-back guarantee -->
 <section class="section-sm" style="background:var(--bg-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
   <div class="container">
-    <div class="card-glow" style="padding:32px; display:grid; grid-template-columns:auto 1fr; gap:24px; align-items:center;">
+    <div class="card-glow guarantee-strip" style="padding:32px;">
       <div style="width:64px; height:64px; border-radius:16px; background:var(--emerald-tint); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; color:var(--emerald);">
         <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
       </div>
