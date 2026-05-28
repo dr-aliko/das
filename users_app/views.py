@@ -160,13 +160,6 @@ def logout_view(request):
     return redirect('/auth/login/')
 
 
-def home_redirect(request):
-    if not request.user.is_authenticated:
-        return render(request, 'landing.html')
-    if request.user.is_coach:
-        return redirect('/coach/')
-    return redirect('/student/')
-
 
 # ──────────────────────────────────────────────
 # Coaching Inbox — Alert API endpoints

@@ -1,0 +1,78 @@
+{% load static %}<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}Vagus · YKS hazırlığını plansız bırakma{% endblock %}</title>
+<meta name="description" content="{% block meta_description %}Vagus; deneme analizlerini, konu eksiklerini, haftalık görevlerini ve TYT/AYT yol haritanı tek panelde takip etmeni sağlar.{% endblock %}" />
+<meta property="og:title" content="{% block og_title %}Vagus · YKS hazırlık platformu{% endblock %}" />
+<meta property="og:description" content="YKS hazırlığını plansız bırakma. Deneme analizi, aylık plan, haftalık görevler." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'marketing/site.css' %}" />
+{% block extra_css %}{% endblock %}
+<style>
+  /* Mobile nav drawer */
+  .mobile-nav { display: none; position: fixed; inset: 0; z-index: 100; }
+  .mobile-nav.open { display: flex; flex-direction: column; }
+  .mobile-nav-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+  .mobile-nav-panel {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 280px;
+    background: var(--bg-2); border-left: 1px solid var(--border);
+    padding: 24px; display: flex; flex-direction: column; gap: 8px;
+    z-index: 1;
+  }
+  .mobile-nav-panel a {
+    display: block; padding: 12px 16px; font-size: 15px; font-weight: 500;
+    color: var(--muted); border-radius: 8px;
+    transition: color 140ms, background 140ms;
+  }
+  .mobile-nav-panel a:hover, .mobile-nav-panel a.active { color: var(--heading); background: rgba(255,255,255,0.04); }
+  .hamburger-btn {
+    display: none; background: none; border: none; cursor: pointer;
+    color: var(--muted); padding: 4px; margin-left: auto;
+  }
+  @media (max-width: 880px) { .hamburger-btn { display: flex; align-items: center; } }
+</style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% include 'marketing/_nav.html' %}
+
+<!-- Mobile nav drawer -->
+<div class="mobile-nav" id="mobileNav" role="dialog" aria-modal="true">
+  <div class="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+  <div class="mobile-nav-panel surface-dark">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <a href="{% url 'marketing:home' %}" class="brand" onclick="closeMobileNav()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+        Vagus
+      </a>
+      <button onclick="closeMobileNav()" style="background:none;border:none;cursor:pointer;color:var(--muted);">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <a href="{% url 'marketing:home' %}" class="{% if active_nav == 'home' %}active{% endif %}">Anasayfa</a>
+    <a href="{% url 'marketing:features' %}" class="{% if active_nav == 'features' %}active{% endif %}">Özellikler</a>
+    <a href="{% url 'marketing:pricing' %}" class="{% if active_nav == 'pricing' %}active{% endif %}">Fiyatlandırma</a>
+    <a href="{% url 'marketing:coach_list' %}" class="{% if active_nav == 'coaches' %}active{% endif %}">Koçlar</a>
+    <div style="height:1px; background:var(--border); margin: 8px 0;"></div>
+    <a href="/auth/login/" style="color:var(--indigo-bright); font-weight:600;">Giriş Yap</a>
+    <a href="{{ site_settings.nav_cta_url }}" class="btn btn-primary" style="text-align:center; margin-top:8px;">{{ site_settings.nav_cta_label }}</a>
+  </div>
+</div>
+
+{% block content %}{% endblock %}
+
+{% include 'marketing/_footer.html' %}
+
+<script>
+  function openMobileNav() { document.getElementById('mobileNav').classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeMobileNav() { document.getElementById('mobileNav').classList.remove('open'); document.body.style.overflow=''; }
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeMobileNav(); });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

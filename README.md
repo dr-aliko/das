@@ -45,6 +45,22 @@ python manage.py createsuperuser
 **Running async tasks inline (no worker needed in dev):**
 Add `Q_SYNC=True` to your `.env`. All Django-Q2 tasks then run synchronously.
 
+**YouTube Playlist Importer (optional):**
+The coach panel's "Playlist Ekle" button requires a YouTube Data API v3 key.
+Without it every import attempt returns a friendly JSON error — no other functionality is affected.
+
+To enable it:
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Library**
+2. Enable **YouTube Data API v3**
+3. Go to **Credentials** → **Create Credentials** → **API key**
+4. (Recommended) Restrict the key to *YouTube Data API v3* and your server's IP
+5. Add to your `.env`:
+   ```
+   YOUTUBE_API_KEY=AIza...
+   ```
+
+The key is read only by the backend (`settings.YOUTUBE_API_KEY`) and is never sent to the browser.
+
 ## Running tests
 
 ```bash

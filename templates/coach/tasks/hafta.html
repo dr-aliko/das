@@ -8,7 +8,8 @@
 <div class="md:hidden -mx-4 -mt-5 sm:-mt-8"
      x-data="coachMobilePanel()"
      x-init="init()"
-     x-cloak>
+     x-cloak
+     @playlist-imported.window="onPlaylistImported($event.detail)">
 
   {# Slim app bar #}
   <header class="sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] px-4 h-14 flex items-center justify-between"
@@ -204,7 +205,8 @@
 
 <script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
 <div class="hidden md:block">
-<div x-data="panel()" x-init="init()" x-cloak>
+<div x-data="panel()" x-init="init()" x-cloak
+     @playlist-imported.window="onPlaylistImported($event.detail)">
 
   <div class="print:hidden flex items-center gap-2 mb-5 flex-wrap">
 
@@ -515,15 +517,42 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Oynatma Listesi</label>
-            <select x-model="taskForm.liste_id" @change="loadVideolar()"
-                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
-              <option value="">Liste seçin</option>
-              <template x-for="l in listeler" :key="l.id">
-                <option :value="l.id" x-text="l.baslik"></option>
-              </template>
-            </select>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-ink-400 uppercase tracking-wide">Oynatma Listesi</label>
+              <button type="button"
+                      @click="window.dispatchEvent(new CustomEvent('open-playlist-importer'))"
+                      class="text-xs text-steel-400 hover:text-steel-300 transition font-medium">
+                + Playlist Ekle
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <select x-model="taskForm.liste_id" @change="handleListeChange()"
+                      class="flex-1 min-w-0 border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                <option value="">Liste seçin</option>
+                <template x-for="l in listeler" :key="l.id">
+                  <option :value="l.id" x-text="l.baslik"></option>
+                </template>
+                <template x-if="filteredYtListeler.length > 0">
+                  <option disabled>── Yüklenen Playlistler ──</option>
+                </template>
+                <template x-for="l in filteredYtListeler" :key="l.pk">
+                  <option :value="'yt:' + l.pk"
+                          x-text="'[YT] ' + l.title + ' (' + l.exam_type + ')'"></option>
+                </template>
+              </select>
+              <button type="button"
+                      x-show="String(taskForm.liste_id).startsWith('yt:')"
+                      @click="deleteYtPlaylist(taskForm.ytPlaylistPk || parseInt(String(taskForm.liste_id).slice(3)))"
+                      title="Playlisti sil"
+                      class="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-ink-700
+                             text-ink-500 hover:text-ruby-400 hover:bg-ruby-500/10 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div>
@@ -633,6 +662,8 @@
     </div>
   </div>
 
+  {% include "coach/tasks/_playlist_import_modal.html" %}
+
 </div>
 </div>
 {% endblock %}
@@ -692,7 +723,7 @@ function coachMobilePanel() {
     students:[], selectedStudent:null,
 
     /* ── API-driven data for konu_anlatimi cascade ── */
-    dersler:[], listeler:[], videolar:[],
+    dersler:[], listeler:[], videolar:[], ytListeler:[],
 
     /* ── Sheet state (shared with _task_bottom_sheets.html) ── */
     showStudentSheet:false, showAddSheet:false, showEditSheet:false,
@@ -702,8 +733,18 @@ function coachMobilePanel() {
       aktivite_tipi:'soru_cozumu', sinav_tipi:'TYT',
       konu_ders_id:'', liste_id:'', selectedVideos:[],
       konu_not:'', tarih:'', ozel_sure_dk:0, aciklama:'', error:'',
+      ytPlaylistPk:null, ytPlaylistTitle:'',
     },
 
+    get filteredYtListeler(){
+      const tip=this.taskForm.sinav_tipi;
+      const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
+      return this.ytListeler.filter(l=>{
+        if(tip && l.exam_type!==tip) return false;
+        if(ders) return l.subject_display===ders.ad;
+        return true;
+      });
+    },
     get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
     get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
@@ -715,7 +756,7 @@ function coachMobilePanel() {
       const mon=new Date(today); mon.setDate(today.getDate()-dow+1);
       this.weekStart=ISO(mon); this.taskForm.tarih=ISO(today);
       this._build();
-      await Promise.all([this._loadStudents(), this._loadDersler()]);
+      await Promise.all([this._loadStudents(), this._loadDersler(), this.loadYtListeler()]);
     },
 
     async _loadStudents(){
@@ -805,6 +846,54 @@ function coachMobilePanel() {
       this.taskForm.ozel_sure_dk=total;
     },
 
+    /* ── YouTube playlist helpers (mirrors tasks_panel.js) ── */
+    async loadYtListeler(){
+      try{
+        const r=await fetch('/coach/tasks/api/youtube/list');
+        const data=await r.json();
+        this.ytListeler=data.playlists??[];
+      }catch(e){ this.ytListeler=[]; }
+    },
+    async loadYtVideolar(pk){
+      this.videolar=[];
+      this.taskForm.ytPlaylistPk=pk;
+      try{
+        const r=await fetch(`/coach/tasks/api/youtube/${pk}/videos`);
+        const data=await r.json();
+        this.videolar=(data.videos??[]).map(v=>({id:v.id,baslik:v.title,sure_dk:v.duration}));
+        this.taskForm.ytPlaylistTitle=data.title??'';
+        this.taskForm.liste_id='yt:'+pk;
+        this.taskForm.selectedVideos=[];
+        this.updateSure();
+      }catch(e){ console.error('[coach mobile] ytVideolar',e); }
+    },
+    onPlaylistImported(payload){
+      if(!this.selectedStudent)return;
+      this.listeler=[];
+      this.taskForm.aktivite_tipi='konu_anlatimi';
+      this.taskForm.sinav_tipi=payload.exam_type;
+      this.taskForm.ders_title=(payload.subject_display||payload.exam_type)+' - Konu Anlatimi';
+      this.taskForm.liste_id='yt:'+payload.playlist_pk;
+      this.taskForm.ytPlaylistPk=payload.playlist_pk;
+      this.taskForm.ytPlaylistTitle=payload.title||'';
+      this.videolar=(payload.videos??[]).map(v=>({id:v.id,baslik:v.title,sure_dk:v.duration}));
+      this.taskForm.selectedVideos=[];
+      this.updateSure();
+      this.showAddSheet=true;
+    },
+    async deleteYtPlaylist(pk){
+      if(!confirm('Bu playlisti ve tüm videolarını silmek istiyor musunuz?'))return;
+      try{
+        const r=await fetch(`/coach/tasks/api/youtube/${pk}`,{method:'DELETE',headers:{'X-CSRFToken':CSRF()}});
+        if(!r.ok){alert('Silme işlemi başarısız.');return;}
+        this.ytListeler=this.ytListeler.filter(l=>l.pk!==pk);
+        if(this.taskForm.liste_id==='yt:'+pk){
+          this.taskForm.liste_id=''; this.taskForm.ytPlaylistPk=null;
+          this.videolar=[]; this.taskForm.selectedVideos=[]; this.updateSure();
+        }
+      }catch(e){ console.error('[deleteYtPlaylist]',e); }
+    },
+
     /* ── Sheet open/close ── */
     openAdd(){
       if(!this.selectedStudent)return;
@@ -815,6 +904,7 @@ function coachMobilePanel() {
         ders_title:'', subject:'mat', aktivite_tipi:'soru_cozumu', sinav_tipi:'TYT',
         konu_ders_id:'', liste_id:'', selectedVideos:[],
         konu_not:'', tarih:dayIso, ozel_sure_dk:0, aciklama:'', error:'',
+        ytPlaylistPk:null, ytPlaylistTitle:'',
       };
       this.showAddSheet=true;
     },
@@ -829,19 +919,27 @@ function coachMobilePanel() {
         konu_ders_id:'', liste_id:'', selectedVideos:[],
         konu_not:'', tarih:g.tarih, ozel_sure_dk:g.ozel_sure_dk??0,
         aciklama:g.detaylar?.[0]?.aciklama??'', error:'',
+        ytPlaylistPk:null, ytPlaylistTitle:'',
       };
 
       /* Hydrate konu_anlatimi cascade identically to the desktop _hydrateKonuEdit */
       if(g.aktivite_tipi==='konu_anlatimi' && g.meta){
         const meta=g.meta;
         this.taskForm.sinav_tipi=meta.sinav_tipi??'TYT';
-        this.taskForm.konu_ders_id=String(meta.ders_id??'');
-        await this.loadListeler();
-        this.taskForm.liste_id=String(meta.liste_id??'');
-        await this.loadVideolar(meta.liste_id);
-        const savedIds=new Set((meta.videos??[]).map(v=>String(v.id)));
-        this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
-        this.updateSure();
+        if(meta.source==='youtube' && meta.youtube_playlist_pk){
+          await this.loadYtVideolar(meta.youtube_playlist_pk);
+          const savedIds=new Set((meta.videos??[]).map(v=>String(v.id)));
+          this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
+          this.updateSure();
+        }else{
+          this.taskForm.konu_ders_id=String(meta.ders_id??'');
+          await this.loadListeler();
+          this.taskForm.liste_id=String(meta.liste_id??'');
+          await this.loadVideolar(meta.liste_id);
+          const savedIds=new Set((meta.videos??[]).map(v=>String(v.id)));
+          this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
+          this.updateSure();
+        }
       }
       this.showEditSheet=true;
     },
@@ -874,24 +972,31 @@ function coachMobilePanel() {
           const v=this.videolar.find(v=>v.id==vid_id);
           return { aciklama:v?.baslik??String(vid_id), sure_bilgisi:v?`${v.sure_dk} dk`:'' };
         });
-        if(this.taskForm.konu_not.trim()) detaylarArr.push({aciklama:this.taskForm.konu_not.trim(),sure_bilgisi:''});
+        if(this.taskForm.konu_not&&this.taskForm.konu_not.trim()) detaylarArr.push({aciklama:this.taskForm.konu_not.trim(),sure_bilgisi:''});
         detaylar=JSON.stringify(detaylarArr);
 
-        /* ders_title: same formula as desktop */
-        const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
-        ders_title=ders?`${ders.ad} - Konu Anlatımı`:(this.taskForm.ders_title||'Konu Anlatımı');
+        const isYt=typeof this.taskForm.liste_id==='string'&&this.taskForm.liste_id.startsWith('yt:');
+        const videosArr=this.taskForm.selectedVideos.map(vid_id=>{
+          const v=this.videolar.find(v=>v.id==vid_id);
+          return {id:Number(vid_id),title:v?.baslik??'',duration:v?.sure_dk??0};
+        });
 
-        /* meta payload fields — source of truth for future edit hydration */
-        extra={
-          sinav_tipi:this.taskForm.sinav_tipi,
-          konu_ders_id:this.taskForm.konu_ders_id,
-          liste_id:this.taskForm.liste_id,
-          liste_baslik:this.listeler.find(l=>String(l.id)===this.taskForm.liste_id)?.baslik??'',
-          videos:this.taskForm.selectedVideos.map(vid_id=>{
-            const v=this.videolar.find(v=>v.id==vid_id);
-            return {id:Number(vid_id),title:v?.baslik??'',duration:v?.sure_dk??0};
-          }),
-        };
+        if(isYt){
+          const ytPk=this.taskForm.ytPlaylistPk??parseInt(this.taskForm.liste_id.slice(3));
+          const pl=this.ytListeler.find(l=>l.pk===ytPk);
+          ders_title=this.taskForm.ders_title||(pl?(pl.subject_display||pl.exam_type)+' - Konu Anlatimi':'Konu Anlatimi');
+          extra={sinav_tipi:this.taskForm.sinav_tipi,youtube_playlist_pk:ytPk,liste_baslik:pl?.title??'',videos:videosArr};
+        }else{
+          const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
+          ders_title=ders?`${ders.ad} - Konu Anlatımı`:(this.taskForm.ders_title||'Konu Anlatımı');
+          extra={
+            sinav_tipi:this.taskForm.sinav_tipi,
+            konu_ders_id:this.taskForm.konu_ders_id,
+            liste_id:this.taskForm.liste_id,
+            liste_baslik:this.listeler.find(l=>String(l.id)===this.taskForm.liste_id)?.baslik??'',
+            videos:videosArr,
+          };
+        }
       }else{
         /* soru_cozumu / tekrar */
         if(!this.taskForm.ders_title.trim()){

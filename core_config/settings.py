@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'tasks_app',
     'django_q',
     'curriculum_app',
+    'marketing_app',
 ]
 
 MIDDLEWARE = [
@@ -48,6 +49,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core_config.context_processors.v2_shell',
                 'core_config.context_processors.desktop_v2',
+                'marketing_app.context_processors.site_settings',
             ],
         },
     },
@@ -164,6 +166,9 @@ else:
 # Used only for konu_anlatimi create/refresh flow. Edit hydration uses meta.videos instead.
 EXTERNAL_API_BASE_URL = config('EXTERNAL_API_BASE_URL', default='http://152.70.23.159:5000/api')
 EXTERNAL_API_TIMEOUT = config('EXTERNAL_API_TIMEOUT', default=5, cast=int)
+
+# YouTube Data API v3 — used by the playlist importer; never exposed to frontend
+YOUTUBE_API_KEY = config('YOUTUBE_API_KEY', default='')
 
 # Email — dev default prints to console; override via env vars in production
 EMAIL_BACKEND       = config('EMAIL_BACKEND',       default='django.core.mail.backends.console.EmailBackend')

@@ -1,0 +1,118 @@
+{% extends "marketing/base_public.html" %}
+{% load static %}
+
+{% block title %}{{ coach.get_display_name }} · Vagus Koçları{% endblock %}
+{% block meta_description %}{{ coach.bio_short }}{% endblock %}
+
+{% block content %}
+
+<!-- Profile hero -->
+<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+  <div class="glow-hero" style="opacity:0.5;"></div>
+  <div class="container" style="position:relative;">
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:48px; align-items:flex-start;">
+
+      <!-- Main profile -->
+      <div>
+        <!-- Back link -->
+        <a href="{% url 'marketing:coach_list' %}" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted-2); margin-bottom:32px; text-decoration:none;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+          Tüm Koçlar
+        </a>
+
+        <!-- Identity -->
+        <div style="display:flex; align-items:center; gap:24px; margin-bottom:24px;">
+          {% if coach.photo %}
+          <img src="{{ coach.photo.url }}" alt="{{ coach.get_display_name }}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; flex-shrink:0; border:2px solid var(--border);" />
+          {% else %}
+          <div style="width:100px; height:100px; border-radius:50%; background:{{ coach.avatar_gradient }}; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:32px; letter-spacing:-0.02em; flex-shrink:0;">{{ coach.avatar_initials }}</div>
+          {% endif %}
+          <div>
+            <h1 style="margin:0 0 4px; font-size:32px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">{{ coach.get_display_name }}</h1>
+            <div style="font-size:13px; color:var(--indigo-bright); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">{{ coach.title }}</div>
+            <div style="font-size:14px; color:var(--muted-2); margin-top:4px;">{{ coach.specialty }}</div>
+          </div>
+        </div>
+
+        <!-- Metrics strip -->
+        {% if coach.years_experience or coach.student_count or coach.success_metric %}
+        <div style="display:flex; gap:32px; padding:20px 24px; background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:32px;">
+          {% if coach.years_experience %}
+          <div>
+            <div class="tnum" style="font-size:24px; font-weight:700; color:var(--heading);">{{ coach.years_experience }}+</div>
+            <div style="font-size:12px; color:var(--muted-2); margin-top:2px;">Yıl deneyim</div>
+          </div>
+          {% endif %}
+          {% if coach.student_count %}
+          <div>
+            <div class="tnum" style="font-size:24px; font-weight:700; color:var(--heading);">{{ coach.student_count }}+</div>
+            <div style="font-size:12px; color:var(--muted-2); margin-top:2px;">Öğrenci</div>
+          </div>
+          {% endif %}
+          {% if coach.success_metric %}
+          <div>
+            <div style="font-size:24px; font-weight:700; color:var(--emerald);">{{ coach.success_metric }}</div>
+            <div style="font-size:12px; color:var(--muted-2); margin-top:2px;">Ortalama başarı</div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Long bio -->
+        {% if coach.bio_long %}
+        <div style="font-size:16px; line-height:1.75; color:var(--body);">
+          {{ coach.bio_long|linebreaks }}
+        </div>
+        {% else %}
+        <div class="card-glow" style="padding:28px;">
+          <p style="font-size:16px; line-height:1.75; color:var(--body); margin:0;">{{ coach.bio_short }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Sticky CTA card -->
+      <div style="position:sticky; top:100px;">
+        <div class="card" style="border-color:rgba(99,102,241,0.3); box-shadow: 0 0 0 1px rgba(99,102,241,0.15), 0 24px 48px -12px rgba(79,70,229,0.2);">
+          <!-- Mini avatar -->
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border);">
+            {% if coach.photo %}
+            <img src="{{ coach.photo.url }}" alt="{{ coach.get_display_name }}" style="width:44px; height:44px; border-radius:50%; object-fit:cover;" />
+            {% else %}
+            <div style="width:44px; height:44px; border-radius:50%; background:{{ coach.avatar_gradient }}; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:14px;">{{ coach.avatar_initials }}</div>
+            {% endif %}
+            <div>
+              <div style="font-size:14px; font-weight:600; color:var(--heading);">{{ coach.get_display_name }}</div>
+              <div style="font-size:12px; color:var(--muted-2);">{{ coach.specialty }}</div>
+            </div>
+          </div>
+
+          <div style="font-size:15px; font-weight:600; color:var(--heading); margin-bottom:6px;">Bu koçla hazırlanmaya başla.</div>
+          <p style="font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 20px;">Ücretsiz görüşme talep et, koçun seni arasın.</p>
+
+          <a href="{% url 'marketing:coach_request' coach.slug %}" class="btn btn-primary btn-lg" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            Görüşme Talebi Oluştur
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+          </a>
+          <a href="{% url 'marketing:coach_list' %}" class="btn btn-ghost" style="width:100%; display:flex; align-items:center; justify-content:center;">Diğer Koçları Gör</a>
+
+          <p style="margin-top:14px; font-size:12px; color:var(--muted-2); text-align:center;">30 gün para iadesi garantisi</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Bottom CTA for mobile -->
+<section class="section-sm" style="background:var(--bg-2); border-top:1px solid var(--border);">
+  <div class="container-narrow" style="text-align:center;">
+    <h2 class="h2">{{ coach.get_display_name }} ile YKS'ye hazırlan.</h2>
+    <p class="sub" style="margin:14px auto 0;">Görüşme talebi bırak, koçun seni arasın.</p>
+    <div style="margin-top:24px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <a href="{% url 'marketing:coach_request' coach.slug %}" class="btn btn-primary btn-lg">Görüşme Talebi Oluştur</a>
+      <a href="{% url 'marketing:coach_list' %}" class="btn btn-ghost btn-lg">Tüm Koçları Gör</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

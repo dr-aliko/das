@@ -12,17 +12,30 @@
        needsDate: false,
        inlineDate: '',
        studentSelected: false,
+       planningMode: 'EXAM_DATE_BACKWARD',
+       tytStart: '',
+       tytEnd: '',
+       aytStart: '',
+       aytEnd: '',
        checkDates() {
          const sel = document.getElementById('student-select');
          const opt = sel.options[sel.selectedIndex];
          this.studentSelected = !!sel.value;
          this.hasTyt = opt.dataset.tyt !== '';
          this.hasAyt = opt.dataset.ayt !== '';
-         this.needsDate = this.studentSelected && (
+         this.needsDate = this.studentSelected && this.planningMode === 'EXAM_DATE_BACKWARD' && (
                           (this.sinav === 'TYT'  && !this.hasTyt)
                        || (this.sinav === 'AYT'  && !this.hasAyt)
                        || (this.sinav === 'BOTH' && !this.hasTyt && !this.hasAyt));
          this.inlineDate = '';
+       },
+       get showTytWindow() { return this.planningMode === 'CUSTOM_WINDOWS' && this.sinav !== 'AYT'; },
+       get showAytWindow() { return this.planningMode === 'CUSTOM_WINDOWS' && this.sinav !== 'TYT'; },
+       get customValid() {
+         if (this.planningMode !== 'CUSTOM_WINDOWS') return true;
+         const tytOk = this.sinav !== 'AYT' ? (this.tytStart && this.tytEnd) : true;
+         const aytOk = this.sinav !== 'TYT' ? (this.aytStart && this.aytEnd) : true;
+         return tytOk && aytOk;
        }
      }">
 
@@ -45,7 +58,7 @@
   {% endif %}
 
   <form method="post" class="space-y-5"
-        @submit.prevent="(!needsDate || inlineDate) ? $el.submit() : null">
+        @submit.prevent="(!needsDate || inlineDate) && customValid ? $el.submit() : null">
     {% csrf_token %}
 
     {# Student select #}
@@ -123,6 +136,67 @@
       </div>
     </div>
 
+    {# Planning mode #}
+    <div>
+      <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Planlama Modu</label>
+      <div class="flex gap-2">
+        <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition text-sm"
+               :class="planningMode === 'EXAM_DATE_BACKWARD' ? 'border-primary bg-primary/10 text-ink-50' : 'text-ink-400'">
+          <input type="radio" name="planning_mode" value="EXAM_DATE_BACKWARD" class="sr-only"
+                 x-model="planningMode" @change="checkDates()">
+          Sınav Tarihinden
+        </label>
+        <label class="flex-1 flex items-center justify-center gap-2 rounded-xl border border-ink-700 bg-ink-800 py-3 cursor-pointer transition text-sm"
+               :class="planningMode === 'CUSTOM_WINDOWS' ? 'border-primary bg-primary/10 text-ink-50' : 'text-ink-400'">
+          <input type="radio" name="planning_mode" value="CUSTOM_WINDOWS" class="sr-only"
+                 x-model="planningMode" @change="checkDates()">
+          Özel Tarih Aralıkları
+        </label>
+      </div>
+    </div>
+
+    {# Custom date windows — revealed when CUSTOM_WINDOWS selected #}
+    <div x-show="planningMode === 'CUSTOM_WINDOWS'" x-cloak
+         class="rounded-2xl border border-steel-500/30 bg-steel-tint p-4 space-y-4">
+      <p class="text-xs font-semibold text-steel-300">TYT ve AYT için ayrı tarih aralıkları girin. Aralıklar çakışabilir.</p>
+
+      <div x-show="showTytWindow" class="space-y-2">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-mat">TYT Penceresi</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-ink-400 mb-1">Başlangıç</label>
+            <input type="date" name="tyt_start_date" x-model="tytStart"
+                   class="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-ink-100 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary/50">
+          </div>
+          <div>
+            <label class="block text-[10px] text-ink-400 mb-1">Bitiş</label>
+            <input type="date" name="tyt_end_date" x-model="tytEnd"
+                   class="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-ink-100 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary/50">
+          </div>
+        </div>
+      </div>
+
+      <div x-show="showAytWindow" class="space-y-2">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-fen">AYT Penceresi</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-ink-400 mb-1">Başlangıç</label>
+            <input type="date" name="ayt_start_date" x-model="aytStart"
+                   class="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-ink-100 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary/50">
+          </div>
+          <div>
+            <label class="block text-[10px] text-ink-400 mb-1">Bitiş</label>
+            <input type="date" name="ayt_end_date" x-model="aytEnd"
+                   class="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-ink-100 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary/50">
+          </div>
+        </div>
+      </div>
+    </div>
+
     {# Optional title #}
     <div>
       <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wider">Plan Adı (opsiyonel)</label>
@@ -132,8 +206,8 @@
     </div>
 
     <button type="submit"
-            :disabled="needsDate && !inlineDate"
-            :class="(needsDate && !inlineDate) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-soft'"
+            :disabled="(needsDate && !inlineDate) || !customValid"
+            :class="((needsDate && !inlineDate) || !customValid) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-soft'"
             class="w-full min-h-[44px] bg-primary text-white font-semibold rounded-xl py-3 transition">
       Planı Oluştur
     </button>

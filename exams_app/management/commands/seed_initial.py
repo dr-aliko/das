@@ -68,132 +68,92 @@ TYT_TOPICS = [
     ('TYT Matematik', 40, '', 'Olasılık'),
     ('TYT Matematik', 40, '', 'Veri ve İstatistik'),
 
-    # ── SOSYAL — TARİH ─────────────────────────────────────────────
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Tarih ve Zaman'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'İnsanlığın İlk Dönemleri'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'İlk ve Orta Çağlarda Türk Dünyası'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'İslam Medeniyetinin Doğuşu ve İlk İslam Devletleri'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri"),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', "Orta Çağ'da Dünya"),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiye'si"),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Beylikten Devlete Osmanlı Siyaseti'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Devletleşme Sürecinde Savaşçılar ve Askerler'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Beylikten Devlete Osmanlı Medeniyeti'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Dünya Gücü Osmanlı'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Sultan ve Osmanlı Merkez Teşkilatı'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Klasik Çağda Osmanlı Toplum Düzeni'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Değişim Çağında Avrupa ve Osmanlı'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Devrimler Çağında Değişen Devlet-Toplum İlişkileri'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Sermaye ve Emek'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'XIX. ve XX. Yüzyılda Değişen Gündelik Hayat'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Milli Mücadele'),
-    ('TYT Sosyal Bilimler', 20, 'Tarih', 'Atatürkçülük ve Türk İnkılabı'),
+    # ── TYT TARİH ──────────────────────────────────────────────────
+    ('TYT Tarih', 5, '', 'Tarih ve Zaman'),
+    ('TYT Tarih', 5, '', 'İnsanlığın İlk Dönemleri'),
+    ('TYT Tarih', 5, '', 'İlk ve Orta Çağlarda Türk Dünyası'),
+    ('TYT Tarih', 5, '', 'İslam Medeniyetinin Doğuşu ve İlk İslam Devletleri'),
+    ('TYT Tarih', 5, '', "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri"),
+    ('TYT Tarih', 5, '', "Orta Çağ'da Dünya"),
+    ('TYT Tarih', 5, '', "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiye'si"),
+    ('TYT Tarih', 5, '', 'Beylikten Devlete Osmanlı Siyaseti'),
+    ('TYT Tarih', 5, '', 'Devletleşme Sürecinde Savaşçılar ve Askerler'),
+    ('TYT Tarih', 5, '', 'Beylikten Devlete Osmanlı Medeniyeti'),
+    ('TYT Tarih', 5, '', 'Dünya Gücü Osmanlı'),
+    ('TYT Tarih', 5, '', 'Sultan ve Osmanlı Merkez Teşkilatı'),
+    ('TYT Tarih', 5, '', 'Klasik Çağda Osmanlı Toplum Düzeni'),
+    ('TYT Tarih', 5, '', 'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti'),
+    ('TYT Tarih', 5, '', 'Değişim Çağında Avrupa ve Osmanlı'),
+    ('TYT Tarih', 5, '', 'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)'),
+    ('TYT Tarih', 5, '', 'Devrimler Çağında Değişen Devlet-Toplum İlişkileri'),
+    ('TYT Tarih', 5, '', 'Sermaye ve Emek'),
+    ('TYT Tarih', 5, '', 'XIX. ve XX. Yüzyılda Değişen Gündelik Hayat'),
+    ('TYT Tarih', 5, '', 'XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya'),
+    ('TYT Tarih', 5, '', 'Milli Mücadele'),
+    ('TYT Tarih', 5, '', 'Atatürkçülük ve Türk İnkılabı'),
 
-    # ── SOSYAL — COĞRAFYA ──────────────────────────────────────────
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Doğa ve İnsan'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', "Dünya'nın Şekli ve Hareketleri"),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Coğrafi Konum'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Harita Bilgisi'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'İklim Bilgisi'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', "Dünya'nın Tektonik Oluşumu"),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Jeolojik Zamanlar'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'İç Kuvvetler / Dış Kuvvetler'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Kayaçlar'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', "Türkiye'nin Yer Şekilleri"),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Su - Toprak ve Bitkiler'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Nüfus'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', "Türkiye'de Nüfus"),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Göç'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Ekonomik Faaliyetler'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Bölgeler'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Uluslararası Ulaşım Hatları'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Çevre ve Toplum'),
-    ('TYT Sosyal Bilimler', 20, 'Coğrafya', 'Doğal Afetler'),
+    # ── TYT COĞRAFYA ───────────────────────────────────────────────
+    ('TYT Coğrafya', 5, '', 'Doğa ve İnsan'),
+    ('TYT Coğrafya', 5, '', "Dünya'nın Şekli ve Hareketleri"),
+    ('TYT Coğrafya', 5, '', 'Coğrafi Konum'),
+    ('TYT Coğrafya', 5, '', 'Harita Bilgisi'),
+    ('TYT Coğrafya', 5, '', 'İklim Bilgisi'),
+    ('TYT Coğrafya', 5, '', "Dünya'nın Tektonik Oluşumu"),
+    ('TYT Coğrafya', 5, '', 'Jeolojik Zamanlar'),
+    ('TYT Coğrafya', 5, '', 'İç Kuvvetler / Dış Kuvvetler'),
+    ('TYT Coğrafya', 5, '', 'Kayaçlar'),
+    ('TYT Coğrafya', 5, '', "Türkiye'nin Yer Şekilleri"),
+    ('TYT Coğrafya', 5, '', 'Su - Toprak ve Bitkiler'),
+    ('TYT Coğrafya', 5, '', 'Nüfus'),
+    ('TYT Coğrafya', 5, '', "Türkiye'de Nüfus"),
+    ('TYT Coğrafya', 5, '', 'Göç'),
+    ('TYT Coğrafya', 5, '', 'Ekonomik Faaliyetler'),
+    ('TYT Coğrafya', 5, '', 'Bölgeler'),
+    ('TYT Coğrafya', 5, '', 'Uluslararası Ulaşım Hatları'),
+    ('TYT Coğrafya', 5, '', 'Çevre ve Toplum'),
+    ('TYT Coğrafya', 5, '', 'Doğal Afetler'),
 
-    # ── SOSYAL — FELSEFE ───────────────────────────────────────────
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Felsefenin Konusu'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Bilgi Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Varlık Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Ahlak Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Sanat Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Din Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Siyaset Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'Bilim Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', 'İlk Çağ Felsefesi'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', '2. ve 15. Yüzyıl Felsefeleri'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', '15. ve 17. Yüzyıl Felsefeleri'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', '18. ve 19. Yüzyıl Felsefeleri'),
-    ('TYT Sosyal Bilimler', 20, 'Felsefe', '20. Yüzyıl Felsefesi'),
+    # ── TYT FELSEFE ────────────────────────────────────────────────
+    ('TYT Felsefe', 4, '', 'Felsefenin Konusu'),
+    ('TYT Felsefe', 4, '', 'Bilgi Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Varlık Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Ahlak Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Sanat Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Din Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Siyaset Felsefesi'),
+    ('TYT Felsefe', 4, '', 'Bilim Felsefesi'),
+    ('TYT Felsefe', 4, '', 'İlk Çağ Felsefesi'),
+    ('TYT Felsefe', 4, '', '2. ve 15. Yüzyıl Felsefeleri'),
+    ('TYT Felsefe', 4, '', '15. ve 17. Yüzyıl Felsefeleri'),
+    ('TYT Felsefe', 4, '', '18. ve 19. Yüzyıl Felsefeleri'),
+    ('TYT Felsefe', 4, '', '20. Yüzyıl Felsefesi'),
 
-    # ── SOSYAL — DİN KÜLTÜRÜ ───────────────────────────────────────
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Bilgi ve İnanç'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve İslam'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İslam ve İbadet'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Gençlik ve Değerler'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İslam Medeniyeti ve Özellikleri'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Allah İnancı ve İnsan'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', "Allah'ın Varlığı ve Birliği"),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', "Allah'ın İsim ve Sıfatları"),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', "Kur'an-ı Kerim'de İnsan ve Özellikleri"),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İnsanın Allah İle İrtibatı'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', "Kur'an-ı Kerim'de Gençler"),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Bir Genç Olarak Hz. Muhammed'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Hz. Muhammed ve Gençler'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Bazı Genç Sahabeler'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve Aile'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din, Kültür ve Sanat'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve Çevre'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve Sosyal Değişim'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve Ekonomi'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Din ve Sosyal Adalet'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İslam Ahlakı'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Dinî Yorum Farklılıklarının Sebepleri'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'Dinî Yorumlarla İlgili Bazı Kavramlar'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İslam Düşüncesinde İtikadi ve Siyasi Yorumlar'),
-    ('TYT Sosyal Bilimler', 20, 'Din Kültürü', 'İslam Düşüncesinde Fıkhi Yorumlar'),
-
-    # ── FEN — FİZİK ────────────────────────────────────────────────
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Fizik Bilimine Giriş'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Madde ve Özellikleri'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Hareket ve Kuvvet'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'İş, Güç ve Enerji I'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Isı, Sıcaklık ve Genleşme'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Dinamik'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'İş, Güç ve Enerji II'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Elektrostatik'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Elektrik ve Manyetizma'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Basınç'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Kaldırma Kuvveti'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Dalgalar'),
-    ('TYT Fen Bilimleri', 20, 'Fizik', 'Optik'),
-
-    # ── FEN — KİMYA ────────────────────────────────────────────────
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Kimya Bilimi'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Atomun Yapısı'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Periyodik Sistem'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Maddenin Halleri'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Kimyasal Türler Arası Etkileşimler'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Kimyasal Hesaplamalar'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Kimyanın Temel Kanunları'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Asit, Baz ve Tuz'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Karışımlar'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Endüstride ve Canlılarda Enerji'),
-    ('TYT Fen Bilimleri', 20, 'Kimya', 'Kimya Her Yerde'),
-
-    # ── FEN — BİYOLOJİ ─────────────────────────────────────────────
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Canlıların Ortak Özellikleri'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Canlıların Temel Bileşenleri'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Hücre ve Organelleri'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Hücre Zarından Madde Geçişi'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Canlıların Sınıflandırılması'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Mitoz ve Eşeysiz Üreme'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Mayoz ve Eşeyli Üreme'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Kalıtım'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Ekosistem Ekolojisi'),
-    ('TYT Fen Bilimleri', 20, 'Biyoloji', 'Güncel Çevre Sorunları'),
+    # ── TYT DİN KÜLTÜRÜ ────────────────────────────────────────────
+    ('TYT Din Kültürü', 4, '', 'Bilgi ve İnanç'),
+    ('TYT Din Kültürü', 4, '', 'Din ve İslam'),
+    ('TYT Din Kültürü', 4, '', 'İslam ve İbadet'),
+    ('TYT Din Kültürü', 4, '', 'Gençlik ve Değerler'),
+    ('TYT Din Kültürü', 4, '', 'İslam Medeniyeti ve Özellikleri'),
+    ('TYT Din Kültürü', 4, '', 'Allah İnancı ve İnsan'),
+    ('TYT Din Kültürü', 4, '', "Allah'ın Varlığı ve Birliği"),
+    ('TYT Din Kültürü', 4, '', "Allah'ın İsim ve Sıfatları"),
+    ('TYT Din Kültürü', 4, '', "Kur'an-ı Kerim'de İnsan ve Özellikleri"),
+    ('TYT Din Kültürü', 4, '', 'İnsanın Allah İle İrtibatı'),
+    ('TYT Din Kültürü', 4, '', "Kur'an-ı Kerim'de Gençler"),
+    ('TYT Din Kültürü', 4, '', 'Bir Genç Olarak Hz. Muhammed'),
+    ('TYT Din Kültürü', 4, '', 'Hz. Muhammed ve Gençler'),
+    ('TYT Din Kültürü', 4, '', 'Bazı Genç Sahabeler'),
+    ('TYT Din Kültürü', 4, '', 'Din ve Aile'),
+    ('TYT Din Kültürü', 4, '', 'Din, Kültür ve Sanat'),
+    ('TYT Din Kültürü', 4, '', 'Din ve Çevre'),
+    ('TYT Din Kültürü', 4, '', 'Din ve Sosyal Değişim'),
+    ('TYT Din Kültürü', 4, '', 'Din ve Ekonomi'),
+    ('TYT Din Kültürü', 4, '', 'Din ve Sosyal Adalet'),
+    ('TYT Din Kültürü', 4, '', 'İslam Ahlakı'),
+    ('TYT Din Kültürü', 4, '', 'Dinî Yorum Farklılıklarının Sebepleri'),
+    ('TYT Din Kültürü', 4, '', 'Dinî Yorumlarla İlgili Bazı Kavramlar'),
+    ('TYT Din Kültürü', 4, '', 'İslam Düşüncesinde İtikadi ve Siyasi Yorumlar'),
+    ('TYT Din Kültürü', 4, '', 'İslam Düşüncesinde Fıkhi Yorumlar'),
 
     # ── TYT FİZİK (branş, 7 soru) ──────────────────────────────────
     ('TYT Fizik', 7, '', 'Fizik Bilimine Giriş'),
@@ -234,6 +194,100 @@ TYT_TOPICS = [
     ('TYT Biyoloji', 6, '', 'Kalıtım'),
     ('TYT Biyoloji', 6, '', 'Ekosistem Ekolojisi'),
     ('TYT Biyoloji', 6, '', 'Güncel Çevre Sorunları'),
+
+    # ── TYT GEOMETRİ ───────────────────────────────────────────────
+    ('TYT Geometri', 10, '', 'Doğru ve Açı'),
+    ('TYT Geometri', 10, '', 'Üçgenler'),
+    ('TYT Geometri', 10, '', 'Dik Üçgen ve Özel Üçgenler'),
+    ('TYT Geometri', 10, '', 'Çokgenler'),
+    ('TYT Geometri', 10, '', 'Dörtgenler'),
+    ('TYT Geometri', 10, '', 'Çember ve Daire'),
+    ('TYT Geometri', 10, '', 'Analitik Geometri — Doğru'),
+    ('TYT Geometri', 10, '', 'Analitik Geometri — Çember'),
+    ('TYT Geometri', 10, '', 'Katı Cisimler'),
+    ('TYT Geometri', 10, '', 'Dönüşüm Geometrisi'),
+]
+
+# (subject_name, question_count, sub_category, topic_name)
+# SAY track only: Matematik, Fizik, Kimya, Biyoloji — 70 topics total
+AYT_TOPICS = [
+    # ── AYT MATEMATİK (12) ─────────────────────────────────────────
+    ('AYT Matematik', 30, '', 'Fonksiyonlar'),
+    ('AYT Matematik', 30, '', 'Polinomlar'),
+    ('AYT Matematik', 30, '', 'Dereceden Denklemler ve Eşitsizlikler'),
+    ('AYT Matematik', 30, '', 'Parabol'),
+    ('AYT Matematik', 30, '', 'Permütasyon-Kombinasyon-Olasılık – Binom'),
+    ('AYT Matematik', 30, '', 'Trigonometri'),
+    ('AYT Matematik', 30, '', 'Karmaşık Sayılar'),
+    ('AYT Matematik', 30, '', 'Logaritma'),
+    ('AYT Matematik', 30, '', 'Diziler'),
+    ('AYT Matematik', 30, '', 'Limit'),
+    ('AYT Matematik', 30, '', 'Türev'),
+    ('AYT Matematik', 30, '', 'İntegral'),
+
+    # ── AYT FİZİK (26) ─────────────────────────────────────────────
+    ('AYT Fizik', 14, '', 'Vektörler'),
+    ('AYT Fizik', 14, '', 'Bağıl Hareket'),
+    ('AYT Fizik', 14, '', "Newton'un Hareket Yasaları"),
+    ('AYT Fizik', 14, '', 'Bir Boyutta Sabit İvmeli Hareket'),
+    ('AYT Fizik', 14, '', 'Atışlar'),
+    ('AYT Fizik', 14, '', 'İş, Güç ve Enerji'),
+    ('AYT Fizik', 14, '', 'İtme ve Momentum'),
+    ('AYT Fizik', 14, '', 'Kuvvet, Tork ve Denge'),
+    ('AYT Fizik', 14, '', 'Kütle Merkezi'),
+    ('AYT Fizik', 14, '', 'Basit Makineler'),
+    ('AYT Fizik', 14, '', 'Çembersel Hareket'),
+    ('AYT Fizik', 14, '', 'Dönme, Yuvarlanma ve Açısal Momentum'),
+    ('AYT Fizik', 14, '', 'Kütle Çekim ve Kepler Yasaları'),
+    ('AYT Fizik', 14, '', 'Basit Harmonik Hareket'),
+    ('AYT Fizik', 14, '', 'Elektrik Alan ve Potansiyel'),
+    ('AYT Fizik', 14, '', 'Paralel Levhalar ve Sığa'),
+    ('AYT Fizik', 14, '', 'Manyetik Alan ve Manyetik Kuvvet'),
+    ('AYT Fizik', 14, '', 'İndüksiyon, Alternatif Akım ve Transformatörler'),
+    ('AYT Fizik', 14, '', 'Dalga Mekaniği ve Elektromanyetik Dalgalar'),
+    ('AYT Fizik', 14, '', 'Özel Görelilik'),
+    ('AYT Fizik', 14, '', 'Kara Cisim Işıması'),
+    ('AYT Fizik', 14, '', 'Fotoelektrik Olay ve Compton Olayı'),
+    ('AYT Fizik', 14, '', 'Atom Modelleri'),
+    ('AYT Fizik', 14, '', 'Radyoaktivite'),
+    ('AYT Fizik', 14, '', 'Büyük Patlama ve Parçacık Fiziği'),
+    ('AYT Fizik', 14, '', 'Modern Fiziğin Teknolojideki Uygulamaları'),
+
+    # ── AYT KİMYA (15) ─────────────────────────────────────────────
+    ('AYT Kimya', 13, '', 'Kimya Bilimi'),
+    ('AYT Kimya', 13, '', 'Atom ve Yapısı'),
+    ('AYT Kimya', 13, '', 'Periyodik Sistem'),
+    ('AYT Kimya', 13, '', 'Kimyasal Türler Arası Etkileşim'),
+    ('AYT Kimya', 13, '', 'Kimyasal Hesaplamalar'),
+    ('AYT Kimya', 13, '', 'Modern Atom Teorisi'),
+    ('AYT Kimya', 13, '', 'Gazlar'),
+    ('AYT Kimya', 13, '', 'Sıvı Çözeltiler'),
+    ('AYT Kimya', 13, '', 'Kimyasal Tepkimelerde Enerji'),
+    ('AYT Kimya', 13, '', 'Kimyasal Tepkimelerde Hız'),
+    ('AYT Kimya', 13, '', 'Kimyasal Tepkimelerde Denge'),
+    ('AYT Kimya', 13, '', 'Asit-Baz Dengesi'),
+    ('AYT Kimya', 13, '', 'Çözünürlük Dengesi'),
+    ('AYT Kimya', 13, '', 'Kimya ve Elektrik'),
+    ('AYT Kimya', 13, '', 'Organik Kimya'),
+
+    # ── AYT BİYOLOJİ (17) ──────────────────────────────────────────
+    ('AYT Biyoloji', 13, '', 'Canlılık ve Enerji'),
+    ('AYT Biyoloji', 13, '', 'Nükleik Asitler'),
+    ('AYT Biyoloji', 13, '', 'Genetik Şifre ve Protein Sentezi'),
+    ('AYT Biyoloji', 13, '', 'Fotosentez ve Kemosentez'),
+    ('AYT Biyoloji', 13, '', 'Hücresel Solunum'),
+    ('AYT Biyoloji', 13, '', 'Destek ve Hareket Sistemi'),
+    ('AYT Biyoloji', 13, '', 'Sindirim Sistemi'),
+    ('AYT Biyoloji', 13, '', 'Dolaşım ve Bağışıklık Sistemi'),
+    ('AYT Biyoloji', 13, '', 'Solunum Sistemi'),
+    ('AYT Biyoloji', 13, '', 'Üriner Sistem'),
+    ('AYT Biyoloji', 13, '', 'Endokrin Sistem'),
+    ('AYT Biyoloji', 13, '', 'Sinir Sistemi'),
+    ('AYT Biyoloji', 13, '', 'Duyu Organları'),
+    ('AYT Biyoloji', 13, '', 'Üreme Sistemi ve Embriyonik Gelişim'),
+    ('AYT Biyoloji', 13, '', 'Bitki Biyolojisi'),
+    ('AYT Biyoloji', 13, '', 'Komünite ve Popülasyon Ekolojisi'),
+    ('AYT Biyoloji', 13, '', 'Canlılar ve Çevre'),
 ]
 
 
@@ -250,25 +304,29 @@ class Command(BaseCommand):
         subject_cache = {}
         added = updated = 0
 
-        for subject_name, q_count, sub_cat, topic_name in TYT_TOPICS:
-            if subject_name not in subject_cache:
-                subj, _ = Subject.objects.get_or_create(exam_type='TYT', name=subject_name)
-                if subj.question_count != q_count:
-                    subj.question_count = q_count
-                    subj.save(update_fields=['question_count'])
-                subject_cache[subject_name] = subj
+        for batch, exam_type in [(TYT_TOPICS, 'TYT'), (AYT_TOPICS, 'AYT')]:
+            for subject_name, q_count, sub_cat, topic_name in batch:
+                if subject_name not in subject_cache:
+                    subj, _ = Subject.objects.get_or_create(
+                        exam_type=exam_type, name=subject_name,
+                        defaults={'question_count': q_count},
+                    )
+                    if subj.question_count != q_count:
+                        subj.question_count = q_count
+                        subj.save(update_fields=['question_count'])
+                    subject_cache[subject_name] = subj
 
-            subj = subject_cache[subject_name]
-            topic, created = Topic.objects.get_or_create(
-                subject=subj, name=topic_name,
-                defaults={'sub_category': sub_cat},
-            )
-            if created:
-                added += 1
-            elif topic.sub_category != sub_cat:
-                topic.sub_category = sub_cat
-                topic.save(update_fields=['sub_category'])
-                updated += 1
+                subj = subject_cache[subject_name]
+                topic, created = Topic.objects.get_or_create(
+                    subject=subj, name=topic_name,
+                    defaults={'sub_category': sub_cat},
+                )
+                if created:
+                    added += 1
+                elif topic.sub_category != sub_cat:
+                    topic.sub_category = sub_cat
+                    topic.save(update_fields=['sub_category'])
+                    updated += 1
 
         self.stdout.write(self.style.SUCCESS(
             f'  {added} konu eklendi, {updated} konu güncellendi'

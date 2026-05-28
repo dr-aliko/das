@@ -1,0 +1,175 @@
+{# YouTube Playlist Import Modal — rendered inside panel() scope; controlled by playlistImporter() from tasks_panel.js #}
+<div x-data="playlistImporter()"
+     @open-playlist-importer.window="open()"
+     x-show="show" x-cloak
+     class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+     @keydown.escape.window="close()">
+  <div class="rounded-2xl shadow-card-lg w-full max-w-md bg-ink-850 border border-ink-700"
+       @click.stop>
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-ink-700">
+      <h2 class="text-base font-semibold text-ink-100">YouTube Playlist Ekle</h2>
+      <button @click="close()"
+              class="w-7 h-7 flex items-center justify-center text-ink-400 hover:text-ink-200
+                     hover:bg-ink-800 rounded-lg transition text-lg leading-none">&times;</button>
+    </div>
+
+    <div class="p-6 space-y-4">
+
+      {# ── Input / Error ── #}
+      <template x-if="step === 'input' || step === 'error'">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Playlist URL</label>
+            <input x-model="url" type="text"
+                   placeholder="https://youtube.com/playlist?list=…"
+                   @keydown.enter="doPreview()"
+                   class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                          text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500 transition">
+          </div>
+          <p x-show="step === 'error'"
+             class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
+             x-text="errorMsg"></p>
+          <button @click="doPreview()" :disabled="!url.trim()"
+                  class="w-full py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
+                         hover:bg-steel-400 active:bg-steel-600 transition
+                         disabled:opacity-50 disabled:cursor-not-allowed">
+            Önizle
+          </button>
+        </div>
+      </template>
+
+      {# ── Importing (preview + import both show this spinner) ── #}
+      <template x-if="step === 'importing'">
+        <div class="flex flex-col items-center gap-4 py-8">
+          <svg class="animate-spin w-8 h-8 text-steel-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <p class="text-sm text-ink-400">İşleniyor…</p>
+        </div>
+      </template>
+
+      {# ── Preview ── #}
+      <template x-if="step === 'preview'">
+        <div class="space-y-4">
+
+          <div class="rounded-xl bg-ink-800 border border-ink-700 p-4 space-y-2">
+            <p class="text-sm font-semibold text-ink-100 leading-snug" x-text="preview.title"></p>
+            <p class="text-xs text-ink-400" x-text="preview.channel_title"></p>
+            <div class="flex items-center gap-2 flex-wrap pt-1">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                           bg-steel-500/20 text-steel-400 border border-steel-500/30"
+                    x-text="preview.video_count + ' video'"></span>
+              <template x-if="preview.detected_exam_type">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                             bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      x-text="preview.detected_exam_type + ' otomatik algılandı'"></span>
+              </template>
+              <template x-if="preview.detected_subject_name">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                             bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      x-text="preview.detected_subject_name + ' otomatik algılandı'"></span>
+              </template>
+              <template x-if="preview.already_imported">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                             bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Daha önce eklendi — güncellenecek
+                </span>
+              </template>
+            </div>
+          </div>
+
+          {# Exam type picker — only when not auto-detected #}
+          <template x-if="!preview.detected_exam_type">
+            <div>
+              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+              <div class="flex gap-2">
+                <template x-for="tip in ['TYT', 'AYT']" :key="tip">
+                  <button type="button" @click="selectedExamType = tip"
+                          class="flex-1 py-2 rounded-xl text-sm font-bold border transition"
+                          :class="selectedExamType === tip
+                            ? 'bg-steel-500/20 border-steel-500 text-steel-400'
+                            : 'bg-ink-800 border-ink-700 text-ink-400 hover:bg-ink-750'"
+                          x-text="tip"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          {# Subject picker — only when not auto-detected #}
+          <template x-if="!preview.detected_subject_id">
+            <div>
+              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
+                Ders <span class="font-normal normal-case text-ink-500">(isteğe bağlı)</span>
+              </label>
+              <select x-model="selectedSubjectId"
+                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
+                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                <option value="">Seçilmedi</option>
+                <template x-for="s in subjects.filter(s => !selectedExamType || s.exam_type === selectedExamType)"
+                          :key="s.id">
+                  <option :value="s.id" x-text="s.display_name"></option>
+                </template>
+              </select>
+            </div>
+          </template>
+
+          <p x-show="errorMsg"
+             class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
+             x-text="errorMsg"></p>
+
+          <div class="flex gap-2">
+            <button @click="reset()"
+                    class="flex-1 py-2.5 border border-ink-700 text-sm font-medium rounded-xl
+                           text-ink-300 hover:bg-ink-800 transition">
+              Geri
+            </button>
+            <button @click="doImport()"
+                    class="flex-1 py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
+                           hover:bg-steel-400 active:bg-steel-600 transition">
+              Playlisti Ekle
+            </button>
+          </div>
+        </div>
+      </template>
+
+      {# ── Success ── #}
+      <template x-if="step === 'success'">
+        <div class="space-y-4">
+          <div class="flex flex-col items-center gap-3 py-4">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div class="text-center space-y-1">
+              <p class="text-sm font-semibold text-ink-100" x-text="importResult.title"></p>
+              <p class="text-xs text-ink-400"
+                 x-text="importResult.video_count + ' video · ' + importResult.exam_type + (importResult.subject_display ? ' · ' + importResult.subject_display : '')"></p>
+              <p x-show="importResult.was_update" class="text-xs text-amber-400">Playlist güncellendi.</p>
+            </div>
+          </div>
+          <button @click="useNow()"
+                  class="w-full py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
+                         hover:bg-steel-400 active:bg-steel-600 transition">
+            Bu playlist ile görev oluştur
+          </button>
+          <div class="flex gap-2">
+            <button @click="reset()"
+                    class="flex-1 py-2 border border-ink-700 text-xs font-medium rounded-xl
+                           text-ink-300 hover:bg-ink-800 transition">
+              Başka Playlist Ekle
+            </button>
+            <button @click="close()"
+                    class="flex-1 py-2 border border-ink-700 text-xs font-medium rounded-xl
+                           text-ink-300 hover:bg-ink-800 transition">
+              Kapat
+            </button>
+          </div>
+        </div>
+      </template>
+
+    </div>
+  </div>
+</div>

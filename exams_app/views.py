@@ -1919,6 +1919,20 @@ def coach_dashboard(request):
 
     CoachAuditLog.objects.create(coach=request.user, student=None, action='viewed_roster')
 
+    # Pre-fetch primary plan per student (one query, grouped in Python)
+    from curriculum_app.models import MacroPlan
+    all_plans = list(
+        MacroPlan.objects.filter(coach=request.user, student__in=students)
+        .order_by('student_id', '-created_at')
+        .only('id', 'student_id', 'status', 'sinav_tipi',
+              'tyt_start_date', 'tyt_end_date', 'ayt_start_date', 'ayt_end_date',
+              'target_date')
+    )
+    primary_plan_map: dict = {}
+    for p in all_plans:
+        if p.student_id not in primary_plan_map:
+            primary_plan_map[p.student_id] = p
+
     student_data = []
     status_counts = {'iyi': 0, 'dusus': 0, 'pasif': 0}
 
@@ -1962,6 +1976,14 @@ def coach_dashboard(request):
 
         trend = round(last_net - avg_30d, 2) if last_net is not None and avg_30d is not None else None
 
+        primary_plan = primary_plan_map.get(student.id)
+        if primary_plan is None:
+            plan_status = 'plan_yok'
+        elif primary_plan.status == 'APPROVED':
+            plan_status = 'onaylandi'
+        else:
+            plan_status = 'taslak'
+
         student_data.append({
             'student': student,
             'last_net': last_net,
@@ -1970,6 +1992,8 @@ def coach_dashboard(request):
             'status': status_key,
             'initials': initials,
             'trend': trend,
+            'primary_plan': primary_plan,
+            'plan_status': plan_status,
         })
 
     # ── Inbox alerts for the slide-out drawer ─────────────────────────────────

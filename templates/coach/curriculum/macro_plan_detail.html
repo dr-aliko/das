@@ -18,12 +18,33 @@
         <span class="text-xs text-ink-400">{{ plan.student.full_name }}</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary-glow">{{ plan.sinav_tipi }}</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] bg-ink-800 text-ink-400">{{ plan.get_algorithm_display }}</span>
+        {% if plan.segment %}<span class="px-2 py-0.5 rounded-full text-[10px] bg-ink-800 text-ink-400">{{ plan.segment }}</span>{% endif %}
         <span class="text-xs text-ink-500">Hedef: {{ plan.target_date|date:"d.m.Y" }}</span>
         <span class="text-xs text-ink-500">{{ plan.months_remaining }} ay kaldı</span>
         <span class="text-xs text-ink-500">{{ plan.total_topics }} konu</span>
+        {% if plan.planning_mode == 'CUSTOM_WINDOWS' %}
+        <span class="px-2 py-0.5 rounded-full text-[10px] bg-ink-800 text-ink-400">Özel Pencere</span>
+        {% if plan.tyt_start_date %}<span class="text-xs text-ink-500">TYT: {{ plan.tyt_start_date|date:"d.m" }}–{{ plan.tyt_end_date|date:"d.m.Y" }}</span>{% endif %}
+        {% if plan.ayt_start_date %}<span class="text-xs text-ink-500">AYT: {{ plan.ayt_start_date|date:"d.m" }}–{{ plan.ayt_end_date|date:"d.m.Y" }}</span>{% endif %}
+        {% endif %}
+        {% if plan.status == 'APPROVED' %}
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">Onaylandı</span>
+        {% else %}
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400">Taslak</span>
+        {% endif %}
       </div>
     </div>
     <div class="flex items-center gap-2 shrink-0" x-data="{ confirmDelete: false, confirmRegen: false }">
+      {% if plan.status == 'DRAFT' %}
+      <form method="post" action="{% url 'curriculum:approve' plan.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-3 py-2.5 min-h-[44px] rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20
+                       text-xs text-emerald-400 font-semibold transition">
+          Onayla
+        </button>
+      </form>
+      {% endif %}
       <form method="post" action="{% url 'curriculum:regenerate' plan.pk %}" x-show="!confirmDelete">
         {% csrf_token %}
         <button type="button" @click="confirmRegen = !confirmRegen"
@@ -66,6 +87,23 @@
     Bu tablo bir referans takvimdir. Günlük görevler mevcut haftalık planlayıcıdan manuel oluşturulur.
   </div>
 
+  {# Risk alerts #}
+  {% if risk_alerts %}
+  <div class="space-y-2">
+    {% for alert in risk_alerts %}
+    <div class="flex gap-3 items-start px-4 py-3 rounded-xl border text-sm
+                {% if alert.severity == 'CRITICAL' %}border-ruby-500/40 bg-ruby-tint text-ruby-300
+                {% elif alert.severity == 'WARNING' %}border-amber-500/30 bg-amber-500/8 text-amber-300
+                {% else %}border-steel-500/20 bg-steel-tint text-steel-300{% endif %}">
+      <span class="shrink-0 mt-0.5 text-base leading-none">
+        {% if alert.severity == 'CRITICAL' %}⛔{% elif alert.severity == 'WARNING' %}⚠️{% else %}ℹ️{% endif %}
+      </span>
+      <p class="flex-1 text-xs leading-relaxed">{{ alert.message }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# Month timeline — horizontal scroll on desktop, vertical stack on mobile #}
   {% if buckets %}
   <div class="flex gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-3 lg:overflow-x-visible">
@@ -74,7 +112,16 @@
       {# Bucket header #}
       <div class="px-4 py-3 bg-ink-850 border-b border-ink-700 flex items-center justify-between">
         <p class="text-sm font-bold text-ink-100">{{ bucket.label }}</p>
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-ink-800 text-ink-400">{{ bucket.topic_count }} konu</span>
+        <div class="flex items-center gap-1.5">
+          {% if bucket.window_kind == 'TYT' %}
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-mat-tint text-mat">TYT</span>
+          {% elif bucket.window_kind == 'AYT' %}
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-fen-tint text-fen">AYT</span>
+          {% else %}
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-steel-tint text-steel-300">TYT+AYT</span>
+          {% endif %}
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-ink-800 text-ink-400">{{ bucket.topic_count }} konu</span>
+        </div>
       </div>
 
       {# Topics grouped by subject #}
@@ -98,6 +145,41 @@
         <p class="text-xs text-ink-500 italic">Bu ay için konu yok</p>
         {% endfor %}
       </div>
+
+      {# Weekly breakdown (collapsible) #}
+      {% if bucket.weeks.all %}
+      <details class="mx-3 mb-2 group">
+        <summary class="text-[10px] font-semibold text-ink-400 cursor-pointer select-none py-1">
+          Haftalik Dagilim
+        </summary>
+        <div class="mt-1 space-y-2 pb-2">
+          {% for week in bucket.weeks.all %}
+          <div>
+            <p class="text-[9px] font-bold text-ink-300">
+              Hafta {{ forloop.counter }}
+              <span class="font-normal text-ink-500">({{ week.pct_new_topic }}% yeni / {{ week.pct_revision }}% tekrar / {{ week.pct_trial }}% deneme)</span>
+            </p>
+            {% for wt in week.topics.all %}
+            <div class="flex items-baseline gap-1 pl-2 py-0.5">
+              <span class="shrink-0 px-1 rounded text-[8px] font-bold leading-snug
+                {% if wt.activity == 'repair' %}bg-ruby-500/20 text-ruby-300
+                {% elif wt.activity == 'revision' %}bg-amber-500/20 text-amber-300
+                {% elif wt.activity == 'trial' %}bg-steel-500/20 text-steel-300
+                {% else %}bg-ink-700 text-ink-400{% endif %}">
+                {{ wt.get_activity_display }}
+              </span>
+              <span class="text-[10px] text-ink-200 leading-tight">{{ wt.topic.subject.display_name }} — {{ wt.topic.name }}</span>
+              <span class="text-[9px] text-ink-500 shrink-0">{{ wt.hours }}sa</span>
+              {% if wt.reason %}<span class="text-[9px] text-ink-600 italic truncate">{{ wt.reason }}</span>{% endif %}
+            </div>
+            {% empty %}
+            <p class="pl-2 text-[9px] text-ink-600 italic">Bu hafta icin konu yok</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
 
       {# Progress bar — % of total topics #}
       {% if plan.total_topics > 0 %}

@@ -29,4 +29,11 @@ urlpatterns = [
     path('api/dersler', views.DerslerView.as_view(), name='api-dersler'),
     path('api/oynatma-listeleri/<int:ders_id>', views.OynatmaListeleriView.as_view(), name='api-oynatma-listeleri'),
     path('api/videolar/<int:liste_id>', views.VideolarView.as_view(), name='api-videolar'),
+
+    # YouTube playlist importer
+    path('api/youtube/preview', views.YoutubePlaylistPreviewView.as_view(), name='api-youtube-preview'),
+    path('api/youtube/import', views.YoutubePlaylistImportView.as_view(), name='api-youtube-import'),
+    path('api/youtube/list', views.YoutubePlaylistListView.as_view(), name='api-youtube-list'),
+    path('api/youtube/<int:pk>/videos', views.YoutubePlaylistVideosView.as_view(), name='api-youtube-videos'),
+    path('api/youtube/<int:pk>', views.YoutubePlaylistDeleteView.as_view(), name='api-youtube-delete'),
 ]

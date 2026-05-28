@@ -1,0 +1,43 @@
+{% load static %}
+<footer class="site-footer surface-dark">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <a href="{% url 'marketing:home' %}" class="brand">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+          Vagus
+        </a>
+        <p style="margin-top:14px; font-size:13px; color:var(--muted); max-width:280px; line-height:1.6;">{{ site_settings.footer_tagline }}</p>
+      </div>
+      <div class="footer-col">
+        <h4>Ürün</h4>
+        <ul>
+          <li><a href="{% url 'marketing:features' %}">Özellikler</a></li>
+          <li><a href="{% url 'marketing:pricing' %}">Fiyatlandırma</a></li>
+          <li><a href="{{ site_settings.nav_cta_url }}">Hemen Başla</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Şirket</h4>
+        <ul>
+          <li><a href="{% url 'marketing:about' %}">Hakkımızda</a></li>
+          <li><a href="{% url 'marketing:about' %}">Neden Vagus</a></li>
+          <li><a href="{% url 'marketing:contact' %}">İletişim</a></li>
+          <li><a href="{% url 'marketing:coach_list' %}">Koçlar</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Hukuki</h4>
+        <ul>
+          <li><a href="#">Gizlilik</a></li>
+          <li><a href="#">Kullanım Şartları</a></li>
+          <li><a href="#">KVKK</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>{{ site_settings.footer_copyright }}</span>
+      <span>{{ site_settings.footer_location }}</span>
+    </div>
+  </div>
+</footer>

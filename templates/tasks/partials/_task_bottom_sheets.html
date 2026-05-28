@@ -181,6 +181,39 @@
                     </div>
                 </div>
 
+                <!-- Yüklenen YouTube Playlistler (coach-only; ytListeler defined in coachMobilePanel) -->
+                <template x-if="filteredYtListeler && filteredYtListeler.length > 0">
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2 px-1">
+                      <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">YÜKLENEN YT PLAYLİSTLER</label>
+                    </div>
+                    <div class="space-y-1.5 max-h-32 overflow-y-auto"
+                         style="-ms-overflow-style:none;scrollbar-width:none;">
+                      <template x-for="l in filteredYtListeler" :key="l.pk">
+                        <div class="flex items-center gap-1.5">
+                          <button type="button"
+                                  @click="taskForm.selectedVideos=[]; loadYtVideolar(l.pk)"
+                                  class="flex-1 min-w-0 text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors truncate"
+                                  :class="taskForm.liste_id === 'yt:' + l.pk
+                                      ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                      : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--heading)] active:bg-[var(--surface-1)]'"
+                                  x-text="l.title + ' (' + l.exam_type + ')'"></button>
+                          <button type="button"
+                                  @click="deleteYtPlaylist(l.pk)"
+                                  title="Sil"
+                                  class="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl
+                                         text-[var(--muted)] active:bg-red-500/10 active:text-red-400 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
                 <!-- Step 3: Playlist picker — appears after ders selection -->
                 <div x-show="taskForm.konu_ders_id" class="space-y-2">
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider px-1">OYNATMA LİSTESİ</label>

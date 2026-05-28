@@ -206,15 +206,77 @@
 
           </a>
 
-          {# Curriculum plan shortcut #}
-          <a href="{% url 'curriculum:list' %}?student={{ item.student.id }}"
-             class="mt-2 w-full flex items-center gap-1.5 px-3 py-2 rounded-xl
-                    text-xs text-ink-400 hover:text-steel-300 hover:bg-ink-800 transition-colors"
-             title="Müfredat Planları">
-            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
-                 viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Müfredat Planı
-          </a>
+          {# ── Planning action footer ──────────────────────────────────────── #}
+          <div class="mt-3 pt-3 border-t border-ink-700/60">
+
+            {# Plan status + date windows #}
+            <div class="flex items-center gap-2 flex-wrap mb-2.5">
+              {% if item.plan_status == 'onaylandi' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-tint border border-emerald-500/30 text-emerald-500 text-[10px] font-bold uppercase tracking-wider">
+                <span class="w-1 h-1 rounded-full bg-emerald-500"></span>Onaylandı
+              </span>
+              {% elif item.plan_status == 'taslak' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-tint border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider">
+                <span class="w-1 h-1 rounded-full bg-amber-500"></span>Taslak
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-ink-800 border border-ink-700 text-ink-500 text-[10px] font-bold uppercase tracking-wider">
+                Plan Yok
+              </span>
+              {% endif %}
+
+              {% if item.primary_plan %}
+                {% with p=item.primary_plan %}
+                {% if p.tyt_start_date and p.tyt_end_date %}
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-ink-800 border border-ink-700 text-[10px] text-ink-300">
+                  <span class="text-steel-400 font-bold">TYT</span>
+                  {{ p.tyt_start_date|date:"d M" }}–{{ p.tyt_end_date|date:"d M" }}
+                </span>
+                {% elif item.student.tyt_target_date %}
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-ink-800 border border-ink-700 text-[10px] text-ink-300">
+                  <span class="text-steel-400 font-bold">TYT</span>
+                  {{ item.student.tyt_target_date|date:"d M Y" }}
+                </span>
+                {% endif %}
+                {% if p.ayt_start_date and p.ayt_end_date %}
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-ink-800 border border-ink-700 text-[10px] text-ink-300">
+                  <span class="text-emerald-500 font-bold">AYT</span>
+                  {{ p.ayt_start_date|date:"d M" }}–{{ p.ayt_end_date|date:"d M" }}
+                </span>
+                {% elif item.student.ayt_target_date %}
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-ink-800 border border-ink-700 text-[10px] text-ink-300">
+                  <span class="text-emerald-500 font-bold">AYT</span>
+                  {{ item.student.ayt_target_date|date:"d M Y" }}
+                </span>
+                {% endif %}
+                {% endwith %}
+              {% endif %}
+            </div>
+
+            {# Primary CTA + secondary buttons #}
+            <div class="flex items-center gap-1.5">
+              <a href="{% url 'curriculum:editor' item.student.id %}"
+                 class="flex-1 h-8 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-[11px] font-semibold
+                        inline-flex items-center justify-center gap-1 transition-colors">
+                Aylık Planı Düzenle
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+              </a>
+              {% if item.primary_plan %}
+              <a href="{% url 'curriculum:editor' item.student.id %}"
+                 title="Plan Durumu"
+                 class="w-8 h-8 rounded-lg bg-ink-800 border border-ink-700 text-ink-400 hover:text-ink-200 hover:bg-ink-750
+                        inline-flex items-center justify-center transition-colors">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7h8M8 12h5"/></svg>
+              </a>
+              {% endif %}
+              <a href="{% url 'coach:student_detail' item.student.id %}"
+                 title="Öğrenci Detayı"
+                 class="w-8 h-8 rounded-lg bg-ink-800 border border-ink-700 text-ink-400 hover:text-ink-200 hover:bg-ink-750
+                        inline-flex items-center justify-center transition-colors">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              </a>
+            </div>
+          </div>
 
           {# Confirm overlay #}
           <div x-show="confirm" x-cloak

@@ -80,9 +80,9 @@
         <p class="text-xs font-bold text-steel-300">Hedef Sınav Tarihi</p>
         {% endif %}
       </div>
-      <a href="{% url 'curriculum:list' %}?student={{ student.id }}"
+      <a href="{% url 'curriculum:editor' student.id %}"
          class="flex items-center gap-1 text-[10px] font-semibold text-steel-400 hover:text-steel-300 transition-colors">
-        Müfredat Planı →
+        Aylık Planı Düzenle →
       </a>
     </div>
     <form class="flex flex-wrap gap-3 items-end"

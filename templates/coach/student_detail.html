@@ -44,12 +44,12 @@ function coachExamSelect() {
         <h2 class="text-sm font-bold text-indigo-800">Hedef Sınav Tarihi</h2>
         {% endif %}
       </div>
-      <a href="{% url 'curriculum:list' %}?student={{ student.id }}"
+      <a href="{% url 'curriculum:editor' student.id %}"
          class="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Müfredat Planı →
+        Aylık Planı Düzenle →
       </a>
     </div>
     <form class="grid grid-cols-1 sm:grid-cols-2 gap-3"

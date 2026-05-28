@@ -65,6 +65,56 @@ class GrupDetay(models.Model):
         return self.aciklama or ""
 
 
+class YouTubePlaylist(models.Model):
+    playlist_id   = models.CharField(max_length=64, unique=True)
+    title         = models.CharField(max_length=255)
+    channel_title = models.CharField(max_length=255, blank=True)
+    subject       = models.ForeignKey(
+        'exams_app.Subject',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='youtube_playlists',
+    )
+    exam_type     = models.CharField(
+        max_length=3, choices=[('TYT', 'TYT'), ('AYT', 'AYT')], default='TYT',
+    )
+    imported_by   = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='imported_playlists',
+    )
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'YouTube Playlist'
+        verbose_name_plural = 'YouTube Playlistler'
+        ordering = ['exam_type', 'title']
+
+    def __str__(self):
+        return self.title
+
+
+class YouTubeVideo(models.Model):
+    playlist     = models.ForeignKey(
+        YouTubePlaylist, on_delete=models.CASCADE, related_name='videos',
+    )
+    video_id     = models.CharField(max_length=32)
+    title        = models.CharField(max_length=300)
+    duration_min = models.PositiveIntegerField(default=0)
+    position     = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'YouTube Video'
+        verbose_name_plural = 'YouTube Videolar'
+        unique_together = [('playlist', 'video_id')]
+        ordering = ['position']
+
+    def __str__(self):
+        return self.title
+
+
 class KaynakKitap(models.Model):
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,

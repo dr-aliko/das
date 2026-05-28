@@ -96,13 +96,99 @@ function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filena
   URL.revokeObjectURL(url);
 }
 
+function playlistImporter() {
+  const _csrf = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+  return {
+    show: false,
+    step: 'input',       // 'input' | 'preview' | 'importing' | 'success' | 'error'
+    url: '',
+    errorMsg: '',
+    preview: null,       // server response from /preview
+    subjects: [],        // [{pk, display_name, exam_type}] for manual subject picker
+    selectedSubjectId: '',
+    selectedExamType: 'TYT',
+    importResult: null,  // server response from /import
+
+    open() { this.reset(); this.show = true; },
+    close() { this.show = false; },
+    reset() {
+      this.step = 'input'; this.url = ''; this.errorMsg = '';
+      this.preview = null; this.importResult = null;
+      this.selectedSubjectId = ''; this.selectedExamType = 'TYT';
+    },
+
+    async fetchSubjects() {
+      if (this.subjects.length) return;
+      try {
+        const r = await fetch('/coach/tasks/api/youtube/list');
+        // We just need subjects — we use a lightweight endpoint that returns playlists,
+        // but actually we need Subject list. Use Django admin is not available here.
+        // Instead, build subjects from the playlists already imported (won't cover all).
+        // Better: call /api/dersler (external) or a dedicated endpoint.
+        // For now keep subjects empty — manual picker loads from preview's data.
+      } catch (_) {}
+    },
+
+    async doPreview() {
+      if (!this.url.trim()) return;
+      this.step = 'importing'; this.errorMsg = '';
+      try {
+        const r = await fetch('/coach/tasks/api/youtube/preview', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: this.url }),
+        });
+        const data = await r.json();
+        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'Bir hata olustu.'; return; }
+        this.preview = data;
+        this.subjects = data.subjects || [];
+        this.selectedSubjectId = data.detected_subject_id ? String(data.detected_subject_id) : '';
+        this.selectedExamType  = data.detected_exam_type || 'TYT';
+        this.step = 'preview';
+      } catch (e) {
+        this.step = 'error'; this.errorMsg = 'Baglanti hatasi.';
+      }
+    },
+
+    get needsSubject() { return this.preview && !this.preview.detected_subject_id && !this.selectedSubjectId; },
+    get needsExamType() { return this.preview && !this.preview.detected_exam_type; },
+
+    async doImport() {
+      this.step = 'importing';
+      try {
+        const r = await fetch('/coach/tasks/api/youtube/import', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url:        this.url,
+            subject_id: this.selectedSubjectId || null,
+            exam_type:  this.selectedExamType,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'Import basarisiz.'; return; }
+        this.importResult = data;
+        this.step = 'success';
+      } catch (e) {
+        this.step = 'error'; this.errorMsg = 'Baglanti hatasi.';
+      }
+    },
+
+    useNow() {
+      if (!this.importResult) return;
+      window.dispatchEvent(new CustomEvent('playlist-imported', { detail: this.importResult }));
+      this.close();
+    },
+  };
+}
+
 function panel() {
   return {
     studentId: '',
     refDate: localISO(new Date()),
     days: [],
     toplamlar: {},
-    dersler: [], listeler: [], videolar: [],
+    dersler: [], listeler: [], videolar: [], ytListeler: [],
     showTaskModal: false,
     showSettingsModal: false,
     pdfExporting: false,
@@ -115,6 +201,7 @@ function panel() {
       aktivite_tipi: 'konu_anlatimi', sinav_tipi: 'TYT', ders_title: '',
       ozel_sure_dk: 0, aciklama: '', konu_not: '',
       konu_ders_id: '', liste_id: '', selectedVideos: [], tarih: '', error: '',
+      ytPlaylistPk: null, ytPlaylistTitle: '',
     },
 
     async init() {
@@ -197,6 +284,16 @@ function panel() {
     get completionStats() {
       const all = this.days.flatMap(d => d.gorevler);
       return { done: all.filter(g => g.is_completed).length, total: all.length };
+    },
+
+    get filteredYtListeler() {
+      const tip  = this.taskForm.sinav_tipi;
+      const ders = this.dersler.find(d => d.id == this.taskForm.konu_ders_id);
+      return this.ytListeler.filter(l => {
+        if (tip && l.exam_type !== tip) return false;
+        if (ders) return l.subject_display === ders.ad;
+        return true;
+      });
     },
     aktiviteLabel: t => AKTIVITE_LABELS[t] ?? t ?? '',
     formatDetay: d => `• ${d.aciklama}${d.sure_bilgisi ? ' (' + d.sure_bilgisi + ')' : ''}`,
@@ -295,10 +392,12 @@ function panel() {
         const d = await r.json();
         this.listeler = d.listeler ?? [];
         this.taskForm.liste_id = '';
+        this.taskForm.ytPlaylistPk = null;
         this.videolar = [];
       } catch (e) {
         console.error('[loadListeler]', e);
       }
+      await this.loadYtListeler();
     },
 
     async loadVideolar(listeId) {
@@ -314,6 +413,79 @@ function panel() {
       } catch (e) {
         console.error('[loadVideolar]', e);
       }
+    },
+
+    // ── YouTube playlist helpers ────────────────────────────────────────────
+
+    async loadYtListeler() {
+      try {
+        const r = await fetch('/coach/tasks/api/youtube/list');
+        const d = await r.json();
+        this.ytListeler = d.playlists ?? [];
+      } catch (e) { this.ytListeler = []; }
+    },
+
+    async loadYtVideolar(pk) {
+      this.videolar = [];
+      this.taskForm.ytPlaylistPk = pk;
+      try {
+        const r = await fetch(`/coach/tasks/api/youtube/${pk}/videos`);
+        const d = await r.json();
+        // Normalise to the same shape videolar uses: {id, baslik, sure_dk}
+        this.videolar = (d.videos ?? []).map(v => ({
+          id: v.id, baslik: v.title, sure_dk: v.duration,
+        }));
+        this.taskForm.ytPlaylistTitle = d.title ?? '';
+        this.taskForm.selectedVideos = [];
+        this.updateSure();
+      } catch (e) { console.error('[loadYtVideolar]', e); }
+    },
+
+    handleListeChange() {
+      const val = this.taskForm.liste_id;
+      if (typeof val === 'string' && val.startsWith('yt:')) {
+        this.loadYtVideolar(parseInt(val.slice(3)));
+      } else {
+        this.taskForm.ytPlaylistPk = null;
+        this.loadVideolar();
+      }
+    },
+
+    async deleteYtPlaylist(pk) {
+      if (!confirm('Bu playlisti ve tüm videolarını silmek istiyor musunuz?')) return;
+      try {
+        const r = await fetch(`/coach/tasks/api/youtube/${pk}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRFToken': CSRF },
+        });
+        if (!r.ok) { alert('Silme işlemi başarısız.'); return; }
+        this.ytListeler = this.ytListeler.filter(l => l.pk !== pk);
+        if (this.taskForm.liste_id === 'yt:' + pk) {
+          this.taskForm.liste_id = '';
+          this.taskForm.ytPlaylistPk = null;
+          this.videolar = [];
+          this.taskForm.selectedVideos = [];
+          this.updateSure();
+        }
+      } catch (e) { console.error('[deleteYtPlaylist]', e); }
+    },
+
+    onPlaylistImported(payload) {
+      // Called when the import modal fires 'playlist-imported'.
+      // Pre-fill the create-task form with the imported playlist.
+      this.taskForm.aktivite_tipi   = 'konu_anlatimi';
+      this.taskForm.sinav_tipi      = payload.exam_type;
+      this.taskForm.ders_title      = (payload.subject_display || payload.exam_type) + ' - Konu Anlatimi';
+      this.taskForm.liste_id        = 'yt:' + payload.playlist_pk;
+      this.taskForm.ytPlaylistPk    = payload.playlist_pk;
+      this.taskForm.ytPlaylistTitle = payload.title;
+      this.listeler = [];
+      this.videolar = (payload.videos ?? []).map(v => ({
+        id: v.id, baslik: v.title, sure_dk: v.duration,
+      }));
+      this.taskForm.selectedVideos = [];
+      this.updateSure();
+      this.showTaskModal = true;
     },
 
     updateSure() {
@@ -378,31 +550,31 @@ function panel() {
 
     async _hydrateKonuEdit(g) {
       const meta = g.meta ?? {};
+      this.taskForm.sinav_tipi = meta.sinav_tipi ?? 'TYT';
 
-      // Replicate the exact same chain a user follows when creating a task:
-      // a) set sinav_tipi
-      this.taskForm.sinav_tipi   = meta.sinav_tipi ?? 'TYT';
-      // b) set ders_id
-      this.taskForm.konu_ders_id = meta.ders_id    ?? '';
-      // c) load playlists — identical to the @change handler on the ders dropdown
-      await this.loadListeler();
-      // d) set liste_id — identical to the user picking a playlist from the dropdown
-      this.taskForm.liste_id = meta.liste_id ?? '';
-      // e) load videos for this playlist — same handler as @change="loadVideolar()" but
-      //    meta.liste_id is passed explicitly so the guard never reads stale reactive state
-      console.log('[hydrate] loading videos for liste:', meta.liste_id);
-      await this.loadVideolar(meta.liste_id);
-      console.log('[hydrate] videolar loaded:', this.videolar.length, 'videos');
-
-      // f) preselect saved videos — meta.videos is the source of truth; this.videolar
-      //    now holds the full playlist fetched from the API
-      const savedIds = new Set((meta.videos ?? []).map(v => String(v.id)));
-      this.taskForm.selectedVideos = this.videolar
-        .filter(v => savedIds.has(String(v.id)))
-        .map(v => String(v.id));
+      if (meta.source === 'youtube' && meta.youtube_playlist_pk) {
+        // YouTube-sourced task: load videos from our DB
+        this.taskForm.liste_id = 'yt:' + meta.youtube_playlist_pk;
+        await this.loadYtVideolar(meta.youtube_playlist_pk);
+        const savedIds = new Set((meta.videos ?? []).map(v => String(v.id)));
+        this.taskForm.selectedVideos = this.videolar
+          .filter(v => savedIds.has(String(v.id)))
+          .map(v => String(v.id));
+      } else {
+        // External API task (existing path)
+        this.taskForm.konu_ders_id = meta.ders_id ?? '';
+        await this.loadListeler();
+        this.taskForm.liste_id = meta.liste_id ?? '';
+        console.log('[hydrate] loading videos for liste:', meta.liste_id);
+        await this.loadVideolar(meta.liste_id);
+        console.log('[hydrate] videolar loaded:', this.videolar.length, 'videos');
+        const savedIds = new Set((meta.videos ?? []).map(v => String(v.id)));
+        this.taskForm.selectedVideos = this.videolar
+          .filter(v => savedIds.has(String(v.id)))
+          .map(v => String(v.id));
+      }
 
       this.updateSure();
-
     },
 
     async saveTask() {
@@ -420,8 +592,15 @@ function panel() {
         if (this.taskForm.konu_not.trim()) {
           detaylar.push({ aciklama: this.taskForm.konu_not.trim(), sure_bilgisi: '' });
         }
-        const ders = this.dersler.find(d => d.id == this.taskForm.konu_ders_id);
-        this.taskForm.ders_title = ders ? `${ders.ad} - Konu Anlatımı` : (this.taskForm.ders_title || 'Konu Anlatımı');
+        const isYtSource = typeof this.taskForm.liste_id === 'string' && this.taskForm.liste_id.startsWith('yt:');
+        if (isYtSource) {
+          const pl = this.ytListeler.find(l => l.pk === this.taskForm.ytPlaylistPk);
+          this.taskForm.ders_title = this.taskForm.ders_title ||
+            (pl ? (pl.subject_display || pl.exam_type) + ' - Konu Anlatimi' : 'Konu Anlatimi');
+        } else {
+          const ders = this.dersler.find(d => d.id == this.taskForm.konu_ders_id);
+          this.taskForm.ders_title = ders ? `${ders.ad} - Konu Anlatımı` : (this.taskForm.ders_title || 'Konu Anlatımı');
+        }
       } else {
         if (!this.taskForm.konu_ders_id) { this.taskForm.error = 'Ders seçilmeli.'; return; }
         if (!this.taskForm.aciklama.trim()) { this.taskForm.error = 'Açıklama boş olamaz.'; return; }
@@ -443,10 +622,17 @@ function panel() {
       }
 
       if (this.taskForm.aktivite_tipi === 'konu_anlatimi') {
-        payload.sinav_tipi   = this.taskForm.sinav_tipi;
-        payload.konu_ders_id = this.taskForm.konu_ders_id;
-        payload.liste_id     = this.taskForm.liste_id;
-        payload.liste_baslik = this.listeler.find(l => String(l.id) === String(this.taskForm.liste_id))?.baslik ?? '';
+        payload.sinav_tipi = this.taskForm.sinav_tipi;
+        const isYt = typeof this.taskForm.liste_id === 'string' && this.taskForm.liste_id.startsWith('yt:');
+        if (isYt) {
+          const ytPk = this.taskForm.ytPlaylistPk ?? parseInt(this.taskForm.liste_id.slice(3));
+          payload.youtube_playlist_pk = ytPk;
+          payload.liste_baslik = this.taskForm.ytPlaylistTitle || '';
+        } else {
+          payload.konu_ders_id = this.taskForm.konu_ders_id;
+          payload.liste_id     = this.taskForm.liste_id;
+          payload.liste_baslik = this.listeler.find(l => String(l.id) === String(this.taskForm.liste_id))?.baslik ?? '';
+        }
         // videos array goes into meta — source of truth for future edit hydration
         payload.videos = this.taskForm.selectedVideos.map(vid_id => {
           const v = this.videolar.find(v => v.id == vid_id);

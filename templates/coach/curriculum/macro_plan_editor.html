@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+{% load i18n static curriculum_tags %}
+
+{% block title %}Aylık Plan Editörü — {{ student.full_name }} — DAS{% endblock %}
+
+{% block content %}
+<style>
+  /* Subject accent colors */
+  .subj-TYT-Matematik   { border-left-color: #A78BFA; }
+  .subj-TYT-Geometri    { border-left-color: #c084fc; }
+  .subj-TYT-Türkçe      { border-left-color: #3B82F6; }
+  .subj-TYT-Fizik       { border-left-color: #22d3ee; }
+  .subj-TYT-Kimya       { border-left-color: #fb923c; }
+  .subj-TYT-Biyoloji    { border-left-color: #10B981; }
+  .subj-TYT-Tarih       { border-left-color: #f87171; }
+  .subj-TYT-Coğrafya    { border-left-color: #34d399; }
+  .subj-TYT-Felsefe     { border-left-color: #facc15; }
+  .subj-TYT-Din\ Kültürü{ border-left-color: #a3e635; }
+  .subj-AYT-Matematik   { border-left-color: #A78BFA; }
+  .subj-AYT-Fizik       { border-left-color: #22d3ee; }
+  .subj-AYT-Kimya       { border-left-color: #fb923c; }
+  .subj-AYT-Biyoloji    { border-left-color: #10B981; }
+  /* Drag states */
+  [data-topic-id] { cursor: grab; }
+  [data-topic-id].is-dragging { opacity: .35; pointer-events: none; }
+  [data-dropzone].dz-over {
+    outline: 2px solid rgba(100,160,250,.6);
+    outline-offset: -2px;
+    background-color: rgba(100,160,250,.05);
+    border-radius: 0.75rem;
+  }
+  /* Desktop-only 3-column workspace */
+  #editor-workspace {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+  }
+  .editor-narrow-notice { display: none; }
+  @media (max-width: 1200px) {
+    #editor-workspace { display: none !important; }
+    .editor-narrow-notice { display: flex !important; }
+  }
+  /* Modern thin scrollbar */
+  .das-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+  .das-scroll::-webkit-scrollbar-track { background: transparent; }
+  .das-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,.28); border-radius: 99px; }
+  .das-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,.55); }
+  .das-scroll { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.28) transparent; }
+</style>
+
+<div class="w-full py-2 px-6"
+     x-data="{
+       poolType: '{{ default_pool_type }}',
+       subjectId: {{ default_subject_id }},
+       planId: {{ plan.pk }},
+       csrf: document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '',
+       saving: false,
+
+       switchType(t) {
+         this.poolType = t;
+         const first = this.$el.querySelector('[data-subject-chip][data-exam-type=\'' + t + '\']');
+         if (first) this.subjectId = parseInt(first.dataset.subjectId, 10);
+       },
+
+       async post(url, data) {
+         if (this.saving) return;
+         this.saving = true;
+         const fd = new FormData();
+         for (const [k,v] of Object.entries(data)) fd.append(k, v);
+         try {
+           const r = await fetch(url, {method:'POST', headers:{'X-CSRFToken': this.csrf}, body: fd});
+           if (r.ok) {
+             window.dasToast && window.dasToast('Kaydedildi.', 'emerald');
+             if (window.editorSoftRefresh) { await window.editorSoftRefresh(); }
+             else { window.location.reload(); }
+           } else {
+             window.dasToast && window.dasToast('İşlem başarısız.', 'ruby');
+           }
+         } catch(e) { /* silent */ }
+         this.saving = false;
+       }
+     }">
+
+  {# ── Breadcrumb ─────────────────────────────────────────────────────────── #}
+  <nav class="flex items-center gap-1.5 text-xs text-ink-500 mb-4">
+    <a href="{% url 'coach:dashboard' %}" class="hover:text-ink-200 transition-colors">Koç Paneli</a>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    <a href="{% url 'coach:dashboard' %}" class="hover:text-ink-200 transition-colors">Öğrenciler</a>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    <a href="{% url 'coach:student_detail' student.id %}" class="hover:text-ink-200 transition-colors">{{ student.full_name }}</a>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    <span class="text-ink-300 font-medium">Aylık Plan Editörü</span>
+  </nav>
+
+  {# ── Page header ─────────────────────────────────────────────────────────── #}
+  <div class="flex items-start gap-6 pb-5 border-b border-ink-700 mb-0">
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-3 flex-wrap">
+        <h1 class="text-xl font-semibold text-white tracking-tight">Aylık Plan Editörü</h1>
+        {% if plan.status == 'APPROVED' %}
+        <span class="px-2 py-0.5 rounded-full bg-emerald-tint border border-emerald-500/30 text-emerald-500 text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Onaylandı
+        </span>
+        {% else %}
+        <span class="px-2 py-0.5 rounded-full bg-amber-tint border border-amber-500/30 text-amber-500 text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Taslak
+        </span>
+        {% endif %}
+      </div>
+      <p class="text-sm text-ink-400 mt-1">Konuları ders ders seç, aylara taşı ve öğrencinin yol haritasını oluştur.</p>
+
+      {# Student + window strip #}
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <div class="inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 text-[11px] font-semibold flex items-center justify-center text-white">
+            {{ student.full_name|first }}{{ student.full_name.split|last|first }}
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-ink-100 leading-tight">{{ student.full_name }}</div>
+            <div class="text-[10px] text-ink-500 leading-tight">{{ student.grade|default:"Öğrenci" }}</div>
+          </div>
+        </div>
+
+        {% if plan.tyt_start_date and plan.tyt_end_date %}
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+          <span class="text-[10px] font-bold tracking-wider text-steel-400 uppercase">TYT</span>
+          <span class="text-xs text-ink-200 font-medium">{{ plan.tyt_start_date|date:"d M Y" }} — {{ plan.tyt_end_date|date:"d M Y" }}</span>
+        </div>
+        {% elif student.tyt_target_date %}
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+          <span class="text-[10px] font-bold tracking-wider text-steel-400 uppercase">TYT</span>
+          <span class="text-xs text-ink-200 font-medium">Hedef: {{ student.tyt_target_date|date:"d M Y" }}</span>
+        </div>
+        {% endif %}
+
+        {% if plan.ayt_start_date and plan.ayt_end_date %}
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+          <span class="text-[10px] font-bold tracking-wider text-emerald-500 uppercase">AYT</span>
+          <span class="text-xs text-ink-200 font-medium">{{ plan.ayt_start_date|date:"d M Y" }} — {{ plan.ayt_end_date|date:"d M Y" }}</span>
+        </div>
+        {% elif student.ayt_target_date %}
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-700 bg-ink-850">
+          <span class="text-[10px] font-bold tracking-wider text-emerald-500 uppercase">AYT</span>
+          <span class="text-xs text-ink-200 font-medium">Hedef: {{ student.ayt_target_date|date:"d M Y" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Action buttons #}
+    <div class="flex items-center gap-2 shrink-0 flex-wrap">
+      <button onclick="window.dasToast && window.dasToast('Plan kaydedildi.', 'emerald')"
+              class="h-9 px-3 rounded-lg bg-ink-850 border border-ink-700 text-sm text-ink-200 hover:bg-ink-800 font-medium inline-flex items-center gap-1.5 transition-colors">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Kaydet
+      </button>
+
+      {% if plan.status == 'DRAFT' %}
+      <form method="post" action="{% url 'curriculum:approve' plan.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="h-9 px-3.5 rounded-lg bg-emerald-tint border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/20 text-sm font-semibold inline-flex items-center gap-1.5 transition-colors">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Yol Haritasını Onayla
+        </button>
+      </form>
+      {% endif %}
+
+      <form method="post" action="{% url 'curriculum:generate_weekly' plan.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="h-9 px-3.5 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+          Haftalık Plana Dönüştür
+        </button>
+      </form>
+
+      <form method="post" action="{% url 'curriculum:delete' plan.pk %}"
+            onsubmit="return confirm('Bu aylık planı kalıcı olarak silmek istediğinizden emin misiniz? Tüm ay ve konu atamaları silinecek. Bu işlem geri alınamaz.')">
+        {% csrf_token %}
+        <button type="submit"
+                class="h-9 px-3 rounded-lg bg-ink-850 border border-ruby-500/40 text-sm text-ruby-400 hover:bg-ruby-500/10 font-medium inline-flex items-center gap-1.5 transition-colors">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Planı Sil
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {# ── Sticky control bar ──────────────────────────────────────────────────── #}
+  <div class="sticky top-0 z-20 py-3 border-b border-ink-700 bg-ink-950/95 backdrop-blur mb-0">
+    <div class="flex items-center gap-3 flex-wrap">
+
+      {# TYT/AYT switch (only for BOTH plans) #}
+      {% if plan.sinav_tipi == 'BOTH' %}
+      <div class="inline-flex bg-ink-850 border border-ink-700 rounded-lg p-0.5" role="tablist">
+        <button @click="switchType('TYT')"
+                :class="poolType === 'TYT' ? 'bg-steel-tint text-steel-300 ring-1 ring-steel-500/30' : 'text-ink-400 hover:text-white'"
+                class="px-4 h-8 rounded-md text-xs font-semibold transition-all">TYT</button>
+        <button @click="switchType('AYT')"
+                :class="poolType === 'AYT' ? 'bg-emerald-tint text-emerald-500 ring-1 ring-emerald-500/30' : 'text-ink-400 hover:text-white'"
+                class="px-4 h-8 rounded-md text-xs font-semibold transition-all">AYT</button>
+      </div>
+      {% endif %}
+
+      {# Subject chips #}
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
+        {% if plan.sinav_tipi != 'AYT' %}
+          {% for subject in subjects_tyt %}
+          <button data-subject-chip data-subject-id="{{ subject.id }}" data-exam-type="TYT"
+                  @click="subjectId = {{ subject.id }}{% if plan.sinav_tipi == 'BOTH' %}; poolType = 'TYT'{% endif %}"
+                  x-show="poolType === 'TYT'"
+                  :class="subjectId === {{ subject.id }} ? 'bg-steel-tint text-steel-300 border-steel-500/50' : 'bg-ink-850 text-ink-300 border-ink-700 hover:bg-ink-800'"
+                  class="shrink-0 h-8 px-3 rounded-full text-xs font-medium border inline-flex items-center gap-1.5 transition-colors whitespace-nowrap">
+            {{ subject.display_name }}
+          </button>
+          {% endfor %}
+        {% endif %}
+        {% if plan.sinav_tipi != 'TYT' %}
+          {% for subject in subjects_ayt %}
+          <button data-subject-chip data-subject-id="{{ subject.id }}" data-exam-type="AYT"
+                  @click="subjectId = {{ subject.id }}{% if plan.sinav_tipi == 'BOTH' %}; poolType = 'AYT'{% endif %}"
+                  x-show="poolType === 'AYT'"
+                  :class="subjectId === {{ subject.id }} ? 'bg-emerald-tint text-emerald-500 border-emerald-500/50' : 'bg-ink-850 text-ink-300 border-ink-700 hover:bg-ink-800'"
+                  class="shrink-0 h-8 px-3 rounded-full text-xs font-medium border inline-flex items-center gap-1.5 transition-colors whitespace-nowrap">
+            {{ subject.display_name }}
+          </button>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      {# Metrics #}
+      <div class="flex items-center gap-1.5 shrink-0">
+        <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-ink-500"></span>
+          <span class="text-[11px] text-ink-400 font-medium">Planlanmamış</span>
+          <span class="text-xs font-bold text-ink-100 tnum" data-count="unplanned">{{ unplanned_count }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-steel-tint border border-steel-500/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-steel-400"></span>
+          <span class="text-[11px] text-steel-300 font-medium">Planlanan</span>
+          <span class="text-xs font-bold text-steel-300 tnum" data-count="planned">{{ planned_topics }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span class="text-[11px] text-ink-400 font-medium">Halledilmiş</span>
+          <span class="text-xs font-bold text-ink-100 tnum" data-count="skipped">{{ skipped_count }}</span>
+        </div>
+        {% if planned_hours %}
+        <div class="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-ink-850 border border-ink-700">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="text-ink-500"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span class="text-[11px] text-ink-400 font-medium">Toplam saat</span>
+          <span class="text-xs font-bold text-ink-100 tnum" data-count="hours">{{ planned_hours }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Narrow-screen notice (hidden on desktop, visible <1200px via CSS) #}
+  <div class="editor-narrow-notice flex-col items-center justify-center gap-4 py-24 text-center">
+    <svg class="w-12 h-12 text-ink-600 mx-auto" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path d="M8 21h8M12 17v4"/>
+    </svg>
+    <p class="text-ink-400 text-sm font-medium">Bu editör geniş ekran için tasarlandı.</p>
+    <p class="text-ink-600 text-xs">Lütfen masaüstünde kullanın.</p>
+  </div>
+
+  {# 3-COLUMN WORKSPACE — desktop only (hidden <1200px via CSS) #}
+  <div id="editor-workspace" class="py-5" data-workspace>
+
+    {# ── LEFT · Konu Havuzu ─────────────────────────────────────────────── #}
+    <aside>
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden sticky top-20">
+        <div class="px-4 py-3 border-b border-ink-700">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white">Konu Havuzu</h2>
+          </div>
+          <p class="text-[11px] text-ink-500 mt-0.5 leading-snug">Seçili dersin henüz planlanmamış konuları. Taşı → ile aya ata.</p>
+        </div>
+
+        <div class="das-scroll p-3 space-y-2 overflow-y-auto" style="max-height: calc(100vh - 220px)"
+             data-dropzone="pool">
+          {# Render TYT pool #}
+          {% if plan.sinav_tipi != 'AYT' %}
+          {% for subject in subjects_tyt %}
+          {# Django template can't do pool_by_subject[subject.id] easily; use a workaround via forloop tag #}
+          {% with subj_topics=pool_by_subject|get:subject.id %}
+          {% if subj_topics %}
+          {% for topic in subj_topics %}
+          <div x-show="subjectId === {{ subject.id }}" x-cloak
+               draggable="true"
+               data-topic-id="{{ topic.id }}"
+               data-topic-source="pool"
+               class="rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750 transition-colors select-none">
+            <div class="flex items-start gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-ink-100 leading-snug">{{ topic.name }}</div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-[10px] text-ink-500">{{ subject.display_name }}</span>
+                  {% if topic.expected_hours %}
+                  <span class="text-ink-700">·</span>
+                  <span class="text-[10px] text-ink-400 font-medium tnum">{{ topic.expected_hours }}s</span>
+                  {% endif %}
+                </div>
+                {% if topic.is_baglayici or topic.priority_tag == 'CORE' %}
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  {% if topic.is_baglayici %}
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded">Bağlayıcı</span>
+                  {% endif %}
+                  {% if topic.priority_tag == 'CORE' %}
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-tint text-amber-500 px-1.5 py-0.5 rounded">Temel</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {# Click menu fallback (works on mobile + as backup) #}
+            <div class="mt-2.5 flex items-center gap-1" x-data="{open:false}">
+              <div class="relative flex-1">
+                <button @click="open=!open"
+                        class="w-full h-7 rounded-md bg-ink-750 border border-ink-700 text-[11px] font-medium text-ink-300 hover:bg-ink-700 hover:text-steel-300 transition-colors inline-flex items-center justify-center gap-1">
+                  Aya Taşı
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div x-show="open" @click.outside="open=false" x-cloak
+                     class="absolute left-0 bottom-full mb-1 z-30 rounded-xl border border-ink-700 bg-ink-900 shadow-card-lg overflow-hidden min-w-[180px]">
+                  {% for bucket in buckets %}
+                  <button @click="open=false; post('{% url 'curriculum:editor_move' plan.pk %}', {topic_id: '{{ topic.id }}', target: 'bucket:{{ bucket.pk }}'})"
+                          class="w-full text-left px-3 py-2 text-[11px] text-ink-200 hover:bg-ink-800 hover:text-white flex items-center gap-2 transition-colors">
+                    <span class="w-1.5 h-1.5 rounded-full
+                      {% if bucket.window_kind == 'TYT' %}bg-steel-400
+                      {% elif bucket.window_kind == 'AYT' %}bg-emerald-500
+                      {% else %}bg-ink-400{% endif %}"></span>
+                    {{ bucket.label }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              <button @click="post('{% url 'curriculum:editor_skip' plan.pk %}', {topic_id: '{{ topic.id }}', reason: 'Gerek Yok'})"
+                      title="Halledilmiş / Gerek Yok"
+                      class="w-7 h-7 rounded-md bg-ink-750 border border-ink-700 text-ink-500 hover:text-emerald-500 hover:bg-emerald-tint transition-colors flex items-center justify-center">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+          {% endif %}
+
+          {# Render AYT pool #}
+          {% if plan.sinav_tipi != 'TYT' %}
+          {% for subject in subjects_ayt %}
+          {% with subj_topics=pool_by_subject|get:subject.id %}
+          {% if subj_topics %}
+          {% for topic in subj_topics %}
+          <div x-show="subjectId === {{ subject.id }}" x-cloak
+               draggable="true"
+               data-topic-id="{{ topic.id }}"
+               data-topic-source="pool"
+               class="rounded-lg border border-ink-700 bg-ink-800 p-3 hover:border-ink-600 hover:bg-ink-750 transition-colors select-none">
+            <div class="flex items-start gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-ink-100 leading-snug">{{ topic.name }}</div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-[10px] text-ink-500">{{ subject.display_name }}</span>
+                  {% if topic.expected_hours %}
+                  <span class="text-ink-700">·</span>
+                  <span class="text-[10px] text-ink-400 font-medium tnum">{{ topic.expected_hours }}s</span>
+                  {% endif %}
+                </div>
+                {% if topic.is_baglayici %}
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1.5 py-0.5 rounded">Bağlayıcı</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="mt-2.5 flex items-center gap-1" x-data="{open:false}">
+              <div class="relative flex-1">
+                <button @click="open=!open"
+                        class="w-full h-7 rounded-md bg-ink-750 border border-ink-700 text-[11px] font-medium text-ink-300 hover:bg-ink-700 hover:text-steel-300 transition-colors inline-flex items-center justify-center gap-1">
+                  Aya Taşı
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div x-show="open" @click.outside="open=false" x-cloak
+                     class="absolute left-0 bottom-full mb-1 z-30 rounded-xl border border-ink-700 bg-ink-900 shadow-card-lg overflow-hidden min-w-[180px]">
+                  {% for bucket in buckets %}
+                  <button @click="open=false; post('{% url 'curriculum:editor_move' plan.pk %}', {topic_id: '{{ topic.id }}', target: 'bucket:{{ bucket.pk }}'})"
+                          class="w-full text-left px-3 py-2 text-[11px] text-ink-200 hover:bg-ink-800 hover:text-white flex items-center gap-2 transition-colors">
+                    <span class="w-1.5 h-1.5 rounded-full
+                      {% if bucket.window_kind == 'TYT' %}bg-steel-400
+                      {% elif bucket.window_kind == 'AYT' %}bg-emerald-500
+                      {% else %}bg-ink-400{% endif %}"></span>
+                    {{ bucket.label }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              <button @click="post('{% url 'curriculum:editor_skip' plan.pk %}', {topic_id: '{{ topic.id }}', reason: 'Gerek Yok'})"
+                      title="Halledilmiş / Gerek Yok"
+                      class="w-7 h-7 rounded-md bg-ink-750 border border-ink-700 text-ink-500 hover:text-emerald-500 hover:bg-emerald-tint transition-colors flex items-center justify-center">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+          {% endif %}
+
+          {# Empty state hint #}
+          <p class="text-[11px] text-ink-600 text-center py-3 italic">Tüm konular planlandı veya atlandı</p>
+        </div>
+      </div>
+    </aside>
+
+    {# ── CENTER · Monthly board ──────────────────────────────────────────── #}
+    <div class="min-w-0">
+      <div style="position:sticky;top:60px;">
+        <div class="flex items-center justify-between mb-3 pb-1">
+          <h2 class="text-sm font-semibold text-white">Aylık Yol Haritası</h2>
+        </div>
+
+        {% if buckets %}
+        <div id="months-inner-scroll" class="das-scroll" style="overflow-y:auto;max-height:calc(100vh - 130px);">
+          <div class="flex flex-col gap-3">
+        {% for bucket in buckets %}
+        <div class="rounded-xl border bg-ink-850 overflow-hidden w-full
+          {% if bucket.window_kind == 'BOTH' %}border-ink-700{% elif bucket.window_kind == 'TYT' %}border-steel-500/30{% else %}border-emerald-500/30{% endif %}"
+             data-bucket-wrapper data-bucket-id="{{ bucket.pk }}">
+          <div class="px-4 py-3 border-b border-ink-700">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-semibold text-white">{{ bucket.label }}</h3>
+                {% if bucket.window_kind == 'TYT' %}
+                <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 rounded">TYT</span>
+                {% elif bucket.window_kind == 'AYT' %}
+                <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-tint text-emerald-500 rounded">AYT</span>
+                {% else %}
+                <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 rounded">TYT + AYT</span>
+                {% endif %}
+              </div>
+              <div class="flex items-center gap-2">
+                <span data-bucket-hours class="text-[10px] text-ink-500 tnum"></span>
+                <span class="text-[10px] text-ink-500 tnum">{{ bucket.topic_count }} konu</span>
+              </div>
+            </div>
+            <div class="text-[10px] text-ink-500 mt-0.5 tnum">{{ bucket.start_date|date:"d M" }} — {{ bucket.end_date|date:"d M Y" }}</div>
+          </div>
+
+          <div class="p-3 space-y-2 min-h-[100px]"
+               data-dropzone="bucket:{{ bucket.pk }}">
+            {% for mpt in bucket.topics.all %}
+            {% with topic=mpt.topic subject=mpt.topic.subject %}
+            <div class="rounded-lg border-l-2 border-ink-700 bg-ink-800 p-3 hover:bg-ink-750 transition-colors subj-{{ subject.exam_type }}-{{ subject.display_name }} select-none"
+                 draggable="true"
+                 data-topic-id="{{ topic.id }}"
+                 data-topic-source="bucket:{{ bucket.pk }}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-semibold text-ink-100 leading-snug">{{ topic.name }}</div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="text-[10px] text-ink-500">{{ subject.display_name }}</span>
+                    {% if topic.expected_hours %}
+                    <span class="text-ink-700">·</span>
+                    <span class="text-[10px] text-ink-500 tnum">{{ topic.expected_hours }}s</span>
+                    {% endif %}
+                    {% if mpt.is_manual %}
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-steel-tint text-steel-300 px-1 py-0.5 rounded">Manuel</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0" x-data="{menuOpen:false}">
+                  <div class="relative">
+                    <button @click="menuOpen=!menuOpen"
+                            class="w-6 h-6 rounded flex items-center justify-center text-ink-500 hover:text-ink-300 hover:bg-ink-700 transition-colors">
+                      <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                    </button>
+                    <div x-show="menuOpen" @click.outside="menuOpen=false" x-cloak
+                         class="absolute right-0 top-full mt-1 z-30 rounded-xl border border-ink-700 bg-ink-900 shadow-card-lg overflow-hidden min-w-[170px]">
+                      <div class="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-ink-600 border-b border-ink-800">Başka aya taşı</div>
+                      {% for other in buckets %}
+                        {% if other.pk != bucket.pk %}
+                        <button @click="menuOpen=false; post('{% url 'curriculum:editor_move' plan.pk %}', {topic_id: '{{ topic.id }}', target: 'bucket:{{ other.pk }}'})"
+                                class="w-full text-left px-3 py-2 text-[11px] text-ink-200 hover:bg-ink-800 hover:text-white transition-colors">
+                          {{ other.label }}
+                        </button>
+                        {% endif %}
+                      {% endfor %}
+                      <div class="border-t border-ink-800 mt-0.5">
+                        <button @click="menuOpen=false; post('{% url 'curriculum:editor_move' plan.pk %}', {topic_id: '{{ topic.id }}', target: 'pool'})"
+                                class="w-full text-left px-3 py-2 text-[11px] text-steel-400 hover:bg-ink-800 transition-colors">
+                          Havuza geri al
+                        </button>
+                        <button @click="menuOpen=false; post('{% url 'curriculum:editor_skip' plan.pk %}', {topic_id: '{{ topic.id }}', reason: 'Gerek Yok'})"
+                                class="w-full text-left px-3 py-2 text-[11px] text-emerald-500 hover:bg-ink-800 transition-colors">
+                          Halledilmiş işaretle
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <p class="text-[11px] text-ink-600 text-center py-4 italic">Bu ay için konu planlanmadı</p>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+          </div>{# /months-flex #}
+        </div>{# /months-scroll #}
+        {% else %}
+        <div class="rounded-xl border border-dashed border-ink-700 p-10 text-center">
+        <p class="text-sm text-ink-400">Plan henüz oluşturulmadı.</p>
+        <form method="post" action="{% url 'curriculum:regenerate' plan.pk %}" class="mt-3 inline-block">
+          {% csrf_token %}
+          <button type="submit"
+                  class="inline-flex items-center gap-1.5 text-sm text-steel-400 hover:text-steel-300 font-medium">
+            Otomatik plan oluştur
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+      </div>
+        {% endif %}
+      </div>{# /sticky-wrapper #}
+    </div>
+
+    {# ── RIGHT · Halledilmiş + Uyarılar + Kapasite ─────────────────────── #}
+    <aside class="space-y-4">
+
+      {# Halledilmiş / Gerek Yok #}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+        <div class="px-4 py-3 border-b border-ink-700">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white">Halledilmiş / Gerek Yok</h2>
+            <span class="text-[10px] font-bold text-ink-400 bg-ink-800 px-2 py-0.5 rounded-full tnum">{{ skipped_count }}</span>
+          </div>
+          <p class="text-[11px] text-ink-500 mt-0.5 leading-snug">Öğrencinin bildiği veya plana alınmayacak konular.</p>
+        </div>
+        <div class="p-3 space-y-2 min-h-[100px]" data-dropzone="skipped">
+          {% for skipped_entry in skipped %}
+          {% with topic=skipped_entry.topic %}
+          <div class="rounded-lg border border-ink-700 bg-ink-900/60 p-2.5 hover:bg-ink-850 transition-colors">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-ink-300 line-through decoration-ink-600">{{ topic.name }}</div>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="text-[10px] text-ink-500">{{ topic.subject.display_name }}</span>
+                  {% if skipped_entry.reason %}
+                  <span class="text-[9px] font-bold uppercase tracking-wider bg-ink-700 text-ink-400 px-1.5 py-0.5 rounded">{{ skipped_entry.reason }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <button @click="post('{% url 'curriculum:editor_unskip' plan.pk %}', {topic_id: '{{ topic.id }}'})"
+                      title="Plana geri al"
+                      class="w-7 h-7 rounded flex items-center justify-center text-ink-500 hover:text-steel-400 hover:bg-ink-800 transition-colors shrink-0">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              </button>
+            </div>
+          </div>
+          {% endwith %}
+          {% empty %}
+          <p class="text-[11px] text-ink-600 text-center py-3 italic">Henüz konu atlanmadı</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Client-side prereq warnings (populated by editor.js) #}
+      <div id="client-warnings" class="hidden space-y-1.5 rounded-xl border border-amber-500/30 bg-ink-850 p-3"></div>
+
+      {# Plan Uyarıları #}
+      {% if risk_alerts %}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+        <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-white">Plan Uyarıları</h2>
+          <span class="text-[10px] font-bold text-amber-500 bg-amber-tint px-2 py-0.5 rounded-full tnum">{{ risk_alerts.count }}</span>
+        </div>
+        <div class="p-2 space-y-1.5">
+          {% for alert in risk_alerts %}
+          <div class="p-2.5 rounded-lg bg-ink-800/60 hover:bg-ink-800 transition-colors
+            {% if alert.severity == 'CRITICAL' %}border-l-2 border-ruby-500
+            {% elif alert.severity == 'WARNING' %}border-l-2 border-amber-500
+            {% else %}border-l-2 border-ink-600{% endif %}">
+            <div class="flex items-start gap-2">
+              {% if alert.severity == 'CRITICAL' %}
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-ruby-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+              {% elif alert.severity == 'WARNING' %}
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-amber-500 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+              {% else %}
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-ink-400 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {% endif %}
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wider
+                  {% if alert.severity == 'CRITICAL' %}text-ruby-500
+                  {% elif alert.severity == 'WARNING' %}text-amber-500
+                  {% else %}text-ink-400{% endif %}">{{ alert.get_kind_display }}</p>
+                <p class="text-xs text-ink-200 mt-0.5 leading-snug">{{ alert.message }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Plan Kapasitesi #}
+      {% if planned_topics %}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+        <h2 class="text-sm font-semibold text-white">Plan Kapasitesi</h2>
+        <div class="mt-3 space-y-2">
+          <div>
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-ink-400">Planlanan konular</span>
+              <span class="text-ink-100 font-semibold tnum">{{ planned_topics }}</span>
+            </div>
+            <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-steel-500 to-steel-400 rounded-full"
+                   style="width: min({{ planned_topics }}%, 100%)"></div>
+            </div>
+          </div>
+          {% if planned_hours %}
+          <div>
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-ink-400">Toplam saat</span>
+              <span class="text-ink-100 font-semibold tnum">{{ planned_hours }}</span>
+            </div>
+            <div class="mt-1 h-1.5 rounded-full bg-ink-800 overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" style="width: min({{ planned_hours }}%, 100%)"></div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Otomatik Taslak + Diğer İşlemler #}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+        <h3 class="text-xs font-semibold text-ink-300 mb-1">Otomatik Taslak Oluştur</h3>
+        <p class="text-[10px] text-ink-500 mb-2 leading-snug">Motor, öğrencinin segmentine ve zayıf konularına göre ayları otomatik doldurur. Manuel atamaların üzerine yazmaz.</p>
+        <div class="space-y-1.5">
+          <form method="post" action="{% url 'curriculum:regenerate' plan.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full h-8 rounded-lg bg-ink-800 border border-amber-500/30 text-[11px] font-medium text-amber-400 hover:bg-amber-tint transition-colors">
+              Otomatik Taslak Oluştur
+            </button>
+          </form>
+          <a href="{% url 'coach:dashboard' %}"
+             class="flex items-center justify-center h-8 rounded-lg bg-ink-800 border border-ink-700 text-[11px] font-medium text-ink-300 hover:bg-ink-750 transition-colors">
+            Öğrenci Listesine Dön
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<script>
+window.EDITOR_CONFIG = {
+  planId:  {{ plan.pk }},
+  moveUrl: "{% url 'curriculum:editor_move' plan.pk %}",
+  skipUrl: "{% url 'curriculum:editor_skip' plan.pk %}",
+  unskipUrl: "{% url 'curriculum:editor_unskip' plan.pk %}",
+  buckets: {{ bucket_meta_json|safe }},
+  topicMeta: {{ topic_meta_json|safe }}
+};
+</script>
+<script src="{% static 'js/curriculum/editor.js' %}"></script>
+{% endblock %}

@@ -25,9 +25,19 @@ def _build_meta(aktivite_tipi: str, body: dict) -> dict | None:
     """
     meta is only set for konu_anlatimi.
     meta.videos is the source of truth for edit hydration — never re-fetched from API.
+    When youtube_playlist_pk is present the source is a local YouTubePlaylist row.
     """
     if aktivite_tipi != AktiviteTipi.KONU_ANLATIMI:
         return None
+    yt_pk = body.get("youtube_playlist_pk")
+    if yt_pk:
+        return {
+            "source":              "youtube",
+            "youtube_playlist_pk": int(yt_pk),
+            "sinav_tipi":          body.get("sinav_tipi"),
+            "liste_baslik":        body.get("liste_baslik", ""),
+            "videos":              body.get("videos", []),
+        }
     return {
         "sinav_tipi":   body.get("sinav_tipi"),
         "ders_id":      body.get("konu_ders_id"),
@@ -201,6 +211,158 @@ class OynatmaListeleriView(View):
 class VideolarView(View):
     def get(self, request, liste_id: int):
         return JsonResponse({"videolar": api_client.get_videolar(liste_id)})
+
+
+# ── YouTube playlist endpoints ────────────────────────────────────────────────
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistPreviewView(View):
+    def post(self, request):
+        from tasks_app.models import YouTubePlaylist
+        from tasks_app.services.youtube_playlist_importer import (
+            extract_playlist_id, fetch_playlist_meta, detect_subject_and_exam_type,
+            InvalidPlaylistURL, PlaylistNotFound, YouTubeAPIError,
+        )
+        body = _body(request)
+        url = (body.get("url") or "").strip()
+        pid = extract_playlist_id(url)
+        if not pid:
+            return JsonResponse({"error": "Geçerli bir YouTube oynatma listesi URL'si girin."}, status=400)
+
+        try:
+            meta = fetch_playlist_meta(pid)
+        except PlaylistNotFound:
+            return JsonResponse({"error": "Bu playlist bulunamadı veya gizli."}, status=404)
+        except YouTubeAPIError as exc:
+            return JsonResponse({"error": str(exc)}, status=502)
+
+        subject, exam_type = detect_subject_and_exam_type(meta['title'])
+        existing = YouTubePlaylist.objects.filter(playlist_id=pid).first()
+
+        from exams_app.models import Subject
+        subj_qs = Subject.objects.order_by('exam_type', 'name')
+        if exam_type:
+            subj_qs = subj_qs.filter(exam_type=exam_type)
+        subjects = [{'id': s.pk, 'display_name': s.display_name, 'exam_type': s.exam_type} for s in subj_qs]
+
+        return JsonResponse({
+            "playlist_id":           pid,
+            "title":                 meta['title'],
+            "channel_title":         meta['channel_title'],
+            "video_count":           meta['video_count'],
+            "detected_subject_id":   subject.pk if subject else None,
+            "detected_subject_name": subject.display_name if subject else None,
+            "detected_exam_type":    exam_type,
+            "already_imported":      bool(existing),
+            "existing_pk":           existing.pk if existing else None,
+            "subjects":              subjects,
+        })
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistImportView(View):
+    def post(self, request):
+        from exams_app.models import Subject
+        from tasks_app.services.youtube_playlist_importer import (
+            extract_playlist_id, import_playlist,
+            PlaylistNotFound, YouTubeAPIError,
+        )
+        body = _body(request)
+        url = (body.get("url") or "").strip()
+        pid = extract_playlist_id(url)
+        if not pid:
+            return JsonResponse({"error": "Geçerli bir YouTube oynatma listesi URL'si girin."}, status=400)
+
+        subject_id = body.get("subject_id")
+        exam_type  = body.get("exam_type", "").upper()
+
+        if exam_type not in ("TYT", "AYT"):
+            return JsonResponse({"error": "Sınav tipi TYT veya AYT olmalı."}, status=400)
+
+        subject = None
+        if subject_id:
+            try:
+                subject = Subject.objects.get(pk=int(subject_id))
+            except (Subject.DoesNotExist, ValueError):
+                return JsonResponse({"error": "Seçilen ders bulunamadı."}, status=400)
+
+        was_update = False
+        from tasks_app.models import YouTubePlaylist
+        was_update = YouTubePlaylist.objects.filter(playlist_id=pid).exists()
+
+        try:
+            playlist = import_playlist(pid, subject, exam_type, request.user)
+        except PlaylistNotFound:
+            return JsonResponse({"error": "Bu playlist bulunamadı veya gizli."}, status=404)
+        except YouTubeAPIError as exc:
+            return JsonResponse({"error": str(exc)}, status=502)
+
+        videos = [
+            {"id": v.pk, "title": v.title, "duration": v.duration_min}
+            for v in playlist.videos.order_by('position')
+        ]
+        return JsonResponse({
+            "playlist_pk":      playlist.pk,
+            "title":            playlist.title,
+            "subject_id":       playlist.subject_id,
+            "subject_display":  playlist.subject.display_name if playlist.subject else exam_type,
+            "exam_type":        playlist.exam_type,
+            "was_update":       was_update,
+            "video_count":      len(videos),
+            "videos":           videos,
+        }, status=201)
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistListView(View):
+    def get(self, request):
+        from tasks_app.models import YouTubePlaylist
+        qs = YouTubePlaylist.objects.select_related('subject').order_by('exam_type', 'title')
+        playlists = [
+            {
+                "pk":              p.pk,
+                "title":           p.title,
+                "channel_title":   p.channel_title,
+                "exam_type":       p.exam_type,
+                "subject_display": p.subject.display_name if p.subject else "",
+                "video_count":     p.videos.count(),
+            }
+            for p in qs
+        ]
+        return JsonResponse({"playlists": playlists})
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistVideosView(View):
+    def get(self, request, pk: int):
+        from tasks_app.models import YouTubePlaylist
+        try:
+            playlist = YouTubePlaylist.objects.get(pk=pk)
+        except YouTubePlaylist.DoesNotExist:
+            return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
+        videos = [
+            {"id": v.pk, "title": v.title, "duration": v.duration_min}
+            for v in playlist.videos.order_by('position')
+        ]
+        return JsonResponse({
+            "playlist_pk":      playlist.pk,
+            "title":            playlist.title,
+            "subject_display":  playlist.subject.display_name if playlist.subject else "",
+            "exam_type":        playlist.exam_type,
+            "videos":           videos,
+        })
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistDeleteView(View):
+    def delete(self, request, pk: int):
+        from tasks_app.models import YouTubePlaylist
+        try:
+            playlist = YouTubePlaylist.objects.get(pk=pk)
+        except YouTubePlaylist.DoesNotExist:
+            return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
+        playlist.delete()
+        return JsonResponse({"deleted": pk})
 
 
 # ── Excel export ──────────────────────────────────────────────────────────────

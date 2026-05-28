@@ -1,0 +1,166 @@
+{% extends "marketing/base_public.html" %}
+{% load static %}
+
+{% block title %}Fiyatlandırma · Vagus{% endblock %}
+{% block meta_description %}Vagus öğrenci paketleri: aylık, dönemlik ve YKS yıllık planları. Tüm özellikler dahil.{% endblock %}
+
+{% block content %}
+
+<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+  <div class="glow-hero" style="opacity:0.6;"></div>
+  <div class="container-narrow" style="text-align:center; position:relative;">
+    <span class="pill">Fiyatlandırma</span>
+    <h1 class="display" style="margin-top:18px;">Bir kahve fiyatına aylık plan.</h1>
+    <p class="sub" style="margin: 18px auto 0;">Beğenmezsen tek tıkla iptal et. Tüm planlarda bütün özellikler dahil.</p>
+  </div>
+</section>
+
+<!-- Plans -->
+<section class="section-sm">
+  <div class="container">
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+      {% for plan in plans %}
+      <div class="card" style="position:relative; display:flex; flex-direction:column;{% if plan.is_featured %} border-color:rgba(99,102,241,0.5); box-shadow: 0 0 0 1px rgba(99,102,241,0.25), 0 24px 64px -16px rgba(79,70,229,0.25);{% endif %}">
+        {% if plan.badge_label %}
+        <span class="pill" style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:linear-gradient(180deg,var(--indigo),var(--indigo-deep)); color:white; border:none; white-space:nowrap;">{{ plan.badge_label }}</span>
+        {% endif %}
+        <div style="margin-bottom:18px;">
+          <div style="font-size:13px; font-weight:600; color:var(--indigo-bright); text-transform:uppercase; letter-spacing:0.06em;">{{ plan.name }}</div>
+          {% if plan.subtitle %}<div style="font-size:13px; color:var(--muted-2); margin-top:6px;">{{ plan.subtitle }}</div>{% endif %}
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+          <span class="tnum" style="font-size:44px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">₺{{ plan.price_monthly_try }}</span>
+          <span style="color:var(--muted-2); font-size:14px;">/ay</span>
+        </div>
+        {% if plan.summary %}<div style="font-size:12px; color:var(--muted-2); margin-bottom:24px;">{{ plan.summary }}</div>{% else %}<div style="margin-bottom:24px;"></div>{% endif %}
+        <a href="{{ plan.cta_url }}" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-soft{% endif %}">{{ plan.cta_label }}</a>
+        <ul style="margin-top:24px; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+          {% for feat in plan.features.all %}
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>{{ feat.text }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% empty %}
+      <!-- Default plans rendered before seed_marketing is run -->
+      <div class="card" style="display:flex; flex-direction:column;">
+        <div style="margin-bottom:18px;">
+          <div style="font-size:13px; font-weight:600; color:var(--indigo-bright); text-transform:uppercase; letter-spacing:0.06em;">Aylık</div>
+          <div style="font-size:13px; color:var(--muted-2); margin-top:6px;">Aydan aya esneklik</div>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+          <span class="tnum" style="font-size:44px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">₺149</span>
+          <span style="color:var(--muted-2); font-size:14px;">/ay</span>
+        </div>
+        <div style="font-size:12px; color:var(--muted-2); margin-bottom:24px;">İstediğin zaman iptal et</div>
+        <a href="/auth/register/" class="btn btn-soft">Hemen Başla</a>
+        <ul style="margin-top:24px; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Tüm özellikler dahil</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Sınırsız deneme analizi</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Mobil + masaüstü</li>
+        </ul>
+      </div>
+      <div class="card" style="position:relative; display:flex; flex-direction:column; border-color:rgba(99,102,241,0.5); box-shadow: 0 0 0 1px rgba(99,102,241,0.25), 0 24px 64px -16px rgba(79,70,229,0.25);">
+        <span class="pill" style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:linear-gradient(180deg,var(--indigo),var(--indigo-deep)); color:white; border:none;">★ En Çok Tercih Edilen</span>
+        <div style="margin-bottom:18px;">
+          <div style="font-size:13px; font-weight:600; color:var(--indigo-bright); text-transform:uppercase; letter-spacing:0.06em;">Dönemlik · 6 Ay</div>
+          <div style="font-size:13px; color:var(--muted-2); margin-top:6px;">Bir yarıyıl kapsama</div>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+          <span class="tnum" style="font-size:44px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">₺99</span>
+          <span style="color:var(--muted-2); font-size:14px;">/ay</span>
+        </div>
+        <div style="font-size:12px; color:var(--muted-2); margin-bottom:24px;">Toplam ₺594 — 1 ay hediye · %33 indirim</div>
+        <a href="/auth/register/" class="btn btn-primary">Hemen Başla</a>
+        <ul style="margin-top:24px; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Aylık planın tüm özellikleri</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>1 ay hediye</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>%100 para iadesi garantisi (ilk 30 gün)</li>
+        </ul>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column;">
+        <div style="margin-bottom:18px;">
+          <div style="font-size:13px; font-weight:600; color:var(--indigo-bright); text-transform:uppercase; letter-spacing:0.06em;">YKS Yıllık</div>
+          <div style="font-size:13px; color:var(--muted-2); margin-top:6px;">Hazırlığın baştan sona</div>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+          <span class="tnum" style="font-size:44px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">₺79</span>
+          <span style="color:var(--muted-2); font-size:14px;">/ay</span>
+        </div>
+        <div style="font-size:12px; color:var(--muted-2); margin-bottom:24px;">Toplam ₺948 — 4 ay hediye · %47 indirim</div>
+        <a href="/auth/register/" class="btn btn-soft">Hemen Başla</a>
+        <ul style="margin-top:24px; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Dönemlik planın tüm özellikleri</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>4 ay hediye</li>
+          <li style="display:flex; gap:8px; color:var(--body);"><span class="text-emerald" style="font-size:14px;">✓</span>Birebir uzman görüşmesi (ayda 1)</li>
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+
+    <p style="text-align:center; margin-top:24px; font-size:13px; color:var(--muted-2);">
+      Kurum / dershane misin? <a href="{% url 'marketing:contact' %}" style="color:var(--indigo-bright); font-weight:600;">Kurumsal planlar için iletişime geç →</a>
+    </p>
+  </div>
+</section>
+
+<!-- Money-back guarantee -->
+<section class="section-sm" style="background:var(--bg-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="card-glow" style="padding:32px; display:grid; grid-template-columns:auto 1fr; gap:24px; align-items:center;">
+      <div style="width:64px; height:64px; border-radius:16px; background:var(--emerald-tint); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; color:var(--emerald);">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      </div>
+      <div>
+        <h3 class="h3">İlk 30 günde memnun değilsen — para iadesi.</h3>
+        <p class="sub-sm" style="margin-top:6px; max-width:none;">Sorun yok. Tek bir e-posta yeterli. Sebep sorulmaz, ücretin geri ödenir. YKS senin için fazla önemli — riske atmıyoruz.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section-sm">
+  <div class="container-narrow">
+    <div style="text-align:center; max-width:600px; margin: 0 auto 32px;">
+      <span class="eyebrow">SSS</span>
+      <h2 class="h2">Sıkça sorulanlar</h2>
+      <p class="sub" style="margin: 14px auto 0;">Öğrenciler ve velilerden gelen soruları topladık.</p>
+    </div>
+
+    <div style="font-size:11px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.08em; margin: 24px 0 12px;">Öğrenciler için</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for faq in student_faqs %}
+      <details class="card" style="padding:18px 22px; cursor:pointer;">
+        <summary style="font-size:15px; font-weight:600; color:var(--heading); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          {{ faq.question }}<span style="color:var(--muted-2); font-size:18px;">+</span>
+        </summary>
+        <p style="margin-top:12px; color:var(--muted); font-size:14px;">{{ faq.answer }}</p>
+      </details>
+      {% empty %}
+      <details class="card" style="padding:18px 22px; cursor:pointer;">
+        <summary style="font-size:15px; font-weight:600; color:var(--heading); list-style:none; display:flex; justify-content:space-between; align-items:center;">Deneme döneminde ne yapabilirim?<span style="color:var(--muted-2); font-size:18px;">+</span></summary>
+        <p style="margin-top:12px; color:var(--muted); font-size:14px;">Tüm özellikler — Dönemlik plan dahil. Sınırsız deneme analizi, aylık plan, haftalık görevler. Kredi kartı gerekmez.</p>
+      </details>
+      {% endfor %}
+    </div>
+
+    <div style="font-size:11px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.08em; margin: 32px 0 12px;">Veliler için</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for faq in parent_faqs %}
+      <details class="card" style="padding:18px 22px; cursor:pointer;">
+        <summary style="font-size:15px; font-weight:600; color:var(--heading); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          {{ faq.question }}<span style="color:var(--muted-2); font-size:18px;">+</span>
+        </summary>
+        <p style="margin-top:12px; color:var(--muted); font-size:14px;">{{ faq.answer }}</p>
+      </details>
+      {% empty %}
+      <details class="card" style="padding:18px 22px; cursor:pointer;">
+        <summary style="font-size:15px; font-weight:600; color:var(--heading); list-style:none; display:flex; justify-content:space-between; align-items:center;">Vagus, koç/dershane yerine geçer mi?<span style="color:var(--muted-2); font-size:18px;">+</span></summary>
+        <p style="margin-top:12px; color:var(--muted); font-size:14px;">Tek başına da etkili — ama Vagus en iyi sonucu koç/dershane ile birlikte verir.</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

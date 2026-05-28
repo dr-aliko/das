@@ -20,6 +20,7 @@ class Subject(models.Model):
     exam_type = models.CharField(max_length=3, choices=EXAM_TYPE_CHOICES, default='TYT')
     name = models.CharField(max_length=100)
     question_count = models.PositiveSmallIntegerField(default=40)
+    excluded_from_planning = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Ders'
@@ -37,15 +38,50 @@ class Subject(models.Model):
 
 
 class Topic(models.Model):
+    PRIORITY_CORE        = 'CORE'
+    PRIORITY_INDEPENDENT = 'INDEPENDENT'
+    PRIORITY_OPTIONAL    = 'OPTIONAL'
+    PRIORITY_CHOICES = [
+        ('CORE',        'Temel (Zorunlu)'),
+        ('INDEPENDENT', 'Bağımsız'),
+        ('OPTIONAL',    'Opsiyonel'),
+    ]
+
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='topics')
     name = models.CharField(max_length=200)
     # Sosyal → Tarih/Coğrafya/Felsefe/Din Kültürü  |  Fen → Fizik/Kimya/Biyoloji
     sub_category = models.CharField(max_length=100, blank=True, default='')
 
+    # ── Curriculum planning metadata ──────────────────────────────────────────
+    # is_baglayici: topic unlocks dependent topics (prerequisite)
+    is_baglayici  = models.BooleanField(default=False, verbose_name='Bağlayıcı Konu')
+    # expected_hours: nominal study hours needed to reach competency
+    expected_hours = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='Beklenen Çalışma Saati',
+    )
+    # yield_score: 0-100, higher = more exam questions per study hour
+    yield_score   = models.PositiveSmallIntegerField(
+        default=50, verbose_name='Verim Skoru (0-100)',
+    )
+    priority_tag  = models.CharField(
+        max_length=12, choices=PRIORITY_CHOICES, default=PRIORITY_CORE,
+        verbose_name='Öncelik',
+    )
+    # depends_on: topics that must be studied before this one
+    depends_on    = models.ManyToManyField(
+        'self', symmetrical=False, blank=True,
+        related_name='unlocks', verbose_name='Ön Koşul Konular',
+    )
+    excluded_from_planning = models.BooleanField(default=False)
+    order_index = models.PositiveSmallIntegerField(
+        default=9999, verbose_name='Pedagojik Sıra',
+        help_text='Konu havuzunda gösterim sırası. Küçük = önce. 9999 = sırasız.',
+    )
+
     class Meta:
         verbose_name = 'Konu'
         verbose_name_plural = 'Konular'
-        ordering = ['subject', 'sub_category', 'name']
+        ordering = ['subject', 'order_index', 'sub_category', 'name']
         unique_together = [('subject', 'name')]
 
     def __str__(self):

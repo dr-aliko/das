@@ -25,9 +25,10 @@ class SubjectAdmin(admin.ModelAdmin):
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
-    list_display = ('name', 'subject', 'sub_category')
-    list_filter = ('subject__exam_type', 'subject', 'sub_category')
-    search_fields = ('name',)
+    list_display   = ('name', 'subject', 'sub_category', 'priority_tag', 'is_baglayici', 'yield_score', 'expected_hours')
+    list_filter    = ('subject__exam_type', 'subject', 'priority_tag', 'is_baglayici')
+    search_fields  = ('name',)
+    filter_horizontal = ('depends_on',)
 
 
 class ExamResultInline(admin.TabularInline):

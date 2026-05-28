@@ -1,50 +1,212 @@
-{% extends "base.html" %}
+{% load static %}
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Giriş · Vagus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'marketing/site.css' %}" />
+<style>
+  .auth-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-form-side {
+    display: flex;
+    flex-direction: column;
+    padding: 32px 48px;
+  }
+  .auth-brand {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 20px; color: white;
+    letter-spacing: -0.025em; text-decoration: none;
+  }
+  .auth-brand svg { color: var(--indigo-bright); }
+  .auth-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 380px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .auth-field {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--heading);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 140ms;
+    box-sizing: border-box;
+  }
+  .auth-field:focus { border-color: var(--indigo); }
+  .auth-label {
+    display: block;
+    font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .auth-field-group { margin-bottom: 14px; }
+  .auth-error {
+    font-size: 12px;
+    color: #f87171;
+    margin-top: 5px;
+  }
 
-{% block title %}Giriş Yap — DAS{% endblock %}
+  .auth-brand-side {
+    background: linear-gradient(135deg, #0a0e14 0%, #0f141c 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    border-left: 1px solid var(--border);
+  }
+  .auth-brand-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 30% 30%, rgba(99,102,241,0.25), transparent 60%),
+      radial-gradient(ellipse 500px 300px at 80% 70%, rgba(124,58,237,0.18), transparent 60%);
+  }
+  .auth-brand-side::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, black, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, black, transparent 70%);
+  }
+  .auth-brand-content {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    text-align: center;
+  }
 
-{% block content %}
-<div class="min-h-[80vh] flex items-center justify-center">
-  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-    <div class="text-center mb-8">
-      <div class="flex justify-center mb-3">
-        <svg class="w-10 h-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+  @media (max-width: 900px) {
+    .auth-shell { grid-template-columns: 1fr; }
+    .auth-brand-side { display: none; }
+    .auth-form-side { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-shell">
+
+  <!-- Left · Form -->
+  <div class="auth-form-side">
+    <a href="/" class="auth-brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+      Vagus
+    </a>
+
+    <div class="auth-content">
+      <h1 style="margin:0 0 8px; font-size:28px; font-weight:700; color:var(--heading); letter-spacing:-0.02em;">Tekrar hoş geldin.</h1>
+      <p style="margin:0 0 28px; color:var(--muted); font-size:14px;">Hesabına giriş yap ve haftalık görevlerini görmeye başla.</p>
+
+      {% if form.non_field_errors %}
+      <div style="padding:12px 16px; background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); border-radius:10px; margin-bottom:16px;">
+        {% for error in form.non_field_errors %}
+        <p style="margin:0; font-size:13px; color:#f87171;">{{ error }}</p>
+        {% endfor %}
       </div>
-      <h1 class="text-3xl font-bold text-indigo-700">Vagus</h1>
-      <p class="text-gray-500 mt-1">Deneme Analiz Sistemi</p>
-    </div>
+      {% endif %}
 
-    <form method="post" class="space-y-5">
-      {% csrf_token %}
-      {% for field in form %}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+      <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="auth-field-group">
+          <label class="auth-label">{{ field.label }}</label>
           <input
             type="{{ field.field.widget.input_type }}"
             name="{{ field.html_name }}"
             value="{{ field.value|default:'' }}"
-            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
+            class="auth-field"
+            {% if forloop.first %}autofocus{% endif %}
+            {% if field.field.widget.input_type == 'email' %}placeholder="elif@mail.com"{% endif %}
+            {% if field.field.widget.input_type == 'password' %}placeholder="••••••••"{% endif %}
+          />
           {% if field.errors %}
-            <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+          <div class="auth-error">{{ field.errors.0 }}</div>
           {% endif %}
         </div>
-      {% endfor %}
-      {% if form.non_field_errors %}
-        <p class="text-red-500 text-sm">{{ form.non_field_errors.0 }}</p>
-      {% endif %}
-      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition">
-        Giriş Yap
-      </button>
-    </form>
+        {% endfor %}
 
-    <p class="text-center text-sm text-gray-500 mt-6">
-      Hesabın yok mu?
-      <a href="/auth/register/" class="text-indigo-600 hover:underline font-medium">Kayıt Ol</a>
-    </p>
-    <p class="text-center text-sm text-gray-400 mt-2">
-      Öğrenci davetini mi aldın?
-      <a href="/" class="text-indigo-500 hover:underline font-medium">Davet linkini kullan</a>
-    </p>
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin: 4px 0 20px;">
+          <input type="checkbox" id="remember" name="remember" checked />
+          <label for="remember">Beni hatırla</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+          Giriş Yap
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <p style="margin-top:32px; font-size:13px; color:var(--muted); text-align:center;">
+        Hesabın yok mu? <a href="/auth/register/" style="color:var(--indigo-bright); font-weight:600;">Hemen kayıt ol</a>
+      </p>
+    </div>
+
+    <p style="font-size:12px; color:var(--muted-2); text-align:center; margin-top:24px;">© 2026 Vagus · <a href="#" style="color:inherit;">Gizlilik</a> · <a href="#" style="color:inherit;">Şartlar</a></p>
   </div>
+
+  <!-- Right · Brand panel -->
+  <div class="auth-brand-side">
+    <div class="auth-brand-content">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 32px; display:block; filter:drop-shadow(0 0 24px rgba(99,102,241,0.45));">
+        <path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/>
+      </svg>
+
+      <h2 style="font-size:32px; font-weight:700; color:var(--heading); margin:0 0 16px; letter-spacing:-0.02em; line-height:1.2;">YKS hazırlığını plansız bırakma.</h2>
+      <p style="font-size:16px; color:var(--muted); margin:0 0 40px; line-height:1.6;">Deneme analizi, aylık plan, haftalık görevler — hepsi tek panelde.</p>
+
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; max-width:380px; margin:0 auto;">
+        <div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:var(--heading);">12.000+</div>
+          <div style="font-size:11px; color:var(--muted-2); margin-top:2px;">Aktif öğrenci</div>
+        </div>
+        <div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:var(--heading);">320K+</div>
+          <div style="font-size:11px; color:var(--muted-2); margin-top:2px;">Çözülen deneme</div>
+        </div>
+        <div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:var(--emerald);">+12,4</div>
+          <div style="font-size:11px; color:var(--muted-2); margin-top:2px;">Ort. net artışı</div>
+        </div>
+      </div>
+
+      <div style="margin-top:48px; padding:18px 22px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; backdrop-filter:blur(20px); max-width:420px; margin-left:auto; margin-right:auto; text-align:left;">
+        <p style="font-size:13px; color:var(--body); line-height:1.55; margin:0;">"Net'im 4 ayda 78'den 96'ya çıktı. Vagus'un her hafta verdiği listeyi tamamladım, başka bir şey yapmadım."</p>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--violet),var(--indigo)); color:white; font-weight:600; font-size:11px; display:flex; align-items:center; justify-content:center;">MA</div>
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--heading);">Mert A.</div>
+            <div style="font-size:10px; color:var(--muted-2);">12. Sınıf · Eşit Ağırlık</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
-{% endblock %}
+
+</body>
+</html>

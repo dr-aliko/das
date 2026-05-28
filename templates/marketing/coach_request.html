@@ -1,0 +1,196 @@
+{% extends "marketing/base_public.html" %}
+{% load static %}
+
+{% block title %}
+  {% if submitted %}Talebiniz Alındı{% else %}Koç Talebi · {{ coach.get_display_name }}{% endif %} · Vagus
+{% endblock %}
+{% block meta_description %}{{ coach.get_display_name }} ile YKS hazırlık görüşmesi talep et.{% endblock %}
+
+{% block content %}
+
+<section class="section-sm" style="min-height:70vh; display:flex; align-items:flex-start; padding-top:80px;">
+  <div class="container-narrow">
+
+    <!-- Back link -->
+    <a href="{% url 'marketing:coach_detail' coach.slug %}" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted-2); margin-bottom:32px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      {{ coach.get_display_name }}
+    </a>
+
+    <div style="display:grid; grid-template-columns:1fr 280px; gap:40px; align-items:flex-start;">
+
+      <!-- Left: form or success -->
+      <div>
+
+        {% if submitted %}
+        <!-- ── SUCCESS STATE ── -->
+        <div class="card" style="padding:40px; text-align:center;">
+          <div style="width:56px; height:56px; border-radius:50%; background:var(--emerald-tint); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; color:var(--emerald); margin:0 auto 24px;">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h1 class="h2" style="margin-bottom:12px;">Talebin alındı.</h1>
+          <p class="sub" style="margin:0 auto 28px;">{{ coach.get_display_name }} en kısa sürede seninle iletişime geçecek. Bu süreçte Vagus'u keşfetmeye devam edebilirsin.</p>
+          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <a href="{% url 'marketing:home' %}" class="btn btn-primary">Anasayfaya Dön</a>
+            <a href="{% url 'marketing:coach_list' %}" class="btn btn-ghost">Diğer Koçları Gör</a>
+          </div>
+        </div>
+
+        {% else %}
+        <!-- ── FORM ── -->
+        <div style="margin-bottom:28px;">
+          <span class="eyebrow">Görüşme Talebi</span>
+          <h1 class="h2" style="margin-top:10px;">Bu koçla görüşme talebi oluştur.</h1>
+          <p class="sub-sm" style="margin-top:10px;">Bilgilerini bırak, {{ coach.get_display_name }} seni arasın ve süreci birlikte planlayalım.</p>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Non-field errors -->
+          {% if form.non_field_errors %}
+          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:13.5px; color:var(--ruby);">
+            {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- ── Student info ── -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Ad Soyad <span style="color:var(--ruby);">*</span></label>
+              <input type="text" name="full_name" value="{{ form.full_name.value|default:'' }}" placeholder="Elif Yılmaz"
+                style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.full_name.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;" />
+              {% if form.full_name.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.full_name.errors|join:', ' }}</p>{% endif %}
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">E-posta <span style="color:var(--ruby);">*</span></label>
+              <input type="email" name="email" value="{{ form.email.value|default:'' }}" placeholder="elif@mail.com"
+                style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.email.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;" />
+              {% if form.email.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.email.errors|join:', ' }}</p>{% endif %}
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Telefon <span style="color:var(--ruby);">*</span></label>
+            <input type="tel" name="phone" value="{{ form.phone.value|default:'' }}" placeholder="+90 5XX XXX XX XX"
+              style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.phone.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;" />
+            {% if form.phone.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.phone.errors|join:', ' }}</p>{% endif %}
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Sınıf <span style="color:var(--ruby);">*</span></label>
+              <select name="grade_level"
+                style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.grade_level.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; cursor:pointer; box-sizing:border-box;">
+                <option value="">Seç</option>
+                {% for val, label in form.fields.grade_level.choices %}
+                <option value="{{ val }}" {% if form.grade_level.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% if form.grade_level.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.grade_level.errors|join:', ' }}</p>{% endif %}
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Hedef Yıl <span style="color:var(--ruby);">*</span></label>
+              <select name="target_exam_year"
+                style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.target_exam_year.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; cursor:pointer; box-sizing:border-box;">
+                <option value="">Seç</option>
+                {% for val, label in form.fields.target_exam_year.choices %}
+                <option value="{{ val }}" {% if form.target_exam_year.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% if form.target_exam_year.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.target_exam_year.errors|join:', ' }}</p>{% endif %}
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Alan <span style="color:var(--ruby);">*</span></label>
+              <select name="track"
+                style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid {% if form.track.errors %}rgba(239,68,68,0.6){% else %}var(--border){% endif %}; border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; cursor:pointer; box-sizing:border-box;">
+                <option value="">Seç</option>
+                {% for val, label in form.fields.track.choices %}
+                <option value="{{ val }}" {% if form.track.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% if form.track.errors %}<p style="margin:5px 0 0; font-size:12px; color:var(--ruby);">{{ form.track.errors|join:', ' }}</p>{% endif %}
+            </div>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">
+              Koçtan ne konuda destek istiyorsun?
+              <span style="font-weight:400; color:var(--muted-2);">(isteğe bağlı)</span>
+            </label>
+            <textarea name="note" rows="4" placeholder="Örn: AYT Matematik'te ciddi eksiğim, birlikte haftalık plan yapmak istiyorum…"
+              style="width:100%; padding:12px 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; resize:vertical; line-height:1.55; box-sizing:border-box;">{{ form.note.value|default:'' }}</textarea>
+          </div>
+
+          <!-- ── Parent info (collapsible) ── -->
+          <details style="margin-bottom:24px;">
+            <summary style="font-size:13.5px; font-weight:600; color:var(--heading); cursor:pointer; list-style:none; display:flex; align-items:center; gap:6px; padding:12px 0; border-top:1px solid var(--border);">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transition:transform 200ms;" class="details-icon"><path d="M9 6l6 6-6 6"/></svg>
+              Veli bilgilerini ekle
+              <span style="font-weight:400; color:var(--muted-2);">(isteğe bağlı)</span>
+            </summary>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; padding-top:14px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Veli Adı</label>
+                <input type="text" name="parent_name" value="{{ form.parent_name.value|default:'' }}" placeholder="Ahmet Yılmaz"
+                  style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;" />
+              </div>
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--heading); margin-bottom:6px;">Veli Telefonu</label>
+                <input type="tel" name="parent_phone" value="{{ form.parent_phone.value|default:'' }}" placeholder="+90 5XX XXX XX XX"
+                  style="width:100%; height:44px; padding:0 14px; background:var(--card-2); border:1px solid var(--border); border-radius:10px; color:var(--heading); font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;" />
+              </div>
+            </div>
+          </details>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+            Görüşme Talebi Gönder
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <p style="margin-top:12px; font-size:12px; color:var(--muted-2); text-align:center;">Bilgilerin yalnızca bu koçla görüşmeni organize etmek için kullanılır.</p>
+        </form>
+        {% endif %}
+
+      </div>
+
+      <!-- Right: coach mini-card (always visible) -->
+      <div style="position:sticky; top:100px;">
+        <div class="card" style="border-color:rgba(99,102,241,0.25); box-shadow:0 0 0 1px rgba(99,102,241,0.10), 0 16px 40px -12px rgba(79,70,229,0.12);">
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+            {% if coach.photo %}
+            <img src="{{ coach.photo.url }}" alt="{{ coach.get_display_name }}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; flex-shrink:0;" />
+            {% else %}
+            <div style="width:52px; height:52px; border-radius:50%; background:{{ coach.avatar_gradient }}; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:16px; flex-shrink:0;">{{ coach.avatar_initials }}</div>
+            {% endif %}
+            <div>
+              <div style="font-size:15px; font-weight:700; color:var(--heading);">{{ coach.get_display_name }}</div>
+              <div style="font-size:11px; color:var(--indigo-bright); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;">{{ coach.title }}</div>
+            </div>
+          </div>
+          {% if coach.specialty %}
+          <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">{{ coach.specialty }}</div>
+          {% endif %}
+          {% if coach.years_experience or coach.student_count %}
+          <div style="display:flex; gap:20px;">
+            {% if coach.years_experience %}
+            <div>
+              <div class="tnum" style="font-size:20px; font-weight:700; color:var(--heading);">{{ coach.years_experience }}+</div>
+              <div style="font-size:11px; color:var(--muted-2);">Yıl deneyim</div>
+            </div>
+            {% endif %}
+            {% if coach.student_count %}
+            <div>
+              <div class="tnum" style="font-size:20px; font-weight:700; color:var(--heading);">{{ coach.student_count }}+</div>
+              <div style="font-size:11px; color:var(--muted-2);">Öğrenci</div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}

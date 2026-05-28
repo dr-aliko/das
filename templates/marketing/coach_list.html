@@ -1,0 +1,99 @@
+{% extends "marketing/base_public.html" %}
+{% load static %}
+
+{% block title %}Koçlar · Vagus{% endblock %}
+{% block meta_description %}YKS hazırlığında sana en uygun koçu bul. Uzman YKS koçlarıyla çalış, hedefine ulaş.{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="section-sm" style="position:relative; overflow:hidden; padding-top:88px;">
+  <div class="glow-hero" style="opacity:0.6;"></div>
+  <div class="container-narrow" style="text-align:center; position:relative;">
+    <span class="pill">Koçlar</span>
+    <h1 class="display" style="margin-top:18px;">Sana uygun koçu bul.</h1>
+    <p class="sub" style="margin: 18px auto 0;">Alanında uzman, Vagus sertifikalı YKS koçlarıyla çalış. Her öğrenciye özel rehberlik, haftalık takip ve anlık geri bildirim.</p>
+  </div>
+</section>
+
+<!-- Coach grid -->
+<section class="section-sm">
+  <div class="container">
+    {% if coaches %}
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+      {% for coach in coaches %}
+      <div class="card" style="display:flex; flex-direction:column;">
+        <!-- Avatar / Photo -->
+        <div style="display:flex; align-items:flex-start; gap:16px; margin-bottom:18px;">
+          {% if coach.photo %}
+          <img src="{{ coach.photo.url }}" alt="{{ coach.get_display_name }}" style="width:72px; height:72px; border-radius:50%; object-fit:cover; flex-shrink:0; border:2px solid var(--border);" />
+          {% else %}
+          <div style="width:72px; height:72px; border-radius:50%; background:{{ coach.avatar_gradient }}; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:22px; letter-spacing:-0.02em; flex-shrink:0;">{{ coach.avatar_initials }}</div>
+          {% endif %}
+          <div style="min-width:0;">
+            <div style="font-size:17px; font-weight:700; color:var(--heading); line-height:1.2;">{{ coach.get_display_name }}</div>
+            <div style="font-size:12px; color:var(--indigo-bright); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-top:3px;">{{ coach.title }}</div>
+            <div style="font-size:13px; color:var(--muted-2); margin-top:2px;">{{ coach.specialty }}</div>
+          </div>
+        </div>
+
+        <!-- Bio short -->
+        <p style="font-size:13.5px; color:var(--body); line-height:1.6; flex:1; margin:0 0 18px;">{{ coach.bio_short }}</p>
+
+        <!-- Metrics -->
+        {% if coach.years_experience or coach.student_count or coach.success_metric %}
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; padding-top:14px; border-top:1px solid var(--border);">
+          {% if coach.years_experience %}
+          <div>
+            <div class="tnum" style="font-size:18px; font-weight:700; color:var(--heading);">{{ coach.years_experience }}+</div>
+            <div style="font-size:11px; color:var(--muted-2);">Yıl deneyim</div>
+          </div>
+          {% endif %}
+          {% if coach.student_count %}
+          <div>
+            <div class="tnum" style="font-size:18px; font-weight:700; color:var(--heading);">{{ coach.student_count }}+</div>
+            <div style="font-size:11px; color:var(--muted-2);">Öğrenci</div>
+          </div>
+          {% endif %}
+          {% if coach.success_metric %}
+          <div>
+            <div style="font-size:18px; font-weight:700; color:var(--emerald);">{{ coach.success_metric }}</div>
+            <div style="font-size:11px; color:var(--muted-2);">Başarı</div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- CTAs -->
+        <div style="display:flex; gap:10px;">
+          <a href="{% url 'marketing:coach_detail' coach.slug %}" class="btn btn-soft" style="flex:1; text-align:center;">Koçu İncele</a>
+          <a href="{% url 'marketing:coach_request' coach.slug %}" class="btn btn-primary" style="flex:1; text-align:center;">Talep Oluştur</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty state -->
+    <div style="text-align:center; padding:80px 24px; color:var(--muted);">
+      <svg width="48" height="48" fill="none" stroke="var(--muted-2)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 20px; display:block;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+      <p style="font-size:16px; font-weight:600; color:var(--heading); margin:0 0 8px;">Koçlar yakında burada olacak.</p>
+      <p style="font-size:14px; margin:0;">Hemen başlamak için doğrudan kayıt olabilirsin.</p>
+      <a href="/auth/register/" class="btn btn-primary" style="margin-top:24px; display:inline-flex;">Şimdi Kayıt Ol</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Bottom CTA band -->
+<section class="section-sm" style="background:var(--bg-2); border-top:1px solid var(--border);">
+  <div class="container-narrow" style="text-align:center;">
+    <h2 class="h2">Koçsuz da güçlü çalışırsın.</h2>
+    <p class="sub" style="margin:14px auto 0;">Vagus'u koç olmadan da kullanabilirsin. Sistem, hedefine göre planını otomatik oluşturur.</p>
+    <div style="margin-top:24px; display:flex; gap:12px; justify-content:center;">
+      <a href="/auth/register/" class="btn btn-primary btn-lg">Hemen Başla</a>
+      <a href="{% url 'marketing:pricing' %}" class="btn btn-ghost btn-lg">Fiyatları Gör</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
