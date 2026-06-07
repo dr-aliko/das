@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -8,7 +9,7 @@ def send_invite_email_task(invite_id):
     invite = StudentInvite.objects.get(id=invite_id)
 
     path = reverse('users_app:invite_register', args=[invite.token])
-    invite_link = f'https://vagus.tr{path}'
+    invite_link = f'{settings.APP_BASE_URL}{path}'
 
     plain_text = (
         f'Vagus Platformuna Hoş Geldiniz!\n\n'

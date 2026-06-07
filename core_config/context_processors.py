@@ -44,3 +44,10 @@ def desktop_v2(request):
             enabled = getattr(settings, 'DESKTOP_V2_DEFAULT', False)
 
     return {'desktop_v2': enabled}
+
+
+def site_urls(request):
+    return {
+        'PUBLIC_SITE_URL': settings.PUBLIC_SITE_URL,
+        'APP_BASE_URL': settings.APP_BASE_URL,
+    }

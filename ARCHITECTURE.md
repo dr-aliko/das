@@ -103,7 +103,7 @@ BransDeneme          student FK + subject FK + date + scores
 |---|---|---|
 | `SECRET_KEY` | (insecure dev default) | Django secret key — **must** be overridden in prod |
 | `DEBUG` | False | Django debug mode |
-| `ALLOWED_HOSTS` | `127.0.0.1,localhost` | Comma-separated allowed host headers |
+| `ALLOWED_HOSTS` | `app.vagus.tr,127.0.0.1,localhost` | Comma-separated allowed host headers |
 | `DATABASE_URL` | (unset → SQLite) | Full database URL; parsed via `dj-database-url` |
 | `EMAIL_BACKEND` | console | Django email backend class |
 | `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` | localhost/25/False | SMTP config |
@@ -117,4 +117,6 @@ BransDeneme          student FK + subject FK + date + scores
 | `Q_SYNC` | False | Run Django-Q2 tasks synchronously (dev/test only) |
 | `DJANGO_LOG_FILE` | (empty) | Path for rotating log file; unset disables file logging |
 | `EXTERNAL_API_BASE_URL` | `http://...` | External task catalog API base |
-| `CSRF_TRUSTED_ORIGINS` | `https://vagus.tr,...` | Comma-separated trusted CSRF origins |
+| `CSRF_TRUSTED_ORIGINS` | `https://app.vagus.tr` | Comma-separated trusted CSRF origins |
+| `PUBLIC_SITE_URL` | `https://vagus.tr` | Public marketing site base URL |
+| `APP_BASE_URL` | `https://app.vagus.tr` | Django app/panel base URL for generated links |

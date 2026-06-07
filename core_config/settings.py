@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='app.vagus.tr,127.0.0.1,localhost', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -49,6 +49,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core_config.context_processors.v2_shell',
                 'core_config.context_processors.desktop_v2',
+                'core_config.context_processors.site_urls',
                 'marketing_app.context_processors.site_settings',
             ],
         },
@@ -144,9 +145,12 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Allow form posts from our production domain. Override via env if needed.
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://vagus.tr,https://www.vagus.tr',
+    default='https://app.vagus.tr',
     cast=Csv(),
 )
+
+PUBLIC_SITE_URL = config('PUBLIC_SITE_URL', default='https://vagus.tr').rstrip('/')
+APP_BASE_URL = config('APP_BASE_URL', default='https://app.vagus.tr').rstrip('/')
 
 # Production security headers — only active when DEBUG=False
 if not DEBUG:

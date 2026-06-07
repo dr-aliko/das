@@ -29,8 +29,10 @@ jobs:
       DATABASE_URL: postgres://vagus:vagus@localhost:5432/vagus_test
       SECRET_KEY: ci-secret-key-not-for-production
       DEBUG: 'False'
-      ALLOWED_HOSTS: 'vagus.tr,www.vagus.tr'
-      CSRF_TRUSTED_ORIGINS: 'https://vagus.tr,https://www.vagus.tr'
+      ALLOWED_HOSTS: 'app.vagus.tr,127.0.0.1,localhost'
+      CSRF_TRUSTED_ORIGINS: 'https://app.vagus.tr'
+      PUBLIC_SITE_URL: 'https://vagus.tr'
+      APP_BASE_URL: 'https://app.vagus.tr'
 
     steps:
       - uses: actions/checkout@v4

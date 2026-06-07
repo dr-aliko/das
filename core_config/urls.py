@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
-from core_config.views import healthz_view
+from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_subject_detail_student
 from users_app.views import profil_view, theme_save, activity_calendar_api
 
@@ -20,6 +20,7 @@ urlpatterns = [
          name='offline'),
 
     path('admin/', admin.site.urls),
+    path('', app_root_view, name='app_root'),
     path('', include('marketing_app.urls', namespace='marketing')),
     path('auth/', include('users_app.urls', namespace='users_app')),
     path('student/', include('exams_app.student_urls', namespace='student')),

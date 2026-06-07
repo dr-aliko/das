@@ -79,7 +79,7 @@ If the qcluster log shows `relation "django_q_ormq" does not exist`, the django_
 ## 7. Smoke test
 
 ```bash
-curl -i https://vagus.tr/healthz/
+curl -i https://app.vagus.tr/healthz/
 # Expect: HTTP/2 200 + {"status":"healthy","database":"up"}
 ```
 
@@ -100,7 +100,7 @@ sudo systemctl restart vagus-qcluster
 sudo systemctl restart gunicorn
 sudo systemctl reload nginx
 
-curl -i https://vagus.tr/healthz/
+curl -i https://app.vagus.tr/healthz/
 ```
 
 ---
