@@ -71,6 +71,14 @@ class InviteAcceptForm(forms.Form):
     full_name = forms.CharField(max_length=150, label='Ad Soyad')
     password1 = forms.CharField(widget=forms.PasswordInput, label='Şifre')
     password2 = forms.CharField(widget=forms.PasswordInput, label='Şifre Tekrar')
+    terms_accepted = forms.BooleanField(
+        required=True,
+        error_messages={'required': 'Kullanım Koşulları ve Gizlilik Sözleşmesi\'ni kabul etmeniz zorunludur.'},
+    )
+    kvkk_accepted = forms.BooleanField(
+        required=True,
+        error_messages={'required': 'KVKK Aydınlatma Metni\'ni kabul etmeniz zorunludur.'},
+    )
 
     def clean_password2(self):
         p1 = self.cleaned_data.get('password1')

@@ -10,6 +10,25 @@ from users_app.models import User
 from .models import MacroPlan, MacroPlanBucket, MacroPlanTopic, MacroPlanSkippedTopic
 from .services.engine_v2 import generate_macro_syllabus_v2 as generate_macro_syllabus, create_empty_buckets
 
+_SINIF_OFFSET = {'9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0}
+
+# Maps student alan to allowed AYT subject names in the curriculum planner
+_AYT_ALAN_SUBJECTS = {
+    'SAY': {'AYT Matematik', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji'},
+    'EA':  {'AYT Matematik', 'AYT Türk Dili ve Edebiyatı', 'AYT Tarih', 'AYT Coğrafya'},
+    'SOZ': {'AYT Türk Dili ve Edebiyatı', 'AYT Tarih', 'AYT Tarih 2', 'AYT Coğrafya', 'AYT Coğrafya 2', 'AYT Felsefe Grubu', 'AYT Din Kültürü'},
+    'DIL': {'AYT Yabancı Dil'},
+}
+
+
+def _sinif_exam_date(student):
+    """Return June 15 of the student's target YKS year based on sinif. None if sinif unset."""
+    sinif = getattr(student, 'sinif', '') or ''
+    if not sinif or sinif not in _SINIF_OFFSET:
+        return None
+    target_year = date.today().year + _SINIF_OFFSET[sinif] + 1
+    return date(target_year, 6, 15)
+
 
 @coach_required
 def macro_plan_list(request):
@@ -122,11 +141,17 @@ def _get_or_create_primary_plan(coach, student):
         .first()
     )
     if plan is None:
-        target_date = student.tyt_target_date or student.ayt_target_date
+        tyt_date = student.tyt_target_date
+        ayt_date = student.ayt_target_date
+        target_date = tyt_date or ayt_date
         if not target_date:
-            return None, False
-        sinav_tipi = 'BOTH' if (student.tyt_target_date and student.ayt_target_date) else (
-            'TYT' if student.tyt_target_date else 'AYT'
+            auto = _sinif_exam_date(student)
+            if not auto:
+                return None, False
+            tyt_date = ayt_date = auto
+            target_date = auto
+        sinav_tipi = 'BOTH' if (tyt_date and ayt_date) else (
+            'TYT' if tyt_date else 'AYT'
         )
         plan = MacroPlan.objects.create(
             coach=coach,
@@ -181,8 +206,11 @@ def macro_plan_editor(request, student_id):
         Subject.objects.filter(exam_type='TYT', excluded_from_planning=False)
         .exclude(name__in=_TYT_UMBRELLA).order_by('name')
     ) if 'TYT' in exam_types else []
-    subjects_ayt = list(Subject.objects.filter(exam_type='AYT', excluded_from_planning=False).order_by('name')) \
-        if 'AYT' in exam_types else []
+    alan = getattr(student, 'alan', '') or ''
+    ayt_qs = Subject.objects.filter(exam_type='AYT', excluded_from_planning=False)
+    if alan in _AYT_ALAN_SUBJECTS:
+        ayt_qs = ayt_qs.filter(name__in=_AYT_ALAN_SUBJECTS[alan])
+    subjects_ayt = list(ayt_qs.order_by('name')) if 'AYT' in exam_types else []
 
     # Already-placed topic IDs
     placed_ids = set(
@@ -193,13 +221,20 @@ def macro_plan_editor(request, student_id):
 
     # Pool: topics not yet placed and not skipped, grouped by subject
     # Also exclude topics belonging to TYT umbrella subjects
-    all_plan_topics = list(
+    from django.db.models import Q
+    topics_qs = (
         Topic.objects.filter(
             subject__exam_type__in=exam_types,
             subject__excluded_from_planning=False,
             excluded_from_planning=False,
         ).exclude(subject__name__in=_TYT_UMBRELLA)
-        .select_related('subject').prefetch_related('depends_on')
+    )
+    if 'AYT' in exam_types and alan in _AYT_ALAN_SUBJECTS:
+        topics_qs = topics_qs.filter(
+            Q(subject__exam_type='TYT') | Q(subject__name__in=_AYT_ALAN_SUBJECTS[alan])
+        )
+    all_plan_topics = list(
+        topics_qs.select_related('subject').prefetch_related('depends_on')
         .order_by('subject__name', 'order_index', 'sub_category', 'name')
     )
     pool_by_subject: dict[int, list] = {}

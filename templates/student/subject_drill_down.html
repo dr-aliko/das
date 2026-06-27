@@ -68,13 +68,15 @@
     <section class="p-4 pt-5">
 
       {# ── Period filter chips ─────────────────────────────────────────── #}
-      <div class="flex gap-2 overflow-x-auto -mx-4 px-4 no-scrollbar pb-2 mb-5">
+      <div class="flex gap-2 overflow-x-auto -mx-4 px-4 no-scrollbar pb-2 mb-5"
+           :class="periodLoading && 'opacity-60 pointer-events-none'">
         {% for period in period_choices %}
-        <a href="?period={{ period|urlencode }}"
-           class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold whitespace-nowrap inline-flex items-center transition-colors
-                  {% if period == active_period %}das-period-chip-active{% else %}das-period-chip{% endif %}">
+        <button type="button"
+                @click="setPeriod('{{ period|escapejs }}')"
+                class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold whitespace-nowrap inline-flex items-center transition-colors"
+                :class="activePeriod === '{{ period }}' ? 'das-period-chip-active' : 'das-period-chip'">
           {{ period }}
-        </a>
+        </button>
         {% endfor %}
       </div>
 
@@ -92,7 +94,7 @@
                 </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                <span>{{ active_period }}</span>
+                <span x-text="activePeriod">{{ active_period }}</span>
             </div>
         </div>
 
@@ -164,67 +166,75 @@
       {# ── Topic accordion (student) ────────────────────────────────── #}
       <div class="das-section-head px-0">
         <h2>En Çok Yanlış Yapılan Konular</h2>
-        <span class="text-[10px] font-bold text-[var(--muted)] uppercase">{{ active_period }}</span>
+        <span class="text-[10px] font-bold text-[var(--muted)] uppercase" x-text="activePeriod"></span>
       </div>
       <div class="das-card p-0 overflow-hidden mb-6">
-        {% for topic in topics %}
-        <div class="border-b border-[var(--border)] last:border-0" x-data="{ expanded: false }">
-          <button @click="expanded = !expanded"
-                  class="w-full flex items-center gap-3 p-4 transition-colors text-left
-                         hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
-                  :class="expanded && 'bg-[var(--surface-2)]'">
-            <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
-                        text-[var(--down)] font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
-            <div class="flex-1 min-w-0 text-left">
-              <div class="text-sm font-bold text-[var(--heading)] truncate">{{ topic.name }}</div>
-              <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider">
-                {{ topic.errors }} hata · {{ topic.exams|length }} sınav
-              </div>
-            </div>
-            <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
-                 :class="expanded && 'rotate-180'"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <use href="#das-icon-chev-down"/>
-            </svg>
-          </button>
-          <div x-show="expanded" x-collapse>
-            <div class="pb-2 space-y-1 px-3">
-              {% for exam in topic.exams %}
-              {% if exam.url %}
-              <a href="{{ exam.url }}"
-                 class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
-                        border-l-2 border-[var(--primary)] bg-[var(--bg)]
-                        hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
-                        text-[var(--muted)] transition-colors">
-              {% else %}
-              <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
-                          border-l-2 border-[var(--border)] bg-[var(--bg)]
-                          text-[var(--muted)]">
-              {% endif %}
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-semibold truncate text-[var(--heading)]">{{ exam.name }}</p>
-                  <p class="text-[10px] text-[var(--muted)] mt-0.5">
-                    {{ exam.date }}{% if exam.source == 'brans' %} · Branş{% else %} · Genel{% endif %}
-                  </p>
+        <template x-if="topics.length > 0">
+          <div>
+            <template x-for="topic in topics" :key="topic.id">
+              <div class="border-b border-[var(--border)]" x-data="{ expanded: false }">
+                <button @click="expanded = !expanded"
+                        class="w-full flex items-center gap-3 p-4 transition-colors text-left
+                               hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
+                        :class="expanded && 'bg-[var(--surface-2)]'">
+                  <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
+                              text-[var(--down)] font-bold text-[10px] shrink-0" x-text="topic.errors"></div>
+                  <div class="flex-1 min-w-0 text-left">
+                    <div class="text-sm font-bold text-[var(--heading)] truncate" x-text="topic.name"></div>
+                    <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider"
+                         x-text="topic.errors + ' hata · ' + topic.exams.length + ' sınav'"></div>
+                  </div>
+                  <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
+                       :class="expanded && 'rotate-180'"
+                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <use href="#das-icon-chev-down"/>
+                  </svg>
+                </button>
+                <div x-show="expanded" x-collapse>
+                  <div class="pb-2 space-y-1 px-3">
+                    <template x-if="topic.exams.length === 0">
+                      <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
+                    </template>
+                    <template x-for="(exam, ei) in topic.exams" :key="ei">
+                      <div>
+                        <a x-show="!!exam.url" :href="exam.url || '#'"
+                           class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                                  border-l-2 border-[var(--primary)] bg-[var(--bg)]
+                                  hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
+                                  text-[var(--muted)] transition-colors">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold truncate text-[var(--heading)]" x-text="exam.name"></p>
+                            <p class="text-[10px] text-[var(--muted)] mt-0.5"
+                               x-text="exam.date + (exam.source === 'brans' ? ' · Branş' : ' · Genel')"></p>
+                          </div>
+                          <span class="text-[10px] font-bold text-[var(--down)] shrink-0" x-text="exam.errors + 'Y'"></span>
+                          <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <use href="#das-icon-chev-right"/>
+                          </svg>
+                        </a>
+                        <div x-show="!exam.url"
+                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                                    border-l-2 border-[var(--border)] bg-[var(--bg)] text-[var(--muted)]">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold truncate text-[var(--heading)]" x-text="exam.name"></p>
+                            <p class="text-[10px] text-[var(--muted)] mt-0.5"
+                               x-text="exam.date + (exam.source === 'brans' ? ' · Branş' : ' · Genel')"></p>
+                          </div>
+                          <span class="text-[10px] font-bold text-[var(--down)] shrink-0" x-text="exam.errors + 'Y'"></span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
                 </div>
-                <span class="text-[10px] font-bold text-[var(--down)] shrink-0">{{ exam.errors }}Y</span>
-                {% if exam.url %}
-                <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#das-icon-chev-right"/>
-                </svg>
-                {% endif %}
-              {% if exam.url %}</a>{% else %}</div>{% endif %}
-              {% empty %}
-              <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
-              {% endfor %}
-            </div>
+              </div>
+            </template>
           </div>
-        </div>
-        {% empty %}
-        <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
-          Bu dönemde konu hatası bulunamadı.
-        </div>
-        {% endfor %}
+        </template>
+        <template x-if="topics.length === 0">
+          <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+            Bu dönemde konu hatası bulunamadı.
+          </div>
+        </template>
       </div>
 
       {# ── Task panel ────────────────────────────────────────────────── #}
@@ -368,66 +378,75 @@
 
       <div class="das-section-head px-0">
         <h2>En Çok Yanlış Yapılan Konular</h2>
-        <span class="text-[10px] font-bold text-[var(--muted)] uppercase">{{ active_period }}</span>
+        <span class="text-[10px] font-bold text-[var(--muted)] uppercase" x-text="activePeriod"></span>
       </div>
       <div class="das-card p-0 overflow-hidden mb-6">
-        {% for topic in topics %}
-        <div class="border-b border-[var(--border)] last:border-0" x-data="{ expanded: false }">
-          <button @click="expanded = !expanded"
-                  class="w-full flex items-center gap-3 p-4 transition-colors text-left
-                         hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
-                  :class="expanded && 'bg-[var(--surface-2)]'">
-            <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
-                        text-[var(--down)] font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
-            <div class="flex-1 min-w-0 text-left">
-              <div class="text-sm font-bold text-[var(--heading)] truncate">{{ topic.name }}</div>
-              <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider">
-                {{ topic.errors }} hata · {{ topic.exams|length }} sınav
-              </div>
-            </div>
-            <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
-                 :class="expanded && 'rotate-180'"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <use href="#das-icon-chev-down"/>
-            </svg>
-          </button>
-          <div x-show="expanded" x-collapse>
-            <div class="pb-2 space-y-1 px-3">
-              {% for exam in topic.exams %}
-              {% if exam.url %}
-              <a href="{{ exam.url }}"
-                 class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
-                        border-l-2 border-[var(--primary)] bg-[var(--bg)]
-                        hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
-                        text-[var(--muted)] transition-colors">
-              {% else %}
-              <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
-                          border-l-2 border-[var(--border)] bg-[var(--bg)] text-[var(--muted)]">
-              {% endif %}
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-semibold truncate text-[var(--heading)]">{{ exam.name }}</p>
-                  <p class="text-[10px] text-[var(--muted)] mt-0.5">
-                    {{ exam.date }}{% if exam.source == 'brans' %} · Branş{% else %} · Genel{% endif %}
-                  </p>
+        <template x-if="topics.length > 0">
+          <div>
+            <template x-for="topic in topics" :key="topic.id">
+              <div class="border-b border-[var(--border)]" x-data="{ expanded: false }">
+                <button @click="expanded = !expanded"
+                        class="w-full flex items-center gap-3 p-4 transition-colors text-left
+                               hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)]"
+                        :class="expanded && 'bg-[var(--surface-2)]'">
+                  <div class="w-8 h-8 rounded-lg bg-[var(--down-tint)] flex items-center justify-center
+                              text-[var(--down)] font-bold text-[10px] shrink-0" x-text="topic.errors"></div>
+                  <div class="flex-1 min-w-0 text-left">
+                    <div class="text-sm font-bold text-[var(--heading)] truncate" x-text="topic.name"></div>
+                    <div class="text-[10px] font-bold text-[var(--down)] uppercase tracking-wider"
+                         x-text="topic.errors + ' hata · ' + topic.exams.length + ' sınav'"></div>
+                  </div>
+                  <svg class="w-4 h-4 text-[var(--muted)] shrink-0 transition-transform duration-200"
+                       :class="expanded && 'rotate-180'"
+                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <use href="#das-icon-chev-down"/>
+                  </svg>
+                </button>
+                <div x-show="expanded" x-collapse>
+                  <div class="pb-2 space-y-1 px-3">
+                    <template x-if="topic.exams.length === 0">
+                      <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
+                    </template>
+                    <template x-for="(exam, ei) in topic.exams" :key="ei">
+                      <div>
+                        <a x-show="!!exam.url" :href="exam.url || '#'"
+                           class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                                  border-l-2 border-[var(--primary)] bg-[var(--bg)]
+                                  hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
+                                  text-[var(--muted)] transition-colors">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold truncate text-[var(--heading)]" x-text="exam.name"></p>
+                            <p class="text-[10px] text-[var(--muted)] mt-0.5"
+                               x-text="exam.date + (exam.source === 'brans' ? ' · Branş' : ' · Genel')"></p>
+                          </div>
+                          <span class="text-[10px] font-bold text-[var(--down)] shrink-0" x-text="exam.errors + 'Y'"></span>
+                          <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <use href="#das-icon-chev-right"/>
+                          </svg>
+                        </a>
+                        <div x-show="!exam.url"
+                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
+                                    border-l-2 border-[var(--border)] bg-[var(--bg)] text-[var(--muted)]">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold truncate text-[var(--heading)]" x-text="exam.name"></p>
+                            <p class="text-[10px] text-[var(--muted)] mt-0.5"
+                               x-text="exam.date + (exam.source === 'brans' ? ' · Branş' : ' · Genel')"></p>
+                          </div>
+                          <span class="text-[10px] font-bold text-[var(--down)] shrink-0" x-text="exam.errors + 'Y'"></span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
                 </div>
-                <span class="text-[10px] font-bold text-[var(--down)] shrink-0">{{ exam.errors }}Y</span>
-                {% if exam.url %}
-                <svg class="w-3 h-3 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#das-icon-chev-right"/>
-                </svg>
-                {% endif %}
-              {% if exam.url %}</a>{% else %}</div>{% endif %}
-              {% empty %}
-              <p class="text-xs text-[var(--muted)] px-3 pb-2">Sınav detayı bulunamadı.</p>
-              {% endfor %}
-            </div>
+              </div>
+            </template>
           </div>
-        </div>
-        {% empty %}
-        <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
-          Bu dönemde konu hatası bulunamadı.
-        </div>
-        {% endfor %}
+        </template>
+        <template x-if="topics.length === 0">
+          <div class="p-4 text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+            Bu dönemde konu hatası bulunamadı.
+          </div>
+        </template>
       </div>
 
       <div class="das-section-head px-0">
@@ -858,10 +877,6 @@ function branchTasks() {
 }
 
 function subjectDrillDownState() {
-  const allExams = {{ exams.all_json|safe }};
-  const statsBySource = {{ stats_by_source_json|safe }};
-  const chartPoints = {{ chart_points_json|safe }};
-
   return {
     dataSource: 'brans',
     compareMode: false,
@@ -870,6 +885,32 @@ function subjectDrillDownState() {
     exportPeriod: '{{ export_period|escapejs }}',
     studentId: '{% if coach_view %}{{ student.id }}{% endif %}',
     subjectSlug: '{{ subjectSlug|escapejs }}',
+    coachView: {% if coach_view %}true{% else %}false{% endif %},
+    activePeriod: '{{ active_period|escapejs }}',
+    periodLoading: false,
+    allExams: {{ exams.all_json|safe }},
+    statsBySource: {{ stats_by_source_json|safe }},
+    chartPoints: {{ chart_points_json|safe }},
+    topics: {{ topics_json|safe }},
+
+    async setPeriod(period) {
+      if (this.activePeriod === period || this.periodLoading) return;
+      this.periodLoading = true;
+      const base = this.coachView
+        ? `/coach/student/${this.studentId}/brans/${this.subjectSlug}/api/`
+        : `/brans/${this.subjectSlug}/api/`;
+      try {
+        const r = await fetch(`${base}?period=${encodeURIComponent(period)}`);
+        const d = await r.json();
+        this.statsBySource = d.stats_by_source;
+        this.chartPoints = d.chart_points;
+        this.topics = d.topics;
+        this.activePeriod = period;
+        this.exportPeriod = period;
+      } finally {
+        this.periodLoading = false;
+      }
+    },
 
     exportUrl(ext) {
       const params = new URLSearchParams({ period: this.exportPeriod });
@@ -883,7 +924,7 @@ function subjectDrillDownState() {
     },
 
     selectedEntries() {
-      return this.selected.map(key => allExams.find(e => e.key === key)).filter(Boolean);
+      return this.selected.map(key => this.allExams.find(e => e.key === key)).filter(Boolean);
     },
 
     compareDelta(field) {
@@ -897,7 +938,7 @@ function subjectDrillDownState() {
     },
 
     activeStats() {
-      return statsBySource[this.dataSource] || statsBySource.all;
+      return this.statsBySource[this.dataSource] || this.statsBySource.all;
     },
 
     formatNet(value) {
@@ -915,7 +956,7 @@ function subjectDrillDownState() {
     },
 
     filteredChartPoints() {
-      return chartPoints.filter(point => point.source === this.dataSource);
+      return this.chartPoints.filter(point => point.source === this.dataSource);
     },
 
     normalizedChartPoints() {
@@ -940,11 +981,11 @@ function subjectDrillDownState() {
     },
     
     hasAnySource(monthLabel) {
-      return allExams.some(e => e.source === this.dataSource && e.monthLabel === monthLabel);
+      return this.allExams.some(e => e.source === this.dataSource && e.monthLabel === monthLabel);
     },
-    
+
     hasAnySourceGlobally() {
-      return allExams.some(e => e.source === this.dataSource);
+      return this.allExams.some(e => e.source === this.dataSource);
     }
   }
 }

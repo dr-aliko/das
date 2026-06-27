@@ -598,7 +598,16 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
         branch_active_json = json.dumps(branch_active)
         branch_completed_json = json.dumps(branch_completed)
 
-    # Convert exam_objs to dict for easy JSON serialization if needed, or pass directly
+    topics_json = json.dumps([
+        {
+            'id': t['id'],
+            'name': t['name'],
+            'errors': t['errors'],
+            'exams': t.get('exams', []),
+        }
+        for t in topics
+    ])
+
     # The UI will filter by dataSource ('brans', 'genel'). We pass all.
     
     # History grouping by month
@@ -651,6 +660,7 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
         'stats_by_source_json': json.dumps(stats_by_source),
         'chart_points_json': json.dumps(chart_points),
         'topics': topics,
+        'topics_json': topics_json,
         'exams': SimpleNamespace(
             recent=recent,
             archive=archive,
@@ -681,6 +691,36 @@ def brans_subject_detail_coach(request, student_id, subject_slug):
     if not ctx:
         return redirect('coach:student_brans_hub', student_id=student.id)
     return render(request, 'student/subject_drill_down.html', ctx)
+
+@student_required
+def brans_subject_detail_student_api(request, subject_slug):
+    period = request.GET.get('period', '30g')
+    ctx = _build_brans_subject_detail_context(request.user, subject_slug, period)
+    if not ctx:
+        return JsonResponse({'error': 'not found'}, status=404)
+    return JsonResponse({
+        'stats_by_source': json.loads(ctx['stats_by_source_json']),
+        'chart_points': json.loads(ctx['chart_points_json']),
+        'topics': json.loads(ctx['topics_json']),
+        'active_period': ctx['active_period'],
+    })
+
+@coach_required
+def brans_subject_detail_coach_api(request, student_id, subject_slug):
+    if not coach_can_view_student(request.user, student_id):
+        return JsonResponse({'error': 'Yetkisiz'}, status=403)
+    from users_app.models import User as UserModel
+    student = get_object_or_404(UserModel, id=student_id, role='student')
+    period = request.GET.get('period', '30g')
+    ctx = _build_brans_subject_detail_context(student, subject_slug, period, coach_view=True)
+    if not ctx:
+        return JsonResponse({'error': 'not found'}, status=404)
+    return JsonResponse({
+        'stats_by_source': json.loads(ctx['stats_by_source_json']),
+        'chart_points': json.loads(ctx['chart_points_json']),
+        'topics': json.loads(ctx['topics_json']),
+        'active_period': ctx['active_period'],
+    })
 
 def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_view=False):
     """DAS-602/603/605: SSR data for the Branş Hub."""
@@ -823,6 +863,22 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
         'has_data': bool(all_date_labels),
     })
 
+    base_url = f"/coach/student/{student.id}/brans/" if coach_view else '/brans/'
+    subjects_json = json.dumps([
+        {
+            'key':       s.key,
+            'name':      s.name,
+            'net':       float(s.net),
+            'delta':     float(s.delta),
+            'trend':     s.trend,
+            'color':     s.color,
+            'klass':     s.class_name,
+            'count':     s.count,
+            'detailUrl': f"/coach/student/{student.id}/brans/{s.key}/?period={period}&type={exam_type}" if coach_view else f"/brans/{s.key}/?period={period}&type={exam_type}",
+        }
+        for s in subjects
+    ])
+
     return {
         'v2_shell': True,
         'shell_hide_fab': True,
@@ -838,6 +894,7 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
         'export_period': period,
         'compare_entries_json': compare_entries_json,
         'subjects': subjects,
+        'subjects_json': subjects_json,
         'brans_chart_json': brans_chart_json,
         'exams': SimpleNamespace(
             recent=recent,
@@ -854,6 +911,36 @@ def brans_hub_student(request):
     return render(request, 'student/brans_hub.html', _build_brans_hub_context(request.user, period, exam_type))
 
 
+@student_required
+def brans_hub_api(request):
+    """AJAX: returns filtered branş hub data as JSON for live filter updates."""
+    period    = request.GET.get('period', '30g')
+    exam_type = request.GET.get('type', 'TYT')
+    ctx = _build_brans_hub_context(request.user, period, exam_type)
+    subjects_data = [
+        {
+            'key':    s.key,
+            'name':   s.name,
+            'net':    float(s.net),
+            'delta':  float(s.delta),
+            'trend':  s.trend,
+            'color':  s.color,
+            'klass':  s.class_name,
+            'count':  s.count,
+            'detailUrl': f'/brans/{s.key}/?period={period}&type={exam_type}',
+        }
+        for s in ctx['subjects']
+    ]
+    return JsonResponse({
+        'subjects':           subjects_data,
+        'brans_chart_json':   ctx['brans_chart_json'],
+        'compare_entries_json': ctx['compare_entries_json'],
+        'active_period':      ctx['active_period'],
+        'exam_type':          ctx['exam_type'],
+        'export_period':      ctx['export_period'],
+    })
+
+
 @coach_required
 def brans_hub_coach(request, student_id):
     if not coach_can_view_student(request.user, student_id):
@@ -863,6 +950,40 @@ def brans_hub_coach(request, student_id):
     period     = request.GET.get('period', '30g')
     exam_type  = request.GET.get('type', 'TYT')
     return render(request, 'student/brans_hub.html', _build_brans_hub_context(student, period, exam_type, coach_view=True))
+
+
+@coach_required
+def brans_hub_coach_api(request, student_id):
+    """AJAX: returns filtered branş hub data as JSON for live filter updates (coach view)."""
+    if not coach_can_view_student(request.user, student_id):
+        return JsonResponse({'error': 'Yetkisiz'}, status=403)
+    from users_app.models import User as UserModel
+    student   = get_object_or_404(UserModel, id=student_id, role='student')
+    period    = request.GET.get('period', '30g')
+    exam_type = request.GET.get('type', 'TYT')
+    ctx = _build_brans_hub_context(student, period, exam_type, coach_view=True)
+    subjects_data = [
+        {
+            'key':    s.key,
+            'name':   s.name,
+            'net':    float(s.net),
+            'delta':  float(s.delta),
+            'trend':  s.trend,
+            'color':  s.color,
+            'klass':  s.class_name,
+            'count':  s.count,
+            'detailUrl': f'/coach/student/{student_id}/brans/{s.key}/?period={period}&type={exam_type}',
+        }
+        for s in ctx['subjects']
+    ]
+    return JsonResponse({
+        'subjects':             subjects_data,
+        'brans_chart_json':     ctx['brans_chart_json'],
+        'compare_entries_json': ctx['compare_entries_json'],
+        'active_period':        ctx['active_period'],
+        'exam_type':            ctx['exam_type'],
+        'export_period':        ctx['export_period'],
+    })
 
 
 def _brans_export_student(request):
@@ -2145,6 +2266,20 @@ def coach_student_detail(request, student_id):
         for a in StudentAchievement.objects.filter(student=student).order_by('-awarded_at')[:4]
     ]
 
+    # Net trend chart with period filter
+    chart_period_str = request.GET.get('chart_period', '30')
+    _, chart_since, chart_period_label = _chart_period_since(chart_period_str)
+    chart_data = _build_student_chart_data(student.id, since=chart_since)
+
+    # Auto-derive exam date from sinif for display in template
+    _sinif_offset_map = {'9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0}
+    sinif = getattr(student, 'sinif', '') or ''
+    if sinif and sinif in _sinif_offset_map:
+        _target_year = date.today().year + _sinif_offset_map[sinif] + 1
+        auto_exam_date_str = f'{_target_year}-06-15'
+    else:
+        auto_exam_date_str = ''
+
     return render(request, 'coach/snapshot.html', {
         'student': student,
         'status': status_info['status'],
@@ -2155,7 +2290,25 @@ def coach_student_detail(request, student_id):
         'trial_active_json':    trial_active_json,
         'trial_completed_json': trial_completed_json,
         'student_badges':       recent_badges,
+        'chart_data_json':      json.dumps(chart_data),
+        'has_chart_data':       bool(chart_data.get('labels')),
+        'chart_period':         chart_period_str,
+        'chart_period_label':   chart_period_label,
+        'auto_exam_date_str':   auto_exam_date_str,
     })
+
+
+@coach_required
+def coach_student_chart_data(request, student_id):
+    """AJAX: returns chart data JSON for the coach snapshot chart."""
+    if not coach_can_view_student(request.user, student_id):
+        return JsonResponse({'error': 'Yetkisiz'}, status=403)
+    from users_app.models import User as UserModel
+    student = get_object_or_404(UserModel, id=student_id, role='student')
+    chart_period_str = request.GET.get('chart_period', '30')
+    _, chart_since, _ = _chart_period_since(chart_period_str)
+    chart_data = _build_student_chart_data(student.id, since=chart_since)
+    return JsonResponse(chart_data)
 
 
 # ──────────────────────────────────────────────

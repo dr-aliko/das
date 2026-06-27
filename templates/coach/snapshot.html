@@ -96,16 +96,26 @@
               .catch(()=>{ saveError=true; });
           ">
       <div>
-        <label class="block text-[10px] font-semibold text-ink-400 mb-1 uppercase tracking-wider">TYT</label>
+        <div class="flex items-center gap-1.5 mb-1">
+          <label class="text-[10px] font-semibold text-ink-400 uppercase tracking-wider">TYT</label>
+          {% if not student.tyt_target_date and auto_exam_date_str %}
+          <span class="text-[9px] px-1 py-0.5 rounded bg-steel-tint text-steel-400 font-medium">otomatik</span>
+          {% endif %}
+        </div>
         <input type="date" name="tyt_target_date"
-               value="{{ student.tyt_target_date|date:'Y-m-d'|default:'' }}"
+               value="{{ student.tyt_target_date|date:'Y-m-d'|default:auto_exam_date_str }}"
                class="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-ink-100 text-sm
                       focus:outline-none focus:ring-2 focus:ring-steel-500/50">
       </div>
       <div>
-        <label class="block text-[10px] font-semibold text-ink-400 mb-1 uppercase tracking-wider">AYT</label>
+        <div class="flex items-center gap-1.5 mb-1">
+          <label class="text-[10px] font-semibold text-ink-400 uppercase tracking-wider">AYT</label>
+          {% if not student.ayt_target_date and auto_exam_date_str %}
+          <span class="text-[9px] px-1 py-0.5 rounded bg-steel-tint text-steel-400 font-medium">otomatik</span>
+          {% endif %}
+        </div>
         <input type="date" name="ayt_target_date"
-               value="{{ student.ayt_target_date|date:'Y-m-d'|default:'' }}"
+               value="{{ student.ayt_target_date|date:'Y-m-d'|default:auto_exam_date_str }}"
                class="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-ink-100 text-sm
                       focus:outline-none focus:ring-2 focus:ring-steel-500/50">
       </div>
@@ -124,6 +134,39 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
       <div class="lg:col-span-8 space-y-4">
+
+        {% if has_chart_data %}
+        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4"
+             x-data="coachTrendChart('{{ student.id }}', '{{ chart_period }}')">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Net Gelişim</h3>
+              <span x-show="loading" x-cloak
+                    class="w-3 h-3 rounded-full border-2 border-steel-500 border-t-transparent animate-spin"></span>
+            </div>
+            <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-[10px] font-medium">
+              <button @click="setPeriod('all')"
+                      class="px-2 py-1 rounded-md transition-colors"
+                      :class="period === 'all' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'">
+                Tümü
+              </button>
+              <button @click="setPeriod('30')"
+                      class="px-2 py-1 rounded-md transition-colors"
+                      :class="period === '30' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'">
+                30 Gün
+              </button>
+              <button @click="setPeriod('7')"
+                      class="px-2 py-1 rounded-md transition-colors"
+                      :class="period === '7' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'">
+                7 Gün
+              </button>
+            </div>
+          </div>
+          <div class="h-[150px]">
+            <canvas id="coachTrendChart"></canvas>
+          </div>
+        </div>
+        {% endif %}
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
@@ -448,6 +491,85 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if has_chart_data %}
+<script>
+function coachTrendChart(studentId, initialPeriod) {
+  const isMobile = window.innerWidth < 640;
+  const CHART_OPTIONS = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { boxWidth: 10, padding: 8, font: { size: 10 }, color: '#94a3b8' },
+      },
+      tooltip: {
+        callbacks: {
+          title: (items, d) => {
+            if (!window._coachChartData) return '';
+            const examNames = window._coachChartData.exam_names;
+            const labels = window._coachChartData.labels;
+            return (examNames ? examNames[items[0].dataIndex] : '') + ' (' + (labels ? labels[items[0].dataIndex] : '') + ')';
+          },
+          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#64748b', maxTicksLimit: isMobile ? 3 : 6 } },
+      y: { grid: { color: '#1e293b' }, ticks: { font: { size: 9 }, color: '#64748b' } },
+    },
+  };
+
+  let chartInstance = null;
+
+  function buildChart(d) {
+    window._coachChartData = d;
+    const canvas = document.getElementById('coachTrendChart');
+    if (!canvas) return;
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    if (!d.labels || !d.labels.length) return;
+    chartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: d.labels,
+        datasets: (d.subjects || []).map(s => ({
+          label: s.name.startsWith('TYT ') ? s.name.slice(4) : s.name,
+          data: s.data,
+          borderColor: s.border,
+          backgroundColor: s.bg,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.35,
+          fill: false,
+        })),
+      },
+      options: CHART_OPTIONS,
+    });
+  }
+
+  buildChart({{ chart_data_json|safe }});
+
+  return {
+    period: initialPeriod || '30',
+    loading: false,
+
+    async setPeriod(p) {
+      if (this.period === p) return;
+      this.period = p;
+      this.loading = true;
+      try {
+        const r = await fetch(`/coach/student/${studentId}/chart-data/?chart_period=${p}`);
+        if (r.ok) buildChart(await r.json());
+      } catch (e) { console.error('[coachTrendChart]', e); }
+      finally { this.loading = false; }
+    },
+  };
+}
+</script>
+{% endif %}
 <script>
 function coachTrialTasks(studentId) {
   const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';

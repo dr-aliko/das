@@ -668,19 +668,6 @@ function panel() {
       }
     },
 
-    async toggleStudentPermit(id) {
-      try {
-        const r = await fetch(`/coach/tasks/api/gorev/${id}/permit`, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        if (r.ok) await this.loadWeek();
-      } catch (e) {
-        console.error('[toggleStudentPermit]', e);
-      }
-    },
-
     async coachResetStudentWeek() {
       if (!this.studentId || !this.days.length) return;
       try {
@@ -691,30 +678,6 @@ function panel() {
         });
         await this.loadWeek();
       } catch (e) { console.error('[coachResetStudentWeek]', e); }
-    },
-
-    get allTasksEditable() {
-      const all = this.days.flatMap(d => d.gorevler);
-      return all.length > 0 && all.every(g => g.student_can_edit);
-    },
-
-    async bulkToggleEditPermit() {
-      if (!this.studentId || !this.days.length) return;
-      const enabled = !this.allTasksEditable;
-      try {
-        await fetch('/coach/tasks/api/bulk-edit-permission/', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            student_id: parseInt(this.studentId),
-            week_start: this.days[0].tarih,
-            enabled,
-          }),
-        });
-        await this.loadWeek();
-      } catch (e) {
-        console.error('[bulkToggleEditPermit]', e);
-      }
     },
 
     // ── Drag & drop ─────────────────────────────────────────────────────────

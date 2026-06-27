@@ -227,17 +227,6 @@
       Planı Sıfırla
     </button>
 
-    <button x-show="studentId"
-            @click="bulkToggleEditPermit()"
-            :title="allTasksEditable ? 'Öğrenci tüm görevleri düzenleyebiliyor — kilitle' : 'Öğrenciye bu haftaki tüm görevleri düzenleme izni ver'"
-            class="h-9 px-3 rounded-lg border text-xs font-medium transition flex items-center gap-1.5"
-            :class="allTasksEditable
-              ? 'bg-steel-tint border-steel-500/50 text-steel-400 hover:bg-steel-500/20'
-              : 'bg-ink-850 border-ink-700 text-ink-400 hover:bg-ink-800'">
-      <span x-text="allTasksEditable ? '🔓' : '🔒'"></span>
-      <span x-text="allTasksEditable ? 'Düzenleme Açık' : 'Düzenleme Kapalı'"></span>
-    </button>
-
     <div class="inline-flex items-center rounded-lg bg-ink-850 border border-ink-700 overflow-hidden">
       <button @click="prevWeek()"
               class="px-2 h-9 text-ink-300 hover:bg-ink-800 transition text-sm font-bold">
@@ -358,14 +347,6 @@
                                text-ruby-500 rounded-md hover:bg-ruby-500/20 transition">
                   Sil
                 </button>
-                <button @click.stop="toggleStudentPermit(g.id)"
-                        :title="g.student_can_edit ? 'Öğrenci düzenleyebiliyor — kilitle' : 'Öğrenciye düzenleme izni ver'"
-                        class="text-[10px] py-1 px-1.5 rounded-md border transition"
-                        :class="g.student_can_edit
-                          ? 'border-steel-500/50 text-steel-400 bg-steel-tint'
-                          : 'border-ink-700 text-ink-500 bg-ink-800/60'">
-                  <span x-text="g.student_can_edit ? '🔓' : '🔒'"></span>
-                </button>
               </div>
 
               <div x-show="sheetOpen"
@@ -417,12 +398,6 @@
                         Sil
                       </button>
                     </div>
-                    <button @click="toggleStudentPermit(g.id)"
-                            :title="g.student_can_edit ? 'Öğrenci düzenleyebiliyor — kilitle' : 'Öğrenciye düzenleme izni ver'"
-                            class="w-full text-sm font-medium py-2.5 rounded-xl border transition"
-                            :class="g.student_can_edit ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50' : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'">
-                      <span x-text="g.student_can_edit ? '🔓 Öğrenci düzenleyebiliyor' : '🔒 Düzenleme kilitli'"></span>
-                    </button>
                   </div>
                 </div>
               </div>

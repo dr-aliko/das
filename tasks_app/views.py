@@ -521,32 +521,6 @@ class StudentGorevCopyView(View):
         return JsonResponse({"id": yeni.id}, status=201)
 
 
-# ── Coach permission toggles ──────────────────────────────────────────────────
-
-@method_decorator(coach_required, name='dispatch')
-class GorevStudentPermitView(View):
-    def post(self, request, pk: int):
-        data = tasks.toggle_student_can_edit(request.user, pk)
-        if not data:
-            return JsonResponse({"errors": "Bulunamadı"}, status=404)
-        return JsonResponse({"ok": True, "gorev": data})
-
-
-@method_decorator(coach_required, name='dispatch')
-class GorevBulkPermitView(View):
-    def post(self, request):
-        body = _body(request)
-        try:
-            student_id = int(body["student_id"])
-            hafta = date.fromisoformat(body["week_start"])
-            enabled = bool(body["enabled"])
-        except (KeyError, ValueError, TypeError):
-            return JsonResponse({"errors": "student_id, week_start ve enabled gerekli"}, status=400)
-        basi, sonu = week_svc.week_bounds(hafta)
-        count = tasks.bulk_set_student_can_edit(request.user, student_id, basi, sonu, enabled)
-        return JsonResponse({"ok": True, "updated": count, "enabled": enabled})
-
-
 # ── Student create + delete + reset ──────────────────────────────────────────
 
 @method_decorator(student_required, name='dispatch')

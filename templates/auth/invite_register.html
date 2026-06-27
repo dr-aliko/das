@@ -18,18 +18,92 @@
 
     <form method="post" class="space-y-5">
       {% csrf_token %}
-      {% for field in form %}
+
+      {# ── Ad Soyad ─────────────────────────────────────────────────── #}
+      <div>
+        <label for="id_full_name" class="block text-sm font-medium text-gray-700 mb-1">{{ form.full_name.label }}</label>
+        <input type="text"
+               id="id_full_name"
+               name="full_name"
+               value="{{ form.full_name.value|default:'' }}"
+               autocomplete="name"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        {% if form.full_name.errors %}
+          <p class="text-red-500 text-xs mt-1">{{ form.full_name.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {# ── Şifre ────────────────────────────────────────────────────── #}
+      <div>
+        <label for="id_password1" class="block text-sm font-medium text-gray-700 mb-1">{{ form.password1.label }}</label>
+        <input type="password"
+               id="id_password1"
+               name="password1"
+               autocomplete="new-password"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        {% if form.password1.errors %}
+          <p class="text-red-500 text-xs mt-1">{{ form.password1.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {# ── Şifre Tekrar ─────────────────────────────────────────────── #}
+      <div>
+        <label for="id_password2" class="block text-sm font-medium text-gray-700 mb-1">{{ form.password2.label }}</label>
+        <input type="password"
+               id="id_password2"
+               name="password2"
+               autocomplete="new-password"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        {% if form.password2.errors %}
+          <p class="text-red-500 text-xs mt-1">{{ form.password2.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {# ── Legal checkboxes ─────────────────────────────────────────── #}
+      <div class="space-y-3 pt-1 border-t border-gray-100">
+
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-          <input type="{{ field.field.widget.input_type }}"
-                 name="{{ field.html_name }}"
-                 value="{{ field.value|default:'' }}"
-                 class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-          {% if field.errors %}
-            <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+          <label for="id_terms_accepted" class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox"
+                   id="id_terms_accepted"
+                   name="terms_accepted"
+                   {% if form.terms_accepted.value %}checked{% endif %}
+                   class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-indigo-600">
+            <span class="text-sm text-gray-700 leading-snug">
+              <a href="https://vagus.tr/gizlilik-sozlesmesi/"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 class="text-indigo-600 hover:underline font-medium">Kullanım Koşulları ve Gizlilik Sözleşmesi</a>'ni
+              okudum ve kabul ediyorum.
+            </span>
+          </label>
+          {% if form.terms_accepted.errors %}
+            <p class="text-red-500 text-xs mt-1 ml-7">{{ form.terms_accepted.errors.0 }}</p>
           {% endif %}
         </div>
-      {% endfor %}
+
+        <div>
+          <label for="id_kvkk_accepted" class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox"
+                   id="id_kvkk_accepted"
+                   name="kvkk_accepted"
+                   {% if form.kvkk_accepted.value %}checked{% endif %}
+                   class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-indigo-600">
+            <span class="text-sm text-gray-700 leading-snug">
+              <a href="https://vagus.tr/kvkk/"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 class="text-indigo-600 hover:underline font-medium">KVKK Aydınlatma Metni</a>'ni
+              okudum ve kişisel verilerimin işlenmesini kabul ediyorum.
+            </span>
+          </label>
+          {% if form.kvkk_accepted.errors %}
+            <p class="text-red-500 text-xs mt-1 ml-7">{{ form.kvkk_accepted.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+      </div>
+
       <button type="submit"
               class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition">
         Kaydol ve Giriş Yap

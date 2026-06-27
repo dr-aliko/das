@@ -15,8 +15,6 @@ urlpatterns = [
     path('api/gorev/<int:pk>', views.GorevDetailView.as_view(), name='api-gorev-detail'),
     path('api/gorev/<int:pk>/copy', views.GorevCopyView.as_view(), name='api-gorev-copy'),
     path('api/gorev/<int:pk>/reorder', views.GorevReorderView.as_view(), name='api-gorev-reorder'),
-    path('api/gorev/<int:pk>/permit', views.GorevStudentPermitView.as_view(), name='api-gorev-permit'),
-    path('api/bulk-edit-permission/', views.GorevBulkPermitView.as_view(), name='api-bulk-permit'),
     path('api/reset-student-week/', views.CoachStudentResetView.as_view(), name='api-reset-student'),
 
     # Kaynak kitaplar

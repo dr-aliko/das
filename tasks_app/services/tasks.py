@@ -266,17 +266,6 @@ def swap_order(coach: User, suruklenen_id: int, birakilan_id: int) -> bool:
     return True
 
 
-# ── Coach permission toggle ───────────────────────────────────────────────────
-
-def toggle_student_can_edit(coach: User, grup_id: int) -> dict | None:
-    grup = GorevGrubu.objects.filter(student__coach=coach, pk=grup_id).first()
-    if not grup:
-        return None
-    grup.student_can_edit = not grup.student_can_edit
-    grup.save(update_fields=["student_can_edit"])
-    return _serialize(grup)
-
-
 # ── Student-permission-gated mutations ───────────────────────────────────────
 
 @transaction.atomic
@@ -323,18 +312,6 @@ def student_swap_order(student: User, suruklenen_id: int, birakilan_id: int) -> 
     a.save(update_fields=["sira_no"])
     b.save(update_fields=["sira_no"])
     return True
-
-
-# ── Bulk permission (coach) ───────────────────────────────────────────────────
-
-def bulk_set_student_can_edit(
-    coach: User, student_id: int, hafta_basi: date, hafta_sonu: date, enabled: bool
-) -> int:
-    return GorevGrubu.objects.filter(
-        student__coach=coach,
-        student_id=student_id,
-        tarih__range=(hafta_basi, hafta_sonu),
-    ).update(student_can_edit=enabled)
 
 
 # ── Student drag (cross-day copy) ─────────────────────────────────────────────

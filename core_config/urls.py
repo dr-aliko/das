@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
-from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_subject_detail_student
+from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api
 from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save
 
 urlpatterns = [
@@ -29,9 +29,11 @@ urlpatterns = [
     path('coach/tasks/', include('tasks_app.urls', namespace='tasks')),
     path('student/tasks/', include('tasks_app.student_urls', namespace='student_tasks')),
     path('brans/', brans_hub_student, name='brans_hub'),
+    path('brans/api/', brans_hub_api, name='brans_hub_api'),
     path('brans/export.xlsx', brans_export_xlsx, name='brans_export_xlsx'),
     path('brans/export.html', brans_export_html, name='brans_export_html'),
     path('brans/<slug:subject_slug>/', brans_subject_detail_student, name='brans_subject_detail'),
+    path('brans/<slug:subject_slug>/api/', brans_subject_detail_student_api, name='brans_subject_detail_api'),
     path('analiz/', RedirectView.as_view(pattern_name='brans_hub', permanent=True), name='analiz_redirect'),
     path('profil/', profil_view,    name='profil'),
     path('profil/theme/', theme_save, name='profil_theme'),
