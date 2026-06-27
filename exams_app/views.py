@@ -290,6 +290,11 @@ _BRANS_AYT_SUBJECTS = [
     ('ayt_dil',   'Dil',        '#6366F1', 'accent-mat',       {'AYT Yabancı Dil', 'AYT İngilizce', 'AYT Almanca', 'AYT Fransızca'}),
 ]
 
+# TYT subjects excluded from Branş Deneme entry (umbrella subjects, not tracked individually)
+_BRANS_TYT_EXCLUDED = frozenset({
+    'TYT Coğrafya', 'TYT Din Kültürü', 'TYT Tarih', 'TYT Felsefe',
+})
+
 # Which AYT subject keys are relevant per alan — unlisted alan shows all AYT subjects
 _AYT_ALAN_FILTER = {
     'SAY': {'ayt_mat', 'ayt_fizik', 'ayt_kimya', 'ayt_bio'},
@@ -3054,7 +3059,8 @@ def brans_create(request):
     # display_name strips the "TYT "/"AYT " prefix via the model property
     tyt_subjects = [
         {'id': str(s.pk), 'name': s.display_name}
-        for s in all_subjects if s.exam_type == 'TYT'
+        for s in all_subjects
+        if s.exam_type == 'TYT' and s.name not in _BRANS_TYT_EXCLUDED
     ]
     ayt_subjects = [
         {'id': str(s.pk), 'name': s.display_name}
