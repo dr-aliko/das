@@ -66,20 +66,16 @@
     <div class="rounded-card p-5 space-y-4 mb-5" style="background:var(--surface-1); border:1.5px solid var(--border);">
       <h2 class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Sınav Bilgileri</h2>
 
-      {# Ders (Subject) — filtered by examType via Alpine #}
+      {# Ders (Subject) — built dynamically via x-for so filtering is DOM-safe across all browsers #}
       <div>
         <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Ders <span class="text-down">*</span></label>
         <select name="ders" x-model="ders" required @change="d=0; y=0;"
                 class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2"
                 style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
           <option value="">Seçin…</option>
-          {% for val, label in form.ders.field.choices %}
-          {% if val %}
-          <option value="{{ val }}"
-                  x-show="visibleIds.includes('{{ val }}')"
-                  {% if form.ders.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-          {% endif %}
-          {% endfor %}
+          <template x-for="s in visibleSubjects" :key="s.id">
+            <option :value="s.id" x-text="s.name"></option>
+          </template>
         </select>
         {% if form.ders.errors %}<p class="text-down text-xs mt-1">{{ form.ders.errors.0 }}</p>{% endif %}
       </div>
@@ -209,13 +205,17 @@
 {% block extra_js %}
 <script>
 function bransCreateV2() {
-  const limits  = {{ subjects_json|safe }};
-  const tytIds  = {{ tyt_ids_json|safe }};
-  const aytIds  = {{ ayt_ids_json|safe }};
+  const limits      = {{ subjects_json|safe }};
+  const tytSubjects = {{ tyt_subjects_json|safe }};
+  const aytSubjects = {{ ayt_subjects_json|safe }};
+
+  // If form had a validation error, re-infer examType from the previously posted ders value
+  const initialDers = '{{ form.ders.value|default:"" }}';
+  const initialExamType = aytSubjects.some(s => s.id === initialDers) ? 'AYT' : 'TYT';
 
   return {
-    examType: 'TYT',
-    ders:   '{{ form.ders.value|default:"" }}',
+    examType: initialExamType,
+    ders:   initialDers,
     tarih:  '{{ form.tarih.value|default:"" }}',
     sure:   '{{ form.sure_dakika.value|default:"" }}',
     not:    '{{ form.ogrenci_notu.value|escapejs|default:"" }}',
@@ -223,7 +223,8 @@ function bransCreateV2() {
     y: parseInt('{{ form.yanlis.value|default:"0" }}', 10) || 0,
     saving: false,
 
-    get visibleIds() { return this.examType === 'AYT' ? aytIds : tytIds; },
+    // x-for source — Alpine adds/removes real <option> DOM nodes, no display:none hack
+    get visibleSubjects() { return this.examType === 'AYT' ? aytSubjects : tytSubjects; },
 
     get accentColor() { return this.examType === 'AYT' ? '#A78BFA' : '#3B82F6'; },
 
@@ -237,8 +238,9 @@ function bransCreateV2() {
 
     setExamType(type) {
       this.examType = type;
-      // Reset subject if it's no longer in the visible list
-      if (this.ders && !this.visibleIds.includes(this.ders)) {
+      // Reset subject only if it no longer belongs to the newly visible list
+      const ids = (type === 'AYT' ? aytSubjects : tytSubjects).map(s => s.id);
+      if (this.ders && !ids.includes(this.ders)) {
         this.ders = '';
         this.d = 0;
         this.y = 0;

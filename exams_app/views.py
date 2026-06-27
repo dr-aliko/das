@@ -3037,11 +3037,10 @@ def brans_create(request):
         form = BransDenemeForm()
 
     all_subjects = list(Subject.objects.only('pk', 'name', 'exam_type', 'question_count').order_by('exam_type', 'name'))
+    # pk → question_count for stepper limit
     subjects_json = json.dumps({str(s.pk): s.question_count for s in all_subjects})
 
-    # Build TYT / AYT subject id lists for client-side toggling
-    tyt_ids = [str(s.pk) for s in all_subjects if s.exam_type == 'TYT']
-    # AYT ids filtered by student's alan if set
+    # AYT alan filter
     student_alan = getattr(request.user, 'alan', '') or ''
     alan_keys = _AYT_ALAN_FILTER.get(student_alan)  # None → no restriction
     ayt_names_allowed = None
@@ -3050,21 +3049,29 @@ def brans_create(request):
         for key, _label, _color, _klass, names in _BRANS_AYT_SUBJECTS:
             if key in alan_keys:
                 ayt_names_allowed.update(names)
-    ayt_ids = [
-        str(s.pk) for s in all_subjects
+
+    # Full subject objects with id + display_name for x-for rendering
+    # display_name strips the "TYT "/"AYT " prefix via the model property
+    tyt_subjects = [
+        {'id': str(s.pk), 'name': s.display_name}
+        for s in all_subjects if s.exam_type == 'TYT'
+    ]
+    ayt_subjects = [
+        {'id': str(s.pk), 'name': s.display_name}
+        for s in all_subjects
         if s.exam_type == 'AYT' and (ayt_names_allowed is None or s.name in ayt_names_allowed)
     ]
 
     return render(request, 'student/brans_create.html', {
-        'form':          form,
-        'subjects_json': subjects_json,
-        'tyt_ids_json':  json.dumps(tyt_ids),
-        'ayt_ids_json':  json.dumps(ayt_ids),
-        'student_alan':  student_alan,
-        'next_url':      next_url,
-        'back_url':      next_url,
-        'page_title':    'Branş Denemesi Ekle',
-        'submit_label':  'Branş Denemesini Kaydet',
+        'form':              form,
+        'subjects_json':     subjects_json,
+        'tyt_subjects_json': json.dumps(tyt_subjects),
+        'ayt_subjects_json': json.dumps(ayt_subjects),
+        'student_alan':      student_alan,
+        'next_url':          next_url,
+        'back_url':          next_url,
+        'page_title':        'Branş Denemesi Ekle',
+        'submit_label':      'Branş Denemesini Kaydet',
     })
 
 

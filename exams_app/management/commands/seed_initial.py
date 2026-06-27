@@ -209,7 +209,7 @@ TYT_TOPICS = [
 ]
 
 # (subject_name, question_count, sub_category, topic_name)
-# SAY track only: Matematik, Fizik, Kimya, Biyoloji — 70 topics total
+# All AYT tracks: SAY (Mat/Fiz/Kim/Bio), EA (Mat+TDE+Tar+Coğ), SÖZ (TDE+Tarih1-2+Coğ1-2+Fel+Din), DİL (YabDil)
 AYT_TOPICS = [
     # ── AYT MATEMATİK (12) ─────────────────────────────────────────
     ('AYT Matematik', 30, '', 'Fonksiyonlar'),
@@ -288,11 +288,93 @@ AYT_TOPICS = [
     ('AYT Biyoloji', 13, '', 'Bitki Biyolojisi'),
     ('AYT Biyoloji', 13, '', 'Komünite ve Popülasyon Ekolojisi'),
     ('AYT Biyoloji', 13, '', 'Canlılar ve Çevre'),
+
+    # ── AYT TÜRK DİLİ VE EDEBİYATI — EA/SÖZ (24 soru) ────────────
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Ses Bilgisi ve Yazım'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Sözcük Türleri'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Cümle Yapısı ve Türleri'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Anlatım Bozukluğu'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Metin Türleri ve Özellikleri'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Şiir Bilgisi'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Divan Edebiyatı'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Halk Edebiyatı'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Tanzimat Edebiyatı'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Servet-i Fünun ve Fecr-i Ati'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Milli Edebiyat Dönemi'),
+    ('AYT Türk Dili ve Edebiyatı', 24, '', 'Cumhuriyet Dönemi Edebiyatı'),
+
+    # ── AYT TARİH — EA/SÖZ Tarih 1 (10 soru) ──────────────────────
+    ('AYT Tarih', 10, '', 'Osmanlı Devleti Kuruluş ve Yükseliş'),
+    ('AYT Tarih', 10, '', 'Osmanlı Devletinde Duraklama ve Gerileme'),
+    ('AYT Tarih', 10, '', 'Osmanlı Devletinde Islahat Hareketleri'),
+    ('AYT Tarih', 10, '', 'Osmanlı Devletinde Dağılma Dönemi'),
+    ('AYT Tarih', 10, '', 'I. Dünya Savaşı ve Mondros Mütarekesi'),
+    ('AYT Tarih', 10, '', 'Kurtuluş Savaşı Hazırlık Dönemi'),
+    ('AYT Tarih', 10, '', 'Kurtuluş Savaşı Cepheler'),
+    ('AYT Tarih', 10, '', 'Lozan Antlaşması ve Cumhuriyetin İlanı'),
+    ('AYT Tarih', 10, '', 'Atatürk Dönemi Siyasi Gelişmeler'),
+    ('AYT Tarih', 10, '', 'Atatürk Dönemi Sosyal ve Kültürel Gelişmeler'),
+
+    # ── AYT TARİH 2 — SÖZ (11 soru) ───────────────────────────────
+    ('AYT Tarih 2', 11, '', 'Sanayi Devrimi ve Etkileri'),
+    ('AYT Tarih 2', 11, '', 'Fransız İhtilali ve Milliyetçilik'),
+    ('AYT Tarih 2', 11, '', 'Sömürgecilik ve Emperyalizm'),
+    ('AYT Tarih 2', 11, '', 'I. Dünya Savaşı'),
+    ('AYT Tarih 2', 11, '', 'Büyük Buhran ve Demokrasilerin Zayıflaması'),
+    ('AYT Tarih 2', 11, '', 'II. Dünya Savaşı'),
+    ('AYT Tarih 2', 11, '', 'Soğuk Savaş Dönemi'),
+    ('AYT Tarih 2', 11, '', 'Dekolonizasyon ve Bağımsızlık Hareketleri'),
+    ('AYT Tarih 2', 11, '', 'Küreselleşme ve 21. Yüzyıl'),
+
+    # ── AYT COĞRAFYA — EA/SÖZ Coğrafya 1 (6 soru) ─────────────────
+    ('AYT Coğrafya', 6, '', 'Doğa Sistemleri'),
+    ('AYT Coğrafya', 6, '', "Türkiye'nin Fiziki Coğrafyası"),
+    ('AYT Coğrafya', 6, '', 'İklim Tipleri ve Bitki Örtüsü'),
+    ('AYT Coğrafya', 6, '', 'Nüfus ve Yerleşme'),
+    ('AYT Coğrafya', 6, '', 'Ekonomik Faaliyetler'),
+    ('AYT Coğrafya', 6, '', 'Çevre Sorunları ve Doğal Kaynaklar'),
+
+    # ── AYT COĞRAFYA 2 — SÖZ (11 soru) ───────────────────────────
+    ('AYT Coğrafya 2', 11, '', 'Küresel Ortam — Bölgeler ve Ülkeler'),
+    ('AYT Coğrafya 2', 11, '', 'Kalkınma ve Ekonomi Coğrafyası'),
+    ('AYT Coğrafya 2', 11, '', 'Çevre ve Toplum'),
+    ('AYT Coğrafya 2', 11, '', 'Doğal Afetler'),
+    ('AYT Coğrafya 2', 11, '', "Türkiye'nin Bölgesel Coğrafyası"),
+
+    # ── AYT FELSEFE GRUBU — SÖZ (12 soru) ─────────────────────────
+    ('AYT Felsefe Grubu', 12, 'Felsefe', 'Felsefenin Alanı ve Temel Kavramlar'),
+    ('AYT Felsefe Grubu', 12, 'Felsefe', 'Bilgi Felsefesi'),
+    ('AYT Felsefe Grubu', 12, 'Felsefe', 'Varlık Felsefesi'),
+    ('AYT Felsefe Grubu', 12, 'Felsefe', 'Ahlak Felsefesi'),
+    ('AYT Felsefe Grubu', 12, 'Felsefe', 'Siyaset Felsefesi'),
+    ('AYT Felsefe Grubu', 12, 'Sosyoloji', 'Toplum ve Kültür'),
+    ('AYT Felsefe Grubu', 12, 'Sosyoloji', 'Sosyalleşme ve Sosyal Değişme'),
+    ('AYT Felsefe Grubu', 12, 'Psikoloji', 'Psikoloji Bilimi'),
+    ('AYT Felsefe Grubu', 12, 'Psikoloji', 'Öğrenme ve Bellek'),
+    ('AYT Felsefe Grubu', 12, 'Psikoloji', 'Kişilik Gelişimi ve Sağlıklı Yaşam'),
+
+    # ── AYT DİN KÜLTÜRÜ — SÖZ (6 soru) ────────────────────────────
+    ('AYT Din Kültürü', 6, '', 'İslam Ahlakı ve İbadetler'),
+    ('AYT Din Kültürü', 6, '', 'Güncel Dini Meseleler'),
+    ('AYT Din Kültürü', 6, '', 'Ahlak ve Değerler'),
+    ('AYT Din Kültürü', 6, '', 'Din ve Toplum'),
+    ('AYT Din Kültürü', 6, '', 'Kur\'an ve Hz. Muhammed'),
+
+    # ── AYT YABANCI DİL — DİL (80 soru) ────────────────────────────
+    ('AYT Yabancı Dil', 80, '', 'Vocabulary and Word Formation'),
+    ('AYT Yabancı Dil', 80, '', 'Grammar — Tense and Aspect'),
+    ('AYT Yabancı Dil', 80, '', 'Grammar — Modals and Conditionals'),
+    ('AYT Yabancı Dil', 80, '', 'Grammar — Passive, Reported Speech'),
+    ('AYT Yabancı Dil', 80, '', 'Reading Comprehension'),
+    ('AYT Yabancı Dil', 80, '', 'Paragraph Completion'),
+    ('AYT Yabancı Dil', 80, '', 'Translation — Turkish to Foreign Language'),
+    ('AYT Yabancı Dil', 80, '', 'Translation — Foreign Language to Turkish'),
+    ('AYT Yabancı Dil', 80, '', 'Dialogue and Sentence Completion'),
 ]
 
 
 class Command(BaseCommand):
-    help = 'TYT yayınları, dersleri ve konuları yükler (PDF 2026 konuları)'
+    help = 'TYT+AYT (tüm alanlar) dersleri, konuları ve yayınları yükler/günceller (idempotent)'
 
     def handle(self, *args, **options):
         self.stdout.write('Yayınlar oluşturuluyor...')

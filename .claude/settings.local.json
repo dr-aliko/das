@@ -64,7 +64,8 @@
       "Bash(sed -n '17,50p' exams_app/models.py)",
       "Bash(sed -n '201,240p' exams_app/models.py)",
       "Bash(.venv/Scripts/python.exe manage.py makemigrations users_app --name add_alan_sinif)",
-      "Bash(.venv/Scripts/python.exe manage.py migrate users_app)"
+      "Bash(.venv/Scripts/python.exe manage.py migrate users_app)",
+      "Bash(.venv/Scripts/python.exe manage.py seed_initial)"
     ]
   }
 }
