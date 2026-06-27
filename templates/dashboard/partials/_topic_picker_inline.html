@@ -3,9 +3,70 @@
    Progressive-disclosure topic picker embedded in exam_create_v2.
    Shares Alpine state with parent x-data (same component scope).
    Requires: topicRows, newTopic, allTopics, allSubjects, topicSubCats(), topicFilteredTopics(),
-             selectNewTopic(t), canAddTopic(), addTopicRow(), topicStep1Info(), saveDraft(){% endcomment %}
+             selectNewTopic(t), canAddTopic(), addTopicRow(), topicStep1Info(), saveDraft(),
+             blankProgressPercent(), blankProgressColor(){% endcomment %}
 
 <div class="space-y-3 pb-4">
+
+  {# ── Task 3: Persistent progress counters — always visible when any subject has answers ── #}
+  <template x-if="allSubjects.some(s => (rows[String(s.id)]?.y||0) > 0 || blank(String(s.id)) > 0)">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-wide mb-2" style="color:var(--muted)">
+        {% trans "Hata Analizi İlerlemesi" %}
+      </p>
+      <div class="space-y-2">
+        <template
+          x-for="s in allSubjects.filter(s => (rows[String(s.id)]?.y||0) > 0 || blank(String(s.id)) > 0)"
+          :key="s.id">
+          <div class="rounded-xl px-3 py-2.5"
+               style="background:var(--surface-2); border:1px solid var(--border);">
+            <p class="text-xs font-bold mb-1.5 truncate"
+               style="color:var(--heading)"
+               x-text="s.name.replace(/^TYT /, '')"></p>
+
+            {# Wrong progress bar #}
+            <template x-if="(rows[String(s.id)]?.y||0) > 0">
+              <div class="mb-1">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[10px] font-semibold text-down">{% trans "Yanlış" %}</span>
+                  <span class="text-[10px] font-semibold tabular-nums"
+                        :style="topicWrongsFor(String(s.id)) > (rows[String(s.id)]?.y||0)
+                               ? 'color:var(--down)'
+                               : topicWrongsFor(String(s.id)) === (rows[String(s.id)]?.y||0)
+                               ? 'color:#10b981'
+                               : 'color:var(--muted)'"
+                        x-text="topicWrongsFor(String(s.id)) + ' / ' + (rows[String(s.id)]?.y||0)"></span>
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-3)">
+                  <div class="h-full rounded-full transition-all duration-200"
+                       :style="'width:' + topicProgressPercent(String(s.id)) + '%; background:' + topicProgressColor(String(s.id))"></div>
+                </div>
+              </div>
+            </template>
+
+            {# Blank progress bar #}
+            <template x-if="blank(String(s.id)) > 0">
+              <div>
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[10px] font-semibold" style="color:var(--muted)">{% trans "Boş" %}</span>
+                  <span class="text-[10px] font-semibold tabular-nums"
+                        :style="topicBlanksFor(String(s.id)) >= blank(String(s.id))
+                               ? 'color:#10b981'
+                               : 'color:var(--muted)'"
+                        x-text="topicBlanksFor(String(s.id)) + ' / ' + blank(String(s.id))"></span>
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-3)">
+                  <div class="h-full rounded-full transition-all duration-200"
+                       :style="'width:' + blankProgressPercent(String(s.id)) + '%; background:' + blankProgressColor(String(s.id))"></div>
+                </div>
+              </div>
+            </template>
+
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
 
   {# ── Existing topic error rows ── #}
   <template x-if="topicRows.length > 0">
@@ -14,38 +75,6 @@
         {% trans "Eklenen Hatalar" %}
         (<span x-text="topicRows.length"></span>)
       </p>
-
-      {# Per-subject wrong allocation progress #}
-      <div class="space-y-1.5 mb-1">
-        <template x-for="sid in [...new Set(topicRows.map(r=>String(r.subjectId)))]" :key="sid">
-          <div>
-            <div class="flex items-center justify-between mb-0.5">
-              <span class="text-[10px] font-semibold"
-                    style="color:var(--muted)"
-                    x-text="topicRows.find(r=>String(r.subjectId)===sid)?.subjectName||''"></span>
-              <span class="text-[10px] font-semibold tabular-nums"
-                    :style="topicWrongsFor(sid) > (rows[sid]?.y||0) ? 'color:var(--down)'
-                           : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0)>0 ? 'color:#10b981'
-                           : 'color:var(--muted)'"
-                    x-text="topicWrongsFor(sid) + ' / ' + (rows[sid]?.y||0) + ' yanlış'"></span>
-            </div>
-            <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-3)">
-              <div class="h-full rounded-full transition-all duration-200"
-                   :style="'width:' + topicProgressPercent(sid) + '%; background:' + topicProgressColor(sid)"></div>
-            </div>
-            <p class="text-[10px] mt-0.5"
-               :style="topicWrongsFor(sid) > (rows[sid]?.y||0) ? 'color:var(--down)'
-                      : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0)>0 ? 'color:#10b981'
-                      : 'color:var(--muted)'"
-               x-text="topicWrongsFor(sid) > (rows[sid]?.y||0)
-                       ? '⚠ ' + (topicWrongsFor(sid) - (rows[sid]?.y||0)) + ' fazla konu eklendi!'
-                       : topicWrongsFor(sid) === (rows[sid]?.y||0) && (rows[sid]?.y||0) > 0
-                       ? '✓ Tüm yanlışlar eşlendi!'
-                       : (rows[sid]?.y||0) - topicWrongsFor(sid) + ' yanlış daha eklenebilir'">
-            </p>
-          </div>
-        </template>
-      </div>
 
       <div class="hidden grid-cols-12 gap-2 px-3 mb-1 sm:grid
                   text-[10px] font-bold uppercase tracking-wide"
@@ -199,7 +228,7 @@
         </div>
       </div>
 
-      {# 4. Wrong / blank count inputs #}
+      {# 4. Wrong / blank count inputs — Task 2: disabled when quota is full #}
       <div x-show="newTopic.topicId" x-cloak class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 text-down">
@@ -208,7 +237,7 @@
           <input type="number"
                  x-model.number="newTopic.wrongCount"
                  min="0"
-                 :max="Math.max(0, (rows[newTopic.subjectId]?.y || 0) - topicWrongsFor(String(newTopic.subjectId)))"
+                 :max="Math.max(0, (rows[String(newTopic.subjectId)]?.y || 0) - topicWrongsFor(String(newTopic.subjectId)))"
                  :disabled="topicWrongsFor(String(newTopic.subjectId)) >= (rows[String(newTopic.subjectId)]?.y || 0)"
                  class="w-full rounded-xl border px-3 py-2.5 text-center text-sm
                         font-bold tabular-nums focus:outline-none focus:ring-2
@@ -221,9 +250,12 @@
                  style="color:var(--muted)">{% trans "Boş Sayısı" %}</label>
           <input type="number"
                  x-model.number="newTopic.blankCount"
-                 min="0" max="40"
+                 min="0"
+                 :max="Math.max(0, blank(String(newTopic.subjectId)) - topicBlanksFor(String(newTopic.subjectId)))"
+                 :disabled="topicBlanksFor(String(newTopic.subjectId)) >= blank(String(newTopic.subjectId))"
                  class="w-full rounded-xl border px-3 py-2.5 text-center text-sm
-                        font-bold tabular-nums focus:outline-none focus:ring-2"
+                        font-bold tabular-nums focus:outline-none focus:ring-2
+                        disabled:opacity-40 disabled:cursor-not-allowed"
                  style="background:var(--surface-3); border-color:var(--border-strong);
                         color:var(--muted);">
         </div>

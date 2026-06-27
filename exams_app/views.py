@@ -31,7 +31,8 @@ DEFAULT_COLORS = [
 
 # All subject names that contribute to the "Fen Bilimleri" analytics line
 # (old umbrella entry + new split subjects added for BransDeneme)
-_FEN_NAMES = frozenset({'TYT Fen Bilimleri', 'TYT Fizik', 'TYT Kimya', 'TYT Biyoloji'})
+_FEN_NAMES    = frozenset({'TYT Fen Bilimleri', 'TYT Fizik', 'TYT Kimya', 'TYT Biyoloji'})
+_SOSYAL_NAMES = frozenset({'TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü'})
 # Canonical four-subject axis shown in every chart / comparison / analytics view
 _TYT_DISPLAY_SUBJECTS = ['TYT Türkçe', 'TYT Matematik', 'TYT Sosyal Bilimler', 'TYT Fen Bilimleri']
 
@@ -129,6 +130,28 @@ def _build_v2_subjects(exam_list):
             total_q = correct + wrong + blank
             accuracy = round(correct / total_q * 100) if total_q > 0 else 0
             out.append({'key': key, 'name': label, 'net': net, 'delta': delta, 'accuracy': accuracy})
+        elif subj_name == 'TYT Sosyal Bilimler':
+            # Prefer individual sub-subjects; fall back to umbrella entry for old exams
+            sosyal_last = [last_results[s] for s in _SOSYAL_NAMES if s in last_results]
+            if sosyal_last:
+                net = round(sum(float(fr.net_score) for fr in sosyal_last), 2)
+                sosyal_prev = [prev_results[s] for s in _SOSYAL_NAMES if s in prev_results]
+                delta = round(net - sum(float(fr.net_score) for fr in sosyal_prev), 2) if sosyal_prev else None
+                correct = sum(fr.correct_answers for fr in sosyal_last)
+                wrong   = sum(fr.wrong_answers   for fr in sosyal_last)
+                blank   = sum(fr.blank_answers   for fr in sosyal_last)
+                total_q = correct + wrong + blank
+                accuracy = round(correct / total_q * 100) if total_q > 0 else 0
+                out.append({'key': key, 'name': label, 'net': net, 'delta': delta, 'accuracy': accuracy})
+            else:
+                r = last_results.get(subj_name)
+                if r is not None:
+                    net = float(r.net_score)
+                    prev = prev_results.get(subj_name)
+                    delta = round(net - float(prev.net_score), 2) if prev is not None else None
+                    total_q = r.correct_answers + r.wrong_answers + r.blank_answers
+                    accuracy = round(r.correct_answers / total_q * 100) if total_q > 0 else 0
+                    out.append({'key': key, 'name': label, 'net': net, 'delta': delta, 'accuracy': accuracy})
         else:
             r = last_results.get(subj_name)
             if r is not None:
@@ -191,6 +214,14 @@ def _build_denemeler_v2_context(user, filters=None):
     for i in range(len(exam_objs) - 1):
         exam_objs[i].delta = round(exam_objs[i].net - exam_objs[i + 1].net, 2)
 
+    # Total before period filter — drives sparse/empty-state banner logic
+    all_exam_count = len(exam_objs)
+    # Build chart points from unfiltered set (chronological, newest 20)
+    chart_data = json.dumps([
+        {'d': e.date.strftime('%d %b').lstrip('0'), 'n': float(e.net)}
+        for e in reversed(exam_objs[:20])
+    ])
+
     # Period filter: trim to last N days (DAS-305)
     period_str = filters.get('period', '')
     if period_str in _PERIOD_DAYS:
@@ -220,27 +251,55 @@ def _build_denemeler_v2_context(user, filters=None):
             exams=month_exams,
         ))
 
-    sparse_threshold = 3
     return {
         'exams': SimpleNamespace(
             recent=recent,
             archive=archive,
             total_count=len(exam_objs),
         ),
-        'sparse_threshold': sparse_threshold,
-        'exams_needed': max(0, sparse_threshold - len(recent)),
+        'all_exam_count': all_exam_count,
+        'sparse_threshold': 2,
+        'exams_needed': max(0, 2 - all_exam_count),
+        'chart_data': chart_data,
     }
 
 
+# Hex values from tokens.css + design-consistent additions for TYT subjects
 _BRANS_HUB_SUBJECTS = [
-    ('mat', 'Matematik', 'var(--mat)', 'accent-mat', {'TYT Matematik'}),
-    ('turkce', 'Türkçe', 'var(--turkce)', 'accent-turkce', {'TYT Türkçe'}),
-    ('sosyal', 'Sosyal', 'var(--sosyal)', 'accent-sosyal', {'TYT Sosyal Bilimler'}),
-    ('fen', 'Fen', 'var(--fen)', 'accent-fen', {'TYT Fen Bilimleri'}),
-    ('fizik', 'Fizik', 'var(--fizik)', 'accent-fizik', {'TYT Fizik'}),
-    ('kimya', 'Kimya', 'var(--kimya)', 'accent-kimya', {'TYT Kimya'}),
-    ('biyoloji', 'Biyoloji', 'var(--biyoloji)', 'accent-biyoloji', {'TYT Biyoloji'}),
+    ('mat',      'Matematik', '#A78BFA', 'accent-mat',      {'TYT Matematik'}),
+    ('turkce',   'Türkçe',    '#3B82F6', 'accent-turkce',   {'TYT Türkçe'}),
+    ('sosyal',   'Sosyal',    '#F59E0B', 'accent-sosyal',   {'TYT Sosyal Bilimler'}),
+    ('fen',      'Fen',       '#10B981', 'accent-fen',      {'TYT Fen Bilimleri'}),
+    ('fizik',    'Fizik',     '#06B6D4', 'accent-fizik',    {'TYT Fizik'}),
+    ('kimya',    'Kimya',     '#F97316', 'accent-kimya',    {'TYT Kimya'}),
+    ('biyoloji', 'Biyoloji',  '#22C55E', 'accent-biyoloji', {'TYT Biyoloji'}),
 ]
+
+_BRANS_AYT_SUBJECTS = [
+    ('ayt_mat',   'Mat',        '#EF4444', 'accent-ayt-mat',   {'AYT Matematik'}),
+    ('ayt_tde',   'TDE',        '#3B82F6', 'accent-ayt-tde',   {'AYT Türk Dili ve Edebiyatı', 'AYT TDE'}),
+    ('ayt_fizik', 'Fizik',      '#06B6D4', 'accent-fizik',     {'AYT Fizik'}),
+    ('ayt_kimya', 'Kimya',      '#F97316', 'accent-kimya',     {'AYT Kimya'}),
+    ('ayt_bio',   'Biyoloji',   '#22C55E', 'accent-biyoloji',  {'AYT Biyoloji'}),
+    ('ayt_tar1',  'Tarih 1',    '#F59E0B', 'accent-sosyal',    {'AYT Tarih 1', 'AYT Tarih'}),
+    ('ayt_tar2',  'Tarih 2',    '#D97706', 'accent-sosyal',    {'AYT Tarih 2'}),
+    ('ayt_cog1',  'Coğrafya 1', '#84CC16', 'accent-biyoloji',  {'AYT Coğrafya 1', 'AYT Coğrafya'}),
+    ('ayt_cog2',  'Coğrafya 2', '#65A30D', 'accent-biyoloji',  {'AYT Coğrafya 2'}),
+    ('ayt_fel',   'Felsefe',    '#EC4899', 'accent-mat',       {'AYT Felsefe Grubu', 'AYT Felsefe'}),
+    ('ayt_din',   'Din',        '#FB923C', 'accent-kimya',     {'AYT Din Kültürü'}),
+    ('ayt_dil',   'Dil',        '#6366F1', 'accent-mat',       {'AYT Yabancı Dil', 'AYT İngilizce', 'AYT Almanca', 'AYT Fransızca'}),
+]
+
+# Which AYT subject keys are relevant per alan — unlisted alan shows all AYT subjects
+_AYT_ALAN_FILTER = {
+    'SAY': {'ayt_mat', 'ayt_fizik', 'ayt_kimya', 'ayt_bio'},
+    'EA':  {'ayt_mat', 'ayt_tde', 'ayt_tar1', 'ayt_cog1'},
+    'SOZ': {'ayt_tde', 'ayt_tar1', 'ayt_tar2', 'ayt_cog1', 'ayt_cog2', 'ayt_fel', 'ayt_din'},
+    'DIL': {'ayt_dil'},
+}
+
+# Combined lookup list — used by bucket/slug helpers shared across TYT and AYT
+_BRANS_ALL_SUBJECTS = _BRANS_HUB_SUBJECTS + _BRANS_AYT_SUBJECTS
 
 
 def _brans_student_initials(student):
@@ -268,7 +327,7 @@ def _append_next(url, next_url):
 
 
 def _brans_subject_bucket(subject_name):
-    for key, _label, _color, _klass, names in _BRANS_HUB_SUBJECTS:
+    for key, _label, _color, _klass, names in _BRANS_ALL_SUBJECTS:
         if subject_name in names:
             return key
     return None
@@ -319,71 +378,6 @@ def _brans_export_period_query(period):
     return period if period in {'7g', '30g', '3 ay', '1 yıl', 'Tümü'} else '30g'
 
 
-def _brans_insight_url(subject_key, *, coach_view=False, student_id=None):
-    if coach_view:
-        return reverse('coach:student_brans_subject_detail', kwargs={'student_id': student_id, 'subject_slug': subject_key})
-    return reverse('brans_subject_detail', kwargs={'subject_slug': subject_key})
-
-
-def _build_brans_insights(student, entries, period, *, coach_view=False):
-    current_cutoff = _brans_period_cutoff(period)
-    total_count = len(entries)
-    if total_count < 2:
-        text = (
-            f"{student.full_name} için en az iki branş denemesi eklendiğinde içgörüler oluşacak."
-            if coach_view else
-            'En az iki branş denemesi eklediğinde içgörüler burada görünecek.'
-        )
-        return [{
-            'text': text,
-            'severity': 'empty',
-            'class_name': 'border-amber-400 bg-amber-50/10 text-amber-900',
-            'icon_class': 'bg-amber-100 text-amber-600',
-            'url': reverse('coach:student_brans_create', kwargs={'student_id': student.id}) if coach_view else reverse('student:brans_create'),
-        }]
-
-    insights = []
-    for key, label, _color, _klass, names in _BRANS_HUB_SUBJECTS:
-        subject_entries = [e for e in entries if e.ders.name in names]
-        recent_three = subject_entries[:3]
-        if len(recent_three) == 3:
-            newest, middle, oldest = recent_three
-            drop = float(oldest.net) - float(newest.net)
-            if newest.net < middle.net < oldest.net and drop >= 2:
-                text = (
-                    f"{student.full_name}'in {label} netleri düşüşte. Konulara bak →"
-                    if coach_view else
-                    f'{label} son sınavlarda düşüşte. Konulara bak →'
-                )
-                insights.append({
-                    'text': text,
-                    'severity': 'high',
-                    'class_name': 'border-red-400 bg-red-50/10 text-red-900',
-                    'icon_class': 'bg-red-100 text-red-600',
-                    'url': _brans_insight_url(key, coach_view=coach_view, student_id=student.id),
-                })
-
-        period_entries = [e for e in subject_entries if e.tarih >= current_cutoff]
-        previous_entries = [e for e in subject_entries if e.tarih < current_cutoff]
-        if period_entries:
-            period_best = max(period_entries, key=lambda e: e.net)
-            previous_best = max((float(e.net) for e in previous_entries), default=None)
-            if previous_best is None or float(period_best.net) > previous_best:
-                text = (
-                    f"{student.full_name} {label} branşında en iyi performansını yaptı!"
-                    if coach_view else
-                    f'{label} branşında en iyi performansın!'
-                )
-                insights.append({
-                    'text': text,
-                    'severity': 'low',
-                    'class_name': 'border-emerald-400 bg-emerald-50/10 text-emerald-900',
-                    'icon_class': 'bg-emerald-100 text-emerald-600',
-                    'url': _brans_insight_url(key, coach_view=coach_view, student_id=student.id),
-                })
-
-    insights.sort(key=lambda item: {'high': 0, 'low': 1, 'empty': 2}.get(item['severity'], 3))
-    return insights[:3]
 
 
 def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, coach_view=False):
@@ -391,11 +385,11 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
     from django.db.models import Sum
 
     subject_info = None
-    for key, label, color, klass, names in _BRANS_HUB_SUBJECTS:
+    for key, label, color, klass, names in _BRANS_ALL_SUBJECTS:
         if key == subject_slug:
             subject_info = {'key': key, 'name': label, 'color': color, 'class': klass, 'names': names}
             break
-            
+
     if not subject_info:
         return None
 
@@ -683,9 +677,12 @@ def brans_subject_detail_coach(request, student_id, subject_slug):
         return redirect('coach:student_brans_hub', student_id=student.id)
     return render(request, 'student/subject_drill_down.html', ctx)
 
-def _build_brans_hub_context(student, period='30g', *, coach_view=False):
+def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_view=False):
     """DAS-602/603/605: SSR data for the Branş Hub."""
     from itertools import groupby as _groupby
+
+    if exam_type not in ('TYT', 'AYT'):
+        exam_type = 'TYT'
 
     today = date.today()
     period = _brans_export_period_query(period)
@@ -693,17 +690,28 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
     current_cutoff = _brans_period_cutoff(period)
     previous_cutoff = today - timedelta(days=period_days * 2) if period_days else date.min
 
+    if exam_type == 'AYT':
+        alan = getattr(student, 'alan', '') or ''
+        allowed_keys = _AYT_ALAN_FILTER.get(alan)  # None → no restriction
+        active_subs = [
+            s for s in _BRANS_AYT_SUBJECTS
+            if allowed_keys is None or s[0] in allowed_keys
+        ]
+    else:
+        active_subs = _BRANS_HUB_SUBJECTS
+
     qs = (
         BransDeneme.objects
-        .filter(student=student)  # type='branch' by model: only Branş Denemeleri live here.
+        .filter(student=student)
         .select_related('ders')
         .order_by('-tarih', '-id')
     )
-    entries = list(qs)
-    insights = _build_brans_insights(student, entries, period, coach_view=coach_view)
+    all_entries = list(qs)
+    # Filter to the selected exam type by subject name prefix
+    entries = [e for e in all_entries if e.ders.name.startswith(exam_type + ' ')]
 
-    current = {key: [] for key, *_ in _BRANS_HUB_SUBJECTS}
-    previous = {key: [] for key, *_ in _BRANS_HUB_SUBJECTS}
+    current = {key: [] for key, *_ in active_subs}
+    previous = {key: [] for key, *_ in active_subs}
     for entry in entries:
         bucket = _brans_subject_bucket(entry.ders.name)
         if not bucket:
@@ -714,7 +722,7 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
             previous[bucket].append(entry.net)
 
     subjects = []
-    for key, label, color, klass, _names in _BRANS_HUB_SUBJECTS:
+    for key, label, color, klass, _names in active_subs:
         cur_avg = round(sum(current[key]) / len(current[key]), 1) if current[key] else 0.0
         prev_avg = round(sum(previous[key]) / len(previous[key]), 1) if previous[key] else 0.0
         delta = round(cur_avg - prev_avg, 2) if current[key] and previous[key] else 0.0
@@ -784,7 +792,7 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
     all_date_labels  = [f'{d.day} {_TURKISH_MONTHS[d.month]}' for d in all_dates_sorted]
 
     chart_datasets = []
-    for key, label, color, _klass, names in _BRANS_HUB_SUBJECTS:
+    for key, label, color, _klass, names in active_subs:
         subj_map = {
             e.tarih.isoformat(): round(float(e.net), 2)
             for e in entries if e.ders.name in names
@@ -820,8 +828,8 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
         'brans_add_url': f"/coach/student/{student.id}/brans/ekle/?next=/coach/student/{student.id}/brans/" if coach_view else '/student/brans/ekle/?next=/brans/',
         'brans_add_label': f'{student.full_name} için Branş Denemesi Ekle' if coach_view else 'Branş Denemesi Ekle',
         'active_period': period,
+        'exam_type': exam_type,
         'period_choices': ['7g', '30g', '3 ay', '1 yıl', 'Tümü'],
-        'insights': insights,
         'export_period': period,
         'compare_entries_json': compare_entries_json,
         'subjects': subjects,
@@ -836,8 +844,9 @@ def _build_brans_hub_context(student, period='30g', *, coach_view=False):
 
 @student_required
 def brans_hub_student(request):
-    period = request.GET.get('period', '30g')
-    return render(request, 'student/brans_hub.html', _build_brans_hub_context(request.user, period))
+    period     = request.GET.get('period', '30g')
+    exam_type  = request.GET.get('type', 'TYT')
+    return render(request, 'student/brans_hub.html', _build_brans_hub_context(request.user, period, exam_type))
 
 
 @coach_required
@@ -845,9 +854,10 @@ def brans_hub_coach(request, student_id):
     if not coach_can_view_student(request.user, student_id):
         return HttpResponseForbidden('Bu öğrenciyi görüntüleme yetkiniz yok.')
     from users_app.models import User as UserModel
-    student = get_object_or_404(UserModel, id=student_id, role='student')
-    period = request.GET.get('period', '30g')
-    return render(request, 'student/brans_hub.html', _build_brans_hub_context(student, period, coach_view=True))
+    student    = get_object_or_404(UserModel, id=student_id, role='student')
+    period     = request.GET.get('period', '30g')
+    exam_type  = request.GET.get('type', 'TYT')
+    return render(request, 'student/brans_hub.html', _build_brans_hub_context(student, period, exam_type, coach_view=True))
 
 
 def _brans_export_student(request):
@@ -870,7 +880,7 @@ def _brans_export_entries(student, period, subject_slug=None):
     if cutoff != date.min:
         qs = qs.filter(tarih__gte=cutoff)
     if subject_slug:
-        subject_names = next((names for key, _label, _color, _klass, names in _BRANS_HUB_SUBJECTS if key == subject_slug), None)
+        subject_names = next((names for key, _label, _color, _klass, names in _BRANS_ALL_SUBJECTS if key == subject_slug), None)
         if subject_names:
             qs = qs.filter(ders__name__in=subject_names)
     return list(qs)
@@ -1068,6 +1078,7 @@ def denemeler_list(request):
         ctx = _build_denemeler_v2_context(request.user, filters=filters)
         ctx['filters'] = filters
         ctx['trial_topics'] = _build_trial_topic_errors(request.user, filters['period'])
+        ctx['topic_subjects'] = _ENTRY_SUBJECTS_HARDCODED
         return render(request, 'student/denemeler_v2.html', ctx)
     # V1 path — unchanged
     from django.core.paginator import Paginator
@@ -1081,6 +1092,32 @@ def denemeler_list(request):
     return render(request, 'student/denemeler.html', {'page': page})
 
 
+@student_required
+def denemeler_cards_partial(request):
+    """AJAX: re-renders just the exam cards section on period/sort/filter change."""
+    filters = {
+        'period':   request.GET.get('period', ''),
+        'sort':     request.GET.get('sort', 'date'),
+        'has_note': request.GET.get('has_note', '') == '1',
+    }
+    ctx = _build_denemeler_v2_context(request.user, filters=filters)
+    ctx['filters'] = filters
+    return render(request, 'dashboard/partials/_denemeler_cards.html', ctx)
+
+
+@student_required
+def denemeler_topics_partial(request):
+    """AJAX: re-renders topic error accordion on subject/period filter change."""
+    period  = request.GET.get('period', '')
+    subject = request.GET.get('subject', '')
+    topics  = _build_trial_topic_errors(request.user, period, subject_name=subject)
+    return render(request, 'dashboard/partials/_denemeler_topics.html', {
+        'trial_topics': topics,
+        'filters': {'period': period, 'subject': subject},
+        'topic_subjects': _ENTRY_SUBJECTS_HARDCODED,
+    })
+
+
 def _period_since(period_str):
     """Return (period_label, since_date) from a ?period= query-string value."""
     if period_str == '30':
@@ -1090,7 +1127,7 @@ def _period_since(period_str):
     return 'all', None
 
 
-def _build_trial_topic_errors(user, period_str='', top_n=12, *, coach_view=False, student_id=None):
+def _build_trial_topic_errors(user, period_str='', top_n=12, *, coach_view=False, student_id=None, subject_name=''):
     """Top error topics from TRIAL exams, with per-exam breakdown, for the accordion.
 
     Pass coach_view=True and student_id=<int> so drill-down links point to the coach
@@ -1099,6 +1136,8 @@ def _build_trial_topic_errors(user, period_str='', top_n=12, *, coach_view=False
     from django.db.models import Sum as _Sum
 
     qs = ExamTopicError.objects.filter(exam__student=user)
+    if subject_name:
+        qs = qs.filter(topic__subject__name=subject_name)
     since = None
     if period_str in _PERIOD_DAYS:
         since = date.today() - timedelta(days=_PERIOD_DAYS[period_str])
@@ -1571,33 +1610,36 @@ def exam_delete(request, exam_id):
 # Feature-flagged fast-entry; falls back to step1 when flag is off.
 # ──────────────────────────────────────────────
 
-_ENTRY_SUBJECT_COLORS = {
-    'TYT Türkçe':          '#3B82F6',
-    'TYT Matematik':       '#A78BFA',
-    'TYT Sosyal Bilimler': '#F59E0B',
-    'TYT Fen Bilimleri':   '#10B981',
-    'TYT Fizik':           '#10B981',
-    'TYT Kimya':           '#06B6D4',
-    'TYT Biyoloji':        '#22C55E',
-}
+# Fixed subject list for the main TYT entry form.
+# (db_name, forced_question_count, accent_color)
+_ENTRY_SUBJECTS_HARDCODED = [
+    ('TYT Matematik',    40, '#A78BFA'),
+    ('TYT Türkçe',       40, '#3B82F6'),
+    ('TYT Fizik',         7, '#10B981'),
+    ('TYT Kimya',         7, '#06B6D4'),
+    ('TYT Biyoloji',      6, '#22C55E'),
+    ('TYT Din Kültürü',   5, '#F97316'),
+    ('TYT Felsefe',       5, '#EC4899'),
+    ('TYT Tarih',         5, '#F59E0B'),
+    ('TYT Coğrafya',      5, '#84CC16'),
+]
 
 
 def _build_v2_entry_subjects():
-    """Return SimpleNamespace list with color annotations for create v2."""
-    qs = (
-        Subject.objects.filter(exam_type='TYT')
-        .exclude(name='TYT Fen Bilimleri')
-        .order_by('name')
-    )
+    """Return SimpleNamespace list for create v2, using hardcoded order and counts."""
+    names = [row[0] for row in _ENTRY_SUBJECTS_HARDCODED]
+    config = {row[0]: (row[1], row[2]) for row in _ENTRY_SUBJECTS_HARDCODED}
+    by_name = {s.name: s for s in Subject.objects.filter(name__in=names)}
     return [
         SimpleNamespace(
-            id=s.id,
-            name=s.name,
-            display_name=s.display_name,
-            question_count=s.question_count,
-            color=_ENTRY_SUBJECT_COLORS.get(s.name, '#6D5BFF'),
+            id=by_name[name].id,
+            name=by_name[name].name,
+            display_name=by_name[name].display_name,
+            question_count=forced_count,
+            color=color,
         )
-        for s in qs
+        for name, forced_count, color in _ENTRY_SUBJECTS_HARDCODED
+        if name in by_name
     ]
 
 
@@ -2994,14 +3036,35 @@ def brans_create(request):
     else:
         form = BransDenemeForm()
 
-    subjects_json = json.dumps({str(s.pk): s.question_count for s in Subject.objects.only('pk', 'question_count')})
+    all_subjects = list(Subject.objects.only('pk', 'name', 'exam_type', 'question_count').order_by('exam_type', 'name'))
+    subjects_json = json.dumps({str(s.pk): s.question_count for s in all_subjects})
+
+    # Build TYT / AYT subject id lists for client-side toggling
+    tyt_ids = [str(s.pk) for s in all_subjects if s.exam_type == 'TYT']
+    # AYT ids filtered by student's alan if set
+    student_alan = getattr(request.user, 'alan', '') or ''
+    alan_keys = _AYT_ALAN_FILTER.get(student_alan)  # None → no restriction
+    ayt_names_allowed = None
+    if alan_keys is not None:
+        ayt_names_allowed = set()
+        for key, _label, _color, _klass, names in _BRANS_AYT_SUBJECTS:
+            if key in alan_keys:
+                ayt_names_allowed.update(names)
+    ayt_ids = [
+        str(s.pk) for s in all_subjects
+        if s.exam_type == 'AYT' and (ayt_names_allowed is None or s.name in ayt_names_allowed)
+    ]
+
     return render(request, 'student/brans_create.html', {
-        'form': form,
+        'form':          form,
         'subjects_json': subjects_json,
-        'next_url': next_url,
-        'back_url': next_url,
-        'page_title': 'Branş Denemesi Ekle',
-        'submit_label': 'Branş Denemesini Kaydet',
+        'tyt_ids_json':  json.dumps(tyt_ids),
+        'ayt_ids_json':  json.dumps(ayt_ids),
+        'student_alan':  student_alan,
+        'next_url':      next_url,
+        'back_url':      next_url,
+        'page_title':    'Branş Denemesi Ekle',
+        'submit_label':  'Branş Denemesini Kaydet',
     })
 
 

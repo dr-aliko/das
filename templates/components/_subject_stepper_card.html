@@ -60,7 +60,7 @@
         <button type="button"
                 class="das-stepper-btn"
                 @click="incD('{{ subject.id }}')"
-                :disabled="overflow('{{ subject.id }}') || saving"
+                :disabled="remaining('{{ subject.id }}') <= 0 || saving"
                 aria-label="{{ subject.display_name }} doğru artır">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -105,7 +105,7 @@
         <button type="button"
                 class="das-stepper-btn"
                 @click="incY('{{ subject.id }}')"
-                :disabled="overflow('{{ subject.id }}') || saving"
+                :disabled="remaining('{{ subject.id }}') <= 0 || saving"
                 aria-label="{{ subject.display_name }} yanlış artır">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>

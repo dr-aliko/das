@@ -246,40 +246,127 @@
       {% endif %}
 
       {% if user.is_student %}
-      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
-        <p class="px-4 pt-4 pb-2 text-[10px] uppercase tracking-wider text-ink-500 font-bold">
-          {% trans "Akademik" %}
-        </p>
-        <div class="divide-y divide-ink-700">
-          <a href="#" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors">
-            <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <use href="#das-icon-target"/>
-              </svg>
-            </span>
-            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Hedeflerim" %}</span>
-            <span class="text-xs text-ink-500">2026 YKS</span>
-            <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <use href="#das-icon-chev-right"/>
+      {# ── Akademik Bilgiler accordion ── #}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden"
+           x-data="akademikProfil('{{ user.alan }}', '{{ user.sinif }}', {{ target_year|default:'null' }})">
+
+        {# ── Header / collapsed summary row ── #}
+        <button @click="open = !open"
+                class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-ink-800 transition-colors text-left"
+                :class="open && 'bg-ink-800'">
+          <span class="w-8 h-8 rounded-lg bg-ink-800 flex items-center justify-center text-ink-400 shrink-0"
+                :class="open && 'bg-ink-750'">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#das-icon-target"/>
             </svg>
-          </a>
-          <a href="#" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors">
-            <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <use href="#das-icon-calendar"/>
-              </svg>
-            </span>
-            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Çalışma Planım" %}</span>
-            <span class="text-xs text-emerald-500 font-semibold">{% trans "Aktif" %}</span>
-            <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <use href="#das-icon-chev-right"/>
-            </svg>
-          </a>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-ink-100">Akademik Bilgiler</p>
+            {# Collapsed summary — hidden while open #}
+            <p class="text-xs text-ink-400 mt-0.5 truncate" x-show="!open" x-cloak>
+              <span x-text="summaryLine"></span>
+            </p>
+          </div>
+          {# "Kaydedildi" flash + chevron #}
+          <span x-show="saved && !open"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-500"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="text-[10px] text-emerald-500 font-semibold shrink-0 mr-1" x-cloak>
+            Kaydedildi
+          </span>
+          <svg class="w-4 h-4 text-ink-500 shrink-0 transition-transform duration-200"
+               :class="open && 'rotate-180'"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <use href="#das-icon-chev-down"/>
+          </svg>
+        </button>
+
+        {# ── Expanded body ── #}
+        <div x-show="open" x-collapse>
+          <div class="px-4 pb-5 space-y-5 border-t border-ink-700 pt-4">
+
+            {# Alan Seçimi #}
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-2.5">Alan Seçimi</p>
+              <div class="flex flex-wrap gap-2">
+                {% for val, label in alan_choices %}
+                <button type="button" @click="setAlan('{{ val }}')"
+                        class="h-8 px-3 rounded-lg text-xs font-semibold transition-colors border"
+                        :class="alan === '{{ val }}'
+                          ? 'bg-steel-500/15 border-steel-500 text-steel-300'
+                          : 'bg-ink-800 border-ink-700 text-ink-400 hover:bg-ink-750 hover:text-ink-200'">
+                  {{ label }}
+                </button>
+                {% endfor %}
+                <button type="button" @click="setAlan('')"
+                        class="h-8 px-3 rounded-lg text-xs font-semibold transition-colors border"
+                        :class="alan === ''
+                          ? 'bg-ink-700 border-ink-600 text-ink-200'
+                          : 'bg-ink-800 border-ink-700 text-ink-500 hover:bg-ink-750'">
+                  Belirtme
+                </button>
+              </div>
+            </div>
+
+            {# Sınıf Seçimi #}
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-2.5">Sınıf Seçimi</p>
+              <div class="flex flex-wrap gap-2">
+                {% for val, label in sinif_choices %}
+                <button type="button" @click="setSinif('{{ val }}')"
+                        class="h-8 px-3 rounded-lg text-xs font-semibold transition-colors border"
+                        :class="sinif === '{{ val }}'
+                          ? 'bg-steel-500/15 border-steel-500 text-steel-300'
+                          : 'bg-ink-800 border-ink-700 text-ink-400 hover:bg-ink-750 hover:text-ink-200'">
+                  {{ label }}{% if val != 'mezun' %}. Sınıf{% endif %}
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+
+            {# Sınav Hedefi — auto-calculated, always visible inside expanded body #}
+            <div class="flex items-center justify-between pt-3 border-t border-ink-700">
+              <p class="text-xs font-semibold text-ink-400">Sınav Hedefi</p>
+              <span class="text-sm font-bold text-steel-400"
+                    x-text="targetYear ? targetYear + ' YKS' : '—'"></span>
+            </div>
+
+            {# Save confirmation inside open panel #}
+            <div class="flex justify-end -mt-2" x-show="saved" x-cloak
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-500"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0">
+              <span class="text-[11px] text-emerald-500 font-semibold">Kaydedildi</span>
+            </div>
+
+          </div>
         </div>
+      </div>
+
+      {# Çalışma Planım row #}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+        <a href="#" class="px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors">
+          <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#das-icon-calendar"/>
+            </svg>
+          </span>
+          <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Çalışma Planım" %}</span>
+          <span class="text-xs text-emerald-500 font-semibold">{% trans "Aktif" %}</span>
+          <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#das-icon-chev-right"/>
+          </svg>
+        </a>
       </div>
       {% endif %}
 
@@ -448,6 +535,59 @@ function profileState(initialTheme) {
       } finally {
         this.showThemeSheet = false;
       }
+    },
+  };
+}
+
+function akademikProfil(initialAlan, initialSinif, initialTargetYear) {
+  const SINIF_LABELS = { '9': '9. Sınıf', '10': '10. Sınıf', '11': '11. Sınıf', '12': '12. Sınıf', 'mezun': 'Mezun' };
+  const SINIF_OFFSET = { '9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0 };
+
+  return {
+    open:       false,
+    alan:       initialAlan  || '',
+    sinif:      initialSinif || '',
+    targetYear: initialTargetYear,
+    saved:      false,
+    _saveTimer: null,
+
+    get summaryLine() {
+      const parts = [];
+      if (this.alan)       parts.push(this.alan);
+      if (this.sinif)      parts.push(SINIF_LABELS[this.sinif] || this.sinif);
+      if (this.targetYear) parts.push(this.targetYear + ' YKS');
+      return parts.length ? parts.join(' · ') : 'Belirtilmedi';
+    },
+
+    getCsrf() {
+      const m = document.cookie.match(/csrftoken=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    },
+
+    async _persist(payload) {
+      try {
+        const r = await fetch('{% url "profil_alan_sinif" %}', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf() },
+          body:    JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          if (data.target_year !== undefined) this.targetYear = data.target_year;
+          this.saved = true;
+          clearTimeout(this._saveTimer);
+          this._saveTimer = setTimeout(() => { this.saved = false; }, 2000);
+        }
+      } catch (e) {
+        console.error('[DAS] alan/sinif save error', e);
+      }
+    },
+
+    setAlan(val) { this.alan = val; this._persist({ alan: val }); },
+    setSinif(val) {
+      this.sinif = val;
+      this.targetYear = val in SINIF_OFFSET ? new Date().getFullYear() + SINIF_OFFSET[val] + 1 : null;
+      this._persist({ sinif: val });
     },
   };
 }

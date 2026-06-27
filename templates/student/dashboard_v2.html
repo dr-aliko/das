@@ -4,6 +4,11 @@
 
 {% block content %}
 <script>
+/* Task 4: seed Alpine store with SSR value so KPI strip is reactive from first paint */
+document.addEventListener('alpine:init', () => {
+  Alpine.store('radarCount', {{ stats.radar_count|default:0 }});
+});
+
 function examSelect() {
   return {
     sel: [],
@@ -122,7 +127,11 @@ function studentTasks() {
       });
     },
 
-    init() { window._studentTasksComp = this; },
+    init() {
+      window._studentTasksComp = this;
+      Alpine.store('radarCount', this.radar.length);
+      this.$watch('radar', val => Alpine.store('radarCount', val.length));
+    },
   };
 }
 </script>
@@ -364,7 +373,12 @@ function trendChart() {
     period: '{{ chart_period|default:"30" }}',
     periodLabel: '{{ chart_period_label|default:"Son 30 gün"|escapejs }}',
     loading: false,
+    viewMode: 'subject',
     avg: '—', max: '—', delta: '—', deltaUp: true,
+    toggleView() {
+      this.viewMode = this.viewMode === 'subject' ? 'total' : 'subject';
+      if (window.DASTrend) window.DASTrend.setView(this.viewMode, this);
+    },
     periodText(key) {
       if (key === '7') return 'Son 7 gün';
       if (key === 'all') return 'Tümü';
@@ -464,12 +478,21 @@ window.DASInitCharts = function(d, sd, hasExams) {
 
   function nav(i) { if (_examIds[i]) window.location.href = '/student/exam/' + _examIds[i] + '/'; }
 
+  /* Task 1: separate subject and total-net dataset arrays for view toggling */
+  const _subjectDatasets = d.subjects.map((s, i) => ({
+    label: s.name, data: _s.data[i].slice(), borderColor: s.border, backgroundColor: s.bg,
+    borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: false,
+  }));
+  const _totalDataset = {
+    label: 'Genel Net',
+    data: _s.totals.slice(),
+    borderColor: '#6D5BFF', backgroundColor: 'rgba(109,91,255,0.12)',
+    borderWidth: 3, pointBackgroundColor: '#6D5BFF', pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: true,
+  };
+
   const lineChart = new Chart(document.getElementById('lineChart'), {
     type: 'line',
-    data: { labels: _s.labels, datasets: d.subjects.map((s, i) => ({
-        label: s.name, data: _s.data[i], borderColor: s.border, backgroundColor: s.bg,
-        borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: false,
-    })) },
+    data: { labels: _s.labels, datasets: _subjectDatasets.map(ds => ({ ...ds })) },
     options: {
       responsive: true, maintainAspectRatio: false, layout: { padding: { top: 42 } },
       interaction: { mode: 'index', intersect: false },
@@ -490,13 +513,27 @@ window.DASInitCharts = function(d, sd, hasExams) {
   requestAnimationFrame(() => document.getElementById('lineChartSkeleton')?.remove());
 
   window.DASTrend = {
+    _mode: 'subject',
     update(key, comp) {
       _s = _cut(key);
       lineChart.data.labels = _s.labels;
-      lineChart.data.datasets.forEach((ds, i) => { ds.data = _s.data[i]; });
+      if (this._mode === 'total') {
+        lineChart.data.datasets[0].data = _s.totals;
+      } else {
+        lineChart.data.datasets.forEach((ds, i) => { ds.data = _s.data[i]; });
+      }
       lineChart.update('none');
       const sum = _summary(_s.totals);
       comp.avg = sum.avg; comp.max = sum.max; comp.delta = sum.delta; comp.deltaUp = sum.deltaUp;
+    },
+    setView(mode, comp) {
+      this._mode = mode;
+      if (mode === 'total') {
+        lineChart.data.datasets = [{ ..._totalDataset, data: _s.totals.slice() }];
+      } else {
+        lineChart.data.datasets = _subjectDatasets.map((ds, i) => ({ ...ds, data: _s.data[i].slice() }));
+      }
+      lineChart.update();
     },
   };
 
@@ -542,6 +579,10 @@ window.DASInitCharts = function(d, sd, hasExams) {
 
   if (window._trendChartComp && window.DASTrend) {
     window.DASTrend.update(window._trendChartComp.period || '30', window._trendChartComp);
+    /* Restore view mode if chart was recreated while toggle was active */
+    if (window._trendChartComp.viewMode === 'total') {
+      window.DASTrend.setView('total', window._trendChartComp);
+    }
   }
 };
 

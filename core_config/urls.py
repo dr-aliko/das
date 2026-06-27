@@ -3,7 +3,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_subject_detail_student
-from users_app.views import profil_view, theme_save, activity_calendar_api
+from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save
 
 urlpatterns = [
     path('healthz/', healthz_view, name='healthz'),
@@ -36,4 +36,5 @@ urlpatterns = [
     path('profil/', profil_view,    name='profil'),
     path('profil/theme/', theme_save, name='profil_theme'),
     path('profil/aktivite/', activity_calendar_api, name='profil_aktivite'),
+    path('profil/alan-sinif/', alan_sinif_save, name='profil_alan_sinif'),
 ]

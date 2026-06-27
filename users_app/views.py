@@ -386,12 +386,67 @@ def profil_view(request):
     else:
         all_badges = []
 
+    # Sınav Hedefi auto-calculation from sinif
+    target_year = None
+    if user.is_student and user.sinif:
+        from datetime import date as _date
+        current_year = _date.today().year
+        sinif_offset = {'9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0}.get(user.sinif)
+        if sinif_offset is not None:
+            target_year = current_year + sinif_offset + 1  # +1: next YKS cycle
+
     return render(request, 'profile/profile_v2.html', {
         'stats':         stats,
         'activity_week': activity_week,
         'all_badges':    all_badges,
+        'target_year':   target_year,
+        'alan_choices':  User.ALAN_CHOICES,
+        'sinif_choices': User.SINIF_CHOICES,
         'v2_shell':      True,
     })
+
+
+@login_required
+@require_http_methods(['POST'])
+def alan_sinif_save(request):
+    """Save alan (field of study) and/or sinif (grade) for the logged-in student."""
+    if not request.user.is_student:
+        return JsonResponse({'ok': False, 'error': 'not a student'}, status=403)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON'}, status=400)
+
+    valid_alan  = {k for k, _ in User.ALAN_CHOICES}
+    valid_sinif = {k for k, _ in User.SINIF_CHOICES}
+
+    fields_to_save = []
+    if 'alan' in data:
+        val = data['alan']
+        if val not in valid_alan and val != '':
+            return JsonResponse({'ok': False, 'error': 'invalid alan'}, status=400)
+        request.user.alan = val
+        fields_to_save.append('alan')
+    if 'sinif' in data:
+        val = data['sinif']
+        if val not in valid_sinif and val != '':
+            return JsonResponse({'ok': False, 'error': 'invalid sinif'}, status=400)
+        request.user.sinif = val
+        fields_to_save.append('sinif')
+
+    if fields_to_save:
+        request.user.save(update_fields=fields_to_save)
+
+    # Return updated target_year so frontend can update without reload
+    from datetime import date as _date
+    sinif = request.user.sinif
+    target_year = None
+    if sinif:
+        sinif_offset = {'9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0}.get(sinif)
+        if sinif_offset is not None:
+            target_year = _date.today().year + sinif_offset + 1
+
+    return JsonResponse({'ok': True, 'target_year': target_year})
 
 
 @login_required

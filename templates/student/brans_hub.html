@@ -3,6 +3,388 @@
 {% block title %}{% if coach_view %}{{ student.full_name }} — Branş Hub{% else %}Branş Hub{% endif %} — DAS{% endblock %}
 
 {% block content %}
+<div class="pb-28" x-data="bransHubState()">
+
+  {# ── Mobile sticky header ── #}
+  <header class="md:hidden sticky top-0 z-30 border-b border-ink-700 px-4 h-14 flex items-center justify-between"
+          style="background:rgba(10,14,20,0.95); backdrop-filter:blur(10px);">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-steel-500/15 text-steel-400">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </div>
+      <h1 class="text-sm font-bold text-white">Branş Hub</h1>
+    </div>
+    <div class="flex items-center gap-1">
+      {% if not coach_view %}
+      <button @click="openAddExam()" type="button"
+              class="w-10 h-10 flex items-center justify-center rounded-xl text-ink-400 active:scale-95 transition-transform"
+              aria-label="{{ brans_add_label }}">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+      </button>
+      {% endif %}
+      <div class="relative" x-data="{ open: false }">
+        <button @click="open = !open" type="button"
+                class="w-10 h-10 flex items-center justify-center rounded-xl text-ink-400"
+                :class="open ? 'bg-ink-800' : ''"
+                aria-label="Dışa aktar">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+        <div x-show="open" @click.away="open = false" x-cloak
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             class="absolute right-0 mt-2 w-48 rounded-2xl border border-ink-700 bg-ink-850 shadow-xl overflow-hidden z-50">
+          <div class="p-2 space-y-1">
+            <a :href="exportUrl('xlsx')" @click="open = false"
+               class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl text-ink-200 hover:bg-ink-800 transition-colors">
+              <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Excel Olarak İndir
+            </a>
+            <button @click="exportHTML(); open = false"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl text-ink-200 hover:bg-ink-800 transition-colors text-left">
+              <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+              HTML Olarak İndir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {# ── Coach banner ── #}
+  {% if coach_view %}
+  <div class="sticky top-14 z-20 border-b border-ink-700 bg-ink-900/90 backdrop-blur">
+    <div class="px-4 md:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {{ student_initials }}
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-ink-500 uppercase tracking-tight">Öğrenci İzleniyor</div>
+          <div class="text-sm font-bold text-ink-100 truncate">{{ student.full_name }}</div>
+        </div>
+      </div>
+      <a href="{% url 'coach:student_detail' student.id %}"
+         class="text-[10px] font-bold text-steel-400 hover:text-steel-300 uppercase tracking-wider transition-colors">Profil</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Main card container ── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    {# ── Desktop header ── #}
+    <div class="hidden md:flex items-center justify-between px-6 pt-5 pb-4 border-b border-ink-700">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-white flex items-center gap-2">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75"
+               class="text-steel-400" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+          </svg>
+          {% if coach_view %}{{ student.full_name }} Branş Performansı{% else %}Branş Performansın{% endif %}
+        </h1>
+        <p class="text-sm text-ink-400 mt-1">{{ active_period }} · {{ subjects|length }} branş</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+
+        {# TYT / AYT toggle #}
+        <div class="inline-flex items-center rounded-lg bg-ink-850 border border-ink-700 p-1">
+          <a href="?period={{ active_period|urlencode }}&type=TYT"
+             class="px-3 h-7 text-[11px] rounded font-bold transition-colors
+                    {% if exam_type == 'TYT' %}bg-ink-750 text-steel-300 shadow-sm{% else %}text-ink-400 hover:text-ink-200{% endif %}">
+            TYT
+          </a>
+          <a href="?period={{ active_period|urlencode }}&type=AYT"
+             class="px-3 h-7 text-[11px] rounded font-bold transition-colors
+                    {% if exam_type == 'AYT' %}bg-ink-750 text-steel-300 shadow-sm{% else %}text-ink-400 hover:text-ink-200{% endif %}">
+            AYT
+          </a>
+        </div>
+
+        {# Period pills #}
+        <div class="inline-flex items-center rounded-lg bg-ink-850 border border-ink-700 p-1">
+          {% for period in period_choices %}
+          <a href="?period={{ period|urlencode }}&type={{ exam_type }}"
+             class="px-2.5 h-7 text-[11px] rounded font-medium transition-colors
+                    {% if period == active_period %}bg-ink-750 text-steel-300 shadow-sm{% else %}text-ink-400 hover:text-ink-200{% endif %}">
+            {{ period }}
+          </a>
+          {% endfor %}
+        </div>
+
+        {% if not coach_view %}
+        <button @click="openAddExam()" type="button"
+                class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm
+                       font-medium inline-flex items-center gap-1.5 transition-colors">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
+               stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Yeni Branş Sınavı
+        </button>
+        {% endif %}
+
+        <div class="relative" x-data="{ open: false }">
+          <button @click="open = !open" type="button"
+                  class="h-9 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500
+                         text-xs font-semibold hover:bg-emerald-500/20 transition-colors inline-flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Excel
+          </button>
+          <div x-show="open" @click.away="open = false" x-cloak
+               x-transition:enter="transition ease-out duration-100"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100"
+               class="absolute right-0 mt-2 w-44 rounded-xl border border-ink-700 bg-ink-850 shadow-xl overflow-hidden z-50">
+            <div class="p-1.5 space-y-0.5">
+              <a :href="exportUrl('xlsx')" @click="open = false"
+                 class="flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors">
+                <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Excel
+              </a>
+              <button @click="exportHTML(); open = false"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors text-left">
+                <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                HTML
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# ── Mobile period + TYT/AYT filters ── #}
+    <div class="md:hidden border-b border-ink-700 px-4 py-3 space-y-2">
+      {# TYT/AYT row #}
+      <div class="flex gap-2">
+        <a href="?period={{ active_period|urlencode }}&type=TYT"
+           class="flex-1 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors
+                  {% if exam_type == 'TYT' %}bg-steel-500/15 border border-steel-500 text-steel-300{% else %}bg-ink-850 border border-ink-700 text-ink-400{% endif %}">
+          TYT
+        </a>
+        <a href="?period={{ active_period|urlencode }}&type=AYT"
+           class="flex-1 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors
+                  {% if exam_type == 'AYT' %}bg-steel-500/15 border border-steel-500 text-steel-300{% else %}bg-ink-850 border border-ink-700 text-ink-400{% endif %}">
+          AYT
+        </a>
+      </div>
+      {# Period row #}
+      <div class="flex gap-2 overflow-x-auto no-scrollbar">
+        {% for period in period_choices %}
+        <a href="?period={{ period|urlencode }}&type={{ exam_type }}"
+           class="flex-shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors whitespace-nowrap
+                  {% if period == active_period %}bg-steel-500/15 border border-steel-500 text-steel-300{% else %}bg-ink-850 border border-ink-700 text-ink-300{% endif %}">
+          {{ period }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="p-4 md:p-6 space-y-6">
+
+      {# ── Subject performance cards ── #}
+      <section>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-3">Branş Performansı</p>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {% for subject in subjects %}
+
+          {# Desktop card #}
+          <a href="{% if coach_view %}{% url 'coach:student_brans_subject_detail' student.id subject.key %}{% else %}{% url 'brans_subject_detail' subject.key %}{% endif %}"
+             class="hidden md:block rounded-xl border-l-4 bg-ink-850 hover:bg-ink-800 transition-colors p-4
+                    border border-ink-700 hover:border-ink-600"
+             style="border-left-color:{{ subject.color }}">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-[10px] uppercase tracking-wider text-ink-400 font-bold">{{ subject.name }}</p>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tnum
+                           {% if subject.trend == 'up' %}bg-emerald-500/10 text-emerald-500{% else %}bg-ruby-500/10 text-ruby-500{% endif %}">
+                {% if subject.trend == 'up' %}▲{% else %}▼{% endif %} {{ subject.delta|floatformat:2 }}
+              </span>
+            </div>
+            <p class="text-3xl font-bold text-ink-50 tnum">{{ subject.net|floatformat:1 }}</p>
+            <div class="mt-3 flex gap-1 items-end h-4 opacity-40">
+              <div class="flex-1 h-1/3 rounded-t-sm" style="background:{{ subject.color }}"></div>
+              <div class="flex-1 h-1/2 rounded-t-sm" style="background:{{ subject.color }}"></div>
+              <div class="flex-1 h-2/3 rounded-t-sm" style="background:{{ subject.color }}"></div>
+              <div class="flex-1 h-1/2 rounded-t-sm" style="background:{{ subject.color }}"></div>
+              <div class="flex-1 h-full rounded-t-sm" style="background:{{ subject.color }}"></div>
+            </div>
+          </a>
+
+          {# Mobile card #}
+          <a href="{% if coach_view %}{% url 'coach:student_brans_subject_detail' student.id subject.key %}{% else %}{% url 'brans_subject_detail' subject.key %}{% endif %}"
+             class="md:hidden rounded-xl border border-ink-700 bg-ink-850 p-3 flex flex-col gap-2"
+             style="border-left: 3px solid {{ subject.color }}; padding-left: 12px;">
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{{ subject.name }}</div>
+            <div class="flex items-end justify-between">
+              <div class="text-2xl font-bold text-ink-50 tnum">{{ subject.net|floatformat:1 }}</div>
+              <div class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold
+                          {% if subject.trend == 'up' %}bg-emerald-500/10 text-emerald-500{% else %}bg-ruby-500/10 text-ruby-500{% endif %}">
+                {% if subject.trend == 'up' %}▲{% else %}▼{% endif %} {{ subject.delta|floatformat:2 }}
+              </div>
+            </div>
+          </a>
+
+          {% empty %}
+          <div class="col-span-2 lg:col-span-4 py-8 text-center text-sm text-ink-500">
+            Bu dönemde {{ exam_type }} denemesi bulunamadı.
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {# ── Trend chart ── #}
+      <section>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-ink-500 mb-3">Branş Trendi</p>
+        <div class="rounded-xl border border-ink-700 bg-ink-900 overflow-hidden" style="height:240px; padding:16px;">
+          <canvas id="bransChart"></canvas>
+        </div>
+      </section>
+
+      {# ── Exam list ── #}
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-ink-500"
+               x-text="activeSubject ? activeSubjectName + ' Denemeleri' : 'Son Branş Denemeleri'">Son Branş Denemeleri</p>
+            <p class="text-[10px] text-ink-600 mt-0.5" x-text="visibleCount() + ' kayıt'"></p>
+          </div>
+          {% if not coach_view %}
+          <a href="/student/exam/new/"
+             class="h-8 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-xs
+                    font-medium inline-flex items-center gap-1.5 transition-colors md:hidden">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Ekle
+          </a>
+          {% endif %}
+        </div>
+
+        <div class="flex gap-2 mb-3" x-show="activeSubject" x-transition x-cloak>
+          <button type="button" @click="clearSubject()"
+                  class="h-8 px-3 rounded-full text-xs font-semibold bg-steel-500/15 border border-steel-500 text-steel-300">
+            Filtreyi Temizle
+          </button>
+          <span class="h-8 px-3 rounded-full text-xs font-semibold bg-ink-850 border border-ink-700 text-ink-300 flex items-center"
+                x-text="activeSubjectName"></span>
+        </div>
+
+        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+          {% if exams.total_count %}
+          <div class="divide-y divide-ink-700">
+            {% for exam in exams.recent %}
+            <div class="flex items-center justify-between p-4 hover:bg-ink-800 transition-colors cursor-pointer"
+                 x-show="!activeSubject || activeSubject === '{{ exam.subject_key }}'"
+                 x-transition:enter="transition-opacity duration-150"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-2 h-2 rounded-full shrink-0" style="background-color:{{ exam.color }}"></div>
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold text-ink-100 truncate">{{ exam.subject }}</div>
+                  <div class="text-[10px] text-ink-500 mt-0.5">{{ exam.date_label }} · {{ exam.duration }}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <a href="{{ exam.detail_url }}"
+                   class="text-[10px] font-bold text-steel-400 hover:text-steel-300 uppercase transition-colors">Aç</a>
+                <div class="text-lg font-bold text-ink-50 tnum">{{ exam.net|floatformat:2 }}</div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center text-sm text-ink-500">Son 30 günde branş denemesi yok.</div>
+            {% endfor %}
+
+            {% for month in exams.archive %}
+            <details class="group" x-show="hasMonth('{{ month.month_label }}')" x-transition:enter="transition-opacity duration-150">
+              <summary class="flex items-center justify-between p-4 cursor-pointer list-none hover:bg-ink-800 transition-colors">
+                <span class="text-xs font-bold uppercase tracking-widest text-ink-500">{{ month.month_label }}</span>
+                <span class="text-[10px] font-semibold text-ink-600">{{ month.count }} kayıt</span>
+              </summary>
+              <div class="divide-y divide-ink-700/60" style="background:rgba(0,0,0,0.2)">
+                {% for exam in month.exams %}
+                <div class="flex items-center justify-between px-4 py-3 hover:bg-ink-800 transition-colors"
+                     x-show="!activeSubject || activeSubject === '{{ exam.subject_key }}'"
+                     x-transition:enter="transition-opacity duration-150">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-2 h-2 rounded-full shrink-0" style="background-color:{{ exam.color }}"></div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-semibold text-ink-100 truncate">{{ exam.subject }}</div>
+                      <div class="text-[10px] text-ink-500 mt-0.5">{{ exam.date_label }} · {{ exam.duration }}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3 shrink-0">
+                    <a href="{{ exam.detail_url }}"
+                       class="text-[10px] font-bold text-steel-400 hover:text-steel-300 uppercase transition-colors">Aç</a>
+                    <div class="text-base font-bold text-ink-50 tnum">{{ exam.net|floatformat:2 }}</div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
+            {% endfor %}
+          </div>
+
+          <div x-show="activeSubject && visibleCount() === 0" x-cloak x-transition class="p-8 text-center">
+            <p class="text-sm text-ink-500">Bu branş için kayıt bulunmuyor.</p>
+            <button type="button" @click="clearSubject()"
+                    class="mt-3 text-sm font-bold text-steel-400 hover:text-steel-300 transition-colors">
+              Tümünü Göster →
+            </button>
+          </div>
+
+          {% else %}
+          <div class="p-8 text-center">
+            <p class="text-sm text-ink-500">Henüz branş denemesi bulunmuyor.</p>
+            {% if not coach_view %}
+            <button @click="openAddExam()" type="button"
+                    class="mt-3 text-sm font-bold text-steel-400 hover:text-steel-300 transition-colors">
+              İlk branş denemeni ekle →
+            </button>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  {# ── Mobile FAB ── #}
+  {% if not coach_view %}
+  <button @click="openAddExam()" type="button"
+          class="md:hidden fixed bottom-24 right-4 w-14 h-14 text-white rounded-2xl shadow-lg
+                 flex items-center justify-center active:scale-95 transition-transform z-30 bg-steel-500"
+          style="box-shadow:0 6px 20px rgba(59,130,246,.40)"
+          aria-label="{{ brans_add_label }}" title="{{ brans_add_label }}">
+    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+         stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+  </button>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function bransHubState() {
   const entries = {{ compare_entries_json|safe }};
@@ -14,465 +396,52 @@ function bransHubState() {
     activeSubjectName: '',
     entries,
     get subjectSlug() { return this.activeSubject; },
-    openAddExam() { window.location.href = this.addUrl; },
+    openAddExam()   { window.location.href = this.addUrl; },
     setSubject(key, name) { this.activeSubject = key; this.activeSubjectName = name; },
-    clearSubject() { this.activeSubject = ''; this.activeSubjectName = ''; },
-    visibleCount() { return this.entries.filter(e => !this.activeSubject || e.subjectKey === this.activeSubject).length; },
-    hasMonth(monthLabel) { return this.entries.some(e => e.monthLabel === monthLabel && (!this.activeSubject || e.subjectKey === this.activeSubject)); },
+    clearSubject()  { this.activeSubject = ''; this.activeSubjectName = ''; },
+    visibleCount()  { return this.entries.filter(e => !this.activeSubject || e.subjectKey === this.activeSubject).length; },
+    hasMonth(label) { return this.entries.some(e => e.monthLabel === label && (!this.activeSubject || e.subjectKey === this.activeSubject)); },
     exportUrl(ext) {
       const params = new URLSearchParams({ period: this.exportPeriod });
-      if (this.studentId) params.set('student_id', this.studentId);
+      if (this.studentId)  params.set('student_id', this.studentId);
       if (this.subjectSlug) params.set('subject', this.subjectSlug);
       return `/brans/export.${ext}?${params.toString()}`;
     },
     exportHTML() { window.location.href = this.exportUrl('html'); },
   };
 }
-</script>
 
-<div class="das-brans-hub -mx-4 -mt-5 sm:-mt-8 min-h-dvh pb-24 flex flex-col"
-     x-data="bransHubState()">
-
-  <header class="das-appbar md:hidden sticky top-0 z-30 border-b border-[var(--border)] px-4 h-14 flex items-center justify-between"
-          style="background:var(--surface-1)">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--primary-tint); color:var(--primary)">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-      </div>
-      <h1 class="text-sm font-bold uppercase tracking-wider" style="color:var(--heading)">Branş Hub</h1>
-    </div>
-    <div class="flex items-center gap-1">
-      <button @click="openAddExam()" type="button"
-              class="w-10 h-10 flex items-center justify-center rounded-xl active:scale-95 transition-transform"
-              style="color:var(--muted)" aria-label="{{ brans_add_label }}">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
-      </button>
-      <div class="relative" x-data="{ open: false }">
-        <button @click="open = !open" type="button"
-                class="w-10 h-10 flex items-center justify-center rounded-xl active:scale-95 transition-transform"
-                :class="open ? 'bg-[var(--surface-2)] text-[var(--primary)]' : ''"
-                style="color:var(--muted)" aria-label="Dışa aktar">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
-          </svg>
-        </button>
-        <div x-show="open" @click.away="open = false"
-             x-transition:enter="transition ease-out duration-100"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             class="absolute right-0 mt-2 w-48 border rounded-2xl shadow-xl overflow-hidden z-50"
-             style="background:var(--surface-1); border-color:var(--border)" x-cloak>
-          <div class="p-2 space-y-1">
-            <a :href="exportUrl('xlsx')" @click="open = false"
-               class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-colors text-left hover:bg-[var(--surface-2)]"
-               style="color:var(--heading)">
-              <svg class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              Excel Olarak İndir
-            </a>
-            <button @click="exportHTML(); open = false"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl transition-colors text-left hover:bg-[var(--surface-2)]"
-                    style="color:var(--heading)">
-              <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              HTML Olarak İndir
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <header class="hidden md:flex items-end justify-between px-6 pt-6 pb-4 border-b border-ink-700 bg-ink-950 shrink-0">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-white flex items-center gap-2">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75"
-             class="text-steel-400" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
-        </svg>
-        {% if coach_view %}{{ student.full_name }} Branş Performansı{% else %}Branş Performansın{% endif %}
-      </h1>
-      <p class="text-sm text-ink-400 mt-1">Son {{ active_period }} · {{ subjects|length }} branş</p>
-    </div>
-    <div class="flex items-center gap-2">
-      {% if not coach_view %}
-      <button @click="openAddExam()" type="button"
-              class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm
-                     font-medium inline-flex items-center gap-1.5 transition-colors">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Yeni Branş Sınavı
-      </button>
-      {% endif %}
-      <div class="inline-flex items-center rounded-lg bg-ink-850 border border-ink-700 p-1">
-        {% for period in period_choices %}
-        <a href="?period={{ period|urlencode }}"
-           class="px-2.5 h-7 text-[11px] rounded font-medium transition-colors
-                  {% if period == active_period %}bg-ink-750 text-steel-300 shadow-sm{% else %}text-ink-400 hover:text-ink-200{% endif %}">
-          {{ period }}
-        </a>
-        {% endfor %}
-      </div>
-      <div class="relative" x-data="{ open: false }">
-        <button @click="open = !open" type="button"
-                class="h-9 px-3 rounded-lg bg-emerald-tint border border-emerald-500/30 text-emerald-500
-                       text-xs font-semibold hover:bg-emerald-500/20 transition-colors inline-flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Excel
-        </button>
-        <div x-show="open" @click.away="open = false"
-             x-transition:enter="transition ease-out duration-100"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             class="absolute right-0 mt-2 w-44 rounded-xl border border-ink-700 bg-ink-850 shadow-card-lg overflow-hidden z-50"
-             x-cloak>
-          <div class="p-1.5 space-y-0.5">
-            <a :href="exportUrl('xlsx')" @click="open = false"
-               class="flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors">
-              <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Excel
-            </a>
-            <button @click="exportHTML(); open = false"
-                    class="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors text-left">
-              <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              HTML
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  {% if coach_view %}
-  <div class="sticky top-14 z-20 border-b border-ink-700 bg-ink-900/90 backdrop-blur shrink-0">
-    <div class="w-full px-4 md:px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
-          {{ student_initials }}
-        </div>
-        <div class="text-left min-w-0">
-          <div class="text-[10px] font-bold text-ink-500 uppercase tracking-tight">Öğrenci İzleniyor</div>
-          <div class="text-sm font-bold text-ink-100 truncate">{{ student.full_name }}</div>
-        </div>
-      </div>
-      <a href="{% url 'coach:student_detail' student.id %}"
-         class="text-[10px] font-bold text-steel-400 hover:text-steel-300 uppercase tracking-wider transition-colors">
-        Profil
-      </a>
-    </div>
-  </div>
-  {% endif %}
-
-  <main class="flex-1 overflow-y-auto">
-
-    <section class="p-4 md:px-6 pt-6 md:hidden">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-black uppercase tracking-tight" style="color:var(--heading)">
-          {% if coach_view %}Branş Performansı{% else %}Branş Performansın{% endif %}
-        </h2>
-      </div>
-      <div class="das-filter-row -mx-4 px-4 flex gap-2 overflow-x-auto no-scrollbar">
-        {% for period in period_choices %}
-        <a href="?period={{ period|urlencode }}"
-           class="das-filter-chip{% if period == active_period %} active{% endif %}">{{ period }}</a>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="px-4 md:px-6 mb-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {% for subject in subjects %}
-
-        <div class="hidden md:block rounded-xl border-l-4 bg-ink-850 hover:bg-ink-800 transition-colors p-4 cursor-pointer border border-ink-700 hover:border-ink-600"
-             style="border-left-color:{{ subject.color }}"
-             @click="window.location.href = '{% if coach_view %}{% url 'coach:student_brans_subject_detail' student.id subject.key %}{% else %}{% url 'brans_subject_detail' subject.key %}{% endif %}'"
-             :class="activeSubject === '{{ subject.key }}' ? 'ring-2 ring-steel-500/50' : ''">
-          <div class="flex items-center justify-between">
-            <p class="text-[10px] uppercase tracking-wider text-ink-400 font-bold">{{ subject.name }}</p>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tnum
-                         {% if subject.trend == 'up' %}bg-emerald-tint text-emerald-500{% else %}bg-ruby-tint text-ruby-500{% endif %}">
-              {% if subject.trend == 'up' %}▲{% else %}▼{% endif %} {{ subject.delta|floatformat:2 }}
-            </span>
-          </div>
-          <p class="mt-2 text-3xl font-bold text-ink-50 tnum">{{ subject.net|floatformat:1 }}</p>
-          <div class="mt-3 grid grid-cols-5 gap-1">
-            <div class="h-1.5 rounded-full opacity-40" style="background:{{ subject.color }}"></div>
-            <div class="h-1.5 rounded-full opacity-55" style="background:{{ subject.color }}"></div>
-            <div class="h-1.5 rounded-full opacity-55" style="background:{{ subject.color }}"></div>
-            <div class="h-1.5 rounded-full opacity-55" style="background:{{ subject.color }}"></div>
-            <div class="h-1.5 rounded-full opacity-85" style="background:{{ subject.color }}"></div>
-          </div>
-        </div>
-
-        <div class="md:hidden das-card p-4 flex flex-col gap-3 {{ subject.class_name }} cursor-pointer"
-             role="button"
-             @click="window.location.href = '{% if coach_view %}{% url 'coach:student_brans_subject_detail' student.id subject.key %}{% else %}{% url 'brans_subject_detail' subject.key %}{% endif %}'"
-             :class="activeSubject === '{{ subject.key }}' ? 'ring-2 ring-[var(--primary)]' : ''">
-          <div class="das-kpi-label">{{ subject.name }}</div>
-          <div class="flex items-end justify-between">
-            <div class="das-kpi-value">{{ subject.net|floatformat:1 }}</div>
-            <div class="delta {{ subject.trend }}">
-              {% if subject.trend == 'up' %}
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-              {% else %}
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              {% endif %}
-              <span>{{ subject.delta|floatformat:2 }}</span>
-            </div>
-          </div>
-          <div class="mt-1 h-6 w-full flex items-end gap-0.5 opacity-40">
-            <div class="w-full h-1/3 rounded-t-[2px]" style="background-color:{{ subject.color }}"></div>
-            <div class="w-full h-1/2 rounded-t-[2px]" style="background-color:{{ subject.color }}"></div>
-            <div class="w-full h-2/3 rounded-t-[2px]" style="background-color:{{ subject.color }}"></div>
-            <div class="w-full h-1/2 rounded-t-[2px]" style="background-color:{{ subject.color }}"></div>
-            <div class="w-full h-4/5 rounded-t-[2px]" style="background-color:{{ subject.color }}"></div>
-          </div>
-        </div>
-
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="px-4 md:px-6 mb-6">
-      <div class="das-section-head px-0">
-        <h2>Branş Trendi</h2>
-      </div>
-      <div class="das-card overflow-hidden" style="height:260px; padding:12px;">
-        <canvas id="bransChart"></canvas>
-      </div>
-    </section>
-
-    <section class="px-4 md:px-6 mb-6">
-      <div class="das-section-head px-0">
-        <div>
-          <h2 x-text="activeSubject ? activeSubjectName + ' Denemeleri' : 'Son Branş Denemeleri'">Son Branş Denemeleri</h2>
-          <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1"
-               x-text="visibleCount() + ' kayıt'"></div>
-        </div>
-        <span class="das-section-link">Hub</span>
-      </div>
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-3" x-show="activeSubject" x-transition x-cloak>
-        <button type="button" @click="clearSubject()" class="das-filter-chip active">Filtreyi Temizle</button>
-        <span class="das-filter-chip" x-text="activeSubjectName"></span>
-      </div>
-      <div class="das-card p-0 overflow-hidden">
-        {% if exams.total_count %}
-        <div class="divide-y divide-[var(--border)]">
-          {% for exam in exams.recent %}
-          <div class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors"
-               x-show="!activeSubject || activeSubject === '{{ exam.subject_key }}'"
-               x-transition.opacity role="button">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-2 h-2 rounded-full shrink-0" style="background-color:{{ exam.color }}"></div>
-              <div class="min-w-0">
-                <div class="text-sm font-bold leading-tight truncate" style="color:var(--heading)">{{ exam.subject }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider mt-0.5" style="color:var(--muted)">{{ exam.date_label }} • {{ exam.duration }}</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-3 shrink-0">
-              <a href="{{ exam.detail_url }}" class="text-[10px] font-bold uppercase" style="color:var(--primary)">Aç</a>
-              <div class="text-lg font-black tabular-nums" style="color:var(--heading)">{{ exam.net|floatformat:2 }}</div>
-            </div>
-          </div>
-          {% empty %}
-          <div class="p-4 text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Son 30 günde branş denemesi yok.</div>
-          {% endfor %}
-
-          {% for month in exams.archive %}
-          <details class="group" x-show="hasMonth('{{ month.month_label }}')" x-transition.opacity>
-            <summary class="flex items-center justify-between p-4 cursor-pointer list-none active:bg-[var(--surface-2)] transition-colors">
-              <span class="text-xs font-black uppercase tracking-widest" style="color:var(--muted)">{{ month.month_label }}</span>
-              <span class="text-[10px] font-bold" style="color:var(--muted-2)">{{ month.count }} kayıt</span>
-            </summary>
-            <div class="divide-y divide-[var(--border)]" style="background:rgba(0,0,0,0.15)">
-              {% for exam in month.exams %}
-              <div class="flex items-center justify-between px-4 py-3"
-                   x-show="!activeSubject || activeSubject === '{{ exam.subject_key }}'"
-                   x-transition.opacity>
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="w-2 h-2 rounded-full shrink-0" style="background-color:{{ exam.color }}"></div>
-                  <div class="min-w-0">
-                    <div class="text-sm font-bold leading-tight truncate" style="color:var(--heading)">{{ exam.subject }}</div>
-                    <div class="text-[10px] font-bold uppercase tracking-wider mt-0.5" style="color:var(--muted)">{{ exam.date_label }} • {{ exam.duration }}</div>
-                  </div>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                  <a href="{{ exam.detail_url }}" class="text-[10px] font-bold uppercase" style="color:var(--primary)">Aç</a>
-                  <div class="text-base font-black tabular-nums" style="color:var(--heading)">{{ exam.net|floatformat:2 }}</div>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </details>
-          {% endfor %}
-        </div>
-        <div x-show="activeSubject && visibleCount() === 0" x-cloak x-transition class="p-8 text-center">
-          <div class="text-sm font-bold" style="color:var(--muted)">Bu branş için kayıt bulunmuyor.</div>
-          <button type="button" @click="clearSubject()"
-                  class="inline-block mt-3 text-sm font-bold" style="color:var(--primary)">Tümünü Göster →</button>
-        </div>
-        {% else %}
-        <div class="p-8 text-center">
-          <div class="text-sm font-bold" style="color:var(--muted)">Henüz branş denemesi bulunmuyor.</div>
-          {% if not coach_view %}
-          <button @click="openAddExam()" type="button"
-                  class="inline-block mt-3 text-sm font-bold" style="color:var(--primary)">İlk branş denemeni ekle →</button>
-          {% else %}
-          <button @click="openAddExam()" type="button"
-                  class="inline-block mt-3 text-sm font-bold" style="color:var(--primary)">{{ student.full_name }} için ekle →</button>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
-    </section>
-
-    <button @click="openAddExam()" type="button"
-            class="md:hidden fixed bottom-24 right-4 w-14 h-14 text-white rounded-2xl shadow-lg flex items-center justify-center active:scale-95 transition-transform z-30"
-            style="background:var(--primary); box-shadow:0 6px 20px rgba(109,91,255,.45)"
-            aria-label="{{ brans_add_label }}" title="{{ brans_add_label }}">
-      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
-    </button>
-
-    <section class="px-4 md:px-6 mb-12 space-y-3">
-      {% for insight in insights %}
-      <a href="{{ insight.url }}" class="das-card border-l-4 {{ insight.class_name }} block" role="button">
-        <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-2xl {{ insight.icon_class }} flex items-center justify-center shrink-0">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          </div>
-          <div class="flex-1">
-            <h4 class="text-sm font-bold leading-tight mb-1">{{ insight.text }}</h4>
-            <p class="text-[11px] font-medium opacity-80 leading-relaxed">{{ active_period }} verilerine göre oluşturuldu.</p>
-          </div>
-        </div>
-      </a>
-      {% endfor %}
-    </section>
-
-  </main>
-</div>
-
-<style>
-  .das-brans-hub {
-    --bg:           #f8fafc;
-    --surface-1:    #ffffff;
-    --surface-2:    #f4f4f8;
-    --border:       #e2e2ea;
-    --primary:      #3a7fce;
-    --primary-tint: rgba(58,127,206,0.10);
-    --turkce:       #3B82F6;
-    --mat:          #A78BFA;
-    --sosyal:       #F59E0B;
-    --fen:          #10B981;
-    --fizik:        #06B6D4;
-    --kimya:        #F97316;
-    --biyoloji:     #84CC16;
-    --up:           #22C55E;
-    --up-tint:      rgba(34,197,94,0.12);
-    --down:         #EF4444;
-    --down-tint:    rgba(239,68,68,0.12);
-    --heading:      #111118;
-    --body:         #2d2d3a;
-    --muted:        #6b6b80;
-    --muted-2:      #9898ad;
-    --r-card:       12px;
-    --r-pill:       9999px;
-  }
-  html.dark .das-brans-hub {
-    --bg:           #0a0e14;
-    --surface-1:    #131820;
-    --surface-2:    #1a2030;
-    --border:       #2a3142;
-    --primary:      #4a90e2;
-    --primary-tint: rgba(74,144,226,0.12);
-    --up:           #10b981;
-    --up-tint:      rgba(16,185,129,0.12);
-    --down:         #ef4444;
-    --down-tint:    rgba(239,68,68,0.12);
-    --heading:      #e8ecf3;
-    --body:         #cbd5e1;
-    --muted:        #5b6477;
-    --muted-2:      #94a3b8;
-  }
-  .das-brans-hub .das-card { background:var(--surface-1); border:1px solid var(--border); border-radius:var(--r-card); position:relative; box-shadow:0 1px 3px rgba(0,0,0,.4); }
-  .das-brans-hub .das-card[role="button"]:active { transform:scale(.99); }
-  .das-brans-hub .das-card.accent-turkce  { border-left:3px solid var(--turkce);  padding-left:14px; }
-  .das-brans-hub .das-card.accent-mat     { border-left:3px solid var(--mat);     padding-left:14px; }
-  .das-brans-hub .das-card.accent-sosyal  { border-left:3px solid var(--sosyal);  padding-left:14px; }
-  .das-brans-hub .das-card.accent-fen     { border-left:3px solid var(--fen);     padding-left:14px; }
-  .das-brans-hub .das-card.accent-fizik   { border-left:3px solid var(--fizik);   padding-left:14px; }
-  .das-brans-hub .das-card.accent-kimya   { border-left:3px solid var(--kimya);   padding-left:14px; }
-  .das-brans-hub .das-card.accent-biyoloji { border-left:3px solid var(--biyoloji); padding-left:14px; }
-  .das-brans-hub .das-kpi-label { font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
-  .das-brans-hub .das-kpi-value { font-size:24px; font-weight:800; letter-spacing:-.02em; color:var(--heading); line-height:1; }
-  .das-brans-hub .delta { display:inline-flex; align-items:center; gap:2px; padding:2px 6px; border-radius:var(--r-pill); font-size:10px; font-weight:700; }
-  .das-brans-hub .delta.up   { background:var(--up-tint);   color:var(--up); }
-  .das-brans-hub .delta.down { background:var(--down-tint); color:var(--down); }
-  .das-brans-hub .das-filter-row { display:flex; overflow-x:auto; scrollbar-width:none; }
-  .das-brans-hub .das-filter-row::-webkit-scrollbar { display:none; }
-  .das-brans-hub .das-filter-chip { flex-shrink:0; height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--surface-2); border:1px solid var(--border); color:var(--body); font-size:12px; font-weight:600; display:inline-flex; align-items:center; }
-  .das-brans-hub .das-filter-chip.active { background:var(--primary-tint); border-color:var(--primary); color:var(--primary); }
-  .das-brans-hub .das-section-head { display:flex; align-items:baseline; justify-content:space-between; padding:24px 0 12px; }
-  .das-brans-hub .das-section-head h2 { font-size:12px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.05em; }
-  .das-brans-hub .das-section-link { font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; }
-  .no-scrollbar::-webkit-scrollbar { display:none; }
-  .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
 (function () {
   const raw = {{ brans_chart_json|safe }};
 
   if (!raw.has_data || !raw.labels.length) {
     const canvas = document.getElementById('bransChart');
     if (canvas) {
-      canvas.parentElement.style.display = 'flex';
-      canvas.parentElement.style.alignItems = 'center';
-      canvas.parentElement.style.justifyContent = 'center';
+      canvas.parentElement.style.cssText += 'display:flex;align-items:center;justify-content:center;';
       canvas.style.display = 'none';
       const msg = document.createElement('p');
       msg.textContent = 'Henüz yeterli branş denemesi yok.';
-      msg.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:center;';
+      msg.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#5b6477;text-align:center;';
       canvas.parentElement.appendChild(msg);
     }
     return;
   }
 
-  // Phase 7 distinct subject palette — explicitly assigned by label in JS
-  // so Chart.js always receives programmatic Color objects, never JSON strings.
-  const PALETTE = {
-    'Türkçe':   { border: '#3B82F6', point: '#3B82F6', bg: 'rgba(59,130,246,0.08)'  },
-    'Matematik':{ border: '#EF4444', point: '#EF4444', bg: 'rgba(239,68,68,0.08)'   },
-    'Sosyal':   { border: '#F59E0B', point: '#F59E0B', bg: 'rgba(245,158,11,0.08)'  },
-    'Fen':      { border: '#10B981', point: '#10B981', bg: 'rgba(16,185,129,0.08)'  },
-  };
-  const FALLBACKS = ['#6ba8f0','#f87171','#fbbf24','#34d399','#a78bfa','#fb923c'];
+  const FALLBACKS = ['#6ba8f0','#f87171','#fbbf24','#34d399','#a78bfa','#fb923c','#38bdf8','#4ade80'];
 
-  const datasets = raw.datasets.map((ds, idx) => {
-    const palette = PALETTE[ds.label] || {
-      border: FALLBACKS[idx % FALLBACKS.length],
-      point:  FALLBACKS[idx % FALLBACKS.length],
-      bg:     'rgba(148,163,184,0.08)',
-    };
-    return {
-      label:               ds.label,
-      data:                ds.data,
-      borderColor:         palette.border,
-      pointBackgroundColor: palette.point,
-      pointBorderColor:    palette.border,
-      backgroundColor:     palette.bg,
-      borderWidth:         3,
-      pointRadius:         4,
-      pointHoverRadius:    7,
-      tension:             0.35,
-      fill:                false,
-      spanGaps:            true,
-    };
-  });
+  const datasets = raw.datasets.map((ds, idx) => ({
+    label:                ds.label,
+    data:                 ds.data,
+    borderColor:          ds.borderColor || FALLBACKS[idx % FALLBACKS.length],
+    pointBackgroundColor: ds.borderColor || FALLBACKS[idx % FALLBACKS.length],
+    backgroundColor:      'transparent',
+    borderWidth:          2.5,
+    pointRadius:          4,
+    pointHoverRadius:     7,
+    tension:              0.35,
+    fill:                 false,
+    spanGaps:             true,
+  }));
 
   const isMobile = window.innerWidth < 640;
   new Chart(document.getElementById('bransChart'), {
@@ -487,11 +456,11 @@ function bransHubState() {
           position: 'bottom',
           labels: {
             usePointStyle: true,
-            pointStyle:    'circle',
-            boxWidth:      isMobile ? 8  : 10,
-            padding:       isMobile ? 10 : 16,
-            font:          { size: isMobile ? 10 : 11, weight: '600' },
-            color:         '#94a3b8',
+            pointStyle: 'circle',
+            boxWidth:   isMobile ? 8 : 10,
+            padding:    isMobile ? 10 : 16,
+            font:       { size: isMobile ? 10 : 11, weight: '600' },
+            color:      '#94a3b8',
           },
         },
         tooltip: {
@@ -513,11 +482,7 @@ function bransHubState() {
       scales: {
         x: {
           grid:  { display: false },
-          ticks: {
-            color:         '#5b6477',
-            font:          { size: isMobile ? 9 : 10 },
-            maxTicksLimit: isMobile ? 4 : 10,
-          },
+          ticks: { color: '#5b6477', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : 10 },
         },
         y: {
           grid:  { color: 'rgba(42,49,66,0.6)', drawBorder: false },

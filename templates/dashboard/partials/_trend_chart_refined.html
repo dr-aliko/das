@@ -10,25 +10,46 @@
       <h2>{% trans "Genel Deneme Net Trendi" %}</h2>
       <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide" x-text="periodLabel">{{ chart_period_label }}</div>
     </div>
-    <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
-      <button @click="setPeriod('7')"
-              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-              :disabled="loading"
-              :class="period === '7'
-                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                : 'text-[var(--muted)]'">{% trans "7G" %}</button>
-      <button @click="setPeriod('30')"
-              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-              :disabled="loading"
-              :class="period === '30'
-                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                : 'text-[var(--muted)]'">{% trans "30G" %}</button>
-      <button @click="setPeriod('all')"
-              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-              :disabled="loading"
-              :class="period === 'all'
-                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                : 'text-[var(--muted)]'">{% trans "Tümü" %}</button>
+    <div class="flex items-center gap-2">
+
+      {# Task 1: View mode toggle — Ders Bazlı ↔ Genel Net #}
+      <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
+        <button @click="viewMode !== 'subject' && toggleView()"
+                :disabled="loading"
+                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+                :class="viewMode === 'subject'
+                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                  : 'text-[var(--muted)]'">{% trans "Ders" %}</button>
+        <button @click="viewMode !== 'total' && toggleView()"
+                :disabled="loading"
+                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+                :class="viewMode === 'total'
+                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                  : 'text-[var(--muted)]'">{% trans "Genel" %}</button>
+      </div>
+
+      {# Period switcher #}
+      <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
+        <button @click="setPeriod('7')"
+                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+                :disabled="loading"
+                :class="period === '7'
+                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                  : 'text-[var(--muted)]'">{% trans "7G" %}</button>
+        <button @click="setPeriod('30')"
+                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+                :disabled="loading"
+                :class="period === '30'
+                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                  : 'text-[var(--muted)]'">{% trans "30G" %}</button>
+        <button @click="setPeriod('all')"
+                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+                :disabled="loading"
+                :class="period === 'all'
+                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                  : 'text-[var(--muted)]'">{% trans "Tümü" %}</button>
+      </div>
+
     </div>
   </div>
 
@@ -69,7 +90,8 @@
           </div>
         </div>
       </div>
-      <a href="#"
+      {# Task 2: Link to denemeler detail page #}
+      <a href="/student/denemeler/"
          class="text-[11px] font-bold text-[var(--primary)] flex items-center gap-1">
         {% trans "Detay" %}
         {% include "components/_icon.html" with name="chev-right" size=12 %}

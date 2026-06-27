@@ -13,7 +13,7 @@
       <div class="flex items-end justify-between gap-4">
         <div>
           <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">{% trans "Denemelerim" %}</h1>
-          <p class="text-sm text-ink-400 mt-1">{{ exams.total_count }} deneme</p>
+          <p class="text-sm text-ink-400 mt-1" id="das-exam-count">{{ exams.total_count }} deneme</p>
         </div>
         <div class="flex items-center gap-2">
           <button @click="sortOpen = true"
@@ -45,6 +45,7 @@
       </div>
     </div>
 
+    {# ── Mobile filter strip ── #}
     <div class="md:hidden sticky top-14 z-20 border-b border-ink-700 py-2 space-y-2"
          style="background:rgba(10,14,20,0.95); backdrop-filter:blur(10px);">
       <div class="flex overflow-x-auto gap-2 px-4 no-scrollbar overscroll-x-contain">
@@ -100,6 +101,7 @@
       </div>
     </div>
 
+    {# ── Desktop filter bar ── #}
     <div class="hidden md:flex flex-wrap items-center gap-2 px-6 py-3 border-b border-ink-700">
       <button @click="setPeriod('')"
               class="h-8 px-3 rounded-full text-xs font-medium transition-colors"
@@ -148,147 +150,34 @@
       </button>
     </div>
 
-    <div class="p-4 md:p-6 space-y-8">
+    {# ── Exam cards (swappable via AJAX) ── #}
+    <div class="p-4 md:p-6">
 
-      {% if exams.total_count == 0 %}
+      {% if all_exam_count == 0 %}
         {% include "dashboard/partials/_denemeler_empty_states.html" with state="total_empty" %}
 
       {% else %}
-      <section>
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">{% trans "Son 30 Gün" %} · {{ exams.recent|length }} {% trans "deneme" %}</p>
-        </div>
-        {% if exams.recent|length and exams.recent|length < sparse_threshold %}
-          <div class="max-w-prose-wide mx-auto mb-4">
-            {% include "dashboard/partials/_denemeler_empty_states.html" with state="sparse_banner" %}
+
+        {# ── Mini progress chart (2+ exams) ── #}
+        {% if all_exam_count >= 2 %}
+        <div class="mb-6 rounded-xl border border-ink-700 bg-ink-900 overflow-hidden"
+             x-data="denemeProgressChart()">
+          <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">
+              {% trans "Net Gelişimi" %}
+            </p>
+            <p class="text-[10px] text-ink-500 tnum" x-text="chartSummary"></p>
           </div>
+          <div class="relative" style="height:110px;">
+            <canvas id="denemeProgressCanvas"></canvas>
+          </div>
+        </div>
         {% endif %}
 
-        <div class="max-w-prose-wide space-y-2">
-          {% for exam in exams.recent %}
-          <div class="relative rounded-xl border bg-ink-850 hover:bg-ink-800 hover:border-ink-600
-                      transition-colors p-4 border-l-4 cursor-pointer select-none
-                      {% if exam.type == 'TYT' %}border-ink-700 hover:border-ink-600{% elif exam.type == 'AYT' %}border-ink-700 hover:border-ink-600{% else %}border-ink-700 hover:border-ink-600{% endif %}"
-               style="border-left-color:{% if exam.type == 'TYT' %}#3B82F6{% elif exam.type == 'AYT' %}#A78BFA{% else %}#F59E0B{% endif %}"
-               role="button" tabindex="0"
-               @click="compareMode ? toggleSelection({{ exam.id }}, '{{ exam.type }}') : (window.location.href = '{% url 'student:exam_detail' exam.id %}')"
-               @keydown.enter.prevent="$el.click()"
-               @keydown.space.prevent="$el.click()">
-            <div class="flex items-center gap-4">
-              <div x-show="compareMode"
-                   x-transition:enter="transition ease-out duration-150"
-                   x-transition:enter-start="opacity-0 -translate-x-1"
-                   x-transition:enter-end="opacity-100 translate-x-0"
-                   class="shrink-0" x-cloak>
-                <div class="w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center"
-                     :class="selected.some(s => s.id === {{ exam.id }}) ? 'bg-steel-500 border-steel-500' : 'border-ink-600'">
-                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                       x-show="selected.some(s => s.id === {{ exam.id }})">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                  </svg>
-                </div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="text-[10px] font-bold text-steel-400 uppercase tracking-wider">{{ exam.type }}</span>
-                  <span class="text-[10px] text-ink-500">·</span>
-                  <span class="text-[11px] text-ink-400 truncate">{{ exam.publisher }}</span>
-                </div>
-                <p class="text-sm font-semibold text-ink-100">{{ exam.date|date:"d M Y" }}</p>
-              </div>
-              <div class="text-right shrink-0">
-                <p class="text-lg font-bold text-ink-50 tnum leading-none">{{ exam.net|floatformat:2 }}</p>
-                <div class="mt-0.5 flex justify-end">
-                  {% if exam.delta is not None %}
-                    {% if exam.delta > 0 %}
-                    <span class="text-[11px] font-bold text-emerald-500 tnum">▲ +{{ exam.delta|floatformat:2 }}</span>
-                    {% elif exam.delta < 0 %}
-                    <span class="text-[11px] font-bold text-ruby-500 tnum">▼ {{ exam.delta|floatformat:2 }}</span>
-                    {% endif %}
-                  {% endif %}
-                </div>
-              </div>
-              <svg x-show="!compareMode" class="w-4 h-4 text-ink-500 shrink-0" fill="none"
-                   stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <use href="#das-icon-chev-right"/>
-              </svg>
-            </div>
-          </div>
-          {% empty %}
-            {% include "dashboard/partials/_denemeler_empty_states.html" with state="recent_empty" %}
-          {% endfor %}
+        <div id="das-exam-cards" :class="cardsLoading ? 'opacity-50 pointer-events-none' : ''">
+          {% include "dashboard/partials/_denemeler_cards.html" %}
         </div>
-      </section>
-      {% endif %}
 
-      {% if exams.archive %}
-      <section>
-        <h2 class="text-[10px] uppercase tracking-wider text-ink-500 font-bold mb-4">{% trans "Arşiv" %}</h2>
-        <div class="max-w-prose-wide space-y-3">
-          {% for month in exams.archive %}
-          <details class="group rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
-            <summary class="flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-ink-800 transition-colors">
-              <div class="flex items-center gap-3">
-                <span class="font-semibold text-ink-100">{{ month.month_label }}</span>
-                <span class="text-[11px] font-bold text-ink-500 bg-ink-800 border border-ink-700 px-2 py-0.5 rounded-full tnum">
-                  {{ month.count }}
-                </span>
-              </div>
-              <svg class="w-4 h-4 text-ink-500 transition-transform duration-200 group-open:rotate-180"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#das-icon-chev-down"/>
-              </svg>
-            </summary>
-            <div class="px-4 pb-4 space-y-2 border-t border-ink-700 pt-3">
-              {% for exam in month.exams %}
-              <div class="relative rounded-xl border bg-ink-800 hover:bg-ink-750 hover:border-ink-600
-                          transition-colors p-3.5 border-l-4 cursor-pointer select-none"
-                   style="border-left-color:{% if exam.type == 'TYT' %}#3B82F6{% elif exam.type == 'AYT' %}#A78BFA{% else %}#F59E0B{% endif %};border-color:#2a3142"
-                   role="button" tabindex="0"
-                   @click="compareMode ? toggleSelection({{ exam.id }}, '{{ exam.type }}') : (window.location.href = '{% url 'student:exam_detail' exam.id %}')"
-                   @keydown.enter.prevent="$el.click()">
-                <div class="flex items-center gap-4">
-                  <div x-show="compareMode" class="shrink-0" x-cloak>
-                    <div class="w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center"
-                         :class="selected.some(s => s.id === {{ exam.id }}) ? 'bg-steel-500 border-steel-500' : 'border-ink-600'">
-                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                           x-show="selected.some(s => s.id === {{ exam.id }})">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-0.5">
-                      <span class="text-[10px] font-bold text-steel-400 uppercase tracking-wider">{{ exam.type }}</span>
-                      <span class="text-[10px] text-ink-500">·</span>
-                      <span class="text-[11px] text-ink-400 truncate">{{ exam.publisher }}</span>
-                    </div>
-                    <p class="text-sm font-medium text-ink-100">{{ exam.date|date:"d M Y" }}</p>
-                  </div>
-                  <div class="text-right shrink-0">
-                    <p class="text-base font-bold text-ink-50 tnum leading-none">{{ exam.net|floatformat:2 }}</p>
-                    {% if exam.delta is not None %}
-                    <div class="mt-0.5 flex justify-end">
-                      {% if exam.delta > 0 %}
-                      <span class="text-[11px] font-bold text-emerald-500 tnum">▲ +{{ exam.delta|floatformat:2 }}</span>
-                      {% elif exam.delta < 0 %}
-                      <span class="text-[11px] font-bold text-ruby-500 tnum">▼ {{ exam.delta|floatformat:2 }}</span>
-                      {% endif %}
-                    </div>
-                    {% endif %}
-                  </div>
-                  <svg x-show="!compareMode" class="w-4 h-4 text-ink-500 shrink-0" fill="none"
-                       stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="#das-icon-chev-right"/>
-                  </svg>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </details>
-          {% endfor %}
-        </div>
-      </section>
       {% endif %}
 
     </div>
@@ -297,67 +186,13 @@
   {% include "dashboard/partials/_filter_sort_sheets.html" %}
   {% include "dashboard/partials/_compare_sticky_cta.html" %}
 
-  {# ── Trial exam topic error accordion ── #}
-  {% if trial_topics %}
+  {# ── Topic error accordion ── #}
+  {% if all_exam_count > 0 %}
   <div class="mt-6 mb-28">
-    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden max-w-prose-wide">
-
-      <div class="px-4 md:px-6 py-3 border-b border-ink-700 flex items-center justify-between">
-        <h2 class="text-xs font-semibold text-ink-400 uppercase tracking-wider">En Çok Hata Yapılan Konular</h2>
-        {% if filters.period %}
-        <span class="text-[10px] text-ink-500 font-medium">
-          Son {{ filters.period }} gün · tüm branşlar
-        </span>
-        {% else %}
-        <span class="text-[10px] text-ink-500 font-medium">tüm zamanlar · tüm branşlar</span>
-        {% endif %}
-      </div>
-
-      {% for topic in trial_topics %}
-      <div class="border-b border-ink-700 last:border-0" x-data="{ expanded: false }">
-        <button @click="expanded = !expanded"
-                class="w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left
-                       hover:bg-ink-800 active:bg-ink-800"
-                :class="expanded && 'bg-ink-800'">
-          <div class="w-8 h-8 rounded-lg bg-ruby-tint flex items-center justify-center
-                      text-ruby-500 font-bold text-[10px] shrink-0">{{ topic.errors }}</div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-ink-100 truncate">{{ topic.name }}</p>
-            <p class="text-[10px] text-ink-400 mt-0.5">
-              {{ topic.subject }} · {{ topic.errors }} hata · {{ topic.exams|length }} sınav
-            </p>
-          </div>
-          <svg class="w-4 h-4 text-ink-500 shrink-0 transition-transform duration-200"
-               :class="expanded && 'rotate-180'"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#das-icon-chev-down"/>
-          </svg>
-        </button>
-        <div x-show="expanded" x-collapse>
-          <div class="pb-2 space-y-1 px-3">
-            {% for exam in topic.exams %}
-            <a href="{{ exam.url }}"
-               class="flex items-center gap-2.5 px-3 py-2 rounded-lg ml-3
-                      border-l-2 border-steel-500/50 bg-ink-900/50
-                      hover:bg-ink-800 hover:text-ink-100
-                      text-ink-400 transition-colors">
-              <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold truncate text-ink-100">{{ exam.name }}</p>
-                <p class="text-[10px] text-ink-500 mt-0.5">{{ exam.date }}</p>
-              </div>
-              <span class="text-[10px] font-bold text-ruby-500 shrink-0">{{ exam.errors }}Y</span>
-              <svg class="w-3 h-3 shrink-0 text-ink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#das-icon-chev-right"/>
-              </svg>
-            </a>
-            {% empty %}
-            <p class="text-xs text-ink-500 px-3 pb-2">Sınav detayı bulunamadı.</p>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden max-w-prose-wide transition-opacity"
+         :class="topicsLoading ? 'opacity-50 pointer-events-none' : ''"
+         id="das-topic-errors">
+      {% include "dashboard/partials/_denemeler_topics.html" with trial_topics=trial_topics filters=filters topic_subjects=topic_subjects %}
     </div>
   </div>
   {% endif %}
@@ -367,12 +202,63 @@
 
 {% block extra_js %}
 <script>
+/* ── Exam progress mini chart ── */
+function denemeProgressChart() {
+  return {
+    chartSummary: '',
+    init() {
+      const raw = {{ chart_data|safe }};
+      if (!raw.length) return;
+      const labels = raw.map(p => p.d);
+      const data   = raw.map(p => p.n);
+      const first  = data[0], last = data[data.length - 1];
+      const delta  = last - first;
+      this.chartSummary = (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' son ' + data.length + ' denemede';
+
+      const ctx = document.getElementById('denemeProgressCanvas');
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            borderColor: '#6D5BFF',
+            backgroundColor: 'rgba(109,91,255,0.08)',
+            borderWidth: 2,
+            tension: 0.35,
+            fill: true,
+            pointRadius: data.length <= 8 ? 3 : 0,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#6D5BFF',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: {
+            callbacks: { label: ctx => ' ' + ctx.parsed.y.toFixed(2) },
+          }},
+          scales: {
+            x: { display: false },
+            y: { display: false, min: Math.max(0, Math.min(...data) - 5) },
+          },
+        },
+      });
+    },
+  };
+}
+
+/* ── Main compareModeState ── */
 function compareModeState() {
   return {
-    compareMode: false,
-    selected: [],
+    compareMode:   false,
+    selected:      [],
+    cardsLoading:  false,
+    topicsLoading: false,
+    topicSubject:  '',
 
-    init() { document.body.classList.remove('compare-active'); },
+    init()    { document.body.classList.remove('compare-active'); },
     destroy() { document.body.classList.remove('compare-active'); },
 
     toggleCompareMode() {
@@ -393,10 +279,10 @@ function compareModeState() {
       this.selected.push({ id, type });
     },
 
-    sortOpen:   false,
-    filterOpen: false,
-    activePeriod: '{{ filters.period|default:"" }}',
-    activeSort:   '{{ filters.sort|default:"date" }}',
+    sortOpen:      false,
+    filterOpen:    false,
+    activePeriod:  '{{ filters.period|default:"" }}',
+    activeSort:    '{{ filters.sort|default:"date" }}',
     activeHasNote: {% if filters.has_note %}true{% else %}false{% endif %},
 
     get activeFilterCount() {
@@ -406,23 +292,54 @@ function compareModeState() {
       return n;
     },
 
-    applyFilters() {
-      const p = new URLSearchParams(window.location.search);
-      p.set('denemeler_v2', '1');
-      this.activePeriod ? p.set('period', this.activePeriod) : p.delete('period');
-      this.activeSort !== 'date' ? p.set('sort', this.activeSort) : p.delete('sort');
-      this.activeHasNote ? p.set('has_note', '1') : p.delete('has_note');
-      window.location.search = p.toString();
+    async fetchCards() {
+      const p = new URLSearchParams();
+      if (this.activePeriod)          p.set('period',   this.activePeriod);
+      if (this.activeSort !== 'date') p.set('sort',     this.activeSort);
+      if (this.activeHasNote)         p.set('has_note', '1');
+      this.cardsLoading = true;
+      try {
+        const html = await fetch('/student/denemeler/cards/?' + p).then(r => r.text());
+        const el   = document.getElementById('das-exam-cards');
+        if (el) el.innerHTML = html;
+      } finally {
+        this.cardsLoading = false;
+      }
     },
 
-    setSort(val)   { this.activeSort = val; this.sortOpen = false; this.applyFilters(); },
-    setPeriod(val) { this.activePeriod = val; this.applyFilters(); },
+    async fetchTopics() {
+      const p = new URLSearchParams();
+      if (this.activePeriod)  p.set('period',  this.activePeriod);
+      if (this.topicSubject)  p.set('subject', this.topicSubject);
+      this.topicsLoading = true;
+      try {
+        const html = await fetch('/student/denemeler/topics/?' + p).then(r => r.text());
+        const el   = document.getElementById('das-topic-errors');
+        if (el) el.innerHTML = html;
+      } finally {
+        this.topicsLoading = false;
+      }
+    },
+
+    // Period change drives both sections in parallel
+    setPeriod(val) {
+      this.activePeriod = val;
+      Promise.all([this.fetchCards(), this.fetchTopics()]);
+    },
+
+    // Sort is cards-only
+    setSort(val) { this.activeSort = val; this.sortOpen = false; this.fetchCards(); },
+
+    // Reset clears period + has_note, syncs both sections
     resetFilters() {
       this.activePeriod  = '';
       this.activeHasNote = false;
       this.filterOpen    = false;
-      this.applyFilters();
+      Promise.all([this.fetchCards(), this.fetchTopics()]);
     },
+
+    // Subject filter is topic-section-only
+    setTopicSubject(subj) { this.topicSubject = subj; this.fetchTopics(); },
   };
 }
 </script>

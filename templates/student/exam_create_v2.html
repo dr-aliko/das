@@ -228,10 +228,10 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
 
   </form>{# /exam-create-form #}
 
-</div>{# /x-data wrapper #}
+  {# ── Sticky footer — inside x-data scope so Alpine getters are accessible ── #}
+  {% include "dashboard/partials/_create_footer_bar.html" %}
 
-{# ── Sticky footer — outside form, connects via form="exam-create-form" ── #}
-{% include "dashboard/partials/_create_footer_bar.html" %}
+</div>{# /x-data wrapper #}
 
 {% endblock %}
 
@@ -299,9 +299,9 @@ function examCreateV2() {
     get formValid()   { return this.metaValid && !this.hasOverflow && !this.durationOver && !this.hasTopicOverflow; },
 
     /* ── Stepper actions (DAS-346: arrow-key events on buttons) ─────── */
-    incD(id) { if (!this.overflow(id) && !this.saving) { this.rows[id].d++; this._schedDraft(); } },
+    incD(id) { if (this.remaining(id) > 0 && !this.saving) { this.rows[id].d++; this._schedDraft(); } },
     decD(id) { if (this.rows[id].d > 0 && !this.saving) { this.rows[id].d--; this._schedDraft(); } },
-    incY(id) { if (!this.overflow(id) && !this.saving) { this.rows[id].y++; this._schedDraft(); } },
+    incY(id) { if (this.remaining(id) > 0 && !this.saving) { this.rows[id].y++; this._schedDraft(); } },
     decY(id) { if (this.rows[id].y > 0 && !this.saving) { this.rows[id].y--; this._schedDraft(); } },
     resetAll() {
       Object.keys(this.rows).forEach(id => { this.rows[id].d = 0; this.rows[id].y = 0; });
@@ -376,15 +376,22 @@ function examCreateV2() {
       this.newTopic.topicId     = t.id;
       this.newTopic.topicName   = t.name;
       this.newTopic.subjectName = t.subject_name;
+      /* Task 1: default wrongCount to 1 whenever there is remaining wrong capacity */
+      const sid = String(this.newTopic.subjectId);
+      const remWrong = Math.max(0, (this.rows[sid]?.y || 0) - this.topicWrongsFor(sid));
+      this.newTopic.wrongCount = remWrong > 0 ? 1 : 0;
     },
 
     canAddTopic() {
       if (!this.newTopic.topicId) return false;
       if (this.newTopic.wrongCount <= 0 && this.newTopic.blankCount <= 0) return false;
-      const sid    = String(this.newTopic.subjectId);
-      const target = this.rows[sid]?.y || 0;
-      const adding = parseInt(this.newTopic.wrongCount) || 0;
-      if (adding > 0 && this.topicWrongsFor(sid) + adding > target) return false;
+      const sid        = String(this.newTopic.subjectId);
+      const wrongTarget = this.rows[sid]?.y || 0;
+      const blankTarget = this.blank(sid);
+      const addingWrong = parseInt(this.newTopic.wrongCount) || 0;
+      const addingBlank = parseInt(this.newTopic.blankCount) || 0;
+      if (addingWrong > 0 && this.topicWrongsFor(sid) + addingWrong > wrongTarget) return false;
+      if (addingBlank > 0 && this.topicBlanksFor(sid) + addingBlank > blankTarget) return false;
       return true;
     },
 
@@ -440,6 +447,18 @@ function examCreateV2() {
       const target = this.rows[subjectId]?.y || 0;
       if (target === 0) return 0;
       return Math.min(100, Math.round((this.topicWrongsFor(subjectId) / target) * 100));
+    },
+    blankProgressPercent(subjectId) {
+      const target = this.blank(subjectId);
+      if (target === 0) return 0;
+      return Math.min(100, Math.round((this.topicBlanksFor(subjectId) / target) * 100));
+    },
+    blankProgressColor(subjectId) {
+      const target = this.blank(subjectId);
+      const mapped = this.topicBlanksFor(subjectId);
+      if (target === 0 || mapped === 0) return 'transparent';
+      if (mapped >= target) return '#10b981';
+      return 'var(--primary)';
     },
 
     /* ── Submit — DAS-349 mutation safety ───────────────────────────── */

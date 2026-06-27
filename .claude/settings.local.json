@@ -57,7 +57,14 @@
       "Bash(.venv/Scripts/python manage.py makemigrations curriculum_app --name initial)",
       "Bash(.venv/Scripts/python manage.py migrate --noinput)",
       "Bash(.venv/Scripts/python -m pytest curriculum_app/tests/ -v --tb=short)",
-      "PowerShell($css = Get-Content -Raw 'C:\\\\Users\\\\kayaa\\\\OneDrive\\\\Masaüstü\\\\Yeni klasör \\(2\\)\\\\projem\\\\static\\\\css\\\\tailwind.min.css'; foreach \\($name in @\\('bg-ink-950','bg-ink-900','bg-ink-850','bg-ink-800','bg-ink-750','border-ink-700','border-ink-600','text-ink-200','text-ink-300','text-ink-400','text-ink-500'\\)\\) { $pat = '\\\\.' + [regex]::Escape\\($name\\) + '\\\\{[^}]+\\\\}'; $m = [regex]::Match\\($css, $pat\\); if \\($m.Success\\) { Write-Output \\($name + ' => ' + $m.Value\\) } else { Write-Output \\($name + ' NOT FOUND'\\) } })"
+      "PowerShell($css = Get-Content -Raw 'C:\\\\Users\\\\kayaa\\\\OneDrive\\\\Masaüstü\\\\Yeni klasör \\(2\\)\\\\projem\\\\static\\\\css\\\\tailwind.min.css'; foreach \\($name in @\\('bg-ink-950','bg-ink-900','bg-ink-850','bg-ink-800','bg-ink-750','border-ink-700','border-ink-600','text-ink-200','text-ink-300','text-ink-400','text-ink-500'\\)\\) { $pat = '\\\\.' + [regex]::Escape\\($name\\) + '\\\\{[^}]+\\\\}'; $m = [regex]::Match\\($css, $pat\\); if \\($m.Success\\) { Write-Output \\($name + ' => ' + $m.Value\\) } else { Write-Output \\($name + ' NOT FOUND'\\) } })",
+      "Bash(.venv/Scripts/python manage.py shell -c \"from exams_app.models import Subject; [print\\(s.id, s.name, s.question_count\\) for s in Subject.objects.filter\\(exam_type='TYT'\\)]\")",
+      "Bash(.venv\\\\Scripts\\\\python manage.py check)",
+      "Bash(.venv/Scripts/python.exe manage.py shell -c \"from django.urls import reverse; print\\(reverse\\('student:denemeler_cards'\\)\\); print\\(reverse\\('student:denemeler_topics'\\)\\)\")",
+      "Bash(sed -n '17,50p' exams_app/models.py)",
+      "Bash(sed -n '201,240p' exams_app/models.py)",
+      "Bash(.venv/Scripts/python.exe manage.py makemigrations users_app --name add_alan_sinif)",
+      "Bash(.venv/Scripts/python.exe manage.py migrate users_app)"
     ]
   }
 }

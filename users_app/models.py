@@ -24,6 +24,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [('student', 'Öğrenci'), ('coach', 'Koç')]
+    ALAN_CHOICES  = [('SAY', 'SAY'), ('EA', 'EA'), ('SOZ', 'SÖZ'), ('DIL', 'DİL')]
+    SINIF_CHOICES = [('9', '9'), ('10', '10'), ('11', '11'), ('12', '12'), ('mezun', 'Mezun')]
 
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150)
@@ -42,6 +44,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     denemeler_v2 = models.BooleanField(default=False)
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default='auto')
     grade = models.CharField(max_length=50, blank=True, default='')
+    alan  = models.CharField(max_length=5, choices=ALAN_CHOICES, blank=True, default='')
+    sinif = models.CharField(max_length=5, choices=SINIF_CHOICES, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     # ── Streak tracking ───────────────────────────────────────────────────────
     current_streak     = models.PositiveIntegerField(default=0)
