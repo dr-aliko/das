@@ -1,27 +1,32 @@
 /* ============================================================
    DAS tokens.css — CSS Custom Property Foundation
-   DAS-003
-   Source: _artifacts/implementation/DAS-003/tokens.css
+   DAS-003 · extended by REDESIGN Phase 1 (see UI_REDESIGN_PLAN.md)
 
    THEMING STRATEGY
    ────────────────
-   :root defines the light-compatible baseline (app is currently
-   light-theme dominant — no visual change until .das-dark is used).
+   :root defines the light baseline AND the internal --dark-*
+   value set (single source of truth for every dark value in
+   the app — theme_system.css, components.css and base.html
+   reference these, never literal hex).
 
-   .das-dark scopes the dark palette. Apply to any ancestor:
-     Phase 1:  <div class="das-dark">{{ dashboard section }}</div>
-     Phase 4+: <html class="das-dark">
+   Scope mapping (.das-dark / .das-theme-* / html.dark) lives
+   in theme_system.css.
+
+   Full token reference: static/css/TOKENS.md
    ============================================================ */
 
 
-/* ── Light-compatible baseline ─────────────────────────────────────────── */
+/* ── Light baseline + shared constants ─────────────────────────────────── */
 :root {
 
-  /* Backgrounds — neutral at :root; dark values in .das-dark */
-  --bg:           transparent;
-  --surface-1:    #ffffff;
-  --surface-2:    #f4f4f8;
-  --surface-3:    #e8e8ef;
+  /* Backgrounds — surface elevation ladder (0 = page, 3 = popover) */
+  --bg:              #F6F7FB;
+  --surface-0:       #F6F7FB;
+  --surface-1:       #ffffff;
+  --surface-2:       #f4f4f8;
+  --surface-3:       #e8e8ef;
+  --surface-overlay: #ffffff;
+  --scrim:           rgba(9, 11, 20, 0.45);
 
   /* Borders */
   --border:        #e2e2ea;
@@ -30,25 +35,35 @@
   /* Brand primary */
   --primary:       #6D5BFF;
   --primary-soft:  #4F44B8;
-  --primary-glow:  #9C8BFF;
+  --primary-glow:  #7C6BF2;
   --primary-tint:  rgba(109, 91, 255, 0.10);
 
-  /* Subject palette — constant across all themes */
+  /* Subject palette */
   --turkce:  #3B82F6;
   --mat:     #A78BFA;
-  --sosyal:  #F59E0B;
-  --fen:     #10B981;
+  --sosyal:  #D97706;
+  --fen:     #059669;
 
-  /* Semantic status */
-  --up:        #22C55E;
-  --up-tint:   rgba(34, 197, 94, 0.12);
-  --down:      #EF4444;
-  --down-tint: rgba(239, 68, 68, 0.12);
+  /* Semantic status — text-safe on their tints (≥4.5:1) */
+  --up:           #15803D;
+  --up-tint:      rgba(34, 197, 94, 0.12);
+  --down:         #B91C1C;
+  --down-tint:    rgba(239, 68, 68, 0.12);
+  --warn:         #B45309;
+  --warn-tint:    rgba(251, 191, 36, 0.14);
+  --info:         #2563EB;
+  --info-tint:    rgba(96, 165, 250, 0.14);
+
+  /* Aliases — success/danger read better in some contexts */
+  --success:      var(--up);
+  --success-tint: var(--up-tint);
+  --danger:       var(--down);
+  --danger-tint:  var(--down-tint);
 
   /* Typography */
   --heading:  #111118;
   --body:     #2d2d3a;
-  --muted:    #6b6b80;
+  --muted:    #62627a;
   --muted-2:  #9898ad;
 
   /* Border radius */
@@ -63,6 +78,17 @@
   --s-4: 16px;
   --s-5: 24px;
   --s-6: 32px;
+  --s-7: 48px;
+
+  /* Z-index scale */
+  --z-sticky:   20;
+  --z-nav:      30;
+  --z-dropdown: 40;
+  --z-modal:    50;
+  --z-toast:    60;
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--primary);
 
   /* Shadows */
   --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.08);
@@ -74,45 +100,38 @@
   --t-base:   200ms;
   --t-slow:   300ms;
   --ease-out: cubic-bezier(0.3, 0.7, 0.4, 1);
+
+  /* ── Internal dark value set (single source — mapped by theme scopes) ── */
+  --dark-bg:              #0B0E16;
+  --dark-surface-0:       #0B0E16;
+  --dark-surface-1:       #121623;
+  --dark-surface-2:       #1A1F2F;
+  --dark-surface-3:       #232A3D;
+  --dark-surface-overlay: #2B3348;
+  --dark-scrim:           rgba(4, 6, 12, 0.6);
+
+  --dark-border:        #252C40;
+  --dark-border-strong: #39415C;
+
+  --dark-primary:      #8B7CFF;
+  --dark-primary-glow: #A99DFF;
+  --dark-primary-tint: rgba(139, 124, 255, 0.14);
+
+  --dark-turkce:  #60A5FA;
+  --dark-mat:     #C4B5FD;
+  --dark-sosyal:  #FBBF24;
+  --dark-fen:     #34D399;
+
+  --dark-up:        #4ADE80;
+  --dark-down:      #F87171;
+  --dark-warn:      #FBBF24;
+  --dark-info:      #60A5FA;
+
+  --dark-heading:  #F1F3FA;
+  --dark-body:     #C3C9DA;
+  --dark-muted:    #8B93AB;
+  --dark-muted-2:  #6B7390;
+
+  --dark-shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
+  --dark-shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
-
-
-/* ── Dark theme scope ───────────────────────────────────────────────────── */
-.das-dark {
-  --bg:           #0B0B12;
-  --surface-1:    #15151F;
-  --surface-2:    #1E1E2C;
-  --surface-3:    #262635;
-
-  --border:        #262635;
-  --border-strong: #2F2F42;
-
-  --heading:  #FFFFFF;
-  --body:     #E5E5F0;
-  --muted:    #8A8AA3;
-  --muted-2:  #5E5E78;
-
-  --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-}
-
-
-/* ── Forced dark via media query (disabled until full migration) ─────────── */
-/*
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:           #0B0B12;
-    --surface-1:    #15151F;
-    --surface-2:    #1E1E2C;
-    --surface-3:    #262635;
-    --border:        #262635;
-    --border-strong: #2F2F42;
-    --heading:  #FFFFFF;
-    --body:     #E5E5F0;
-    --muted:    #8A8AA3;
-    --muted-2:  #5E5E78;
-    --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
-    --shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  }
-}
-*/

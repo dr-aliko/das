@@ -97,7 +97,7 @@
           </div>
           {# Wrong #}
           <div class="w-14 shrink-0 sm:w-auto sm:col-span-3">
-            <input type="number"
+            <input type="number" inputmode="numeric"
                    x-model.number="row.wrongCount"
                    min="0" max="40"
                    class="w-full text-center text-sm rounded-lg border px-1.5 py-1.5
@@ -107,7 +107,7 @@
           </div>
           {# Blank #}
           <div class="w-14 shrink-0 sm:w-auto sm:col-span-3">
-            <input type="number"
+            <input type="number" inputmode="numeric"
                    x-model.number="row.blankCount"
                    min="0" max="40"
                    class="w-full text-center text-sm rounded-lg border px-1.5 py-1.5
@@ -234,7 +234,7 @@
           <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 text-down">
             {% trans "Yanlış Sayısı" %}
           </label>
-          <input type="number"
+          <input type="number" inputmode="numeric"
                  x-model.number="newTopic.wrongCount"
                  min="0"
                  :max="Math.max(0, (rows[String(newTopic.subjectId)]?.y || 0) - topicWrongsFor(String(newTopic.subjectId)))"
@@ -248,7 +248,7 @@
         <div>
           <label class="block text-xs font-bold uppercase tracking-wide mb-1.5"
                  style="color:var(--muted)">{% trans "Boş Sayısı" %}</label>
-          <input type="number"
+          <input type="number" inputmode="numeric"
                  x-model.number="newTopic.blankCount"
                  min="0"
                  :max="Math.max(0, blank(String(newTopic.subjectId)) - topicBlanksFor(String(newTopic.subjectId)))"

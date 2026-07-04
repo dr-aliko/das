@@ -14,50 +14,52 @@
   </div>
 
   <!-- Tablo -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead class="bg-gray-50 border-b border-gray-100">
+  <div class="das-table-wrap bg-[var(--surface-1)] rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
+    <div class="das-table-scroll">
+    <table class="das-table das-table--sticky-first">
+      <thead>
         <tr>
-          <th class="text-left px-6 py-3 font-semibold text-gray-600 min-w-36">Ders</th>
+          <th class="min-w-36">Ders</th>
           {% for exam in exams %}
-          <th class="px-4 py-3 text-center font-semibold text-gray-700 min-w-32">
+          <th class="center min-w-32">
             <div class="truncate max-w-28">{{ exam.custom_name }}</div>
-            <div class="text-xs text-gray-400 font-normal">{{ exam.exam_date }}</div>
+            <div class="text-[10px] font-normal normal-case tracking-normal opacity-80">{{ exam.exam_date }}</div>
           </th>
           {% endfor %}
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-50">
+      <tbody>
         {% for row in rows %}
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-3 font-medium text-gray-700">{{ row.subject.name|slice:"4:" }}</td>
+        <tr>
+          <td class="font-medium text-[var(--heading)]">{{ row.subject.name|slice:"4:" }}</td>
           {% for net in row.nets %}
-          <td class="px-4 py-3 text-center">
+          <td class="center tnum">
             {% if net is not None %}
               <span class="font-semibold
-                {% if net == row.best and exams|length > 1 %}text-emerald-600{% elif net < 0 %}text-red-500{% else %}text-gray-700{% endif %}">
+                {% if net == row.best and exams|length > 1 %}text-[var(--up)]{% elif net < 0 %}text-[var(--down)]{% endif %}">
                 {{ net|floatformat:2 }}
               </span>
               {% if net == row.best and exams|length > 1 %}
-              <span class="ml-1 text-xs text-emerald-500">↑</span>
+              <span class="ml-1 text-xs text-[var(--up)]">↑</span>
               {% endif %}
             {% else %}
-              <span class="text-gray-300">—</span>
+              <span class="text-[var(--muted-2)]">—</span>
             {% endif %}
           </td>
           {% endfor %}
         </tr>
         {% endfor %}
       </tbody>
-      <tfoot class="bg-indigo-50 border-t-2 border-indigo-100">
+      <tfoot>
         <tr>
-          <td class="px-6 py-3 font-bold text-indigo-800">Toplam Net</td>
+          <td>Toplam Net</td>
           {% for total in totals %}
-          <td class="px-4 py-3 text-center font-bold text-indigo-700 text-base">{{ total|floatformat:2 }}</td>
+          <td class="center tnum text-base">{{ total|floatformat:2 }}</td>
           {% endfor %}
         </tr>
       </tfoot>
     </table>
+    </div>
   </div>
 
   <!-- Bar grafik -->
@@ -79,7 +81,7 @@
 {% block extra_js %}
 <script>
 (function() {
-  const palette = ['#3b82f6','#8b5cf6','#f59e0b','#10b981'];
+  const palette = window.DAS ? DAS.DAS_COLORS().subjects : ['#3b82f6','#8b5cf6','#f59e0b','#10b981'];
   const exams = [
     {% for exam in exams %}
     { name: "{{ exam.custom_name|escapejs }}", date: "{{ exam.exam_date }}", total: {{ totals|join:"," }}[{{ forloop.counter0 }}] },
@@ -99,7 +101,7 @@
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: false, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+      scales: { y: { beginAtZero: false, grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) } }, x: { grid: { display: false } } }
     }
   });
 
@@ -122,7 +124,7 @@
     options: {
       responsive: true,
       plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 12, font: { size: isMobile ? 10 : 11 } } } },
-      scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+      scales: { y: { grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) } }, x: { grid: { display: false } } }
     }
   });
   {% endif %}

@@ -74,10 +74,60 @@
     return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
   }
 
+  /**
+   * REDESIGN Phase 6 — theme-aware Chart.js defaults.
+   * Reads current CSS tokens and applies them to Chart.defaults so every
+   * chart inherits grid/tick/tooltip/legend theming without per-chart config.
+   * Safe to call repeatedly (e.g. on theme toggle).
+   */
+  function chartDefaults() {
+    var Chart = global.Chart;
+    if (!Chart) return;
+
+    var muted   = getCssVar('--muted');
+    var gridCol = muted && muted.charAt(0) === '#' ? withAlpha(muted, 0.12) : 'rgba(139,147,171,0.12)';
+
+    Chart.defaults.color = muted;
+    Chart.defaults.borderColor = gridCol;
+    Chart.defaults.scale.grid.color = gridCol;
+    Chart.defaults.scale.ticks.color = muted;
+
+    var tooltip = Chart.defaults.plugins.tooltip;
+    tooltip.backgroundColor = getCssVar('--surface-3');
+    tooltip.titleColor  = getCssVar('--heading');
+    tooltip.bodyColor   = getCssVar('--body');
+    tooltip.borderColor = getCssVar('--border-strong');
+    tooltip.borderWidth = 1;
+    tooltip.cornerRadius = 8;
+    tooltip.padding = 10;
+
+    Chart.defaults.plugins.legend.labels.color = getCssVar('--body');
+
+    if (global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      Chart.defaults.animation = false;
+    }
+  }
+
+  // Apply once at load (Chart.js is loaded before this bridge in base.html)
+  chartDefaults();
+
+  // Re-theme on dark-mode toggle: refresh defaults, then repaint live charts.
+  // Per-chart dataset colors resolved at build time keep their values; pages
+  // that need full re-theme rebuild their charts on this same event.
+  global.addEventListener('darkmode-change', function () {
+    chartDefaults();
+    var Chart = global.Chart;
+    if (!Chart || !Chart.instances) return;
+    Object.keys(Chart.instances).forEach(function (id) {
+      try { Chart.instances[id].update('none'); } catch (e) { /* detached canvas */ }
+    });
+  });
+
   // Expose globally — no module bundler required
   global.DAS = global.DAS || {};
-  global.DAS.getCssVar  = getCssVar;
-  global.DAS.DAS_COLORS = DAS_COLORS;
-  global.DAS.withAlpha  = withAlpha;
+  global.DAS.getCssVar     = getCssVar;
+  global.DAS.DAS_COLORS    = DAS_COLORS;
+  global.DAS.withAlpha     = withAlpha;
+  global.DAS.chartDefaults = chartDefaults;
 
 }(window));

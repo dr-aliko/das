@@ -47,6 +47,51 @@
           </a>
         </div>
       </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-4">
+        <button @click="activeFilter = 'tumu'"
+                class="rounded-xl border p-3 text-left transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                :class="activeFilter === 'tumu'
+                  ? 'bg-steel-tint border-steel-500'
+                  : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
+          <span class="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Toplam</span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ total }}</span>
+        </button>
+        <button @click="activeFilter = 'iyi'"
+                class="rounded-xl border p-3 text-left transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                :class="activeFilter === 'iyi'
+                  ? 'bg-steel-tint border-steel-500'
+                  : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
+          <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>İyi
+          </span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.iyi }}</span>
+        </button>
+        <button @click="activeFilter = 'dusus'"
+                class="rounded-xl border p-3 text-left transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                :class="activeFilter === 'dusus'
+                  ? 'bg-steel-tint border-steel-500'
+                  : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
+          <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
+          </span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.dusus }}</span>
+        </button>
+        <button @click="activeFilter = 'pasif'"
+                class="rounded-xl border p-3 text-left transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                :class="activeFilter === 'pasif'
+                  ? 'bg-steel-tint border-steel-500'
+                  : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
+          <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-ink-500"></span>Pasif
+          </span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.pasif }}</span>
+        </button>
+      </div>
     </div>
 
     <div class="p-4 md:p-6">

@@ -223,8 +223,8 @@ function denemeProgressChart() {
           labels,
           datasets: [{
             data,
-            borderColor: '#6D5BFF',
-            backgroundColor: 'rgba(109,91,255,0.08)',
+            borderColor: DAS.getCssVar('--primary'),
+            backgroundColor: DAS.withAlpha(DAS.getCssVar('--primary'), 0.1),
             borderWidth: 2,
             tension: 0.35,
             fill: true,

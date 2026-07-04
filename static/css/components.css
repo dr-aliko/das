@@ -415,8 +415,15 @@ body.v2-shell .shell-floating-bar {
   }
 }
 
+/* Bottom nav container — theme-aware chrome (overrides static utilities) */
+nav.v2-bottom-nav {
+  background: var(--surface-1);
+  border-top-color: var(--border);
+}
+
 /* Bottom-nav tab cell (DAS-016) */
 .das-nav-tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -428,23 +435,53 @@ body.v2-shell .shell-floating-bar {
   font-weight: 500;
   touch-action: manipulation;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--t-fast) var(--ease-out);
 }
 .das-nav-tab svg { width: 22px; height: 22px; }
-.das-nav-tab.active { color: var(--primary); }
+.das-nav-tab.active { color: var(--primary); font-weight: 600; }
 .das-nav-tab.active svg { stroke-width: 2.25; }
+.das-nav-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--primary);
+}
 .das-nav-tab:active { background: var(--surface-2); }
+.das-nav-tab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary);
+  border-radius: var(--r-chip);
+}
 
-/* Desktop tab cell (DAS-018) */
+/* Pending-item badge dot — add <span class="badge-dot"></span> inside a tab */
+.das-nav-tab .badge-dot {
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 16px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  border: 2px solid var(--surface-1);
+}
+
+/* Desktop tab cell (DAS-018) — token-aware (app bar is now surface, not purple) */
 .das-dtab {
   padding: .5rem 1rem;
   font-size: .875rem;
   font-weight: 500;
   border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, .85);
+  color: var(--muted);
   text-decoration: none;
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
-.das-dtab:hover { border-bottom-color: rgba(255, 255, 255, .35); }
-.das-dtab.active { border-bottom-color: #fff; color: #fff; }
+.das-dtab:hover { color: var(--body); border-bottom-color: var(--border-strong); }
+.das-dtab.active { border-bottom-color: var(--primary); color: var(--primary); }
+.das-dtab:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--r-chip); }
 
 /* DAS-305: filter strip sticks below V2 app bar (h-14 = 3.5rem) */
 body.v2-shell .v2-filter-strip {
@@ -474,20 +511,10 @@ body.compare-active .v2-fab {
    they are completely unaffected. */
 
 /* ── Dark-mode V2 shell: activate dark tokens + remap light utilities ─────── */
+/* Token values come from the --dark-* set in tokens.css (single source). */
 html.dark body.v2-shell {
-  --surface-1:      #15151F;
-  --surface-2:      #1E1E2C;
-  --surface-3:      #262635;
-  --border:         #262635;
-  --border-strong:  #2F2F42;
-  --heading:        #FFFFFF;
-  --body:           #E5E5F0;
-  --muted:          #8A8AA3;
-  --muted-2:        #5E5E78;
-  --shadow-card:    0 1px 3px rgba(0, 0, 0, .4);
-  --shadow-card-md: 0 4px 16px rgba(0, 0, 0, .5);
-  background-color: #0B0B12;
-  color: #E5E5F0;
+  background-color: var(--dark-bg);
+  color: var(--dark-body);
 }
 html.dark body.v2-shell main  { background-color: transparent !important; }
 html.dark body.v2-shell nav.v2-bottom-nav { background-color: var(--surface-1) !important; }
@@ -525,4 +552,191 @@ html.dark body.v2-shell textarea {
 /* Prevent iOS Safari auto-zoom on inputs smaller than 16px */
 @media (max-width: 768px) {
   input, select, textarea { font-size: 16px !important; }
+}
+
+
+/* ============================================================
+   REDESIGN Phase 4 — Tables, badges, empty states
+   ============================================================ */
+
+/* ── .das-table — standardized data table ──────────────────── */
+.das-table-wrap {
+  position: relative;
+}
+.das-table-wrap .das-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Scroll affordance: right-edge fade, mobile/tablet only */
+@media (max-width: 1023.98px) {
+  .das-table-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 24px;
+    pointer-events: none;
+    background: linear-gradient(to left, var(--surface-1), transparent);
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
+  }
+}
+
+.das-table {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+.das-table thead th {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.das-table tbody td {
+  padding: 8px 16px;
+  height: 44px;
+  color: var(--body);
+  border-bottom: 1px solid var(--border);
+}
+.das-table tbody tr:last-child td { border-bottom: none; }
+.das-table tbody tr:hover td { background: var(--surface-2); }
+.das-table tfoot td {
+  padding: 10px 16px;
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 700;
+  border-top: 1px solid var(--border-strong);
+}
+html.dark .das-table tfoot td { color: var(--dark-primary-glow); }
+
+/* Numeric cells: right-aligned + tabular figures (tnum.css also targets .das-table .num) */
+.das-table th.num, .das-table td.num { text-align: right; }
+.das-table th.center, .das-table td.center { text-align: center; }
+
+/* Sticky first column for wide numeric tables */
+.das-table--sticky-first th:first-child,
+.das-table--sticky-first td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-1);
+}
+.das-table--sticky-first thead th:first-child { background: var(--surface-2); }
+.das-table--sticky-first tbody tr:hover td:first-child { background: var(--surface-2); }
+
+/* Sortable headers */
+.das-table th[aria-sort] { cursor: pointer; user-select: none; }
+.das-table th[aria-sort="ascending"]::after  { content: ' ▲'; font-size: 9px; color: var(--primary); }
+.das-table th[aria-sort="descending"]::after { content: ' ▼'; font-size: 9px; color: var(--primary); }
+
+/* ── .das-badge — semantic status pills ────────────────────── */
+.das-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.das-badge svg { width: 12px; height: 12px; flex-shrink: 0; }
+.das-badge--success { color: var(--up);      background: var(--up-tint); }
+.das-badge--danger  { color: var(--down);    background: var(--down-tint); }
+.das-badge--warn    { color: var(--warn);    background: var(--warn-tint); }
+.das-badge--info    { color: var(--info);    background: var(--info-tint); }
+.das-badge--primary { color: var(--primary); background: var(--primary-tint); }
+.das-badge--muted   { color: var(--muted);   background: var(--surface-2); }
+html.dark .das-badge--primary { color: var(--dark-primary-glow); }
+
+/* ── .das-empty — standard empty state ─────────────────────── */
+.das-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  color: var(--muted);
+}
+.das-empty svg { width: 32px; height: 32px; opacity: 0.5; }
+.das-empty p { font-size: 0.875rem; max-width: 28rem; }
+
+
+/* ============================================================
+   REDESIGN Phase 5 — Forms, toggles, validation
+   ============================================================ */
+
+/* Expanded touch target for small toggle controls (44px+ effective) */
+.das-toggle-hit { position: relative; }
+.das-toggle-hit::after { content: ''; position: absolute; inset: -10px; }
+
+/* Check pop-in on completion toggles */
+@keyframes das-check-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.das-toggle-hit svg { animation: das-check-pop 180ms var(--ease-out); }
+
+/* Universal field validation */
+.das-field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--down);
+}
+.das-input--invalid,
+input.das-input--invalid, select.das-input--invalid, textarea.das-input--invalid {
+  border-color: var(--down) !important;
+}
+.das-input--invalid:focus { --tw-ring-color: var(--down) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .das-toggle-hit svg { animation: none; }
+}
+
+
+/* ============================================================
+   REDESIGN Phase 7 — A11y & motion polish
+   ============================================================ */
+
+/* Skip-to-content link — visible only on keyboard focus */
+.das-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: var(--r-chip);
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateY(-200%);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.das-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Global reduced-motion guard */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -423,6 +423,11 @@ function trendChart() {
 }
 
 window.DASInitCharts = function(d, sd, hasExams) {
+  window._DAS_LAST_CHART_ARGS = [d, sd, hasExams];
+  const _tok = window.DAS ? DAS.DAS_COLORS() : {};
+  const tickColor = _tok.muted || '#8A8AA3';
+  const gridColor = (_tok.muted && _tok.muted[0] === '#') ? DAS.withAlpha(_tok.muted, 0.12) : 'rgba(255,255,255,0.05)';
+  const primaryColor = _tok.primary || '#6D5BFF';
   const emptyEl = document.getElementById('das-charts-empty');
   const cardsEl = document.getElementById('das-chart-cards');
   const trendEl = document.querySelector('[x-data*="trendChart"]');
@@ -486,8 +491,8 @@ window.DASInitCharts = function(d, sd, hasExams) {
   const _totalDataset = {
     label: 'Genel Net',
     data: _s.totals.slice(),
-    borderColor: '#6D5BFF', backgroundColor: 'rgba(109,91,255,0.12)',
-    borderWidth: 3, pointBackgroundColor: '#6D5BFF', pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: true,
+    borderColor: primaryColor, backgroundColor: DAS.withAlpha(primaryColor, 0.14),
+    borderWidth: 3, pointBackgroundColor: primaryColor, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: true,
   };
 
   const lineChart = new Chart(document.getElementById('lineChart'), {
@@ -498,15 +503,15 @@ window.DASInitCharts = function(d, sd, hasExams) {
       interaction: { mode: 'index', intersect: false },
       onClick(_, el) { if (el.length) nav(el[0].index); },
       plugins: {
-        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
         tooltip: { callbacks: {
           title: i => _s.examNames[i[0].dataIndex] + ' (' + _s.labels[i[0].dataIndex] + ')',
           footer: i => 'Toplam: ' + i.reduce((s, x) => s + x.parsed.y, 0).toFixed(2),
         }},
       },
       scales: {
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } },
-        x: { grid: { display: false }, ticks: { color: '#8A8AA3', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor } },
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
       },
     },
   });
@@ -542,10 +547,10 @@ window.DASInitCharts = function(d, sd, hasExams) {
     data: { labels: d.labels, datasets: d.subjects.map(s => ({ label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false })) },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       onClick(_, el) { if(el.length) nav(el[0].index); },
-      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
         tooltip: { callbacks: { title: i => _examNames[i[0].dataIndex] + ' (' + d.labels[i[0].dataIndex] + ')', footer: i => 'Toplam: ' + i.reduce((s,x)=>s+x.parsed.y,0).toFixed(2) } } },
-      scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#8A8AA3', font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
-                y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } } } }
+      scales: { x: { stacked: true, grid: { display: false }, ticks: { color: tickColor, font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+                y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } } } }
   });
 
   [lineChart, barChart].forEach(chart => {
@@ -566,12 +571,12 @@ window.DASInitCharts = function(d, sd, hasExams) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: '#8A8AA3' } },
+          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
           tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
         },
         scales: {
-          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: '#8A8AA3', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' }, beginAtZero: true },
-          y: { title: { display: !isMobile, text: 'Net Skor', color: '#8A8AA3', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8A8AA3' } }
+          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor }, beginAtZero: true },
+          y: { title: { display: !isMobile, text: 'Net Skor', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor } }
         }
       }
     });
@@ -585,6 +590,13 @@ window.DASInitCharts = function(d, sd, hasExams) {
     }
   }
 };
+
+/* Rebuild charts with fresh token colors when the theme toggles */
+window.addEventListener('darkmode-change', function () {
+  if (window._DAS_LAST_CHART_ARGS && typeof window.DASInitCharts === 'function') {
+    window.DASInitCharts.apply(null, window._DAS_LAST_CHART_ARGS);
+  }
+});
 
 {% if has_chart_data %}
 window.DASInitCharts({{ chart_data_json|safe }}, {{ scatter_data_json|safe }}, true);

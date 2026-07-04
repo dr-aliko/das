@@ -1,10 +1,10 @@
 {# Phase 7.2 — Desktop-only app bar. hidden md:block keeps mobile untouched. #}
-<header class="hidden md:block sticky top-0 z-30 border-b border-ink-700 bg-ink-900">
+<header class="hidden md:block sticky top-0 z-30 border-b border-ink-700 bg-ink-900/90 backdrop-blur">
   <div class="mx-auto max-w-page h-14 px-6 flex items-center">
 
     {# ── Brand logo ─────────────────────────────────────────────────────── #}
     <a href="/" class="flex items-center gap-2 text-white font-semibold tracking-tight shrink-0">
-      <svg class="w-7 h-7 text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+      <svg class="w-7 h-7 text-steel-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
       Vagus
     </a>
 
@@ -13,46 +13,46 @@
       {% if user.is_student %}
 
         <a href="/student/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if request.path == '/student/' %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Panel</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if request.path == '/student/' %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Panel</a>
 
         <a href="/student/denemeler/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/student/denemeler' in request.path or '/student/exam' in request.path or '/student/karsilastir' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Denemeler</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/student/denemeler' in request.path or '/student/exam' in request.path or '/student/karsilastir' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Denemeler</a>
 
         <a href="/student/tasks/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/student/tasks' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Görevler</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/student/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Görevler</a>
 
         <a href="/brans/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/brans' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Branş</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Branş</a>
 
         <a href="/profil/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/profil' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Profil</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Profil</a>
 
       {% else %}
 
         <a href="/coach/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if request.path == '/coach/' or '/coach/student' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Öğrenciler</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if request.path == '/coach/' or '/coach/student' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Öğrenciler</a>
 
         <a href="/coach/denemeler/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/coach/denemeler' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Denemeler</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/coach/denemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Denemeler</a>
 
         <a href="/coach/tasks/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/coach/tasks' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Görevler</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/coach/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Görevler</a>
 
         <a href="/coach/brans/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/coach/brans' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Branş</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/coach/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Branş</a>
 
         <a href="/profil/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors
-                  {% if '/profil' in request.path %}bg-ink-800 text-white{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Profil</a>
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-ink-300 hover:bg-ink-800/60 hover:text-white{% endif %}">Profil</a>
 
       {% endif %}
     </nav>
@@ -63,7 +63,7 @@
       {% if user.is_student %}
       {# Student-only: + Yeni Sınav CTA #}
       <a href="/student/exam/new/"
-         class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
+         class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 active:scale-[0.98] text-white text-sm font-medium inline-flex items-center gap-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-300">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
              stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14"/>
@@ -75,7 +75,7 @@
       {# User identity chip — entire chip is a link to profile #}
       <a href="/profil/"
          class="flex items-center gap-2 pl-3 border-l border-ink-700
-                ml-1 px-2 py-1.5 rounded-lg hover:bg-ink-800/60 transition-colors">
+                ml-1 px-2 py-1.5 rounded-lg hover:bg-ink-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">
         {% if user.is_student %}
           <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-violet-700
                       text-[11px] font-semibold flex items-center justify-center text-white select-none shrink-0"

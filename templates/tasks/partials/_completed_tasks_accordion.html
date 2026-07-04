@@ -22,7 +22,8 @@
 
         <div class="flex-1 p-3 flex items-center gap-4">
           <button @click.stop="toggleCompletedTask(task)"
-                  class="w-5 h-5 rounded-full bg-green-500 border-2 border-green-500 text-white flex items-center justify-center shrink-0"
+                  class="das-toggle-hit w-5 h-5 rounded-full bg-green-500 border-2 border-green-500 text-white flex items-center justify-center shrink-0
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
                   :class="canToggleCompleted ? '' : 'cursor-default'"
                   :title="canToggleCompleted ? 'Geri al' : 'Tamamlandı'">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">

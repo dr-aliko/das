@@ -25,6 +25,7 @@
 
 .das-stepper-btn:active  { transform: scale(0.87); background: var(--surface-3); }
 .das-stepper-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+.das-stepper-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* ── Stepper inline input (replaces static span) ───────────── */
 .das-stepper-input {

@@ -502,7 +502,7 @@ function coachTrendChart(studentId, initialPeriod) {
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { boxWidth: 10, padding: 8, font: { size: 10 }, color: '#94a3b8' },
+        labels: { boxWidth: 10, padding: 8, font: { size: 10 }, color: DAS.getCssVar('--muted') },
       },
       tooltip: {
         callbacks: {
@@ -517,8 +517,8 @@ function coachTrendChart(studentId, initialPeriod) {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#64748b', maxTicksLimit: isMobile ? 3 : 6 } },
-      y: { grid: { color: '#1e293b' }, ticks: { font: { size: 9 }, color: '#64748b' } },
+      x: { grid: { display: false }, ticks: { font: { size: 9 }, color: DAS.getCssVar('--muted'), maxTicksLimit: isMobile ? 3 : 6 } },
+      y: { grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) }, ticks: { font: { size: 9 }, color: DAS.getCssVar('--muted') } },
     },
   };
 

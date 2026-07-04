@@ -15,7 +15,9 @@
 .das-kpi-value,
 .delta,
 .exam-net,
-.spark-label {
+.spark-label,
+[data-tnum],
+.das-table .num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }

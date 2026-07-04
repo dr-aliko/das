@@ -91,7 +91,7 @@
         </div>
         <div>
           <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Süre <span class="text-xs font-medium ml-0.5" style="color:var(--muted)">(dk)</span></label>
-          <input type="number" name="sure_dakika" x-model="sure" min="1" max="300"
+          <input type="number" inputmode="numeric" name="sure_dakika" x-model="sure" min="1" max="300"
                  class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2"
                  style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
           {% if form.sure_dakika.errors %}<p class="text-down text-xs mt-1">{{ form.sure_dakika.errors.0 }}</p>{% endif %}

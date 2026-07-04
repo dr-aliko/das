@@ -181,7 +181,7 @@
     options: {
       responsive: true,
       plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 10, padding: isMobile ? 8 : 14, font: { size: isMobile ? 10 : 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)}` } } },
-      scales: { r: { min: 0, suggestedMax: maxVal + step, ticks: { stepSize: step, font: { size: 9 }, backdropColor: 'transparent', color: '#9ca3af' }, pointLabels: { font: { size: isMobile ? 9 : 11 }, color: '#374151' }, grid: { color: 'rgba(0,0,0,0.06)' }, angleLines: { color: 'rgba(0,0,0,0.06)' } } },
+      scales: { r: { min: 0, suggestedMax: maxVal + step, ticks: { stepSize: step, font: { size: 9 }, backdropColor: 'transparent', color: DAS.getCssVar('--muted-2') }, pointLabels: { font: { size: isMobile ? 9 : 11 }, color: DAS.getCssVar('--body') }, grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) }, angleLines: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) } } },
     },
   });
 })();

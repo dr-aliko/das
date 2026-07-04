@@ -70,45 +70,47 @@
         </h2>
         <span class="text-xs text-gray-400">{{ entries|length }} kayıt</span>
       </div>
-      <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+      <div class="das-table-wrap">
+      <div class="das-table-scroll">
+      <table class="das-table">
         <thead>
-          <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
-            <th class="px-4 py-2.5 w-8"></th>
-            <th class="px-5 py-2.5 text-left">Tarih</th>
-            <th class="px-4 py-2.5 text-center">Doğru</th>
-            <th class="px-4 py-2.5 text-center">Yanlış</th>
-            <th class="px-4 py-2.5 text-center">Boş</th>
-            <th class="px-4 py-2.5 text-center font-semibold text-gray-600">Net</th>
-            <th class="px-4 py-2.5 text-center hidden sm:table-cell">Süre</th>
+          <tr>
+            <th class="w-8"></th>
+            <th>Tarih</th>
+            <th class="center">Doğru</th>
+            <th class="center">Yanlış</th>
+            <th class="center">Boş</th>
+            <th class="center">Net</th>
+            <th class="center hidden sm:table-cell">Süre</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody>
           {% for entry in entries %}
-            <tr class="hover:bg-gray-50 transition">
-              <td class="px-4 py-3 text-center w-8">
+            <tr class="transition">
+              <td class="center w-8">
                 <input type="checkbox" :value="{{ entry.pk }}"
                        @change="toggle({{ entry.pk }})"
                        :disabled="sel.length >= 2 && !sel.includes({{ entry.pk }})"
                        class="rounded text-indigo-500 focus:ring-indigo-300 disabled:opacity-30 cursor-pointer">
               </td>
-              <td class="px-5 py-3 text-gray-700">{{ entry.tarih|date:"d.m.Y" }}</td>
-              <td class="px-4 py-3 text-center text-green-600 font-medium">{{ entry.dogru }}</td>
-              <td class="px-4 py-3 text-center text-red-500 font-medium">{{ entry.yanlis }}</td>
-              <td class="px-4 py-3 text-center text-gray-400">{{ entry.bos }}</td>
-              <td class="px-4 py-3 text-center font-bold
-                {% if entry.net >= 8 %}text-green-600
-                {% elif entry.net >= 5 %}text-yellow-600
-                {% else %}text-red-500{% endif %}">
+              <td class="tnum">{{ entry.tarih|date:"d.m.Y" }}</td>
+              <td class="center tnum text-[var(--up)] font-medium">{{ entry.dogru }}</td>
+              <td class="center tnum text-[var(--down)] font-medium">{{ entry.yanlis }}</td>
+              <td class="center tnum text-[var(--muted)]">{{ entry.bos }}</td>
+              <td class="center tnum font-bold
+                {% if entry.net >= 8 %}text-[var(--up)]
+                {% elif entry.net >= 5 %}text-[var(--warn)]
+                {% else %}text-[var(--down)]{% endif %}">
                 {{ entry.net }}
               </td>
-              <td class="px-4 py-3 text-center text-gray-400 text-xs hidden sm:table-cell">
+              <td class="center tnum text-[var(--muted)] text-xs hidden sm:table-cell">
                 {% if entry.sure_dakika %}{{ entry.sure_dakika }} dk{% else %}—{% endif %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
+      </div>
       </div>
     </div>
   {% endfor %}

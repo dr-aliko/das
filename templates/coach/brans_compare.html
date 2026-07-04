@@ -86,26 +86,27 @@
       <p class="text-xs text-gray-400 mt-0.5">Yeni − Eski · En çok değişenden sıralı</p>
     </div>
     {% if topic_deltas %}
-    <div class="overflow-x-auto">
-    <table class="w-full text-sm">
+    <div class="das-table-wrap">
+    <div class="das-table-scroll">
+    <table class="das-table">
       <thead>
-        <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
-          <th class="px-5 py-2.5 text-left">Konu</th>
-          <th class="px-4 py-2.5 text-center">Eski</th>
-          <th class="px-4 py-2.5 text-center">Yeni</th>
-          <th class="px-4 py-2.5 text-center">Değişim</th>
+        <tr>
+          <th>Konu</th>
+          <th class="center">Eski</th>
+          <th class="center">Yeni</th>
+          <th class="center">Değişim</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-50">
+      <tbody>
         {% for row in topic_deltas %}
-        <tr class="hover:bg-gray-50 transition">
-          <td class="px-5 py-3 text-gray-700">{{ row.name }}</td>
-          <td class="px-4 py-3 text-center text-gray-500">{{ row.a_val }}</td>
-          <td class="px-4 py-3 text-center text-gray-500">{{ row.b_val }}</td>
-          <td class="px-4 py-3 text-center font-semibold
-            {% if row.delta < 0 %}text-green-600
-            {% elif row.delta > 0 %}text-red-500
-            {% else %}text-gray-400{% endif %}">
+        <tr class="transition">
+          <td class="text-[var(--heading)]">{{ row.name }}</td>
+          <td class="center tnum text-[var(--muted)]">{{ row.a_val }}</td>
+          <td class="center tnum text-[var(--muted)]">{{ row.b_val }}</td>
+          <td class="center tnum font-semibold
+            {% if row.delta < 0 %}text-[var(--up)]
+            {% elif row.delta > 0 %}text-[var(--down)]
+            {% else %}text-[var(--muted)]{% endif %}">
             {% if row.delta < 0 %}↓ {{ row.delta }}
             {% elif row.delta > 0 %}↑ +{{ row.delta }}
             {% else %}—{% endif %}
@@ -115,9 +116,10 @@
       </tbody>
     </table>
     </div>
+    </div>
     {% else %}
-    <div class="px-5 py-8 text-center text-sm text-gray-400">
-      Konu bazlı hata verisi bulunamadı.
+    <div class="das-empty">
+      <p>Konu bazlı hata verisi bulunamadı.</p>
     </div>
     {% endif %}
   </div>
