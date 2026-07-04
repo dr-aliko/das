@@ -95,7 +95,26 @@ DAS-345 validation | DAS-346 keyboard nav | DAS-348 topic errors | DAS-349 mutat
           {% for pub in publishers %}
             <option value="{{ pub.id }}">{{ pub.name }}</option>
           {% endfor %}
+          <option value="other">{% trans "Diğer (Manuel Giriş)" %}</option>
         </select>
+
+        {# Manual publisher name — only when "Diğer" is selected #}
+        <div x-show="publisherId === 'other'" x-cloak class="mt-2">
+          <label for="id_publisher_custom"
+                 class="block text-sm font-bold mb-1.5"
+                 style="color:var(--body)">
+            {% trans "Yayın Adı" %} <span class="text-down">*</span>
+          </label>
+          <input id="id_publisher_custom" type="text" name="publisher_custom"
+                 x-model="publisherCustom"
+                 :required="publisherId === 'other'"
+                 maxlength="100" autocomplete="off"
+                 placeholder="{% trans 'Yayın evinin adını yazın' %}"
+                 class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium
+                        focus:outline-none focus:ring-2"
+                 style="background:var(--surface-2); border-color:var(--border-strong);
+                        color:var(--body); --tw-ring-color:var(--primary);">
+        </div>
       </div>
 
       {# Custom name #}
@@ -256,6 +275,7 @@ function examCreateV2() {
   return {
     /* ── Meta ──────────────────────────────────────────────────────────── */
     publisherId:  '',
+    publisherCustom: '',
     customName:   '',
     examDate:     '',
     duration:     '',
@@ -294,7 +314,12 @@ function examCreateV2() {
     get totalNet()    { return Object.keys(this.rows).reduce((s, id) => s + this.net(id), 0); },
     get hasOverflow() { return Object.keys(this.rows).some(id => this.overflow(id)); },
     get hasTopicOverflow() { return Object.keys(this.rows).some(id => this.topicWrongsFor(id) > (this.rows[id]?.y || 0)); },
-    get metaValid()   { return !!(this.publisherId && this.customName.trim() && this.examDate); },
+    get metaValid()   {
+      const pubOk = this.publisherId === 'other'
+        ? !!this.publisherCustom.trim()
+        : !!this.publisherId;
+      return !!(pubOk && this.customName.trim() && this.examDate);
+    },
     get durationOver(){ return (parseFloat(this.duration) || 0) > 165; },
     get formValid()   { return this.metaValid && !this.hasOverflow && !this.durationOver && !this.hasTopicOverflow; },
 
@@ -319,7 +344,8 @@ function examCreateV2() {
 
     saveDraft() {
       const data = {
-        publisherId: this.publisherId, customName: this.customName,
+        publisherId: this.publisherId, publisherCustom: this.publisherCustom,
+        customName: this.customName,
         examDate: this.examDate, duration: this.duration,
         studentNote: this.studentNote, topicRows: this.topicRows,
         rows: Object.fromEntries(
@@ -334,6 +360,7 @@ function examCreateV2() {
       const d = this._draft;
       if (!d) return;
       if (d.publisherId)  this.publisherId  = d.publisherId;
+      if (d.publisherCustom) this.publisherCustom = d.publisherCustom;
       if (d.customName)   this.customName   = d.customName;
       if (d.examDate)     this.examDate     = d.examDate;
       if (d.duration)     this.duration     = d.duration;
@@ -522,7 +549,7 @@ function examCreateV2() {
       } catch(e) {}
 
       /* Watch meta fields for debounced draft autosave */
-      ['publisherId', 'customName', 'examDate', 'duration', 'studentNote']
+      ['publisherId', 'publisherCustom', 'customName', 'examDate', 'duration', 'studentNote']
         .forEach(f => this.$watch(f, () => this._schedDraft()));
     },
   };

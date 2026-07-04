@@ -4,6 +4,9 @@ from django.db import models
 
 class Publisher(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    # Inactive publishers stay in DB (Exam FK is PROTECT) but are hidden
+    # from the selection dropdowns. Manual "Diğer" entries are created inactive.
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'Yayın'

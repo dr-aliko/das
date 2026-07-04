@@ -1627,15 +1627,32 @@ def exam_notes_update(request, exam_id):
         return JsonResponse({'status': 'error', 'detail': 'invalid json'}, status=400)
 
 
+def _resolve_publisher_id(request):
+    """Publisher id from POST; 'other' creates/reuses an inactive Publisher from manual text."""
+    publisher_id = request.POST.get('publisher')
+    if publisher_id == 'other':
+        name = request.POST.get('publisher_custom', '').strip()[:100]
+        if not name:
+            return None
+        pub = Publisher.objects.filter(name__iexact=name).first()
+        if not pub:
+            pub = Publisher.objects.create(name=name, is_active=False)
+        return pub.id
+    return publisher_id or None
+
+
 @student_required
 def exam_edit(request, exam_id):
     """Edit an existing exam — reuses the V2 create template for a unified UI."""
     exam = get_object_or_404(Exam, id=exam_id, student=request.user)
     subjects   = _build_v2_entry_subjects()
-    publishers = Publisher.objects.all()
+    # Include the exam's current publisher even if deactivated, so prefill still resolves.
+    publishers = Publisher.objects.filter(
+        models.Q(is_active=True) | models.Q(pk=exam.publisher_id)
+    )
 
     if request.method == 'POST':
-        publisher_id = request.POST.get('publisher')
+        publisher_id = _resolve_publisher_id(request)
         custom_name  = request.POST.get('custom_name', '').strip()
         exam_date    = request.POST.get('exam_date')
         duration     = request.POST.get('duration_minutes') or None
@@ -1798,10 +1815,10 @@ def exam_create_v2(request):
         return redirect('student:exam_step1')
 
     subjects   = _build_v2_entry_subjects()
-    publishers = Publisher.objects.all()
+    publishers = Publisher.objects.filter(is_active=True)
 
     if request.method == 'POST':
-        publisher_id = request.POST.get('publisher')
+        publisher_id = _resolve_publisher_id(request)
         custom_name  = request.POST.get('custom_name', '').strip()
         exam_date    = request.POST.get('exam_date')
         duration     = request.POST.get('duration_minutes') or None
@@ -1882,10 +1899,10 @@ def exam_create_step1(request):
         return redirect('student:exam_create_v2')
 
     subjects = Subject.objects.filter(exam_type='TYT').exclude(name='TYT Fen Bilimleri').order_by('name')
-    publishers = Publisher.objects.all()
+    publishers = Publisher.objects.filter(is_active=True)
 
     if request.method == 'POST':
-        publisher_id = request.POST.get('publisher')
+        publisher_id = _resolve_publisher_id(request)
         custom_name = request.POST.get('custom_name', '').strip()
         exam_date = request.POST.get('exam_date')
         duration = request.POST.get('duration_minutes') or None

@@ -2,8 +2,9 @@ from django.core.management.base import BaseCommand
 from exams_app.models import Publisher, Subject, Topic
 
 PUBLISHERS = [
-    '3D Yayınları', 'Limit Yayınları', 'Endemik Yayınları',
-    'Bilgi Sarmal', 'Fen Bilimleri Yayınları',
+    '345 (Üç Dört Beş)', 'Bilgi Sarmal', 'Orijinal Yayınları',
+    'Limit Yayınları', 'Apotemi', 'Hız ve Renk',
+    'Özdebir Yayınları', '3D Yayınları', 'Paraf Yayınları', 'TÖDER',
 ]
 
 # (subject_name, question_count, sub_category, topic_name)
@@ -379,7 +380,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Yayınlar oluşturuluyor...')
         for name in PUBLISHERS:
-            Publisher.objects.get_or_create(name=name)
+            Publisher.objects.update_or_create(name=name, defaults={'is_active': True})
         self.stdout.write(self.style.SUCCESS(f'  {len(PUBLISHERS)} yayın hazır'))
 
         self.stdout.write('Konular güncelleniyor...')

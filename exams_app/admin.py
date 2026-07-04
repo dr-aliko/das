@@ -7,7 +7,8 @@ from .models import (
 
 @admin.register(Publisher)
 class PublisherAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'is_active')
+    list_filter = ('is_active',)
     search_fields = ('name',)
 
 
