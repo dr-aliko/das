@@ -156,6 +156,12 @@
   <script>
     (function(){
       var html = document.documentElement;
+      if (window.innerWidth < 768) {
+        html.classList.add('dark');
+        html.classList.remove('das-theme-auto', 'das-theme-light');
+        html.classList.add('das-theme-dark');
+        return;
+      }
       var saved = localStorage.getItem('theme');
       var pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
       var effective;
@@ -211,7 +217,7 @@
       {% endif %}
       <span class="text-indigo-300 max-w-[8rem] truncate sm:max-w-none">{{ user.full_name }}</span>
       <button id="dm-btn" onclick="toggleDM()" title="Tema değiştir" aria-label="Tema değiştir"
-              class="opacity-70 hover:opacity-100 transition text-base leading-none px-1">🌙</button>
+              class="hidden md:inline opacity-70 hover:opacity-100 transition text-base leading-none px-1">🌙</button>
       <a href="/auth/logout/" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-md">Çıkış</a>
     </div>
   </div>

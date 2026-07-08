@@ -2288,15 +2288,6 @@ def coach_student_detail(request, student_id):
     _, chart_since, chart_period_label = _chart_period_since(chart_period_str)
     chart_data = _build_student_chart_data(student.id, since=chart_since)
 
-    # Auto-derive exam date from sinif for display in template
-    _sinif_offset_map = {'9': 3, '10': 2, '11': 1, '12': 0, 'mezun': 0}
-    sinif = getattr(student, 'sinif', '') or ''
-    if sinif and sinif in _sinif_offset_map:
-        _target_year = date.today().year + _sinif_offset_map[sinif] + 1
-        auto_exam_date_str = f'{_target_year}-06-15'
-    else:
-        auto_exam_date_str = ''
-
     return render(request, 'coach/snapshot.html', {
         'student': student,
         'status': status_info['status'],
@@ -2311,7 +2302,6 @@ def coach_student_detail(request, student_id):
         'has_chart_data':       bool(chart_data.get('labels')),
         'chart_period':         chart_period_str,
         'chart_period_label':   chart_period_label,
-        'auto_exam_date_str':   auto_exam_date_str,
     })
 
 
@@ -2931,14 +2921,29 @@ def _build_comparison(exam_1, exam_2):
 
 
 def _get_radar_topics(student_id, since=None):
-    """Gray topics that don't yet have a TRIAL StudentTask for this student."""
+    """Gray topics that don't yet have a TRIAL StudentTask for this student,
+    sorted by subject total mistake count (descending)."""
+    from collections import defaultdict
     all_gray = list(_get_gray_topics(student_id, since=since))
     assigned_ids = set(
         StudentTask.objects.filter(student_id=student_id,
                                    task_source=StudentTask.SOURCE_TRIAL)
         .values_list('topic_id', flat=True)
     )
-    return [t for t in all_gray if t['topic__id'] not in assigned_ids]
+    topics = [t for t in all_gray if t['topic__id'] not in assigned_ids]
+
+    subject_totals = defaultdict(int)
+    subject_groups = defaultdict(list)
+    for t in topics:
+        subj = t['topic__subject__name']
+        subject_totals[subj] += (t['wrong_total'] or 0) + (t['blank_total'] or 0)
+        subject_groups[subj].append(t)
+
+    sorted_subjects = sorted(subject_totals, key=lambda s: subject_totals[s], reverse=True)
+    result = []
+    for subj in sorted_subjects:
+        result.extend(subject_groups[subj])
+    return result
 
 
 def _get_gray_topics(student_id, last_n=None, since=None):

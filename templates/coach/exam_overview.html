@@ -3,18 +3,43 @@
 {% block title %}Öğrenci Denemeleri — DAS{% endblock %}
 
 {% block content %}
-<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden"
+     x-data="{ viewMode: localStorage.getItem('coach_view_mode') || 'card', setViewMode(m) { this.viewMode = m; localStorage.setItem('coach_view_mode', m); } }">
 
-  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700">
-    <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Öğrenci Denemeleri</h1>
-    <p class="text-sm text-ink-400 mt-1">Öğrenci seç — tüm deneme geçmişini görüntüle</p>
+  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700 flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Öğrenci Denemeleri</h1>
+      <p class="text-sm text-ink-400 mt-1">Öğrenci seç — tüm deneme geçmişini görüntüle</p>
+    </div>
+    <div class="flex items-center gap-0.5 bg-ink-900 rounded-lg p-0.5 shrink-0">
+      <button @click="setViewMode('card')"
+              :class="viewMode === 'card' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'"
+              class="w-8 h-8 rounded-md flex items-center justify-center transition-colors"
+              title="Kart görünümü">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/>
+          <rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>
+        </svg>
+      </button>
+      <button @click="setViewMode('list')"
+              :class="viewMode === 'list' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'"
+              class="w-8 h-8 rounded-md flex items-center justify-center transition-colors"
+              title="Liste görünümü">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="p-4 md:p-6">
     {% if student_data %}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+    <div :class="viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3'">
       {% for item in student_data %}
-      <a href="{% url 'coach:student_exams' item.student.id %}"
+
+      {# CARD VIEW #}
+      <a x-show="viewMode === 'card'"
+         href="{% url 'coach:student_exams' item.student.id %}"
          class="group rounded-xl border border-ink-700 bg-ink-850 hover:bg-ink-800
                 hover:border-ink-600 hover:shadow-card-lg hover:scale-[1.01]
                 transition-all duration-200 p-4">
@@ -58,6 +83,39 @@
           </span>
         </div>
       </a>
+
+      {# LIST VIEW #}
+      <a x-show="viewMode === 'list'"
+         href="{% url 'coach:student_exams' item.student.id %}"
+         class="group flex items-center gap-3 px-4 py-3 rounded-xl border border-ink-700
+                bg-ink-850 hover:bg-ink-800 hover:border-ink-600 transition-all duration-200">
+        <div class="pii w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700
+                    flex items-center justify-center text-white font-semibold text-xs shrink-0">
+          {{ item.student.full_name|slice:":1"|upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="pii font-semibold text-ink-100 text-sm truncate">{{ item.student.full_name }}</p>
+          <p class="pii text-[11px] text-ink-500">{{ item.student.grade|default:"—" }}</p>
+        </div>
+        <div class="hidden sm:flex items-center gap-5 shrink-0">
+          <div class="text-right">
+            <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Toplam</p>
+            <p class="text-sm font-bold text-ink-100 tnum">{{ item.total }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Son Net</p>
+            <p class="text-sm font-bold text-steel-400 tnum">{% if item.last_net %}{{ item.last_net|floatformat:1 }}{% else %}—{% endif %}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Son Tarih</p>
+            <p class="text-sm font-bold text-ink-200 tnum">{% if item.last_date %}{{ item.last_date|date:"d M" }}{% else %}—{% endif %}</p>
+          </div>
+        </div>
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+             class="text-ink-500 group-hover:text-steel-400 transition-colors shrink-0"
+             viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+
       {% endfor %}
     </div>
     {% else %}
