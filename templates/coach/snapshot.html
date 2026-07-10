@@ -50,6 +50,11 @@
         </svg>
         Rapor
       </a>
+      <a href="{% url 'coach:student_placement_results' student.id %}"
+         class="inline-flex h-8 px-3 rounded-md bg-ink-800 border border-ink-700
+                hover:bg-ink-750 text-ink-200 text-xs font-medium items-center gap-1.5 transition-colors">
+        <span class="hidden sm:inline">Seviye</span> Tespiti
+      </a>
       <a href="/coach/tasks/?student={{ student.id }}"
          class="hidden sm:inline-flex h-8 px-3 rounded-md bg-ink-800 border border-ink-700
                 hover:bg-ink-750 text-ink-200 text-xs font-medium items-center gap-1.5 transition-colors">

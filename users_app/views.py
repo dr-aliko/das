@@ -395,14 +395,23 @@ def profil_view(request):
         if sinif_offset is not None:
             target_year = current_year + sinif_offset + 1  # +1: next YKS cycle
 
+    has_completed_placement = False
+    if user.is_student:
+        from exams_app.models import StudentExamAttempt
+        has_completed_placement = StudentExamAttempt.objects.filter(
+            student=user, is_completed=True, exam__is_active=True
+        ).exists()
+
     return render(request, 'profile/profile_v2.html', {
-        'stats':         stats,
-        'activity_week': activity_week,
-        'all_badges':    all_badges,
-        'target_year':   target_year,
-        'alan_choices':  User.ALAN_CHOICES,
-        'sinif_choices': User.SINIF_CHOICES,
-        'v2_shell':      True,
+        'stats':                   stats,
+        'activity_week':           activity_week,
+        'all_badges':              all_badges,
+        'target_year':             target_year,
+        'alan_choices':            User.ALAN_CHOICES,
+        'sinif_choices':           User.SINIF_CHOICES,
+        'has_completed_placement': has_completed_placement,
+        'v2_shell':                True,
+        'shell_hide_fab':          True,
     })
 
 

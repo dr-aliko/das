@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}{{ attempt.exam.title }} — {{ student.full_name }} — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-6">
+
+  {# ── 1. OVERALL SCORE CARD ────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    <div class="px-4 md:px-6 pt-5 pb-4 border-b border-ink-700 flex items-center gap-3">
+      <a href="{% url 'coach:student_placement_results' student.id %}"
+         class="shrink-0 text-ink-500 hover:text-ink-300 transition-colors">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </a>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs text-ink-500 uppercase tracking-wider font-semibold">Sınav Detayı</p>
+        <h1 class="text-xl font-bold text-white mt-0.5 truncate">{{ attempt.exam.title }}</h1>
+        <p class="pii text-xs text-ink-500 mt-0.5">
+          {{ student.full_name }} · {{ attempt.end_time|date:"d M Y H:i" }}
+        </p>
+      </div>
+    </div>
+
+    <div class="p-4 md:p-6 space-y-5">
+
+      {# Overall success percentage + bar #}
+      <div>
+        <div class="flex items-end justify-between mb-2">
+          <p class="text-sm font-semibold text-ink-300">Genel Başarı</p>
+          <p class="text-3xl font-bold tnum
+                     {% if overall.pct >= 70 %}text-emerald-400
+                     {% elif overall.pct >= 45 %}text-amber-400
+                     {% else %}text-red-400{% endif %}">
+            %{{ overall.pct }}</p>
+        </div>
+        <div class="h-3 rounded-full bg-ink-800 overflow-hidden">
+          <div class="h-full rounded-full transition-all
+                      {% if overall.pct >= 70 %}bg-emerald-500
+                      {% elif overall.pct >= 45 %}bg-amber-500
+                      {% else %}bg-red-500{% endif %}"
+               style="width: {{ overall.pct }}%"></div>
+        </div>
+      </div>
+
+      {# Stat row #}
+      <div class="grid grid-cols-4 gap-2">
+        <div class="rounded-xl bg-ink-850 border border-ink-700 p-3 text-center">
+          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Net</p>
+          <p class="mt-1 text-xl font-bold text-steel-400 tnum">{{ overall.net }}</p>
+        </div>
+        <div class="rounded-xl bg-ink-850 border border-ink-700 p-3 text-center">
+          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Doğru</p>
+          <p class="mt-1 text-xl font-bold text-emerald-400 tnum">{{ overall.correct }}</p>
+        </div>
+        <div class="rounded-xl bg-ink-850 border border-ink-700 p-3 text-center">
+          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Yanlış</p>
+          <p class="mt-1 text-xl font-bold text-red-400 tnum">{{ overall.wrong }}</p>
+        </div>
+        <div class="rounded-xl bg-ink-850 border border-ink-700 p-3 text-center">
+          <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Boş</p>
+          <p class="mt-1 text-xl font-bold text-ink-400 tnum">{{ overall.blank }}</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── 2. SUBJECT ANALYSIS ──────────────────────────────────────────────────── #}
+  {% if subjects %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-4 md:px-6 pt-4 pb-3 border-b border-ink-700">
+      <h2 class="text-base font-bold text-white">Ders Analizi</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Derse göre başarı yüzdesi ve soru dağılımı</p>
+    </div>
+
+    <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for subj in subjects %}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <p class="font-semibold text-ink-100 text-sm">{{ subj.name }}</p>
+          <span class="text-xs font-bold tnum px-2 py-0.5 rounded-full border
+                       {% if subj.pct >= 70 %}text-emerald-400 bg-emerald-400/10 border-emerald-400/20
+                       {% elif subj.pct >= 45 %}text-amber-400 bg-amber-400/10 border-amber-400/20
+                       {% else %}text-red-400 bg-red-400/10 border-red-400/20{% endif %}">
+            %{{ subj.pct }}
+          </span>
+        </div>
+
+        <div class="h-1.5 rounded-full bg-ink-700 overflow-hidden mb-3">
+          <div class="h-full rounded-full
+                      {% if subj.pct >= 70 %}bg-emerald-500
+                      {% elif subj.pct >= 45 %}bg-amber-500
+                      {% else %}bg-red-500{% endif %}"
+               style="width: {{ subj.pct }}%"></div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs font-semibold tnum">
+          <span class="flex items-center gap-1 text-emerald-400">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ subj.correct }} Doğru
+          </span>
+          <span class="flex items-center gap-1 text-red-400">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            {{ subj.wrong }} Yanlış
+          </span>
+          <span class="text-ink-500">{{ subj.blank }} Boş</span>
+          <span class="ml-auto text-ink-600">{{ subj.total }} Soru</span>
+        </div>
+
+        {# Wrong/blank kazanım list #}
+        {% for row in subj.question_rows %}
+        {% if row.status != 'correct' and row.question.topic %}
+        {% if forloop.first %}
+        <div class="mt-3 pt-3 border-t border-ink-700 space-y-1">
+        {% endif %}
+          <p class="text-[11px] text-ink-500 truncate">
+            <span class="{% if row.status == 'wrong' %}text-red-400{% else %}text-ink-600{% endif %} font-semibold mr-1">
+              {% if row.status == 'wrong' %}✗{% else %}—{% endif %}
+            </span>{{ row.question.topic }}
+          </p>
+        {% if forloop.last %}
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── 3. QUESTION REVIEW — grouped by subject ──────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-4 md:px-6 pt-4 pb-3 border-b border-ink-700">
+      <h2 class="text-base font-bold text-white">Soru Detayları</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Doğru ve yanlış cevapların derse göre dağılımı</p>
+    </div>
+
+    {% for subj in subjects %}
+    <div x-data="{ open: true }">
+
+      <button @click="open = !open"
+              class="w-full flex items-center gap-3 px-4 md:px-6 py-3
+                     border-b border-ink-800 bg-ink-900 hover:bg-ink-850 transition-colors text-left">
+        <div class="flex-1 flex items-center gap-2 min-w-0">
+          <span class="text-xs font-bold text-ink-300 uppercase tracking-wider">{{ subj.name }}</span>
+          <span class="text-[10px] text-ink-600 tnum">{{ subj.total }} soru</span>
+        </div>
+        <div class="flex items-center gap-3 shrink-0 text-xs tnum">
+          <span class="text-emerald-400 font-semibold">{{ subj.correct }}D</span>
+          <span class="text-red-400 font-semibold">{{ subj.wrong }}Y</span>
+          <span class="text-ink-600">{{ subj.blank }}B</span>
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+               class="text-ink-600 transition-transform duration-200 ml-1"
+               :class="open ? 'rotate-180' : ''"
+               viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </button>
+
+      <div x-show="open" x-cloak class="divide-y divide-ink-800/60">
+        {% for row in subj.question_rows %}
+        <div x-data="{ detail: false }" class="px-4 md:px-6 py-3">
+
+          <button @click="detail = !detail"
+                  class="w-full flex items-start gap-3 text-left cursor-pointer min-h-[44px]">
+            <div class="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5
+                        {% if row.status == 'correct' %}bg-emerald-500/15 text-emerald-400
+                        {% elif row.status == 'wrong' %}bg-red-500/15 text-red-400
+                        {% else %}bg-ink-800 text-ink-500{% endif %}">
+              {{ row.question.order }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-ink-300 line-clamp-2 leading-snug">{{ row.question.question_text|truncatechars:100 }}</p>
+              {% if row.question.topic %}
+              <p class="text-[11px] text-ink-600 mt-0.5">{{ row.question.topic }}</p>
+              {% endif %}
+            </div>
+            <div class="shrink-0 flex items-center gap-2 ml-2 mt-0.5">
+              {% if row.status == 'correct' %}
+              <span class="text-xs font-semibold text-emerald-400">Doğru</span>
+              {% elif row.status == 'wrong' %}
+              <span class="text-xs font-semibold text-red-400">{{ row.selected }}</span>
+              {% else %}
+              <span class="text-xs text-ink-600">Boş</span>
+              {% endif %}
+
+              {% if row.time_label %}
+              <span class="inline-flex items-center gap-0.5 text-[10px] font-medium tabular-nums rounded-md px-1.5 py-0.5
+                           {% if row.time_secs < 8 %}text-red-400 bg-red-400/10
+                           {% elif row.time_secs > 180 %}text-amber-400 bg-amber-400/10
+                           {% else %}text-ink-500 bg-ink-800{% endif %}"
+                   title="{% if row.time_secs < 8 %}Çok hızlı — muhtemelen rastgele cevap{% elif row.time_secs > 180 %}Uzun süre — takıldı olabilir{% else %}Normal süre{% endif %}">
+                <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+                </svg>
+                {{ row.time_label }}
+              </span>
+              {% endif %}
+
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+                   class="text-ink-700 transition-transform duration-150"
+                   :class="detail ? 'rotate-90' : ''"
+                   viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            </div>
+          </button>
+
+          <div x-show="detail" x-cloak class="mt-3 ml-9 space-y-2">
+            <p class="text-sm text-ink-200 leading-relaxed whitespace-pre-wrap break-words">{{ row.question.question_text }}</p>
+            {% if row.question.question_image %}
+            <img src="{{ row.question.question_image }}" alt="Soru görseli"
+                 class="max-w-xs rounded-lg border border-ink-700 max-h-40 object-contain">
+            {% endif %}
+            <div class="space-y-1.5 pt-1">
+              {% for key, text in row.question.options.items %}
+              <div class="flex items-start gap-2 rounded-lg px-3 py-2 text-sm
+                          {% if key == row.question.correct_option %}bg-emerald-500/10 border border-emerald-500/25
+                          {% elif key == row.selected and row.status == 'wrong' %}bg-red-500/10 border border-red-500/25
+                          {% else %}border border-transparent bg-ink-800/40{% endif %}">
+                <span class="font-bold shrink-0 w-5 text-center
+                             {% if key == row.question.correct_option %}text-emerald-400
+                             {% elif key == row.selected and row.status == 'wrong' %}text-red-400
+                             {% else %}text-ink-600{% endif %}">{{ key }}</span>
+                <span class="text-ink-300 flex-1 leading-relaxed whitespace-pre-wrap break-words">{{ text }}</span>
+                {% if key == row.question.correct_option %}
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"
+                     class="text-emerald-400 shrink-0 mt-0.5" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7"/>
+                </svg>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>
+{% endblock %}

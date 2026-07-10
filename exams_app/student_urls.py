@@ -32,4 +32,12 @@ urlpatterns = [
     path('brans/<int:pk>/duzenle/', views.brans_edit,   name='brans_edit'),
     path('brans/<int:pk>/sil/', views.brans_delete,     name='brans_delete'),
     path('brans/<slug:subject_slug>/', views.brans_subject_detail_student, name='brans_subject_detail'),
+    # Seviye Tespit Sınavı
+    path('seviye-tespiti/', views.placement_exam_list, name='placement_list'),
+    path('seviye-tespiti/<int:exam_id>/baslat/', views.placement_start, name='placement_start'),
+    path('seviye-tespiti/<int:attempt_id>/al/', views.placement_take, name='placement_take'),
+    path('seviye-tespiti/<int:attempt_id>/cevap/', views.placement_save_answer, name='placement_save_answer'),
+    path('seviye-tespiti/<int:attempt_id>/sure/', views.placement_save_time, name='placement_save_time'),
+    path('seviye-tespiti/<int:attempt_id>/bitir/', views.placement_submit, name='placement_submit'),
+    path('seviye-tespiti/<int:attempt_id>/sonuc/', views.placement_result, name='placement_result'),
 ]

@@ -246,6 +246,60 @@
       {% endif %}
 
       {% if user.is_student %}
+      {# ── Seviye Tespit Sınavı shortcut ── #}
+      {% if has_completed_placement %}
+      {# Completed — subtle steel style #}
+      <a href="/student/seviye-tespiti/"
+         class="flex items-center gap-3 p-4 rounded-xl border border-steel-500/30
+                bg-steel-tint hover:bg-steel-500/20 transition-colors">
+        <span class="w-8 h-8 rounded-lg bg-steel-tint flex items-center justify-center text-steel-400 shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#das-icon-target"/>
+          </svg>
+        </span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-steel-400">{% trans "Seviye Tespit Sınavı" %}</p>
+          <p class="text-xs text-ink-500">{% trans "Sonuçlarını ve analizini görüntüle" %}</p>
+        </div>
+        <span class="shrink-0 text-[10px] font-bold text-emerald-400 bg-emerald-400/10
+                     px-2 py-0.5 rounded-full border border-emerald-400/20">Tamamlandı</span>
+        <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#das-icon-chev-right"/>
+        </svg>
+      </a>
+      {% else %}
+      {# Not completed — vibrant call-to-action #}
+      <a href="/student/seviye-tespiti/"
+         class="relative flex items-center gap-3 p-4 rounded-xl overflow-hidden
+                bg-indigo-600 hover:bg-indigo-500 transition-colors duration-200
+                ring-2 ring-indigo-400/40 shadow-lg shadow-indigo-900/30">
+        {# Subtle glow pulse behind icon #}
+        <span class="absolute inset-0 rounded-xl ring-2 ring-indigo-300/30 animate-pulse pointer-events-none"></span>
+        <span class="relative w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center text-white shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#das-icon-target"/>
+          </svg>
+        </span>
+        <div class="relative flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm font-bold text-white">{% trans "Seviye Tespit Sınavı" %}</p>
+            <span class="text-[10px] font-bold text-indigo-200 bg-white/15
+                         px-2 py-0.5 rounded-full border border-white/20 shrink-0">
+              {% trans "Yeni" %}
+            </span>
+          </div>
+          <p class="text-xs text-indigo-200 mt-0.5">{% trans "Sınavı Henüz Çözmediniz — Hemen Başla" %}</p>
+        </div>
+        <svg class="relative w-4 h-4 text-white/70 shrink-0" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#das-icon-chev-right"/>
+        </svg>
+      </a>
+      {% endif %}
+
       {# ── Akademik Bilgiler accordion ── #}
       <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden"
            x-data="akademikProfil('{{ user.alan }}', '{{ user.sinif }}', {{ target_year|default:'null' }})">

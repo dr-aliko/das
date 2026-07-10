@@ -68,7 +68,15 @@
       "Bash(.venv/Scripts/python.exe manage.py seed_initial)",
       "Bash(npx -y tailwindcss@3.4.17 -c tailwind.config.js -i static/css/tailwind.in.css -o static/css/tailwind.min.css --minify)",
       "Bash(perl -pi -e 's/type=\"number\"\\(?! inputmode\\)/type=\"number\" inputmode=\"numeric\"/g' tasks/partials/_task_bottom_sheets.html student/brans_create.html coach/tasks/hafta.html student/brans_topic_errors.html student/exam_create_v2.html dashboard/partials/_topic_picker_inline.html student/tasks/hafta.html student/exam_create_step1.html student/exam_create_step2.html)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(pip freeze *)",
+      "Bash(ls .venv/Scripts/pip*)",
+      "Bash(ls .venv/bin/pip*)",
+      "Bash(.venv/Scripts/pip.exe install *)",
+      "Bash(/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe *)",
+      "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip install django-import-export)",
+      "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip freeze)",
+      "Bash(\".venv/Scripts/python.exe\" manage.py check)"
     ]
   }
 }

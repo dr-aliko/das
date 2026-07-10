@@ -16,7 +16,11 @@ from django.views.decorators.http import require_http_methods
 from users_app.decorators import coach_can_view_student, coach_required, student_required
 
 from .forms import BransDenemeForm
-from .models import BransDeneme, BransTopicError, Exam, ExamResult, ExamTopicError, Publisher, Subject, StudentTask, Topic
+from .models import (
+    BransDeneme, BransTopicError, Exam, ExamResult, ExamTopicError,
+    Publisher, Subject, StudentTask, Topic,
+    PlacementExam, ExamQuestion, StudentExamAttempt, StudentQuestionAnswer,
+)
 
 SUBJECT_COLORS = {
     'TYT Türkçe':         {'border': '#3b82f6', 'background': 'rgba(59,130,246,0.15)'},
@@ -3529,3 +3533,283 @@ def coach_brans_topic_errors(request, student_id, pk):
         final_fallback=reverse('coach:student_brans_hub', kwargs={'student_id': student_id}),
         back_fallback=reverse('coach:brans_student_detail', kwargs={'student_id': student_id}),
     )
+
+
+# ── Seviye Tespit Sınavı — Student Views ─────────────────────────────────────
+
+@student_required
+def placement_exam_list(request):
+    exams = PlacementExam.objects.filter(is_active=True)
+    my_attempts = {
+        a.exam_id: a
+        for a in StudentExamAttempt.objects.filter(student=request.user).order_by('-start_time')
+    }
+    items = []
+    for exam in exams:
+        attempt = my_attempts.get(exam.pk)
+        items.append({'exam': exam, 'attempt': attempt})
+    return render(request, 'student/placement/list.html', {'items': items, 'shell_hide_fab': True})
+
+
+@student_required
+def placement_start(request, exam_id):
+    if request.method != 'POST':
+        return redirect('student:placement_list')
+    exam = get_object_or_404(PlacementExam, pk=exam_id, is_active=True)
+    existing = StudentExamAttempt.objects.filter(
+        student=request.user, exam=exam, is_completed=False
+    ).first()
+    if existing:
+        return redirect('student:placement_take', attempt_id=existing.pk)
+    attempt = StudentExamAttempt.objects.create(student=request.user, exam=exam)
+    return redirect('student:placement_take', attempt_id=attempt.pk)
+
+
+@student_required
+def placement_take(request, attempt_id):
+    attempt = get_object_or_404(
+        StudentExamAttempt.objects.select_related('exam'),
+        pk=attempt_id,
+        student=request.user,
+    )
+    if attempt.is_completed:
+        return redirect('student:placement_result', attempt_id=attempt.pk)
+
+    questions = list(attempt.exam.questions.order_by('order'))
+    answered_map = {
+        a.question_id: a.selected_option
+        for a in StudentQuestionAnswer.objects.filter(attempt=attempt)
+    }
+    questions_data = [
+        {
+            'id': q.pk,
+            'order': q.order,
+            'question_text': q.question_text,
+            'question_image': q.question_image,
+            'options': q.options(),
+            'answered': answered_map.get(q.pk),
+        }
+        for q in questions
+    ]
+    elapsed = int((timezone.now() - attempt.start_time).total_seconds())
+    remaining = max(0, attempt.exam.duration_minutes * 60 - elapsed)
+
+    return render(request, 'student/placement/take.html', {
+        'attempt': attempt,
+        'questions_json': json.dumps(questions_data),
+        'total': len(questions),
+        'remaining_seconds': remaining,
+        'shell_hide_fab': True,
+    })
+
+
+@require_http_methods(['POST'])
+@student_required
+def placement_save_answer(request, attempt_id):
+    attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
+    try:
+        data = json.loads(request.body)
+        question_id = data.get('question_id')
+        selected = data.get('selected_option')  # A-E or null
+    except (json.JSONDecodeError, KeyError):
+        return JsonResponse({'ok': False}, status=400)
+
+    question = get_object_or_404(ExamQuestion, pk=question_id, exam=attempt.exam)
+    if selected not in ('A', 'B', 'C', 'D', 'E', None, ''):
+        return JsonResponse({'ok': False}, status=400)
+
+    StudentQuestionAnswer.objects.update_or_create(
+        attempt=attempt,
+        question=question,
+        defaults={'selected_option': selected or None},
+    )
+    return JsonResponse({'ok': True})
+
+
+@require_http_methods(['POST'])
+@student_required
+def placement_save_time(request, attempt_id):
+    attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
+    try:
+        data = json.loads(request.body)
+        question_id = int(data['question_id'])
+        seconds = int(data['seconds'])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return JsonResponse({'ok': False}, status=400)
+    if seconds < 0:
+        return JsonResponse({'ok': False}, status=400)
+
+    question = get_object_or_404(ExamQuestion, pk=question_id, exam=attempt.exam)
+    obj, created = StudentQuestionAnswer.objects.get_or_create(
+        attempt=attempt,
+        question=question,
+        defaults={'time_spent_seconds': seconds},
+    )
+    if not created:
+        obj.time_spent_seconds = seconds
+        obj.save(update_fields=['time_spent_seconds'])
+    return JsonResponse({'ok': True})
+
+
+@require_http_methods(['POST'])
+@student_required
+def placement_submit(request, attempt_id):
+    attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
+    questions = list(attempt.exam.questions.all())
+    answers = {a.question_id: a.selected_option for a in StudentQuestionAnswer.objects.filter(attempt=attempt)}
+
+    correct = wrong = blank = 0
+    for q in questions:
+        sel = answers.get(q.pk)
+        if not sel:
+            blank += 1
+        elif sel == q.correct_option:
+            correct += 1
+        else:
+            wrong += 1
+
+    attempt.correct_count = correct
+    attempt.wrong_count = wrong
+    attempt.blank_count = blank
+    attempt.is_completed = True
+    attempt.end_time = timezone.now()
+    attempt.save()
+    return redirect('student:placement_result', attempt_id=attempt.pk)
+
+
+def _fmt_secs(s):
+    if s <= 0:
+        return ''
+    if s < 60:
+        return f'{s} sn'
+    m, leftover = divmod(s, 60)
+    return f'{m} dk {leftover} sn' if leftover else f'{m} dk'
+
+
+def _build_placement_analytics(attempt):
+    """
+    Returns (overall, subjects) for a completed attempt.
+
+    overall = {total, correct, wrong, blank, net, pct}
+    subjects = list of {
+        name, total, correct, wrong, blank, pct,
+        question_rows: [{question, selected, status}]
+    }
+    Questions without a subject are grouped under 'Diğer'.
+    Subjects are ordered by total question count descending.
+    """
+    answer_objs = StudentQuestionAnswer.objects.filter(attempt=attempt)
+    answers  = {a.question_id: a.selected_option      for a in answer_objs}
+    time_map = {a.question_id: a.time_spent_seconds   for a in answer_objs}
+    questions = list(attempt.exam.questions.order_by('order'))
+
+    # Build flat row list
+    question_rows = []
+    for q in questions:
+        sel = answers.get(q.pk)
+        if not sel:
+            status = 'blank'
+        elif sel == q.correct_option:
+            status = 'correct'
+        else:
+            status = 'wrong'
+        t = time_map.get(q.pk, 0)
+        question_rows.append({
+            'question':   q,
+            'selected':   sel,
+            'status':     status,
+            'time_secs':  t,
+            'time_label': _fmt_secs(t),
+        })
+
+    # Overall
+    total = len(question_rows)
+    correct = sum(1 for r in question_rows if r['status'] == 'correct')
+    wrong = sum(1 for r in question_rows if r['status'] == 'wrong')
+    blank = total - correct - wrong
+    overall = {
+        'total':   total,
+        'correct': correct,
+        'wrong':   wrong,
+        'blank':   blank,
+        'net':     round(correct - wrong * 0.25, 2),
+        'pct':     round(correct / total * 100, 1) if total else 0,
+    }
+
+    # Group by subject
+    subject_map = {}
+    for row in question_rows:
+        subj = row['question'].subject or 'Diğer'
+        if subj not in subject_map:
+            subject_map[subj] = {'correct': 0, 'wrong': 0, 'blank': 0, 'question_rows': []}
+        subject_map[subj][row['status']] += 1
+        subject_map[subj]['question_rows'].append(row)
+
+    subjects = []
+    for name, data in subject_map.items():
+        stotal = data['correct'] + data['wrong'] + data['blank']
+        subjects.append({
+            'name':          name,
+            'total':         stotal,
+            'correct':       data['correct'],
+            'wrong':         data['wrong'],
+            'blank':         data['blank'],
+            'pct':           round(data['correct'] / stotal * 100, 1) if stotal else 0,
+            'question_rows': data['question_rows'],
+        })
+    subjects.sort(key=lambda s: s['total'], reverse=True)
+
+    return overall, subjects
+
+
+@student_required
+def placement_result(request, attempt_id):
+    attempt = get_object_or_404(
+        StudentExamAttempt.objects.select_related('exam'),
+        pk=attempt_id,
+        student=request.user,
+        is_completed=True,
+    )
+    overall, subjects = _build_placement_analytics(attempt)
+    return render(request, 'student/placement/result.html', {
+        'attempt':  attempt,
+        'overall':  overall,
+        'subjects': subjects,
+        'shell_hide_fab': True,
+    })
+
+
+# ── Seviye Tespit Sınavı — Coach Views ───────────────────────────────────────
+
+@coach_required
+def coach_placement_results(request, student_id):
+    if not coach_can_view_student(request.user, student_id):
+        return HttpResponseForbidden('Bu öğrenciyi görüntüleme yetkiniz yok.')
+    from users_app.models import User
+    student = get_object_or_404(User, pk=student_id, role='student')
+    attempts = StudentExamAttempt.objects.filter(
+        student=student, is_completed=True
+    ).select_related('exam').order_by('-start_time')
+    return render(request, 'coach/placement/student_results.html', {
+        'student':  student,
+        'attempts': attempts,
+    })
+
+
+@coach_required
+def coach_placement_detail(request, student_id, attempt_id):
+    if not coach_can_view_student(request.user, student_id):
+        return HttpResponseForbidden('Bu öğrenciyi görüntüleme yetkiniz yok.')
+    attempt = get_object_or_404(
+        StudentExamAttempt.objects.select_related('exam', 'student'),
+        pk=attempt_id,
+        student_id=student_id,
+        is_completed=True,
+    )
+    overall, subjects = _build_placement_analytics(attempt)
+    return render(request, 'coach/placement/attempt_detail.html', {
+        'attempt':  attempt,
+        'student':  attempt.student,
+        'overall':  overall,
+        'subjects': subjects,
+    })

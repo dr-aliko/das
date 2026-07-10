@@ -26,4 +26,7 @@ urlpatterns = [
     path('brans/', views.coach_brans_analytics, name='brans_analytics'),
     path('brans/student/<int:student_id>/', views.coach_brans_student_detail, name='brans_student_detail'),
     path('brans/student/<int:student_id>/karsilastir/', views.coach_brans_compare, name='brans_compare'),
+    # Seviye Tespit Sınavı — coach views
+    path('student/<int:student_id>/seviye-tespiti/', views.coach_placement_results, name='student_placement_results'),
+    path('student/<int:student_id>/seviye-tespiti/<int:attempt_id>/', views.coach_placement_detail, name='student_placement_detail'),
 ]

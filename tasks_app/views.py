@@ -452,6 +452,7 @@ class StudentHaftaView(View):
     def get(self, request):
         return render(request, "student/tasks/hafta.html", {
             "student_id": request.user.id,
+            "shell_hide_fab": True,
         })
 
 

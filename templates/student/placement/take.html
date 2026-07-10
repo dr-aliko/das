@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}{{ attempt.exam.title }} — DAS{% endblock %}
+
+{% block extra_css %}
+<style>
+.dot-nav::-webkit-scrollbar { display: none; }
+.dot-nav { scrollbar-width: none; -ms-overflow-style: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="placementExam()" x-init="init()" @beforeunload.window="warnLeave($event)">
+
+  {% comment %}
+  Card is a flex column with an explicit viewport height so the inner content
+  area is a true bounded scroll container. This is the only reliable way to
+  prevent the fixed action bar from covering the last option on mobile.
+  100dvh adjusts dynamically when the iOS Safari address bar hides/shows.
+  1.5rem subtracts the main element's top padding (py-5 = 1.25rem on mobile).
+  {% endcomment %}
+  <div class="w-full flex flex-col rounded-2xl border border-ink-700 bg-ink-950"
+       style="height: calc(100vh - 1.5rem); height: calc(100dvh - 1.5rem)">
+
+    {% comment %} Header — shrink-0 so it never compresses {% endcomment %}
+    <div class="shrink-0 bg-ink-950/95 backdrop-blur-sm
+                px-4 py-3 border-b border-ink-700
+                flex items-center justify-between gap-4 z-10">
+      <div class="min-w-0 flex-1">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider font-semibold">Sınav</p>
+        <h1 class="text-sm font-semibold text-white truncate leading-snug">{{ attempt.exam.title }}</h1>
+      </div>
+      <div class="shrink-0 text-right">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider">Kalan</p>
+        <p class="text-lg font-mono font-bold tabular-nums leading-snug"
+           :class="remaining <= 60 ? 'text-red-400' : 'text-steel-400'"
+           x-text="formatTime(remaining)">--:--</p>
+      </div>
+    </div>
+
+    {% comment %} Dot navigator — shrink-0, scrolls horizontally {% endcomment %}
+    <div class="dot-nav shrink-0 px-4 py-2.5 border-b border-ink-700 overflow-x-auto">
+      <div class="flex gap-1.5 min-w-max">
+        <template x-for="(q, i) in questions" :key="q.id">
+          <button
+            @click="goTo(i)"
+            :class="{
+              'ring-2 ring-steel-400 ring-offset-1 ring-offset-ink-950': currentIndex === i,
+              'bg-emerald-600/90 text-white': answers[q.id] && answers[q.id] !== null && currentIndex !== i,
+              'bg-ink-800 text-ink-500': !answers[q.id] && currentIndex !== i,
+              'bg-steel-600 text-white': currentIndex === i
+            }"
+            class="w-7 h-7 rounded-md text-[11px] font-bold flex items-center justify-center
+                   transition-all shrink-0 min-w-[1.75rem] cursor-pointer"
+            x-text="i + 1">
+          </button>
+        </template>
+      </div>
+    </div>
+
+    {% comment %}
+    Question content — flex-1 + min-h-0 fills remaining card height exactly.
+    overflow-y-auto scrolls within this bounded area (not the page).
+    padding-bottom reserves space for the fixed action bar:
+      4.5rem (72px) covers the bar's content (pt-3 + h-11 = 56px + buffer),
+      plus env(safe-area-inset-bottom) covers the iOS home indicator.
+    pb-5 on the inner wrapper gives visible breathing room below Option E.
+    {% endcomment %}
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pt-4"
+         style="padding-bottom: calc(4.5rem + max(0.75rem, env(safe-area-inset-bottom)))">
+      <template x-if="currentQ">
+        <div class="w-full pb-5">
+          <div class="flex items-center gap-2 mb-4 flex-wrap">
+            <span class="text-xs font-semibold text-ink-500 uppercase tracking-wider"
+                  x-text="`Soru ${currentIndex + 1} / {{ total }}`"></span>
+            <template x-if="currentQ.topic">
+              <span class="text-[11px] text-ink-500 border border-ink-700 rounded-md px-1.5 py-0.5 leading-none"
+                    x-text="currentQ.topic"></span>
+            </template>
+            <template x-if="currentQ.subject">
+              <span class="text-[11px] text-steel-400 bg-steel-400/10 border border-steel-400/20
+                           rounded-md px-1.5 py-0.5 leading-none font-medium"
+                    x-text="currentQ.subject"></span>
+            </template>
+          </div>
+
+          <p class="text-ink-100 leading-relaxed mb-5 text-sm whitespace-pre-wrap break-words"
+             x-text="currentQ.question_text"></p>
+
+          <template x-if="currentQ.question_image">
+            <img :src="currentQ.question_image" alt="Soru görseli"
+                 class="w-full max-w-full rounded-xl border border-ink-700 mb-5 max-h-56 object-contain">
+          </template>
+
+          <div class="space-y-2.5">
+            <template x-for="[key, text] in Object.entries(currentQ.options)" :key="key">
+              <button
+                @click="selectOption(key)"
+                :class="{
+                  'border-steel-400 bg-steel-500/15 text-steel-200': answers[currentQ.id] === key,
+                  'border-ink-700 bg-ink-850/60 text-ink-200 hover:border-ink-500 hover:bg-ink-800': answers[currentQ.id] !== key
+                }"
+                class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border
+                       transition-colors duration-150 cursor-pointer min-h-[44px]">
+                <span class="font-bold shrink-0 w-5 text-center text-sm"
+                      :class="answers[currentQ.id] === key ? 'text-steel-400' : 'text-ink-500'"
+                      x-text="key"></span>
+                <span class="text-sm leading-relaxed flex-1 text-left whitespace-pre-wrap break-words" x-text="text"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+  </div>
+
+  <div class="fixed bottom-0 inset-x-0 z-[45] bg-ink-900/95 backdrop-blur-md border-t border-ink-700 shadow-[0_-6px_24px_rgba(0,0,0,0.4)]">
+    <div class="flex items-center gap-2 px-4 pt-3"
+         style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))">
+
+      <button @click="prev()"
+              :disabled="currentIndex === 0"
+              class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl
+                     bg-ink-800 border border-ink-600 text-ink-300
+                     hover:bg-ink-750 active:bg-ink-700 transition-colors
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+
+      <div class="flex-1 flex flex-col gap-1.5 px-1">
+        <div class="w-full h-1 rounded-full bg-ink-800 overflow-hidden">
+          <div class="h-full rounded-full bg-steel-500 transition-all duration-300"
+               :style="`width: ${Math.round(answeredCount() / {{ total }} * 100)}%`"></div>
+        </div>
+        <p class="text-[10px] text-ink-600 text-center tabular-nums">
+          <span x-text="answeredCount()"></span> / {{ total }} cevaplanmış
+        </p>
+      </div>
+
+      <template x-if="currentIndex < {{ total }} - 1">
+        <button @click="next()"
+                class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl
+                       bg-steel-600 text-white hover:bg-steel-500 active:bg-steel-700 transition-colors">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M9 6l6 6-6 6"/>
+          </svg>
+        </button>
+      </template>
+
+      <template x-if="currentIndex === {{ total }} - 1">
+        <button @click="submitConfirm = true"
+                class="h-11 px-4 shrink-0 flex items-center justify-center gap-1.5 rounded-xl
+                       bg-emerald-600 text-white text-sm font-semibold
+                       hover:bg-emerald-500 active:bg-emerald-700 transition-colors">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          Bitir
+        </button>
+      </template>
+
+    </div>
+  </div>
+
+  <div x-show="submitConfirm" x-cloak
+       class="fixed inset-0 z-[50] flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+       style="padding-bottom: max(1rem, env(safe-area-inset-bottom))">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+               class="text-emerald-400" viewBox="0 0 24 24">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-base font-semibold text-white">Sınavı bitir?</h2>
+      </div>
+      <div class="rounded-xl bg-ink-850 border border-ink-700 p-3 mb-5 space-y-2 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-ink-400">Cevaplanmış</span>
+          <span class="text-emerald-400 font-semibold tabular-nums"
+                x-text="answeredCount() + ' / {{ total }}'"></span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-ink-400">Boş kalan</span>
+          <span class="text-ink-300 font-semibold tabular-nums"
+                x-text="{{ total }} - answeredCount()"></span>
+        </div>
+        <div class="pt-2 border-t border-ink-700">
+          <div class="h-1.5 rounded-full bg-ink-700 overflow-hidden">
+            <div class="h-full rounded-full bg-emerald-500 transition-all"
+                 :style="`width: ${Math.round(answeredCount() / {{ total }} * 100)}%`"></div>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button @click="submitConfirm = false"
+                class="flex-1 text-sm font-medium text-ink-300 bg-ink-800 hover:bg-ink-750
+                       border border-ink-600 rounded-xl px-4 py-2.5 transition-colors min-h-[44px]">
+          Geri Dön
+        </button>
+        <form method="post" action="{% url 'student:placement_submit' attempt.id %}" class="flex-1">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-full text-sm font-medium text-white bg-emerald-600
+                         hover:bg-emerald-500 rounded-xl px-4 py-2.5 transition-colors min-h-[44px]">
+            Evet, Bitir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <form id="auto-submit-form" method="post"
+        action="{% url 'student:placement_submit' attempt.id %}" style="display:none">
+    {% csrf_token %}
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const QUESTIONS = {{ questions_json|safe }};
+const ATTEMPT_ID = {{ attempt.id }};
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const SAVE_URL = "{% url 'student:placement_save_answer' attempt.id %}";
+const TIME_URL = "{% url 'student:placement_save_time' attempt.id %}";
+
+function placementExam() {
+  return {
+    questions: QUESTIONS,
+    currentIndex: 0,
+    answers: {},
+    remaining: {{ remaining_seconds }},
+    timer: null,
+    submitConfirm: false,
+
+    // Time tracking — never exposed to student UI
+    _timeSpent: {},   // { questionId: totalSeconds }
+    _viewStart: null, // Date.now() when current question became active
+
+    init() {
+      QUESTIONS.forEach(q => { this.answers[q.id] = q.answered || null; });
+      this.timer = setInterval(() => {
+        if (this.remaining > 0) {
+          this.remaining--;
+        } else {
+          clearInterval(this.timer);
+          this._flushCurrentTime();
+          document.getElementById('auto-submit-form').submit();
+        }
+      }, 1000);
+
+      // Start timing question 0 immediately
+      this._viewStart = Date.now();
+
+      // On every index change: flush old question's time, start timing new one
+      this.$watch('currentIndex', (newI, oldI) => {
+        this._flushTime(this.questions[oldI]);
+        this._viewStart = Date.now();
+        this.$nextTick(() => this._scrollDotIntoView(newI));
+      });
+    },
+
+    // Accumulate elapsed seconds for the given question object and persist
+    _flushTime(q) {
+      if (!q || this._viewStart === null) return;
+      const elapsed = Math.floor((Date.now() - this._viewStart) / 1000);
+      this._viewStart = null;
+      if (elapsed <= 0) return;
+      this._timeSpent[q.id] = (this._timeSpent[q.id] || 0) + elapsed;
+      this._saveTime(q.id, this._timeSpent[q.id]);
+    },
+
+    // Flush current question before page unload / submit
+    _flushCurrentTime() {
+      this._flushTime(this.currentQ);
+    },
+
+    async _saveTime(questionId, seconds) {
+      try {
+        await fetch(TIME_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ question_id: questionId, seconds }),
+        });
+      } catch (e) {}
+    },
+
+    _scrollDotIntoView(i) {
+      const nav = this.$el.querySelector('.dot-nav');
+      if (!nav) return;
+      const btn = nav.querySelectorAll('button')[i];
+      if (!btn) return;
+      const targetLeft = btn.offsetLeft - nav.offsetWidth / 2 + btn.offsetWidth / 2;
+      nav.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+    },
+
+    get currentQ() { return this.questions[this.currentIndex] || null; },
+
+    formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    },
+
+    goTo(i) { this.currentIndex = i; },
+    next()   { if (this.currentIndex < this.questions.length - 1) this.currentIndex++; },
+    prev()   { if (this.currentIndex > 0) this.currentIndex--; },
+
+    answeredCount() {
+      return Object.values(this.answers).filter(v => v !== null && v !== undefined && v !== '').length;
+    },
+
+    async selectOption(key) {
+      const q = this.currentQ;
+      if (!q) return;
+      this.answers[q.id] = this.answers[q.id] === key ? null : key;
+      await this.saveAnswer(q.id, this.answers[q.id]);
+    },
+
+    async saveAnswer(questionId, selectedOption) {
+      try {
+        await fetch(SAVE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ question_id: questionId, selected_option: selectedOption }),
+        });
+      } catch (e) {}
+    },
+
+    warnLeave(e) {
+      this._flushCurrentTime();
+      if (!this.submitConfirm) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

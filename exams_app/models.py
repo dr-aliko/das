@@ -258,3 +258,122 @@ class BransTopicError(models.Model):
 
     def __str__(self):
         return f'{self.topic.name}: {self.yanlis_sayisi}Y'
+
+
+# ── Seviye Tespit Sınavı ──────────────────────────────────────────────────────
+
+class PlacementExam(models.Model):
+    title = models.CharField(max_length=200, verbose_name='Başlık')
+    duration_minutes = models.PositiveIntegerField(default=45, verbose_name='Süre (dk)')
+    is_active = models.BooleanField(default=True, verbose_name='Aktif', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Seviye Tespit Sınavı'
+        verbose_name_plural = 'Seviye Tespit Sınavları'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def question_count(self):
+        return self.questions.count()
+
+
+class ExamQuestion(models.Model):
+    OPTION_CHOICES = [('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('E', 'E')]
+    SUBJECT_CHOICES = [
+        ('Matematik',  'Matematik'),
+        ('Türkçe',     'Türkçe'),
+        ('Fizik',      'Fizik'),
+        ('Kimya',      'Kimya'),
+        ('Biyoloji',   'Biyoloji'),
+        ('Felsefe',    'Felsefe'),
+        ('Din',        'Din'),
+        ('Tarih',      'Tarih'),
+        ('Coğrafya',   'Coğrafya'),
+    ]
+
+    exam = models.ForeignKey(PlacementExam, on_delete=models.CASCADE, related_name='questions')
+    order = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra', db_index=True)
+    subject = models.CharField(max_length=30, choices=SUBJECT_CHOICES, blank=True, default='', verbose_name='Ders', db_index=True)
+    question_text = models.TextField(verbose_name='Soru Metni')
+    question_image = models.URLField(blank=True, default='', verbose_name='Soru Görseli (URL)')
+    option_a = models.CharField(max_length=500, verbose_name='Seçenek A')
+    option_b = models.CharField(max_length=500, verbose_name='Seçenek B')
+    option_c = models.CharField(max_length=500, verbose_name='Seçenek C')
+    option_d = models.CharField(max_length=500, verbose_name='Seçenek D')
+    option_e = models.CharField(max_length=500, verbose_name='Seçenek E')
+    correct_option = models.CharField(max_length=1, choices=OPTION_CHOICES, verbose_name='Doğru Seçenek')
+    topic = models.CharField(max_length=200, blank=True, default='', verbose_name='Kazanım')
+
+    class Meta:
+        verbose_name = 'Sınav Sorusu'
+        verbose_name_plural = 'Sınav Soruları'
+        ordering = ['exam', 'order']
+
+    def __str__(self):
+        return f'{self.exam.title} — S{self.order}'
+
+    def options(self):
+        return {
+            'A': self.option_a,
+            'B': self.option_b,
+            'C': self.option_c,
+            'D': self.option_d,
+            'E': self.option_e,
+        }
+
+
+class StudentExamAttempt(models.Model):
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='placement_attempts',
+        limit_choices_to={'role': 'student'},
+    )
+    exam = models.ForeignKey(PlacementExam, on_delete=models.CASCADE, related_name='attempts')
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False, db_index=True)
+    correct_count = models.PositiveSmallIntegerField(default=0)
+    wrong_count = models.PositiveSmallIntegerField(default=0)
+    blank_count = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Öğrenci Sınav Girişimi'
+        verbose_name_plural = 'Öğrenci Sınav Girişimleri'
+        ordering = ['-start_time']
+
+    def __str__(self):
+        status = 'Tamamlandı' if self.is_completed else 'Devam Ediyor'
+        return f'{self.student.full_name} — {self.exam.title} [{status}]'
+
+    @property
+    def net_score(self):
+        return round(self.correct_count - self.wrong_count * 0.25, 2)
+
+    @property
+    def elapsed_seconds(self):
+        if self.end_time:
+            return int((self.end_time - self.start_time).total_seconds())
+        return None
+
+
+class StudentQuestionAnswer(models.Model):
+    attempt = models.ForeignKey(StudentExamAttempt, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(ExamQuestion, on_delete=models.CASCADE, related_name='student_answers')
+    selected_option = models.CharField(max_length=1, blank=True, null=True)
+    time_spent_seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Öğrenci Cevabı'
+        verbose_name_plural = 'Öğrenci Cevapları'
+        unique_together = [('attempt', 'question')]
+
+    def __str__(self):
+        return f'{self.attempt} — S{self.question.order}: {self.selected_option or "—"}'
+
+    @property
+    def is_correct(self):
+        return self.selected_option == self.question.correct_option

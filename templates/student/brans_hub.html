@@ -356,15 +356,18 @@
     </div>
   </div>
 
-  {# ── Mobile FAB ── #}
   {% if not coach_view %}
   <button @click="openAddExam()" type="button"
-          class="md:hidden fixed bottom-24 right-4 w-14 h-14 text-white rounded-2xl shadow-lg
-                 flex items-center justify-center active:scale-95 transition-transform z-30 bg-steel-500"
-          style="box-shadow:0 6px 20px rgba(59,130,246,.40)"
-          aria-label="{{ brans_add_label }}" title="{{ brans_add_label }}">
+          class="lg:hidden fixed z-[45] right-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)]
+                 w-14 h-14 rounded-full bg-primary shadow-fab
+                 flex items-center justify-center text-white
+                 active:scale-95 transition-transform
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-300"
+          aria-label="{{ brans_add_label }}">
     <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-         stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <use href="#das-icon-plus"/>
+    </svg>
   </button>
   {% endif %}
 

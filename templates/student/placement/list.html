@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Seviye Tespit Sınavları — DAS{% endblock %}
+
+{% block content %}
+<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700">
+    <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Seviye Tespit Sınavları</h1>
+    <p class="text-sm text-ink-400 mt-1">Mevcut sınavları görüntüle ve katıl</p>
+  </div>
+
+  <div class="p-4 md:p-6">
+    {% if items %}
+    <div class="space-y-3">
+      {% for item in items %}
+      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-ink-100">{{ item.exam.title }}</p>
+            <div class="mt-1 flex items-center gap-3 text-xs text-ink-500">
+              <span>{{ item.exam.question_count }} Soru</span>
+              <span>{{ item.exam.duration_minutes }} dk</span>
+            </div>
+          </div>
+
+          {% if item.attempt and item.attempt.is_completed %}
+          <div class="text-right shrink-0">
+            <p class="text-xs text-ink-500 mb-1">Tamamlandı</p>
+            <p class="text-lg font-bold text-steel-400 tnum">{{ item.attempt.net_score }}</p>
+            <p class="text-[10px] text-ink-500 mt-0.5">net</p>
+          </div>
+          {% elif item.attempt %}
+          <span class="shrink-0 text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg">Devam Ediyor</span>
+          {% endif %}
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+          {% if item.attempt and item.attempt.is_completed %}
+          <a href="{% url 'student:placement_result' item.attempt.id %}"
+             class="flex-1 text-center text-sm font-medium text-ink-300 bg-ink-800
+                    hover:bg-ink-700 border border-ink-600 rounded-lg px-4 py-2 transition-colors">
+            Sonuçları Gör
+          </a>
+          {% elif item.attempt %}
+          <a href="{% url 'student:placement_take' item.attempt.id %}"
+             class="flex-1 text-center text-sm font-medium text-white bg-steel-600
+                    hover:bg-steel-500 rounded-lg px-4 py-2 transition-colors">
+            Devam Et
+          </a>
+          {% else %}
+          <form method="post" action="{% url 'student:placement_start' item.exam.id %}" class="flex-1">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full text-sm font-medium text-white bg-steel-600
+                           hover:bg-steel-500 rounded-lg px-4 py-2 transition-colors">
+              Sınava Başla
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-dashed border-ink-700 p-12 text-center">
+      <p class="text-sm text-ink-400">Henüz aktif sınav bulunmuyor.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
