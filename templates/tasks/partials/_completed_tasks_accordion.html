@@ -40,7 +40,7 @@
                 <span> • <span x-text="task.duration"></span></span>
               </template>
               <template x-if="task.raw.time_spent_dk">
-                <span class="text-green-500"> • ✓ <span x-text="task.raw.time_spent_dk"></span>dk</span>
+                <span class="text-green-500"> • ✓ <span x-text="fmtDk(task.raw.time_spent_dk)"></span></span>
               </template>
             </div>
             <template x-if="task.raw.student_note">

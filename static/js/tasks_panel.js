@@ -309,6 +309,17 @@ function panel() {
         .reduce((sum, g) => sum + (g.time_spent_dk ?? 0), 0);
     },
 
+    fmtDk(dk) {
+      if (!dk) return '';
+      const s = Math.floor(dk / 60), m = dk % 60;
+      return s ? `${s}s ${m}dk` : `${m}dk`;
+    },
+
+    dailyActualLabel(idx) {
+      const dk = this.dailyActualDk(idx);
+      return dk ? '✓ ' + this.fmtDk(dk) : '';
+    },
+
     _tints(t) {
       if (this.isDark) {
         const DM = {

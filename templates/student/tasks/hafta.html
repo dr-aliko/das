@@ -136,7 +136,7 @@
         </span>
         <span x-show="activeDayActualDk"
               class="text-[10px] font-bold text-green-500 tnum"
-              x-text="'✓ ' + activeDayActualDk + 'dk'"></span>
+              x-text="activeDayActualLabel"></span>
       </div>
     </div>
 
@@ -306,7 +306,7 @@
           <div class="text-xs font-semibold mt-0.5 text-blue-500" x-text="dailyLabel(idx)"></div>
           <div x-show="dailyActualDk(idx)"
                class="text-xs mt-0.5 text-green-500 tnum"
-               x-text="'✓ ' + dailyActualDk(idx) + 'dk'"></div>
+               x-text="dailyActualLabel(idx)"></div>
         </div>
 
         {# Add task button — only when student has edit rights on this day's tasks #}
@@ -387,7 +387,7 @@
 
                 {# Show logged time/note on completed tasks #}
                 <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)" class="text-xs text-gray-400 space-y-0.5">
-                  <div x-show="g.time_spent_dk" x-text="'⏱ ' + g.time_spent_dk + ' dk'"></div>
+                  <div x-show="g.time_spent_dk" x-text="'⏱ ' + fmtDk(g.time_spent_dk)"></div>
                   <div x-show="g.student_note" class="italic truncate" x-text="'📝 ' + g.student_note"></div>
                 </div>
 
@@ -474,7 +474,7 @@
                            x-text="formatDetay(d)"></div>
                     </template>
                     <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)" class="mt-2 space-y-0.5">
-                      <div x-show="g.time_spent_dk" class="text-xs text-gray-400" x-text="'⏱ ' + g.time_spent_dk + ' dk çalışıldı'"></div>
+                      <div x-show="g.time_spent_dk" class="text-xs text-gray-400" x-text="'⏱ ' + fmtDk(g.time_spent_dk) + ' çalışıldı'"></div>
                       <div x-show="g.student_note" class="text-xs text-gray-400 italic" x-text="'📝 ' + g.student_note"></div>
                     </div>
                   </div>
@@ -668,6 +668,8 @@ function studentMobilePanel(studentId) {
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
     get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
     get activeDayActualDk(){ return this.activeDayTasks.filter(t=>t.done).reduce((s,t)=>s+(t.raw.time_spent_dk??0),0); },
+    fmtDk(dk){ if(!dk)return''; const s=Math.floor(dk/60),m=dk%60; return s?`${s}s ${m}dk`:`${m}dk`; },
+    get activeDayActualLabel(){ const dk=this.activeDayActualDk; return dk?'✓ '+this.fmtDk(dk):''; },
     init(){
       const today=new Date(), dow=today.getDay()||7;
       this.activeDay=dow;

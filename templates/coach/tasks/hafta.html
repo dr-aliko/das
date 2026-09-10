@@ -160,7 +160,7 @@
         </span>
         <span x-show="activeDayActualDk"
               class="text-[10px] font-bold text-green-500 tnum"
-              x-text="'✓ ' + activeDayActualDk + 'dk'"></span>
+              x-text="activeDayActualLabel"></span>
       </div>
     </div>
 
@@ -348,7 +348,7 @@
                x-text="dailyLabel(idx)"></div>
           <div x-show="dailyActualDk(idx)"
                class="text-[10px] mt-0.5 text-emerald-400 tnum"
-               x-text="'✓ ' + dailyActualDk(idx) + 'dk'"></div>
+               x-text="dailyActualLabel(idx)"></div>
         </div>
 
         <div data-pdf-hide class="print:hidden px-2 pt-2 shrink-0">
@@ -392,7 +392,7 @@
                      class="mt-1 pt-1 border-t border-ink-700/40 space-y-0.5">
                   <div x-show="g.time_spent_dk"
                        class="text-[10px] text-emerald-400 tnum"
-                       x-text="'✓ ' + g.time_spent_dk + 'dk harcandı'"></div>
+                       x-text="'✓ ' + fmtDk(g.time_spent_dk) + ' harcandı'"></div>
                   <div x-show="g.student_note"
                        class="text-[10px] text-ink-500 italic truncate"
                        x-text="g.student_note"></div>
@@ -787,6 +787,8 @@ function coachMobilePanel() {
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
     get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
     get activeDayActualDk(){ return this.activeDayTasks.filter(t=>t.done).reduce((s,t)=>s+(t.raw.time_spent_dk??0),0); },
+    fmtDk(dk){ if(!dk)return''; const s=Math.floor(dk/60),m=dk%60; return s?`${s}s ${m}dk`:`${m}dk`; },
+    get activeDayActualLabel(){ const dk=this.activeDayActualDk; return dk?'✓ '+this.fmtDk(dk):''; },
 
     /* ── Lifecycle ── */
     async init(){
