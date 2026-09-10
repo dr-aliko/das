@@ -55,26 +55,46 @@
 
   {# Week strip #}
   <div class="bg-[var(--surface-1)] pt-4 pb-2 border-b border-[var(--border)]">
-    <div class="px-4 mb-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button @click="prevWeek()"
-                class="p-1 text-[var(--muted)] active:scale-90 transition-transform">
+    <div class="px-4 mb-3 flex items-center justify-between gap-1">
+      <div class="flex items-center gap-0.5 min-w-0">
+        <button @click="prevWeek()" title="Önceki hafta"
+                class="shrink-0 p-1 text-[var(--muted)] active:scale-90 transition-transform">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
-        <span class="text-xs font-bold text-[var(--heading)]" x-text="weekLabel"></span>
-        <button @click="nextWeek()"
-                class="p-1 text-[var(--muted)] active:scale-90 transition-transform">
+        <button @click="prevDay()" title="Önceki gün"
+                class="shrink-0 px-1.5 py-0.5 text-[var(--muted-2)] text-base font-bold leading-none rounded active:scale-90 transition-transform">‹</button>
+        <span class="text-xs font-bold text-[var(--heading)] truncate px-1" x-text="weekLabel"></span>
+        <button @click="nextDay()" title="Sonraki gün"
+                class="shrink-0 px-1.5 py-0.5 text-[var(--muted-2)] text-base font-bold leading-none rounded active:scale-90 transition-transform">›</button>
+        <button @click="nextWeek()" title="Sonraki hafta"
+                class="shrink-0 p-1 text-[var(--muted)] active:scale-90 transition-transform">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
           </svg>
         </button>
       </div>
-      <button @click="goToday()"
-              class="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider active:scale-95 transition-transform">
-        Bugün
-      </button>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <input type="date"
+               @change="goToDate($event.target.value)"
+               :value="days[0]?.iso ?? weekStart"
+               title="Haftaya git"
+               class="h-6 w-8 p-0 opacity-0 absolute pointer-events-none"
+               x-ref="mobileDatePicker">
+        <button @click="$refs.mobileDatePicker.showPicker ? $refs.mobileDatePicker.showPicker() : $refs.mobileDatePicker.click()"
+                class="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] active:scale-90 transition-transform"
+                title="Tarihe git">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+        </button>
+        <button @click="goToday()"
+                class="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider active:scale-95 transition-transform">
+          Bugün
+        </button>
+      </div>
     </div>
 
     <div class="flex justify-between px-2 gap-1" style="overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;">
@@ -106,13 +126,18 @@
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-baseline gap-2">
         <h2 class="text-xl font-black text-[var(--heading)] uppercase"
-            x-text="['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA','CUMARTESİ','PAZAR'][activeDay - 1]"></h2>
+            x-text="(days[activeDay-1]?.label ?? '').toUpperCase()"></h2>
         <span class="text-[var(--muted)] text-sm font-medium"
               x-text="days[activeDay-1] ? days[activeDay-1].num + ' ' + days[activeDay-1].month : ''"></span>
       </div>
-      <span class="text-[10px] font-bold text-[var(--muted-2)] uppercase tracking-widest">
-        <span x-text="activeDayTasks.length"></span> GÖREV
-      </span>
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-bold text-[var(--muted-2)] uppercase tracking-widest">
+          <span x-text="activeDayTasks.length"></span> GÖREV
+        </span>
+        <span x-show="activeDayActualDk"
+              class="text-[10px] font-bold text-green-500 tnum"
+              x-text="'✓ ' + activeDayActualDk + 'dk'"></span>
+      </div>
     </div>
 
     {# Loading indicator #}
@@ -203,17 +228,42 @@
   <div class="flex items-center gap-2 mb-5 flex-wrap">
     <h1 class="text-lg font-bold text-gray-800 mr-1">Haftalık Planım</h1>
 
-    {# Week nav #}
-    <div class="flex items-center gap-1 bg-white border rounded-xl shadow-sm px-1 py-1">
-      <button @click="prevWeek()"
-              class="w-8 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition text-sm font-bold">
-        &#8592;
-      </button>
-      <span class="text-sm font-semibold text-gray-700 px-2 tabular-nums" x-text="weekLabel"></span>
-      <button @click="nextWeek()"
-              class="w-8 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition text-sm font-bold">
-        &#8594;
-      </button>
+    {# Unified nav pill: week-step + day-step + label + date picker #}
+    <div class="relative">
+      <div class="inline-flex items-center h-8 rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden divide-x divide-gray-100">
+        <button @click="prevWeek()" title="Önceki hafta (7 gün)"
+                class="px-2 h-full text-gray-400 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <button @click="prevDay()" title="Önceki gün"
+                class="px-1.5 h-full text-gray-400 hover:bg-gray-50 transition-colors text-base font-bold leading-none">
+          ‹
+        </button>
+        <span class="px-2.5 h-full flex items-center text-sm font-semibold text-gray-700 tabular-nums select-none whitespace-nowrap"
+              x-text="weekLabel"></span>
+        <button @click="nextDay()" title="Sonraki gün"
+                class="px-1.5 h-full text-gray-400 hover:bg-gray-50 transition-colors text-base font-bold leading-none">
+          ›
+        </button>
+        <button @click="nextWeek()" title="Sonraki hafta (7 gün)"
+                class="px-2 h-full text-gray-400 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <button @click="$refs.studentDateInput.showPicker?.() ?? $refs.studentDateInput.click()"
+                title="Tarihe git"
+                class="px-2 h-full flex items-center text-gray-400 hover:bg-gray-50 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+        </button>
+      </div>
+      <input type="date" x-ref="studentDateInput" @change="goToDate($event.target.value)" tabindex="-1"
+             style="position:absolute;top:100%;right:0;width:1px;height:1px;opacity:0;pointer-events:none">
     </div>
 
     {# Reset to coach plan #}
@@ -242,18 +292,21 @@
   <div id="student-weekly-grid" class="grid grid-cols-7 gap-2 min-h-[60vh] min-w-[700px] sm:min-w-0">
     <template x-for="(gun, idx) in days" :key="idx">
       <div class="rounded-2xl shadow-sm flex flex-col min-h-[200px] sm:min-h-[420px] border"
-           :class="idx >= 5 ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-100'"
+           :class="gun.isWeekend ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-100'"
            @dragover.prevent
            @drop="onDrop($event, gun.tarih)">
 
         {# Day header #}
         <div class="px-3 py-2 rounded-t-2xl border-b"
-             :class="idx >= 5 ? 'bg-slate-100 border-slate-200' : 'bg-gray-50 border-gray-100'">
+             :class="gun.isWeekend ? 'bg-slate-100 border-slate-200' : 'bg-gray-50 border-gray-100'">
           <div class="font-bold text-xs uppercase tracking-wide"
-               :class="idx >= 5 ? 'text-slate-500' : 'text-gray-600'"
+               :class="gun.isWeekend ? 'text-slate-500' : 'text-gray-600'"
                x-text="gun.label"></div>
           <div class="text-xs text-gray-400 mt-0.5" x-text="gun.tarih"></div>
           <div class="text-xs font-semibold mt-0.5 text-blue-500" x-text="dailyLabel(idx)"></div>
+          <div x-show="dailyActualDk(idx)"
+               class="text-xs mt-0.5 text-green-500 tnum"
+               x-text="'✓ ' + dailyActualDk(idx) + 'dk'"></div>
         </div>
 
         {# Add task button — only when student has edit rights on this day's tasks #}
@@ -324,13 +377,19 @@
               <div class="mt-2 hidden sm:flex sm:flex-col gap-1.5">
 
                 {# Complete toggle #}
-                <button @click="toggleComplete(g.id)"
+                <button @click="g.is_completed ? toggleComplete(g.id) : openCompleteForm(g.id, g.ders_title, g.ozel_sure_dk)"
                         class="w-full text-xs font-medium py-1 rounded-lg border transition"
                         :class="g.is_completed
                           ? 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                           : 'bg-white/70 border-green-200 text-green-600 hover:bg-green-50'"
                         x-text="g.is_completed ? 'Geri Al' : 'Tamamlandı'">
                 </button>
+
+                {# Show logged time/note on completed tasks #}
+                <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)" class="text-xs text-gray-400 space-y-0.5">
+                  <div x-show="g.time_spent_dk" x-text="'⏱ ' + g.time_spent_dk + ' dk'"></div>
+                  <div x-show="g.student_note" class="italic truncate" x-text="'📝 ' + g.student_note"></div>
+                </div>
 
                 {# Tekrar quality — only when not yet rated #}
                 <div x-show="g.aktivite_tipi === 'tekrar' && !g.tekrar_quality" class="flex gap-1">
@@ -367,7 +426,7 @@
               {# Bottom sheet — mobile only; shows full task details on tap #}
               <div x-show="sheetOpen"
                    @click.self="sheetOpen = false"
-                   @keydown.escape.window="sheetOpen = false"
+                   @keydown.escape.window="if (!completeForm.taskId) sheetOpen = false"
                    x-transition:enter="transition ease-out duration-200"
                    x-transition:enter-start="opacity-0"
                    x-transition:enter-end="opacity-100"
@@ -414,11 +473,15 @@
                            :class="g.is_completed ? 'text-gray-400 line-through' : 'text-gray-500'"
                            x-text="formatDetay(d)"></div>
                     </template>
+                    <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)" class="mt-2 space-y-0.5">
+                      <div x-show="g.time_spent_dk" class="text-xs text-gray-400" x-text="'⏱ ' + g.time_spent_dk + ' dk çalışıldı'"></div>
+                      <div x-show="g.student_note" class="text-xs text-gray-400 italic" x-text="'📝 ' + g.student_note"></div>
+                    </div>
                   </div>
 
                   {# Actions #}
                   <div class="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 shrink-0">
-                    <button @click="toggleComplete(g.id)"
+                    <button @click="g.is_completed ? toggleComplete(g.id) : openCompleteForm(g.id, g.ders_title, g.ozel_sure_dk)"
                             class="w-full text-sm font-semibold py-3 rounded-xl border transition"
                             :class="g.is_completed ? 'bg-white border-gray-200 text-gray-500' : 'bg-white border-green-300 text-green-600 hover:bg-green-50'"
                             x-text="g.is_completed ? 'Geri Al' : 'Tamamlandı ✓'">
@@ -479,6 +542,53 @@
       <div class="flex justify-end gap-2">
         <button @click="showEditModal = false" class="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">İptal</button>
         <button @click="saveEdit()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Complete task modal — z-[70] sits above the mobile bottom sheet (z-[60]) #}
+  {# Escape closes modal only: sheet's escape handler guards on !completeForm.taskId  #}
+  <div x-show="completeForm.taskId"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4"
+       @click.self="completeForm.taskId = null"
+       @keydown.escape.window="completeForm.taskId = null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         @click.stop>
+      <h2 class="text-base font-bold text-gray-800 mb-1">Görevi Tamamla</h2>
+      <p class="text-sm text-gray-400 mb-4 truncate" x-text="completeForm.taskTitle"></p>
+      <div class="mb-3">
+        <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+          Süre (dk) <span class="font-normal normal-case text-gray-400">— isteğe bağlı</span>
+        </label>
+        <input x-model.number="completeForm.time" type="number" inputmode="numeric" min="1" max="1440"
+               placeholder="Kaç dakika çalıştın?"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-300">
+      </div>
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+          Not <span class="font-normal normal-case text-gray-400">— isteğe bağlı</span>
+        </label>
+        <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-300"></textarea>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button @click="submitComplete(true)"
+                class="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+          Atla
+        </button>
+        <button @click="submitComplete(false)"
+                class="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition">
+          Tamamlandı ✓
+        </button>
       </div>
     </div>
   </div>
@@ -557,6 +667,7 @@ function studentMobilePanel(studentId) {
     get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
     get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
+    get activeDayActualDk(){ return this.activeDayTasks.filter(t=>t.done).reduce((s,t)=>s+(t.raw.time_spent_dk??0),0); },
     init(){
       const today=new Date(), dow=today.getDay()||7;
       this.activeDay=dow;
@@ -566,9 +677,10 @@ function studentMobilePanel(studentId) {
     },
     _build(){
       const start=new Date(this.weekStart+'T00:00:00');
-      this.days=DAY_LABELS.map((label,i)=>{
+      this.days=Array.from({length:7},(_,i)=>{
         const d=new Date(start); d.setDate(start.getDate()+i);
-        return {iso:ISO(d),label,num:d.getDate(),month:MONTHS[d.getMonth()],tasks:[]};
+        const dow=d.getDay();
+        return {iso:ISO(d),label:DAY_LABELS[dow===0?6:dow-1],num:d.getDate(),month:MONTHS[d.getMonth()],tasks:[],isWeekend:dow===0||dow===6};
       });
       const s=this.days[0],e=this.days[6],yr=new Date(this.weekStart+'T00:00:00').getFullYear();
       this.weekLabel=s.month===e.month?`${s.num} – ${e.num} ${s.month} ${yr}`:`${s.num} ${s.month} – ${e.num} ${e.month} ${yr}`;
@@ -576,10 +688,16 @@ function studentMobilePanel(studentId) {
     async loadWeek(){
       this.loading=true;
       try{
-        const r=await fetch(`/student/tasks/api/gorevler?hafta=${this.weekStart}`);
-        const data=await r.json();
+        const d0=this.days[0].iso,d6=this.days[6].iso;
+        const urls=[`/student/tasks/api/gorevler?hafta=${d0}`];
+        if(isoMonday(d0)!==isoMonday(d6))urls.push(`/student/tasks/api/gorevler?hafta=${d6}`);
+        const jsons=await Promise.all(urls.map(u=>fetch(u).then(r=>r.json())));
+        const seen=new Set(),allGorevler=[];
+        for(const data of jsons)for(const g of(data.gorevler??[])){
+          if(!seen.has(g.id)){seen.add(g.id);allGorevler.push(g);}
+        }
         this.days.forEach(d=>{d.tasks=[];});
-        for(const g of (data.gorevler??[])){
+        for(const g of allGorevler){
           const day=this.days.find(d=>d.iso===g.tarih);
           if(day) day.tasks.push({
             id:g.id, tarih:g.tarih,
@@ -594,6 +712,14 @@ function studentMobilePanel(studentId) {
     },
     prevWeek(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()-7);this.weekStart=ISO(d);this._build();this.loadWeek();},
     nextWeek(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()+7);this.weekStart=ISO(d);this._build();this.loadWeek();},
+    prevDay(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()-1);this.weekStart=ISO(d);this.activeDay=1;this._build();this.loadWeek();},
+    nextDay(){const d=new Date(this.weekStart+'T00:00:00');d.setDate(d.getDate()+1);this.weekStart=ISO(d);this.activeDay=1;this._build();this.loadWeek();},
+    goToDate(iso){
+      if(!iso)return;
+      const d=new Date(iso+'T00:00:00'),dow=d.getDay()||7;
+      d.setDate(d.getDate()-(dow-1));
+      this.weekStart=ISO(d);this.activeDay=1;this._build();this.loadWeek();
+    },
     goToday(){
       const today=new Date(),dow=today.getDay()||7;
       this.activeDay=dow;
@@ -638,7 +764,7 @@ function studentMobilePanel(studentId) {
     openCompletedTask(task){ this.openDetail(task); },
     toggleCompletedTask(task){ this.toggleComplete(task.id); },
     exportUrl(ext){ return `/student/tasks/export/${ext}?hafta=${encodeURIComponent(this.weekStart)}`; },
-    _exportDays(){ return this.days.map(d=>({label:d.label,tarih:d.iso,gorevler:d.tasks.map(t=>t.raw)})); },
+    _exportDays(){ return this.days.map(d=>({label:d.label,tarih:d.iso,gorevler:d.tasks.map(t=>t.raw),isWeekend:d.isWeekend})); },
     exportHTML(){ _downloadWeeklyHTML_s(this._exportDays(), DEFAULT_COLORS, '', this.weekLabel, `hafta_${this.weekStart}.html`); },
     async markQuality(taskId,quality){
       const task=this._findTask(taskId);

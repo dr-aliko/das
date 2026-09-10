@@ -47,6 +47,8 @@ def _serialize(grup: GorevGrubu) -> dict:
         "is_completed": grup.is_completed,
         "completed_at": grup.completed_at.isoformat() if grup.completed_at else None,
         "tekrar_quality": grup.tekrar_quality,
+        "student_note": grup.student_note,
+        "time_spent_dk": grup.time_spent_dk,
         "student_can_edit": grup.student_can_edit,
         "detaylar": [
             {
@@ -122,22 +124,33 @@ def week_for_own_student(student: User, hafta_basi: date, hafta_sonu: date) -> l
     return [_serialize_with_version(g) for g in visible]
 
 
-def toggle_complete(student: User, grup_id: int, quality: str | None = None) -> dict | None:
+def toggle_complete(
+    student: User,
+    grup_id: int,
+    quality: str | None = None,
+    student_note: str | None = None,
+    time_spent_dk: int | None = None,
+) -> dict | None:
     from django.utils import timezone
     grup = GorevGrubu.objects.filter(student=student, pk=grup_id).first()
     if not grup:
         return None
     if grup.is_completed and quality is None:
-        # Undo completion
         grup.is_completed = False
         grup.completed_at = None
         grup.tekrar_quality = None
+        grup.student_note = None
+        grup.time_spent_dk = None
     else:
         grup.is_completed = True
         grup.completed_at = timezone.now()
         if quality in ("easy", "medium", "hard"):
             grup.tekrar_quality = quality
-    grup.save(update_fields=["is_completed", "completed_at", "tekrar_quality"])
+        if student_note:
+            grup.student_note = student_note
+        if time_spent_dk and time_spent_dk > 0:
+            grup.time_spent_dk = time_spent_dk
+    grup.save(update_fields=["is_completed", "completed_at", "tekrar_quality", "student_note", "time_spent_dk"])
     return _serialize(grup)
 
 

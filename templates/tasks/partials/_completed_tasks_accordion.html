@@ -39,7 +39,14 @@
               <template x-if="task.duration">
                 <span> • <span x-text="task.duration"></span></span>
               </template>
+              <template x-if="task.raw.time_spent_dk">
+                <span class="text-green-500"> • ✓ <span x-text="task.raw.time_spent_dk"></span>dk</span>
+              </template>
             </div>
+            <template x-if="task.raw.student_note">
+              <div class="text-[9px] text-[var(--muted-2)] italic mt-0.5 truncate"
+                   x-text="task.raw.student_note"></div>
+            </template>
           </div>
         </div>
       </div>

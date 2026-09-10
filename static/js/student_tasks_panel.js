@@ -7,6 +7,13 @@ function localISO(d) {
     String(d.getDate()).padStart(2, '0');
 }
 
+function isoMonday(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const dow = d.getDay() || 7;
+  d.setDate(d.getDate() - (dow - 1));
+  return localISO(d);
+}
+
 const AKTIVITE_LABELS = { konu_anlatimi: 'Konu Anlatımı', soru_cozumu: 'Soru Çözümü', tekrar: 'Tekrar' };
 const QUALITY_LABELS  = { easy: 'Kolay', medium: 'Orta', hard: 'Zor' };
 const COLORS_KEY = 'das-tasks-colors';
@@ -44,7 +51,7 @@ function _buildTaskHTML_s(g, cs) {
 
 function _downloadWeeklyHTML_s(days, colorSettings, studentName, weekLabel, filename) {
   const cols = days.map((gun, idx) => {
-    const weekend = idx >= 5;
+    const weekend = gun.isWeekend ?? idx >= 5;
     const tasks = (gun.gorevler||[]).map(g => _buildTaskHTML_s(g, colorSettings)).join('');
     const empty = !gun.gorevler?.length ? `<div style="color:#d1d5db;font-size:12px;text-align:center;padding:16px 0">—</div>` : '';
     return `<div style="min-width:0;background:${weekend?'#f8fafc':'#fff'};border:1px solid ${weekend?'#e2e8f0':'#f3f4f6'};border-radius:16px;overflow:hidden">
@@ -97,7 +104,7 @@ function _downloadWeeklyHTML_s(days, colorSettings, studentName, weekLabel, file
 function studentPanel(studentId, studentName) {
   return {
     studentId,
-    refDate: localISO(new Date()),
+    refDate: isoMonday(localISO(new Date())),
     days: [],
     toplamlar: {},
     colorSettings: { ...DEFAULT_COLORS },
@@ -107,6 +114,7 @@ function studentPanel(studentId, studentName) {
     pdfExporting: false,
     editForm: { id: null, ozel_sure_dk: 0, aciklama: '', error: '' },
     addForm:  { tarih: '', aktivite_tipi: 'tekrar', ders_title: '', ozel_sure_dk: 0, aciklama: '', error: '' },
+    completeForm: { taskId: null, taskTitle: '', note: '', time: '' },
     dragTaskId: null, dragFromDate: null,
 
     get hasEditableTask() {
@@ -121,12 +129,16 @@ function studentPanel(studentId, studentName) {
     },
 
     buildDays() {
-      const ref = new Date(this.refDate + 'T00:00:00');
-      const monday = new Date(ref);
-      monday.setDate(ref.getDate() - (ref.getDay() === 0 ? 6 : ref.getDay() - 1));
-      this.days = GUNLER.map((label, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i);
-        return { label, tarih: localISO(d), gorevler: [] };
+      const start = new Date(this.refDate + 'T00:00:00');
+      this.days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const dow = d.getDay();
+        return {
+          label: GUNLER[dow === 0 ? 6 : dow - 1],
+          tarih: localISO(d),
+          gorevler: [],
+          isWeekend: dow === 0 || dow === 6,
+        };
       });
     },
 
@@ -151,13 +163,41 @@ function studentPanel(studentId, studentName) {
       this.loadWeek();
     },
 
+    prevDay() {
+      const d = new Date(this.refDate + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      this.refDate = localISO(d);
+      this.buildDays();
+      this.loadWeek();
+    },
+
+    nextDay() {
+      const d = new Date(this.refDate + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      this.refDate = localISO(d);
+      this.buildDays();
+      this.loadWeek();
+    },
+
+    goToDate(iso) {
+      if (!iso) return;
+      this.refDate = isoMonday(iso);
+      this.buildDays();
+      this.loadWeek();
+    },
+
     async loadWeek() {
       try {
-        const r = await fetch(`/student/tasks/api/gorevler?hafta=${this.refDate}`);
-        const data = await r.json();
-        this.toplamlar = data.gunluk_toplamlar ?? {};
+        const [d0, d6] = [this.days[0].tarih, this.days[6].tarih];
+        const base = `/student/tasks/api/gorevler?hafta=`;
+        const urls = [base + d0];
+        if (isoMonday(d0) !== isoMonday(d6)) urls.push(base + d6);
+        const jsons = await Promise.all(urls.map(u => fetch(u).then(r => r.json())));
+        const seen = new Set(), all = [];
+        for (const data of jsons) for (const g of (data.gorevler ?? []))
+          if (!seen.has(g.id)) { seen.add(g.id); all.push(g); }
         const byDate = {};
-        (data.gorevler ?? []).forEach(g => { (byDate[g.tarih] ??= []).push(g); });
+        all.forEach(g => { (byDate[g.tarih] ??= []).push(g); });
         this.days = this.days.map(day => ({ ...day, gorevler: byDate[day.tarih] ?? [] }));
       } catch (e) {
         console.error('[loadWeek]', e);
@@ -165,10 +205,16 @@ function studentPanel(studentId, studentName) {
     },
 
     dailyLabel(idx) {
-      const dk = this.toplamlar[idx] ?? 0;
+      const dk = (this.days[idx]?.gorevler ?? []).reduce((sum, g) => sum + (g.ozel_sure_dk ?? 0), 0);
       if (!dk) return '';
       const s = Math.floor(dk / 60), m = dk % 60;
       return s ? `${s}s ${m}dk` : `${m}dk`;
+    },
+
+    dailyActualDk(idx) {
+      return (this.days[idx]?.gorevler ?? [])
+        .filter(g => g.is_completed)
+        .reduce((sum, g) => sum + (g.time_spent_dk ?? 0), 0);
     },
 
     _tints(t) {
@@ -206,6 +252,29 @@ function studentPanel(studentId, studentName) {
         });
         if (r.ok) await this.loadWeek();
       } catch (e) { console.error('[toggleComplete]', e); }
+    },
+
+    openCompleteForm(id, title, plannedDk) {
+      this.completeForm = { taskId: id, taskTitle: title || '', note: '', time: plannedDk || '' };
+    },
+
+    async submitComplete(skip = false) {
+      const { taskId, note, time } = this.completeForm;
+      this.completeForm = { taskId: null, taskTitle: '', note: '', time: '' };
+      const body = {};
+      if (!skip) {
+        const t = parseInt(time);
+        if (note.trim()) body.student_note = note.trim();
+        if (t > 0) body.time_spent_dk = t;
+      }
+      try {
+        const r = await fetch(`/student/tasks/api/complete/${taskId}`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (r.ok) await this.loadWeek();
+      } catch (e) { console.error('[submitComplete]', e); }
     },
 
     async markQuality(id, quality) {

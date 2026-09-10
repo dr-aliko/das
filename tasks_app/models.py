@@ -28,6 +28,9 @@ class GorevGrubu(models.Model):
     completed_at  = models.DateTimeField(null=True, blank=True)
     # Student's self-rating on tekrar tasks: easy / medium / hard
     tekrar_quality = models.CharField(max_length=16, null=True, blank=True)
+    # Optional student note and actual time logged when marking complete
+    student_note  = models.TextField(null=True, blank=True)
+    time_spent_dk = models.PositiveIntegerField(null=True, blank=True)
     # Coach can grant the student edit/reorder rights on this specific task
     student_can_edit = models.BooleanField(default=False)
     # Versioning: coach tasks are masters; student edits create non-master copies

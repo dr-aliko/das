@@ -41,9 +41,6 @@ class GorevForm(forms.Form):
         if not ders_title:
             raise forms.ValidationError("Ders başlığı gerekli.")
 
-        if aktivite == AktiviteTipi.KONU_ANLATIMI and not detaylar:
-            raise forms.ValidationError("Konu Anlatımı için en az bir video/detay seçilmeli.")
-
         if aktivite in (AktiviteTipi.SORU_COZUMU, AktiviteTipi.TEKRAR) and not detaylar:
             raise forms.ValidationError("Açıklama boş olamaz.")
 
