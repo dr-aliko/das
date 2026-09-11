@@ -1,13 +1,25 @@
-<header class="v2-app-bar sticky top-0 z-30 bg-ink-900 text-ink-100 border-b border-ink-700 pt-[env(safe-area-inset-top)]">
+<header class="v2-app-bar sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] pt-[env(safe-area-inset-top)]">
   <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-    <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-ink-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400 rounded-lg">
+    <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-[var(--heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400 rounded-lg">
       <svg class="w-6 h-6 text-steel-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
       Vagus
     </a>
-    <div class="flex items-center gap-3 text-sm">
-      <span class="max-w-[8rem] truncate text-ink-300">{{ user.full_name }}</span>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="max-w-[8rem] truncate text-[var(--body)]">{{ user.full_name }}</span>
+      <button onclick="toggleDM()"
+              title="Temayı değiştir"
+              class="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--muted-2)] active:bg-[var(--surface-2)] transition-colors"
+              x-data="{ isDark: document.documentElement.classList.contains('dark') }"
+              @darkmode-change.window="isDark = $event.detail.isDark">
+        <svg x-show="isDark" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg x-show="!isDark" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
       <a href="/auth/logout/"
-         class="bg-ink-800 hover:bg-ink-750 text-ink-100 px-3 py-1.5 rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">Çıkış</a>
+         class="bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--heading)] px-3 py-1.5 rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">Çıkış</a>
     </div>
   </div>
   {% include "components/_shell_desktop_tabs.html" %}

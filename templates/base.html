@@ -156,12 +156,6 @@
   <script>
     (function(){
       var html = document.documentElement;
-      if (window.innerWidth < 768) {
-        html.classList.add('dark');
-        html.classList.remove('das-theme-auto', 'das-theme-light');
-        html.classList.add('das-theme-dark');
-        return;
-      }
       var saved = localStorage.getItem('theme');
       var pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
       var effective;
