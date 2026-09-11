@@ -76,7 +76,8 @@
       "Bash(/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe *)",
       "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip install django-import-export)",
       "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip freeze)",
-      "Bash(\".venv/Scripts/python.exe\" manage.py check)"
+      "Bash(\".venv/Scripts/python.exe\" manage.py check)",
+      "Bash(node *)"
     ]
   }
 }
