@@ -237,49 +237,41 @@
   <div class="print:hidden flex items-center gap-2 mb-5 flex-wrap">
 
     <select x-model="studentId" @change="loadWeek()"
-            class="pii h-9 pl-3 pr-8 rounded-lg bg-ink-850 border border-ink-700 text-sm
-                   text-ink-100 focus:outline-none focus:border-steel-500 transition">
+            class="pii h-9 pl-3 pr-8 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-sm
+                   text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
       <option value="">Öğrenci Seçin</option>
       {% for s in students %}
       <option value="{{ s.id }}">{{ s.full_name }}</option>
       {% endfor %}
     </select>
 
-    <button x-show="studentId"
-            @click="coachResetStudentWeek()"
-            :title="'Öğrencinin bu haftaki düzenlemelerini sil, koç planına geri dön'"
-            class="h-9 px-3 rounded-lg border text-xs font-medium transition flex items-center gap-1.5
-                   bg-ruby-tint border-ruby-500/30 text-ruby-500 hover:bg-ruby-500/20">
-      Planı Sıfırla
-    </button>
-
-    <div class="relative">
-      <div class="inline-flex items-center h-9 rounded-lg bg-ink-850 border border-ink-700 overflow-hidden divide-x divide-ink-700/70">
+<div class="relative">
+      <div class="inline-flex items-center h-9 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden divide-x divide-[var(--border)]">
         <button @click="prevWeek()" title="Önceki hafta (7 gün)"
-                class="px-2.5 h-full text-ink-400 hover:bg-ink-800 hover:text-ink-200 transition-colors">
+                class="px-2.5 h-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)] transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
         <button @click="prevDay()" title="Önceki gün"
-                class="px-2 h-full text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors text-base font-bold leading-none">
+                class="px-2 h-full text-[var(--muted-2)] hover:bg-[var(--surface-2)] hover:text-[var(--body)] transition-colors text-base font-bold leading-none">
           ‹
         </button>
-        <span class="px-3 h-full flex items-center text-sm font-semibold text-ink-100 tabular-nums select-none whitespace-nowrap"
+        <span class="px-3 h-full flex items-center text-sm font-semibold text-[var(--heading)] tabular-nums select-none whitespace-nowrap"
               x-text="weekLabel"></span>
         <button @click="nextDay()" title="Sonraki gün"
-                class="px-2 h-full text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors text-base font-bold leading-none">
+                class="px-2 h-full text-[var(--muted-2)] hover:bg-[var(--surface-2)] hover:text-[var(--body)] transition-colors text-base font-bold leading-none">
           ›
         </button>
         <button @click="nextWeek()" title="Sonraki hafta (7 gün)"
-                class="px-2.5 h-full text-ink-400 hover:bg-ink-800 hover:text-ink-200 transition-colors">
+                class="px-2.5 h-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)] transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
           </svg>
         </button>
         <button @click="$refs.coachDateInput.showPicker?.() ?? $refs.coachDateInput.click()"
                 title="Tarihe git"
-                class="px-2.5 h-full flex items-center text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors">
+                class="px-2.5 h-full flex items-center text-[var(--muted-2)] hover:bg-[var(--surface-2)] hover:text-[var(--body)] transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
             <path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
@@ -287,7 +279,7 @@
         </button>
       </div>
       <input type="date" x-ref="coachDateInput" @change="goToDate($event.target.value)" tabindex="-1"
-             style="position:absolute;top:100%;right:0;width:1px;height:1px;opacity:0;pointer-events:none;color-scheme:dark">
+             style="position:absolute;top:100%;right:0;width:1px;height:1px;opacity:0;pointer-events:none">
     </div>
 
     <div class="ml-auto flex items-center gap-2">
@@ -297,13 +289,13 @@
         Excel
       </a>
       <button @click="exportHTML()" :disabled="!studentId"
-              class="h-9 px-3 bg-ink-850 border border-ink-700 text-ink-300 rounded-lg text-xs
-                     font-medium hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              class="h-9 px-3 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--body)] rounded-lg text-xs
+                     font-medium hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed transition">
         HTML
       </button>
       <button @click="showSettingsModal = true"
-              class="h-9 px-3 bg-ink-850 border border-ink-700 rounded-lg text-xs font-medium
-                     text-ink-400 hover:bg-ink-800 transition"
+              class="h-9 px-3 bg-[var(--surface-1)] border border-[var(--border)] rounded-lg text-xs font-medium
+                     text-[var(--muted)] hover:bg-[var(--surface-2)] transition"
               title="Renk Ayarları">
         Renkler
       </button>
@@ -312,11 +304,11 @@
               class="h-9 px-3 rounded-lg border text-xs font-medium transition"
               :class="showCompleted
                 ? 'bg-emerald-tint border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20'
-                : 'bg-ink-850 border-ink-700 text-ink-400 hover:bg-ink-800'"
+                : 'bg-[var(--surface-1)] border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-2)]'"
               x-text="showCompleted ? 'Tamamlananları gizle' : 'Tamamlananları göster'">
       </button>
       <span x-show="studentId && completionStats.total > 0"
-            class="text-xs text-ink-500 whitespace-nowrap tnum"
+            class="text-xs text-[var(--muted-2)] whitespace-nowrap tnum"
             x-text="'Tamamlanan: ' + completionStats.done + ' / ' + completionStats.total">
       </span>
     </div>
@@ -331,18 +323,18 @@
   <div class="overflow-x-auto pb-2">
   <div id="weekly-grid" class="grid grid-cols-7 gap-3 min-h-[60vh] min-w-[1100px]">
     <template x-for="(gun, idx) in days" :key="idx">
-      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden flex flex-col min-h-[420px] transition-all"
+      <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden flex flex-col min-h-[420px] transition-all"
            :class="gun.tarih === window.DAS_TODAY ? 'ring-2 ring-steel-500/40' : ''"
            @dragover.prevent
            @drop="onDrop($event, gun.tarih)">
 
-        <div class="px-3 py-3 border-b border-ink-700 shrink-0"
-             :class="gun.tarih === window.DAS_TODAY ? 'bg-steel-tint' : 'bg-ink-900/40'">
+        <div class="px-3 py-3 border-b border-[var(--border)] shrink-0"
+             :class="gun.tarih === window.DAS_TODAY ? 'bg-steel-tint' : 'bg-[var(--surface-2)]'">
           <div class="text-[10px] uppercase tracking-wider font-bold"
-               :class="gun.tarih === window.DAS_TODAY ? 'text-steel-400' : 'text-ink-500'"
+               :class="gun.tarih === window.DAS_TODAY ? 'text-steel-400' : 'text-[var(--muted-2)]'"
                x-text="gun.tarih === window.DAS_TODAY ? gun.label + ' · Bugün' : gun.label"></div>
           <div class="text-xs mt-0.5 tnum"
-               :class="gun.tarih === window.DAS_TODAY ? 'text-ink-100' : 'text-ink-300'"
+               :class="gun.tarih === window.DAS_TODAY ? 'text-[var(--heading)]' : 'text-[var(--body)]'"
                x-text="gun.tarih"></div>
           <div class="text-[11px] font-semibold mt-0.5 text-steel-400 tnum"
                x-text="dailyLabel(idx)"></div>
@@ -353,8 +345,8 @@
 
         <div data-pdf-hide class="print:hidden px-2 pt-2 shrink-0">
           <button @click="openAddTask(gun.tarih)" :disabled="!studentId"
-                  class="w-full py-2 text-xs text-ink-500 hover:text-ink-200 hover:bg-ink-800
-                         rounded-lg border border-dashed border-ink-700 hover:border-ink-600
+                  class="w-full py-2 text-xs text-[var(--muted-2)] hover:text-[var(--heading)] hover:bg-[var(--surface-2)]
+                         rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--border-strong)]
                          disabled:opacity-30 disabled:cursor-not-allowed transition">
             + Ekle
           </button>
@@ -379,30 +371,30 @@
                         :style="{background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
                         x-text="aktiviteLabel(g.aktivite_tipi)"></span>
                   <span x-show="g.ozel_sure_dk"
-                        class="text-[10px] font-medium text-ink-400 tnum"
+                        class="text-[10px] font-medium text-[var(--muted)] tnum"
                         x-text="durStr(g.ozel_sure_dk)"></span>
                 </div>
               </div>
 
               <div class="hidden sm:block">
                 <template x-for="d in g.detaylar" :key="d.id">
-                  <div class="text-[10px] text-ink-400 leading-relaxed mt-1" x-text="formatDetay(d)"></div>
+                  <div class="text-[10px] text-[var(--muted)] leading-relaxed mt-1" x-text="formatDetay(d)"></div>
                 </template>
                 <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)"
-                     class="mt-1 pt-1 border-t border-ink-700/40 space-y-0.5">
+                     class="mt-1 pt-1 border-t border-[var(--border)] space-y-0.5">
                   <div x-show="g.time_spent_dk"
                        class="text-[10px] text-emerald-400 tnum"
                        x-text="'✓ ' + fmtDk(g.time_spent_dk) + ' harcandı'"></div>
                   <div x-show="g.student_note"
-                       class="text-[10px] text-ink-500 italic truncate"
+                       class="text-[10px] text-[var(--muted-2)] italic truncate"
                        x-text="g.student_note"></div>
                 </div>
               </div>
 
               <div data-pdf-hide class="print:hidden mt-2 hidden sm:flex gap-1 flex-wrap">
                 <button @click.stop="editTask(g)"
-                        class="flex-1 text-[10px] font-medium py-1 bg-ink-800/60 border border-ink-700
-                               text-ink-200 rounded-md hover:bg-ink-800 transition">
+                        class="flex-1 text-[10px] font-medium py-1 bg-[var(--surface-2)] border border-[var(--border)]
+                               text-[var(--body)] rounded-md hover:bg-[var(--surface-3)] transition">
                   Düzenle
                 </button>
                 <button @click.stop="deleteTask(g.id)"
@@ -470,7 +462,7 @@
 
           <div x-show="studentId && !gun.gorevler.length"
                class="flex-1 flex items-center justify-center py-6">
-            <span class="text-xs text-ink-700 select-none">—</span>
+            <span class="text-xs text-[var(--border-strong)] select-none">—</span>
           </div>
         </div>
 
@@ -482,24 +474,24 @@
   <div x-show="showTaskModal"
        class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
        @keydown.escape.window="showTaskModal = false">
-    <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-ink-850 border border-ink-700"
+    <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-[var(--surface-1)] border border-[var(--border)]"
          @click.stop>
       <div class="overflow-y-auto flex-1 p-6 pb-2">
         <div class="flex items-center justify-between mb-5">
-          <h2 class="text-base font-semibold text-ink-100"
+          <h2 class="text-base font-semibold text-[var(--heading)]"
               x-text="editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h2>
           <button @click="showTaskModal = false"
-                  class="w-7 h-7 flex items-center justify-center text-ink-400 hover:text-ink-200
-                         hover:bg-ink-800 rounded-lg transition text-lg leading-none">
+                  class="w-7 h-7 flex items-center justify-center text-[var(--muted)] hover:text-[var(--heading)]
+                         hover:bg-[var(--surface-2)] rounded-lg transition text-lg leading-none">
             &times;
           </button>
         </div>
 
         <div class="mb-4">
-          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Aktivite Tipi</label>
+          <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Aktivite Tipi</label>
           <select x-model="taskForm.aktivite_tipi"
-                  class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                         text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                  class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                         text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
             <option value="konu_anlatimi">Konu Anlatımı</option>
             <option value="soru_cozumu">Soru Çözümü</option>
             <option value="tekrar">Tekrar</option>
@@ -508,19 +500,19 @@
 
         <div x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'" class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
             <select x-model="taskForm.sinav_tipi"
-                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                    class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                           text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
               <option value="TYT">TYT</option>
               <option value="AYT">AYT</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Ders</label>
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Ders</label>
             <select x-model="taskForm.konu_ders_id"
-                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                           text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                    class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                           text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
               <option value="">Ders seçin</option>
               <template x-for="d in dersler" :key="d.id">
                 <option :value="d.id" x-text="d.ad"></option>
@@ -532,20 +524,20 @@
         <div x-show="taskForm.aktivite_tipi === 'konu_anlatimi'" class="mb-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
               <select x-model="taskForm.sinav_tipi"
                       @change="taskForm.konu_ders_id = ''; listeler = []; videolar = [];"
-                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                      class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                             text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
                 <option value="TYT">TYT</option>
                 <option value="AYT">AYT</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Ders</label>
+              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Ders</label>
               <select x-model="taskForm.konu_ders_id" @change="loadListeler()"
-                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                      class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                             text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
                 <option value="">Ders seçin</option>
                 <template x-for="d in dersler" :key="d.id">
                   <option :value="d.id" x-text="d.ad"></option>
@@ -556,7 +548,7 @@
 
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="block text-xs font-semibold text-ink-400 uppercase tracking-wide">Oynatma Listesi</label>
+              <label class="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Oynatma Listesi</label>
               <button type="button"
                       @click="window.dispatchEvent(new CustomEvent('open-playlist-importer'))"
                       class="text-xs text-steel-400 hover:text-steel-300 transition font-medium">
@@ -565,8 +557,8 @@
             </div>
             <div class="flex items-center gap-1.5">
               <select x-model="taskForm.liste_id" @change="handleListeChange()"
-                      class="flex-1 min-w-0 border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                      class="flex-1 min-w-0 border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                             text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
                 <option value="">Liste seçin</option>
                 <template x-for="l in listeler" :key="l.id">
                   <option :value="l.id" x-text="l.baslik"></option>
@@ -583,8 +575,8 @@
                       x-show="String(taskForm.liste_id).startsWith('yt:')"
                       @click="deleteYtPlaylist(taskForm.ytPlaylistPk || parseInt(String(taskForm.liste_id).slice(3)))"
                       title="Playlisti sil"
-                      class="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-ink-700
-                             text-ink-500 hover:text-ruby-400 hover:bg-ruby-500/10 transition">
+                      class="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-[var(--border)]
+                             text-[var(--muted-2)] hover:text-ruby-400 hover:bg-ruby-500/10 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -594,52 +586,52 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">
               Videolar
               <span x-show="taskForm.selectedVideos.length"
                     class="ml-1 normal-case font-normal text-steel-400"
                     x-text="'(' + taskForm.selectedVideos.length + ' seçili)'"></span>
             </label>
             <div x-ref="videoList"
-                 class="border border-ink-700 rounded-xl max-h-56 overflow-y-auto divide-y divide-ink-700 bg-ink-800">
+                 class="border border-[var(--border)] rounded-xl max-h-56 overflow-y-auto divide-y divide-[var(--border)] bg-[var(--surface-2)]">
               <template x-for="v in videolar" :key="v.id">
                 <label class="flex items-center gap-3 px-3 py-2 cursor-pointer transition"
-                       :class="taskForm.selectedVideos.includes(String(v.id)) ? 'bg-steel-tint' : 'hover:bg-ink-750'">
+                       :class="taskForm.selectedVideos.includes(String(v.id)) ? 'bg-steel-tint' : 'hover:bg-[var(--surface-3)]'">
                   <input type="checkbox" :value="v.id"
                          x-model="taskForm.selectedVideos" @change="updateSure()"
                          class="rounded text-steel-500 focus:ring-steel-400">
-                  <span class="text-xs flex-1 leading-snug text-ink-200" x-text="v.baslik"></span>
-                  <span class="text-xs text-ink-500 shrink-0 tnum" x-text="v.sure_dk + ' dk'"></span>
+                  <span class="text-xs flex-1 leading-snug text-[var(--body)]" x-text="v.baslik"></span>
+                  <span class="text-xs text-[var(--muted-2)] shrink-0 tnum" x-text="v.sure_dk + ' dk'"></span>
                 </label>
               </template>
-              <p x-show="!videolar.length" class="text-xs text-ink-500 text-center py-5">
+              <p x-show="!videolar.length" class="text-xs text-[var(--muted-2)] text-center py-5">
                 Liste seçildiğinde videolar görünür.
               </p>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">
               Ek Not <span class="font-normal normal-case">(isteğe bağlı)</span>
             </label>
             <input x-model="taskForm.konu_not" type="text" placeholder="Ek not…"
-                   class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                          text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500 transition">
+                   class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                          text-[var(--heading)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-steel-500 transition">
           </div>
         </div>
 
         <div class="mb-4">
-          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Süre (dk)</label>
+          <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Süre (dk)</label>
           <input x-model.number="taskForm.ozel_sure_dk" type="number" inputmode="numeric" min="0"
-                 class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                        text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                 class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                        text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
         </div>
 
         <div class="mb-4" x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'">
-          <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Açıklama</label>
+          <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Açıklama</label>
           <textarea x-model="taskForm.aciklama" rows="2" placeholder="Kaynak / konu / not…"
-                    class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800 text-ink-100
-                           placeholder:text-ink-500 resize-none focus:outline-none focus:border-steel-500 transition"></textarea>
+                    class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)] text-[var(--heading)]
+                           placeholder:text-[var(--muted-2)] resize-none focus:outline-none focus:border-steel-500 transition"></textarea>
         </div>
 
         <p x-show="taskForm.error"
@@ -647,10 +639,10 @@
            x-text="taskForm.error"></p>
       </div>
 
-      <div class="flex justify-end gap-2 px-6 py-4 border-t border-ink-700 bg-ink-850 rounded-b-2xl shrink-0">
+      <div class="flex justify-end gap-2 px-6 py-4 border-t border-[var(--border)] bg-[var(--surface-1)] rounded-b-2xl shrink-0">
         <button @click="showTaskModal = false"
-                class="px-5 py-2 border border-ink-700 rounded-xl text-sm font-medium
-                       text-ink-300 hover:bg-ink-800 transition">
+                class="px-5 py-2 border border-[var(--border)] rounded-xl text-sm font-medium
+                       text-[var(--body)] hover:bg-[var(--surface-2)] transition">
           İptal
         </button>
         <button @click="saveTask()"
@@ -665,9 +657,9 @@
   <div x-show="showSettingsModal"
        class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
        @keydown.escape.window="showSettingsModal = false">
-    <div class="rounded-2xl shadow-card-lg w-full max-w-xs p-6 bg-ink-850 border border-ink-700"
+    <div class="rounded-2xl shadow-card-lg w-full max-w-xs p-6 bg-[var(--surface-1)] border border-[var(--border)]"
          @click.stop>
-      <h2 class="text-base font-semibold text-ink-100 mb-4">Renk Ayarları</h2>
+      <h2 class="text-base font-semibold text-[var(--heading)] mb-4">Renk Ayarları</h2>
       <div class="space-y-2">
         <template x-for="item in [
           {key:'konu_anlatimi', label:'Konu Anlatımı'},
@@ -681,14 +673,14 @@
                   x-text="item.label"></span>
             <input type="color" :value="colorSettings[item.key]"
                    @input="colorSettings[item.key] = $event.target.value; saveColorSettings()"
-                   class="w-9 h-8 rounded-lg cursor-pointer border border-ink-700 bg-transparent p-0.5">
+                   class="w-9 h-8 rounded-lg cursor-pointer border border-[var(--border)] bg-transparent p-0.5">
           </div>
         </template>
       </div>
       <div class="flex justify-between mt-5 gap-2">
         <button @click="resetColors()"
-                class="px-4 py-2 text-sm text-ink-400 border border-ink-700 rounded-xl
-                       hover:bg-ink-800 transition">
+                class="px-4 py-2 text-sm text-[var(--muted)] border border-[var(--border)] rounded-xl
+                       hover:bg-[var(--surface-2)] transition">
           Varsayılana Dön
         </button>
         <button @click="showSettingsModal = false"

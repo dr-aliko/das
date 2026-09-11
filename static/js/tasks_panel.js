@@ -721,18 +721,6 @@ function panel() {
       }
     },
 
-    async coachResetStudentWeek() {
-      if (!this.studentId || !this.days.length) return;
-      try {
-        await fetch('/coach/tasks/api/reset-student-week/', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_id: parseInt(this.studentId), week_start: this.days[0].tarih }),
-        });
-        await this.loadWeek();
-      } catch (e) { console.error('[coachResetStudentWeek]', e); }
-    },
-
     // ── Drag & drop ─────────────────────────────────────────────────────────
     // Cross-day drag = COPY (preserves meta server-side via copy_to_date).
     // Same-day drop  = no-op (reorder not wired to drag; meta invariant safe).

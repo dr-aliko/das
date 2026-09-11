@@ -4,14 +4,14 @@
      x-show="show" x-cloak
      class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
      @keydown.escape.window="close()">
-  <div class="rounded-2xl shadow-card-lg w-full max-w-md bg-ink-850 border border-ink-700"
+  <div class="rounded-2xl shadow-card-lg w-full max-w-md bg-[var(--surface-1)] border border-[var(--border)]"
        @click.stop>
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-ink-700">
-      <h2 class="text-base font-semibold text-ink-100">YouTube Playlist Ekle</h2>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+      <h2 class="text-base font-semibold text-[var(--heading)]">YouTube Playlist Ekle</h2>
       <button @click="close()"
-              class="w-7 h-7 flex items-center justify-center text-ink-400 hover:text-ink-200
-                     hover:bg-ink-800 rounded-lg transition text-lg leading-none">&times;</button>
+              class="w-7 h-7 flex items-center justify-center text-[var(--muted)] hover:text-[var(--heading)]
+                     hover:bg-[var(--surface-2)] rounded-lg transition text-lg leading-none">&times;</button>
     </div>
 
     <div class="p-6 space-y-4">
@@ -20,12 +20,12 @@
       <template x-if="step === 'input' || step === 'error'">
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Playlist URL</label>
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Playlist URL</label>
             <input x-model="url" type="text"
                    placeholder="https://youtube.com/playlist?list=…"
                    @keydown.enter="doPreview()"
-                   class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                          text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-steel-500 transition">
+                   class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                          text-[var(--heading)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-steel-500 transition">
           </div>
           <p x-show="step === 'error'"
              class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
@@ -46,7 +46,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <p class="text-sm text-ink-400">İşleniyor…</p>
+          <p class="text-sm text-[var(--muted)]">İşleniyor…</p>
         </div>
       </template>
 
@@ -54,9 +54,9 @@
       <template x-if="step === 'preview'">
         <div class="space-y-4">
 
-          <div class="rounded-xl bg-ink-800 border border-ink-700 p-4 space-y-2">
-            <p class="text-sm font-semibold text-ink-100 leading-snug" x-text="preview.title"></p>
-            <p class="text-xs text-ink-400" x-text="preview.channel_title"></p>
+          <div class="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4 space-y-2">
+            <p class="text-sm font-semibold text-[var(--heading)] leading-snug" x-text="preview.title"></p>
+            <p class="text-xs text-[var(--muted)]" x-text="preview.channel_title"></p>
             <div class="flex items-center gap-2 flex-wrap pt-1">
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
                            bg-steel-500/20 text-steel-400 border border-steel-500/30"
@@ -83,14 +83,14 @@
           {# Exam type picker — only when not auto-detected #}
           <template x-if="!preview.detected_exam_type">
             <div>
-              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
               <div class="flex gap-2">
                 <template x-for="tip in ['TYT', 'AYT']" :key="tip">
                   <button type="button" @click="selectedExamType = tip"
                           class="flex-1 py-2 rounded-xl text-sm font-bold border transition"
                           :class="selectedExamType === tip
                             ? 'bg-steel-500/20 border-steel-500 text-steel-400'
-                            : 'bg-ink-800 border-ink-700 text-ink-400 hover:bg-ink-750'"
+                            : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
                           x-text="tip"></button>
                 </template>
               </div>
@@ -100,12 +100,12 @@
           {# Subject picker — only when not auto-detected #}
           <template x-if="!preview.detected_subject_id">
             <div>
-              <label class="block text-xs font-semibold text-ink-400 mb-1.5 uppercase tracking-wide">
-                Ders <span class="font-normal normal-case text-ink-500">(isteğe bağlı)</span>
+              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">
+                Ders <span class="font-normal normal-case text-[var(--muted-2)]">(isteğe bağlı)</span>
               </label>
               <select x-model="selectedSubjectId"
-                      class="w-full border border-ink-700 rounded-lg px-3 py-2 text-sm bg-ink-800
-                             text-ink-100 focus:outline-none focus:border-steel-500 transition">
+                      class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
+                             text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
                 <option value="">Seçilmedi</option>
                 <template x-for="s in subjects.filter(s => !selectedExamType || s.exam_type === selectedExamType)"
                           :key="s.id">
@@ -121,8 +121,8 @@
 
           <div class="flex gap-2">
             <button @click="reset()"
-                    class="flex-1 py-2.5 border border-ink-700 text-sm font-medium rounded-xl
-                           text-ink-300 hover:bg-ink-800 transition">
+                    class="flex-1 py-2.5 border border-[var(--border)] text-sm font-medium rounded-xl
+                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
               Geri
             </button>
             <button @click="doImport()"
@@ -144,8 +144,8 @@
               </svg>
             </div>
             <div class="text-center space-y-1">
-              <p class="text-sm font-semibold text-ink-100" x-text="importResult.title"></p>
-              <p class="text-xs text-ink-400"
+              <p class="text-sm font-semibold text-[var(--heading)]" x-text="importResult.title"></p>
+              <p class="text-xs text-[var(--muted)]"
                  x-text="importResult.video_count + ' video · ' + importResult.exam_type + (importResult.subject_display ? ' · ' + importResult.subject_display : '')"></p>
               <p x-show="importResult.was_update" class="text-xs text-amber-400">Playlist güncellendi.</p>
             </div>
@@ -157,13 +157,13 @@
           </button>
           <div class="flex gap-2">
             <button @click="reset()"
-                    class="flex-1 py-2 border border-ink-700 text-xs font-medium rounded-xl
-                           text-ink-300 hover:bg-ink-800 transition">
+                    class="flex-1 py-2 border border-[var(--border)] text-xs font-medium rounded-xl
+                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
               Başka Playlist Ekle
             </button>
             <button @click="close()"
-                    class="flex-1 py-2 border border-ink-700 text-xs font-medium rounded-xl
-                           text-ink-300 hover:bg-ink-800 transition">
+                    class="flex-1 py-2 border border-[var(--border)] text-xs font-medium rounded-xl
+                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
               Kapat
             </button>
           </div>

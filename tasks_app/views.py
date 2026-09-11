@@ -570,20 +570,6 @@ class StudentResetView(View):
         return JsonResponse({"ok": True, "deleted": deleted})
 
 
-@method_decorator(coach_required, name='dispatch')
-class CoachStudentResetView(View):
-    def post(self, request):
-        body = _body(request)
-        try:
-            student_id = int(body["student_id"])
-            hafta = date.fromisoformat(body["week_start"])
-        except (KeyError, ValueError, TypeError):
-            return JsonResponse({"errors": "student_id ve week_start gerekli"}, status=400)
-        basi, sonu = week_svc.week_bounds(hafta)
-        deleted = tasks.reset_student_week_by_coach(request.user, student_id, basi, sonu)
-        return JsonResponse({"ok": True, "deleted": deleted})
-
-
 # ── Student Excel export ──────────────────────────────────────────────────────
 
 @method_decorator(student_required, name='dispatch')

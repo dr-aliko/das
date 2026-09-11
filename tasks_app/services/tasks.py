@@ -432,17 +432,3 @@ def reset_student_week(student: User, hafta_basi: date, hafta_sonu: date) -> int
     return deleted
 
 
-def reset_student_week_by_coach(
-    coach: User, student_id: int, hafta_basi: date, hafta_sonu: date
-) -> int:
-    """Coach resets a student's week — deletes copies AND unhides hidden masters."""
-    deleted, _ = GorevGrubu.objects.filter(
-        student__coach=coach, student_id=student_id,
-        is_master=False, tarih__range=(hafta_basi, hafta_sonu),
-    ).delete()
-    GorevGrubu.objects.filter(
-        student__coach=coach, student_id=student_id,
-        is_master=True, is_hidden_by_student=True,
-        tarih__range=(hafta_basi, hafta_sonu),
-    ).update(is_hidden_by_student=False)
-    return deleted
