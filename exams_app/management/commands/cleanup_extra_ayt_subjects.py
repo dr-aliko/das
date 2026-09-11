@@ -89,28 +89,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         from exams_app.models import Subject, Topic, ExamResult
-        try:
-            from exams_app.models import ExamTopicError, BransTopicError, StudentTask
-        except ImportError:
-            ExamTopicError = BransTopicError = StudentTask = None
-        try:
-            from curriculum_app.models import MacroPlanTopic, MacroPlanWeekTopic
-        except ImportError:
-            MacroPlanTopic = MacroPlanWeekTopic = None
+        from exams_app.models import ExamTopicError, BransTopicError, StudentTask
 
         def is_referenced(t):
-            checks = []
-            if MacroPlanTopic:
-                checks.append(MacroPlanTopic.objects.filter(topic=t).exists())
-            if MacroPlanWeekTopic:
-                checks.append(MacroPlanWeekTopic.objects.filter(topic=t).exists())
-            if StudentTask:
-                checks.append(StudentTask.objects.filter(topic=t).exists())
-            if ExamTopicError:
-                checks.append(ExamTopicError.objects.filter(topic=t).exists())
-            if BransTopicError:
-                checks.append(BransTopicError.objects.filter(topic=t).exists())
-            return any(checks)
+            return any([
+                StudentTask.objects.filter(topic=t).exists(),
+                ExamTopicError.objects.filter(topic=t).exists(),
+                BransTopicError.objects.filter(topic=t).exists(),
+            ])
 
         def handle_legacy_topics(subject_name, legacy_names, keep_canonical=None):
             keep_canonical = keep_canonical or set()

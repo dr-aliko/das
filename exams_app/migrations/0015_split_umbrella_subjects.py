@@ -23,7 +23,6 @@ def _redirect_topic_fks(apps, old_topic, new_topic):
     ExamTopicError = apps.get_model('exams_app', 'ExamTopicError')
     BransTopicError = apps.get_model('exams_app', 'BransTopicError')
     StudentTask = apps.get_model('exams_app', 'StudentTask')
-    MacroPlanTopic = apps.get_model('curriculum_app', 'MacroPlanTopic')
 
     # ExamTopicError unique_together = (exam, topic)
     for ete in ExamTopicError.objects.filter(topic=old_topic):
@@ -50,14 +49,6 @@ def _redirect_topic_fks(apps, old_topic, new_topic):
         else:
             st.topic = new_topic
             st.save(update_fields=['topic'])
-
-    # MacroPlanTopic unique_together = (bucket, topic)
-    for mpt in MacroPlanTopic.objects.filter(topic=old_topic):
-        if MacroPlanTopic.objects.filter(bucket_id=mpt.bucket_id, topic=new_topic).exists():
-            mpt.delete()
-        else:
-            mpt.topic = new_topic
-            mpt.save(update_fields=['topic'])
 
 
 def split_umbrella_subjects(apps, schema_editor):
@@ -104,7 +95,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('exams_app', '0014_topic_depends_on_topic_expected_hours_and_more'),
-        ('curriculum_app', '0002_macroplan_segment_macroplan_status_planriskalert_and_more'),
     ]
 
     operations = [
