@@ -1,15 +1,21 @@
 """
-Upsert KonuTakipTopic records from a JSON file.
+Upsert KonuTakipTopic records from a JSON file (idempotent, any nesting depth).
 
 Expected JSON format:
 {
   "TYT Biyoloji": ["Konu 1", "Konu 2", ...],
-  "TYT Matematik": [
-    "Konu 1",
-    {"name": "Problemler", "checkable": false, "children": ["Alt Konu 1", ...]},
-    "Konu 3"
+  "AYT Fizik": [
+    {"name": "9. Sınıf Fizik", "checkable": false, "children": [
+      "Fizik Bilimine Giriş",
+      {"name": "Kuvvet ve Hareket", "checkable": false, "children": [
+        "Bir Boyutta Hareket", "Kuvvet"
+      ]}
+    ]}
   ]
 }
+
+Children arrays may mix plain strings (leaf topics) and nested dict objects
+(sub-category headers with their own children) at any depth.
 
 Run: python manage.py seed_konu_topics --file topics.json
 """
@@ -49,39 +55,37 @@ class Command(BaseCommand):
                 continue
 
             self.stdout.write(f'\n{subject_name}:')
-
-            for i, entry in enumerate(topic_list):
-                if isinstance(entry, str):
-                    topic, created = self._upsert(subject, None, entry, i, True)
-                    self._log(topic.name, created)
-                    if created:
-                        total_created += 1
-                    else:
-                        total_updated += 1
-
-                elif isinstance(entry, dict):
-                    parent_name = entry['name']
-                    checkable = entry.get('checkable', True)
-                    parent, created = self._upsert(subject, None, parent_name, i, checkable)
-                    self._log(parent_name, created, indent=0)
-                    if created:
-                        total_created += 1
-                    else:
-                        total_updated += 1
-
-                    for j, child_name in enumerate(entry.get('children', [])):
-                        child, child_created = self._upsert(subject, parent, child_name, j, True)
-                        self._log(child_name, child_created, indent=2)
-                        if child_created:
-                            total_created += 1
-                        else:
-                            total_updated += 1
-                else:
-                    self.stdout.write(self.style.WARNING(f'  SKIP: unexpected entry type: {entry!r}'))
+            c, u = self._process_entries(subject, None, topic_list, indent=0)
+            total_created += c
+            total_updated += u
 
         self.stdout.write(self.style.SUCCESS(
             f'\nDone: {total_created} created, {total_updated} updated.'
         ))
+
+    def _process_entries(self, subject, parent, entries, indent):
+        """Recursively upsert entries; children may be strings or nested dicts."""
+        created = updated = 0
+        for i, entry in enumerate(entries):
+            if isinstance(entry, str):
+                topic, c = self._upsert(subject, parent, entry, i, True)
+                self._log(entry, c, indent)
+                created += c
+                updated += 1 - c
+            elif isinstance(entry, dict):
+                name = entry['name']
+                checkable = entry.get('checkable', True)
+                topic, c = self._upsert(subject, parent, name, i, checkable)
+                self._log(name, c, indent)
+                created += c
+                updated += 1 - c
+                if 'children' in entry:
+                    cc, cu = self._process_entries(subject, topic, entry['children'], indent + 2)
+                    created += cc
+                    updated += cu
+            else:
+                self.stdout.write(self.style.WARNING(f'  SKIP: unexpected entry type: {entry!r}'))
+        return created, updated
 
     def _upsert(self, subject, parent, name, order, checkable):
         # Use filter+first to correctly handle nullable parent (NULL != NULL in UNIQUE).

@@ -1,0 +1,57 @@
+{
+  "AYT Biyoloji": [
+    {
+      "name": "11. Sınıf Biyoloji",
+      "checkable": false,
+      "children": [
+        {
+          "name": "İnsan Fizyolojisi",
+          "checkable": false,
+          "children": [
+            "Denetleyici ve Düzenleyici Sistem, Duyu Organları",
+            "Destek ve Hareket Sistemi",
+            "Sindirim Sistemi",
+            "Dolaşım Sistemleri",
+            "Solunum Sistemi",
+            "Üriner Sistem",
+            "Üreme Sistemi ve Embriyonik Gelişim"
+          ]
+        },
+        {
+          "name": "Komünite ve Popülasyon Ekolojisi",
+          "checkable": false,
+          "children": [
+            "Komünite Ekolojisi",
+            "Popülasyon Ekolojisi"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12. Sınıf Biyoloji",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Genden Proteine",
+          "checkable": false,
+          "children": [
+            "Nükleik Asitlerin Keşfi ve Önemi",
+            "Genetik Şifre ve Protein Sentezi"
+          ]
+        },
+        {
+          "name": "Canlılarda Enerji Dönüşümleri",
+          "checkable": false,
+          "children": [
+            "Canlılık ve Enerji",
+            "Fotosentez",
+            "Kemosentez",
+            "Hücresel Solunum",
+            "Bitki Biyolojisi",
+            "Canlılar ve Çevre"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -10,15 +10,40 @@ from users_app.decorators import coach_can_view_student, coach_required, student
 from users_app.models import User
 
 from .models import KonuTakipTopic
-from .services import build_topic_list, toggle_progress
+from .services import build_flat_topics, build_topic_list, toggle_progress
 
 
-def _subjects_with_topics():
-    return list(
+def _serialize_subjects(subjects):
+    return [{'id': s.id, 'name': s.display_name} for s in subjects]
+
+
+def _serialize_topics(subject, student):
+    if not (subject and student):
+        return [], {}, None
+    topics_data, progress_json = build_topic_list(subject, student)
+    return build_flat_topics(topics_data), progress_json, subject.id
+
+
+_AYT_ALAN_MAP = {
+    'SAY': {'AYT Matematik', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji'},
+    'EA':  {'AYT Matematik', 'AYT Türk Dili ve Edebiyatı'},
+    'SOZ': {'AYT Türk Dili ve Edebiyatı', 'AYT Tarih 2', 'AYT Coğrafya 2', 'AYT Felsefe Grubu'},
+    'DIL': {'AYT Yabancı Dil'},
+}
+_DEFAULT_AYT = _AYT_ALAN_MAP['SAY']  # blank alan → SAY subjects
+
+
+def _subject_groups(student):
+    """Return (tyt_subjects, ayt_subjects) for this student, AYT filtered by alan."""
+    all_subjects = list(
         Subject.objects.filter(konu_takip_topics__isnull=False)
         .distinct()
         .order_by('name')
     )
+    ayt_allowed = _AYT_ALAN_MAP.get(student.alan, _DEFAULT_AYT)
+    tyt = [s for s in all_subjects if s.name.startswith('TYT ')]
+    ayt = [s for s in all_subjects if s.name.startswith('AYT ') and s.name in ayt_allowed]
+    return tyt, ayt
 
 
 def _resolve_subject(subjects, subject_id_str):
@@ -52,22 +77,34 @@ class CoachKonuTakipView(View):
         if not selected_student and coached_students:
             selected_student = coached_students[0]
 
-        subjects = _subjects_with_topics()
+        tyt_subjects, ayt_subjects = _subject_groups(selected_student) if selected_student else ([], [])
+        exam_type = request.GET.get('exam_type', 'TYT')
+        if exam_type not in ('TYT', 'AYT'):
+            exam_type = 'TYT'
+        subjects = tyt_subjects if exam_type == 'TYT' else ayt_subjects
         selected_subject = _resolve_subject(subjects, request.GET.get('subject'))
 
-        topics_data, progress_json = [], {}
-        if selected_student and selected_subject:
-            topics_data, progress_json = build_topic_list(selected_subject, selected_student)
+        flat_topics, progress_json, selected_subject_id = _serialize_topics(
+            selected_subject, selected_student
+        )
 
+        qs_student = f'student={selected_student.id}&' if selected_student else ''
         return render(request, 'konu_takip/index.html', {
             'students': coached_students,
             'selected_student': selected_student,
-            'subjects': subjects,
-            'selected_subject': selected_subject,
-            'topics_data': topics_data,
-            'progress_json': json.dumps(progress_json),
-            'toggle_url': '/coach/konu-takip/toggle/',
             'is_coach_view': True,
+            'qs_student': qs_student,
+            'kt_cfg': json.dumps({
+                'examType': exam_type,
+                'tytSubjects': _serialize_subjects(tyt_subjects),
+                'aytSubjects': _serialize_subjects(ayt_subjects),
+                'selectedSubjectId': selected_subject_id,
+                'flatTopics': flat_topics,
+                'progress': progress_json,
+                'toggleUrl': '/coach/konu-takip/toggle/',
+                'apiUrl': '/coach/konu-takip/api/',
+                'studentId': selected_student.id if selected_student else None,
+            }),
         })
 
 
@@ -96,25 +133,65 @@ class CoachToggleView(View):
         return JsonResponse({'ok': True, 'started': progress.started, 'finished': progress.finished})
 
 
+@method_decorator(coach_required, name='dispatch')
+class CoachKonuTakipApiView(View):
+    def get(self, request):
+        coached_students = list(
+            User.objects.filter(role='student', coach=request.user).order_by('full_name')
+        )
+        selected_student = None
+        try:
+            sid = int(request.GET.get('student_id', 0))
+            if sid and coach_can_view_student(request.user, sid):
+                selected_student = User.objects.get(id=sid, role='student')
+        except (ValueError, User.DoesNotExist):
+            pass
+        if not selected_student and coached_students:
+            selected_student = coached_students[0]
+
+        tyt_subjects, ayt_subjects = _subject_groups(selected_student) if selected_student else ([], [])
+        exam_type = request.GET.get('exam_type', 'TYT')
+        if exam_type not in ('TYT', 'AYT'):
+            exam_type = 'TYT'
+        subjects = tyt_subjects if exam_type == 'TYT' else ayt_subjects
+        selected_subject = _resolve_subject(subjects, request.GET.get('subject_id'))
+
+        flat_topics, progress_json, selected_subject_id = _serialize_topics(selected_subject, selected_student)
+        return JsonResponse({
+            'flat_topics': flat_topics,
+            'progress': progress_json,
+            'selected_subject_id': selected_subject_id,
+        })
+
+
 # ── Student views ─────────────────────────────────────────────────────────────
 
 @method_decorator(student_required, name='dispatch')
 class StudentKonuTakipView(View):
     def get(self, request):
-        subjects = _subjects_with_topics()
+        tyt_subjects, ayt_subjects = _subject_groups(request.user)
+        exam_type = request.GET.get('exam_type', 'TYT')
+        if exam_type not in ('TYT', 'AYT'):
+            exam_type = 'TYT'
+        subjects = tyt_subjects if exam_type == 'TYT' else ayt_subjects
         selected_subject = _resolve_subject(subjects, request.GET.get('subject'))
 
-        topics_data, progress_json = [], {}
-        if selected_subject:
-            topics_data, progress_json = build_topic_list(selected_subject, request.user)
+        flat_topics, progress_json, selected_subject_id = _serialize_topics(selected_subject, request.user)
 
         return render(request, 'konu_takip/index.html', {
-            'subjects': subjects,
-            'selected_subject': selected_subject,
-            'topics_data': topics_data,
-            'progress_json': json.dumps(progress_json),
-            'toggle_url': '/student/konu-takip/toggle/',
             'is_coach_view': False,
+            'qs_student': '',
+            'kt_cfg': json.dumps({
+                'examType': exam_type,
+                'tytSubjects': _serialize_subjects(tyt_subjects),
+                'aytSubjects': _serialize_subjects(ayt_subjects),
+                'selectedSubjectId': selected_subject_id,
+                'flatTopics': flat_topics,
+                'progress': progress_json,
+                'toggleUrl': '/student/konu-takip/toggle/',
+                'apiUrl': '/student/konu-takip/api/',
+                'studentId': None,
+            }),
         })
 
 
@@ -135,3 +212,21 @@ class StudentToggleView(View):
         topic = get_object_or_404(KonuTakipTopic, pk=topic_id, checkable=True)
         progress = toggle_progress(request.user, topic.id, field, value)
         return JsonResponse({'ok': True, 'started': progress.started, 'finished': progress.finished})
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentKonuTakipApiView(View):
+    def get(self, request):
+        tyt_subjects, ayt_subjects = _subject_groups(request.user)
+        exam_type = request.GET.get('exam_type', 'TYT')
+        if exam_type not in ('TYT', 'AYT'):
+            exam_type = 'TYT'
+        subjects = tyt_subjects if exam_type == 'TYT' else ayt_subjects
+        selected_subject = _resolve_subject(subjects, request.GET.get('subject_id'))
+
+        flat_topics, progress_json, selected_subject_id = _serialize_topics(selected_subject, request.user)
+        return JsonResponse({
+            'flat_topics': flat_topics,
+            'progress': progress_json,
+            'selected_subject_id': selected_subject_id,
+        })

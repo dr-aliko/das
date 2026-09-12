@@ -1,0 +1,770 @@
+{
+  "AYT Yabancı Dil": [
+    {
+      "name": "9. Sınıf İngilizce (CEFR: A1/A2)",
+      "checkable": false,
+      "children": [
+        "Theme 1: Studying Abroad",
+        "Theme 2: My Environment",
+        "Theme 3: Movies",
+        "Theme 4: Wild Life",
+        "Theme 5: Celebrities",
+        "Theme 6: Intercultural Topics",
+        "Theme 7: Seven Wonders",
+        "Theme 8: Emergency and Health Problems",
+        "Theme 9: Party",
+        "Theme 10: Television"
+      ]
+    },
+    {
+      "name": "10. Sınıf İngilizce (CEFR: A2+/B1)",
+      "checkable": false,
+      "children": [
+        "Theme 1: School Life",
+        "Theme 2: Plans",
+        "Theme 3: Detective Stories",
+        "Theme 4: Ancient Civilizations",
+        "Theme 5: Travel",
+        "Theme 6: Helpful Tips",
+        "Theme 7: Shopping",
+        "Theme 8: Digital Era",
+        "Theme 9: Heroes",
+        "Theme 10: Hobbies"
+      ]
+    },
+    {
+      "name": "11. Sınıf İngilizce (CEFR: B1+/B2)",
+      "checkable": false,
+      "children": [
+        "Theme 1: Future Jobs",
+        "Theme 2: Hobbies and Skills",
+        "Theme 3: Hard Times",
+        "Theme 4: What a Life",
+        "Theme 5: Back to the Past",
+        "Theme 6: Open Your Heart",
+        "Theme 7: Facts About Turkey",
+        "Theme 8: Sports",
+        "Theme 9: My Friends",
+        "Theme 10: Values and Norms"
+      ]
+    },
+    {
+      "name": "12. Sınıf İngilizce (CEFR: B2/B2+)",
+      "checkable": false,
+      "children": [
+        "Theme 1: Music",
+        "Theme 2: Friendship",
+        "Theme 3: Human Rights",
+        "Theme 4: Coming Soon",
+        "Theme 5: Psychology",
+        "Theme 6: Favors",
+        "Theme 7: News Stories",
+        "Theme 8: Alternative Energy",
+        "Theme 9: Technology",
+        "Theme 10: Manners"
+      ]
+    }
+  ],
+
+  "AYT Tarih 2": [
+    {
+      "name": "9. Sınıf Tarih",
+      "checkable": false,
+      "children": [
+        "Tarih Bilimi",
+        "Uygarlığın Doğuşu ve İlk Uygarlıklar",
+        "İlk Türk Devletleri",
+        "İslam Tarihi ve Uygarlığı (13. Yüzyıla Kadar)",
+        "Türk – İslam Devletleri (10–13. Yüzyıllar)",
+        "Türkiye Tarihi (11–13. Yüzyıllar)"
+      ]
+    },
+    {
+      "name": "10. Sınıf Tarih",
+      "checkable": false,
+      "children": [
+        "Beylikten Devlete",
+        "Dünya Gücü: Osmanlı Devleti (1453–1600)",
+        "Arayış Yılları (17. Yüzyıl)",
+        "Avrupa ve Osmanlı Devleti (18. Yüzyıl)",
+        "En Uzun Yüzyıl (1800–1922)"
+      ]
+    },
+    {
+      "name": "11. Sınıf Tarih",
+      "checkable": false,
+      "children": [
+        "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595–1774)",
+        "Değişim Çağında Avrupa ve Osmanlı",
+        "Uluslararası İlişkilerde Denge Stratejisi (1774–1914)",
+        "Devrimler Çağında Değişen Devlet – Toplum İlişkileri",
+        "Sermaye ve Emek",
+        "19. ve 20. Yüzyılda Değişen Gündelik Hayat",
+        "20. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+        "Milli Mücadele",
+        "Atatürkçülük ve Türk İnkılabı",
+        "İki Savaş Arasındaki Dönemde Türkiye ve Dünya",
+        "II. Dünya Savaşı Sürecinde Türkiye ve Dünya",
+        "II. Dünya Savaşı Sonrasında Türkiye ve Dünya",
+        "Toplumsal Devrim Çağında Dünya ve Türkiye",
+        "Yüzyılın Eşiğinde Türkiye ve Dünya"
+      ]
+    }
+  ],
+
+  "AYT Felsefe Grubu": [
+    {
+      "name": "Felsefe Konuları",
+      "checkable": false,
+      "children": [
+        "Felsefe'nin Alanı",
+        "Bilgi Felsefesi",
+        "Bilim Felsefesi",
+        "Varlık Felsefesi",
+        "Ahlak Felsefesi",
+        "Siyaset Felsefesi",
+        "Sanat Felsefesi",
+        "Din Felsefesi"
+      ]
+    },
+    {
+      "name": "Mantık Konuları",
+      "checkable": false,
+      "children": [
+        "Mantığa Giriş",
+        "Klasik Mantık",
+        "Mantık ve Dil",
+        "Sembolik Mantık"
+      ]
+    },
+    {
+      "name": "Psikoloji Konuları",
+      "checkable": false,
+      "children": [
+        "Psikoloji Bilimini Tanıyalım",
+        "Psikolojinin Temel Süreçleri",
+        "Öğrenme Bellek Düşünme",
+        "Ruh Sağlığının Temelleri"
+      ]
+    },
+    {
+      "name": "Sosyoloji Konuları",
+      "checkable": false,
+      "children": [
+        "Sosyolojiye Giriş",
+        "Birey ve Toplum",
+        "Toplumsal Yapı",
+        "Toplumsal Değişme ve Gelişme",
+        "Toplum ve Kültür",
+        "Toplumsal Kurumlar"
+      ]
+    }
+  ],
+
+  "AYT Coğrafya 2": [
+    {
+      "name": "Doğal Sistemler",
+      "checkable": false,
+      "children": [
+        "Doğa ve İnsan",
+        "Dünya'nın Şekli ve Hareketleri",
+        "Coğrafi Konum",
+        "Harita Bilgisi",
+        "İklim Bilgisi",
+        "Yerin Şekillenmesi",
+        "Doğanın Varlıkları"
+      ]
+    },
+    {
+      "name": "Beşeri Sistemler",
+      "checkable": false,
+      "children": [
+        "Beşeri Yapı",
+        "Nüfusun Gelişimi, Dağılışı ve Niteliği",
+        "Göçlerin Nedenleri ve Sonuçları",
+        "Geçim Tarzları"
+      ]
+    },
+    {
+      "name": "Mekansal Bir Sentez: Türkiye",
+      "checkable": false,
+      "children": [
+        "Ülkemizin Yeryüzü Şekilleri ve Özellikleri",
+        "Ülkemizin İklimi ve Özellikleri",
+        "Ülkemizin Doğal Varlıkları",
+        "Ülkemizin Yerleşme, Nüfus ve Göç"
+      ]
+    },
+    {
+      "name": "Küresel Ortam: Bölgeler ve Ülkeler",
+      "checkable": false,
+      "children": [
+        "Bölge Türleri ve Sınırları",
+        "Konum ve Etkileşim",
+        "Coğrafi Keşifler"
+      ]
+    },
+    {
+      "name": "Çevre ve Toplum",
+      "checkable": false,
+      "children": [
+        "Doğa ile İnsan Arasındaki Etkileşim",
+        "Doğal Afetler"
+      ]
+    }
+  ],
+
+  "AYT Kimya": [
+    {
+      "name": "9. Sınıf Kimya",
+      "checkable": false,
+      "children": [
+        "Kimya Bilimi",
+        "Atom ve Periyodik Sistem",
+        "Kimyasal Türler Arası Etkileşimler",
+        "Maddenin Halleri"
+      ]
+    },
+    {
+      "name": "10. Sınıf Kimya",
+      "checkable": false,
+      "children": [
+        "Karışımlar",
+        "Asitler, Bazlar ve Tuzlar",
+        "Kimya Her Yerde"
+      ]
+    },
+    {
+      "name": "11. Sınıf Kimya",
+      "checkable": false,
+      "children": [
+        "Modern Atom Teorisi",
+        "Gazlar",
+        "Sıvı Çözeltiler ve Çözünürlük",
+        "Kimyasal Tepkimelerde Enerji",
+        "Kimyasal Tepkimelerde Denge"
+      ]
+    },
+    {
+      "name": "12. Sınıf Kimya",
+      "checkable": false,
+      "children": [
+        "Kimya ve Elektrik",
+        "Karbon Kimyasına Giriş",
+        "Organik Bileşikler",
+        "Enerji Kaynakları ve Bilimsel Gelişmeler"
+      ]
+    }
+  ],
+
+  "AYT Fizik": [
+    {
+      "name": "9. Sınıf Fizik",
+      "checkable": false,
+      "children": [
+        "Fizik Bilimine Giriş",
+        "Madde ve Özellikleri – Katılar",
+        "Madde ve Özellikleri – Akışkanlar",
+        {
+          "name": "Kuvvet ve Hareket",
+          "checkable": false,
+          "children": [
+            "Bir Boyutta Hareket",
+            "Kuvvet",
+            "Newton'un Hareket Yasaları"
+          ]
+        },
+        {
+          "name": "Enerji",
+          "checkable": false,
+          "children": [
+            "İş, Enerji ve Güç",
+            "Mekanik Enerji",
+            "Enerjinin Korunumu ve Dönüşümleri",
+            "Verim"
+          ]
+        },
+        {
+          "name": "Isı ve Sıcaklık",
+          "checkable": false,
+          "children": [
+            "Isı, Sıcaklık ve İç Enerji",
+            "Hal Değişimi",
+            "Isıl Denge",
+            "Enerji İletim Yolları ve Hızı",
+            "Genleşme"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Sınıf Fizik",
+      "checkable": false,
+      "children": [
+        "Basınç ve Kaldırma Kuvveti",
+        {
+          "name": "Elektrik ve Manyetizma",
+          "checkable": false,
+          "children": [
+            "Elektrik Yükleri",
+            "Akım, Potansiyel Fark, Direnç",
+            "Elektrik Devreleri",
+            "Mıknatıslar",
+            "Akım ve Manyetik Alan İlişkisi"
+          ]
+        },
+        {
+          "name": "Dalgalar",
+          "checkable": false,
+          "children": [
+            "Dalga ve Dalga Hareketinin Temel Değişkenleri",
+            "Su Dalgası",
+            "Deprem Dalgaları ve Depremlerin Özellikleri"
+          ]
+        },
+        {
+          "name": "Optik",
+          "checkable": false,
+          "children": [
+            "Aydınlanma ve Gölge",
+            "Yansıma – Düz ve Küresel Aynalar",
+            "Kırılma, Renk ve Prizmalar",
+            "Mercekler"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. Sınıf Fizik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Kuvvet ve Hareket",
+          "checkable": false,
+          "children": [
+            "Vektörler",
+            "Bağıl Hareket",
+            "Newton'ın Hareket Yasaları",
+            "Bir Boyutta Sabit İvmeli Hareket",
+            "İki Boyutta Hareket (Atışlar)",
+            "Enerji ve Hareket – İş, Güç ve Enerji II",
+            "İtme ve Çizgisel Momentum",
+            "Tork",
+            "Denge ve Denge Şartları – Kütle Merkezi",
+            "Basit Makineler"
+          ]
+        },
+        {
+          "name": "Elektrik ve Manyetizma",
+          "checkable": false,
+          "children": [
+            "Elektriksel Kuvvet ve Elektrik Alan",
+            "Elektriksel Potansiyel",
+            "Düzgün Elektrik Alan ve Sığa – Paralel Levhalar",
+            "Manyetizma ve Elektromanyetik İndükleme",
+            "Alternatif Akım",
+            "Transformatörler"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12. Sınıf Fizik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Çembersel Hareket",
+          "checkable": false,
+          "children": [
+            "Düzgün Çembersel Hareket",
+            "Dönerek Öteleme Hareketi",
+            "Açısal Momentum",
+            "Kütle Çekim Kuvveti ve Kepler Kanunları"
+          ]
+        },
+        {
+          "name": "Basit Harmonik Hareket",
+          "checkable": false,
+          "children": [
+            "Basit Harmonik Hareket"
+          ]
+        },
+        {
+          "name": "Dalga Mekaniği",
+          "checkable": false,
+          "children": [
+            "Dalgalarda Kırınım, Girişim ve Doppler Olayı",
+            "Elektromanyetik Dalgalar"
+          ]
+        },
+        {
+          "name": "Modern Fizik",
+          "checkable": false,
+          "children": [
+            "Atom Fiziğine Giriş ve Radyoaktivite",
+            "Atom Modelleri",
+            "Özel Görelilik",
+            "Kara Cisim Işıması",
+            "Fotoelektrik Olay ve Compton Olayı",
+            "Büyük Patlama ve Parçacık Fiziği",
+            "Modern Fiziğin Teknolojideki Uygulamaları"
+          ]
+        }
+      ]
+    }
+  ],
+
+  "AYT Matematik": [
+    {
+      "name": "9. Sınıf Matematik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Kümeler",
+          "checkable": false,
+          "children": ["Kümelerde Temel Kavramlar", "Kümelerde İşlemler"]
+        },
+        {
+          "name": "Denklem ve Eşitsizlikler",
+          "checkable": false,
+          "children": [
+            "Gerçek Sayılar",
+            "Birinci Dereceden Denklem ve Eşitsizlikler",
+            "Üslü İfadeler ve Denklemler",
+            "Denklem ve Eşitsizliklerle İlgili Uygulamalar"
+          ]
+        },
+        {
+          "name": "Fonksiyonlar",
+          "checkable": false,
+          "children": ["Fonksiyon Kavramı ve Gösterimi"]
+        },
+        {
+          "name": "Üçgenler",
+          "checkable": false,
+          "children": [
+            "Üçgenlerin Eşliği",
+            "Üçgenlerin Benzerliği",
+            "Üçgenin Yardımcı Elemanları",
+            "Dik Üçgen ve Trigonometri",
+            "Üçgenin Alanı"
+          ]
+        },
+        {
+          "name": "Veri",
+          "checkable": false,
+          "children": ["Merkezi Eğilim ve Yayılım Ölçüleri", "Verilerin Grafikle Gösterilmesi"]
+        },
+        {
+          "name": "Olasılık",
+          "checkable": false,
+          "children": ["Basit Olayların Olasılıkları"]
+        }
+      ]
+    },
+    {
+      "name": "10. Sınıf Matematik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Sayma",
+          "checkable": false,
+          "children": ["Sıralama ve Seçme"]
+        },
+        {
+          "name": "Fonksiyonlarla İşlemler ve Uygulamalar",
+          "checkable": false,
+          "children": [
+            "Fonksiyonların Simetrileri ve Cebirsel Özellikleri",
+            "İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi"
+          ]
+        },
+        {
+          "name": "Dörtgenler ve Çokgenler",
+          "checkable": false,
+          "children": ["Dörtgenler ve Özellikleri", "Özel Dörtgenler"]
+        },
+        {
+          "name": "İkinci Dereceden Denklem ve Fonksiyonlar",
+          "checkable": false,
+          "children": ["İkinci Dereceden Bir Bilinmeyenli Denklemler"]
+        },
+        {
+          "name": "Polinomlar",
+          "checkable": false,
+          "children": [
+            "Polinom Kavramı ve Polinomlarla İşlemler",
+            "Polinomlarda Çarpanlara Ayırma",
+            "Polinom ve Rasyonel Denklemlerin Çözüm Kümeleri"
+          ]
+        },
+        {
+          "name": "Geometrik Cisimler",
+          "checkable": false,
+          "children": ["Katı Cisimlerin Yüzey Alanları ve Hacimleri"]
+        }
+      ]
+    },
+    {
+      "name": "11. Sınıf Matematik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Trigonometri",
+          "checkable": false,
+          "children": ["Yönlü Açılar", "Trigonometrik Fonksiyonlar"]
+        },
+        {
+          "name": "Analitik Geometri",
+          "checkable": false,
+          "children": ["Doğrunun Analitik İncelenmesi"]
+        },
+        {
+          "name": "Fonksiyonlarda Uygulamalar",
+          "checkable": false,
+          "children": [
+            "Fonksiyonlarla İlgili Uygulamalar",
+            "İkinci Dereceden Fonksiyonlar ve Grafikleri",
+            "Fonksiyonların Dönüşümleri"
+          ]
+        },
+        {
+          "name": "Denklem ve Eşitsizlik Sistemleri",
+          "checkable": false,
+          "children": [
+            "İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri",
+            "İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler"
+          ]
+        },
+        {
+          "name": "Çember ve Daire",
+          "checkable": false,
+          "children": [
+            "Çemberin Temel Elemanları",
+            "Çemberde Açılar",
+            "Çemberde Teğet",
+            "Dairenin Çevresi ve Alanı"
+          ]
+        },
+        {
+          "name": "Uzay Geometri",
+          "checkable": false,
+          "children": ["Katı Cisimler"]
+        },
+        {
+          "name": "Olasılık",
+          "checkable": false,
+          "children": ["Koşullu Olasılık", "Deneysel ve Teorik Olasılık"]
+        }
+      ]
+    },
+    {
+      "name": "12. Sınıf Matematik",
+      "checkable": false,
+      "children": [
+        {
+          "name": "Üstel ve Logaritmik Fonksiyonlar",
+          "checkable": false,
+          "children": [
+            "Üstel Fonksiyonlar",
+            "Logaritma Fonksiyonu",
+            "Üstel ve Logaritmik Denklem ve Eşitsizlikler"
+          ]
+        },
+        {
+          "name": "Diziler",
+          "checkable": false,
+          "children": ["Gerçek Sayı Dizileri"]
+        },
+        {
+          "name": "Türev",
+          "checkable": false,
+          "children": ["Limit ve Süreklilik", "Anlık Değişim Oranı ve Türev", "Türevin Uygulamaları"]
+        },
+        {
+          "name": "İntegral",
+          "checkable": false,
+          "children": ["Belirsiz İntegral", "Belirli İntegral ve Uygulamaları"]
+        },
+        {
+          "name": "Trigonometri (12. Sınıf)",
+          "checkable": false,
+          "children": ["Toplam – Fark ve İki Kat Açı Formülleri", "Trigonometrik Denklemler"]
+        },
+        {
+          "name": "Dönüşümler",
+          "checkable": false,
+          "children": ["Analitik Düzlemde Temel Dönüşümler", "Çemberin Analitik İncelenmesi"]
+        }
+      ]
+    }
+  ],
+
+  "AYT Türk Dili ve Edebiyatı": [
+    {
+      "name": "9. Sınıf Türk Dili ve Edebiyatı",
+      "checkable": false,
+      "children": [
+        "Hikaye, Şiir, Masal, Fabl, Roman",
+        "Tiyatro",
+        "Biyografi",
+        "Otobiyografi",
+        "Mektup",
+        "E-Posta",
+        "Günlük",
+        "Blog"
+      ]
+    },
+    {
+      "name": "10. Sınıf Türk Dili ve Edebiyatı",
+      "checkable": false,
+      "children": ["Hikaye, Şiir, Destan, Efsane, Roman", "Tiyatro", "Anı", "Hatıra", "Haber Metni", "Gezi Yazısı"]
+    },
+    {
+      "name": "11. Sınıf Türk Dili ve Edebiyatı",
+      "checkable": false,
+      "children": ["Hikaye, Şiir, Makale", "Sohbet ve Fıkra", "Roman", "Tiyatro", "Eleştiri", "Mülakat", "Röportaj"]
+    },
+    {
+      "name": "12. Sınıf Türk Dili ve Edebiyatı",
+      "checkable": false,
+      "children": ["Hikaye, Şiir, Roman", "Tiyatro", "Deneme", "Söylev", "Nutuk"]
+    }
+  ],
+
+  "TYT Kimya": [
+    "Kimya Bilimi",
+    "Atom ve Periyodik Sistem",
+    "Kimyasal Türler Arası Etkileşimler",
+    "Maddenin Halleri",
+    "Doğa ve Kimya",
+    "Kimyanın Temel Kanunları",
+    "Kimyasal Hesaplamalar",
+    "Karışımlar",
+    "Asit, Baz ve Tuz",
+    "Kimya Her Yerde"
+  ],
+
+  "TYT Fizik": [
+    "Fizik Bilimine Giriş",
+    "Madde ve Özellikleri",
+    "Sıvıların Kaldırma Kuvveti",
+    "Basınç",
+    "Isı, Sıcaklık ve Genleşme",
+    "Hareket ve Kuvvet",
+    "Dinamik",
+    "İş, Güç ve Enerji",
+    "Elektrik",
+    "Manyetizma",
+    "Dalgalar",
+    "Optik"
+  ],
+
+  "TYT Din Kültürü": [
+    "Bilgi ve İnanç",
+    "İslam ve İbadet",
+    "Ahlak ve Değerler",
+    "Allah İnsan İlişkisi",
+    "Hz. Muhammed (S.A.V.)",
+    "Vahiy ve Akıl",
+    "İslam Düşüncesinde Yorumlar, Mezhepler",
+    "Din, Kültür ve Medeniyet",
+    "İslam ve Bilim, Estetik, Barış",
+    "Yaşayan Dinler"
+  ],
+
+  "TYT Felsefe": [
+    "Felsefe'nin Konusu",
+    "Bilgi Felsefesi",
+    "Varlık Felsefesi",
+    "Ahlak Felsefesi",
+    "Sanat Felsefesi",
+    "Din Felsefesi",
+    "Siyaset Felsefesi",
+    "Bilim Felsefesi",
+    "İlk Çağ Felsefesi",
+    "2. Yüzyıl ve 15. Yüzyıl Felsefeleri",
+    "15. Yüzyıl ve 17. Yüzyıl Felsefeleri",
+    "18. Yüzyıl ve 19. Yüzyıl Felsefeleri",
+    "20. Yüzyıl Felsefesi"
+  ],
+
+  "TYT Coğrafya": [
+    "Doğa ve İnsan",
+    "Dünya'nın Şekli ve Hareketleri",
+    "Coğrafi Konum",
+    "Harita Bilgisi",
+    "Atmosfer ve Sıcaklık",
+    "İklimler",
+    "Basınç ve Rüzgarlar",
+    "Nem, Yağış ve Buharlaşma",
+    "İç Kuvvetler / Dış Kuvvetler",
+    "Su – Toprak ve Bitkiler",
+    "Nüfus",
+    "Göç",
+    "Yerleşme",
+    "Türkiye'nin Yer Şekilleri",
+    "Ekonomik Faaliyetler",
+    "Bölgeler",
+    "Uluslararası Ulaşım Hatları",
+    "Çevre ve Toplum",
+    "Doğal Afetler"
+  ],
+
+  "TYT Tarih": [
+    "Tarih ve Zaman",
+    "İnsanlığın İlk Dönemleri",
+    "Orta Çağ'da Dünya",
+    "İlk ve Orta Çağlarda Türk Dünyası",
+    "İslam Medeniyetinin Doğuşu",
+    "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri",
+    "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+    "Beylikten Devlete Osmanlı Siyaseti",
+    "Devletleşme Sürecinde Savaşçılar ve Askerler",
+    "Beylikten Devlete Osmanlı Medeniyeti",
+    "Dünya Gücü Osmanlı",
+    "Sultan ve Osmanlı Merkez Teşkilatı",
+    "Klasik Çağda Osmanlı Toplum Düzeni",
+    "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti",
+    "Değişim Çağında Avrupa ve Osmanlı",
+    "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+    "Devrimler Çağında Değişen Devlet-Toplum İlişkileri",
+    "Sermaye ve Emek",
+    "XIX. ve XX. Yüzyılda Değişen Gündelik Hayat",
+    "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+    "Milli Mücadele",
+    "Atatürkçülük ve Türk İnkılabı"
+  ],
+
+  "TYT Türkçe": [
+    "Sözcükte Anlam",
+    "Söz Yorumu",
+    "Deyim ve Atasözü",
+    "Cümlede Anlam",
+    "Paragraf",
+    "Paragrafta Anlatım Teknikleri",
+    "Paragrafta Düşünceyi Geliştirme Yolları",
+    "Paragrafta Yapı",
+    "Paragrafta Konu – Ana Düşünce",
+    "Paragrafta Yardımcı Düşünce",
+    "Ses Bilgisi",
+    "Yazım Kuralları",
+    "Noktalama İşaretleri",
+    "Sözcükte Yapı / Ekler",
+    "Sözcük Türleri",
+    "İsimler",
+    "Zamirler",
+    "Sıfatlar",
+    "Zarflar",
+    "Edat – Bağlaç – Ünlem",
+    "Fiiller",
+    "Fiilde Anlam (Kip – Kişi – Yapı)",
+    "Ek Fiil",
+    "Fiilimsi",
+    "Fiilde Çatı",
+    "Sözcük Grupları",
+    "Cümlenin Ögeleri",
+    "Cümle Türleri",
+    "Anlatım Bozukluğu"
+  ]
+}

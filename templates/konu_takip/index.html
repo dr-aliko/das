@@ -3,16 +3,11 @@
 
 {% block content %}
 <script>
-  /* Initial state injected from server — keys are topic IDs (integers as strings in JSON). */
-  const __KT__ = {
-    progress:   {{ progress_json|safe }},
-    toggleUrl:  '{{ toggle_url }}',
-    studentId:  {% if is_coach_view and selected_student %}{{ selected_student.id }}{% else %}null{% endif %},
-  };
+  const __KT__ = {{ kt_cfg|safe }};
 </script>
 
 <div class="max-w-3xl mx-auto px-3 sm:px-4 pb-28 lg:pb-10 pt-4 space-y-4"
-     x-data="konuTakip(__KT__.progress, __KT__.toggleUrl, __KT__.studentId)">
+     x-data="konuTakip(__KT__)">
 
   {# ── Page header ────────────────────────────────────────────────────────── #}
   <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -24,10 +19,14 @@
       </svg>
       Konu Takip
     </h1>
-    {% if selected_subject %}
-    <span class="text-xs text-[var(--muted-2)] tabular-nums"
-          x-text="totalFinished() + '/' + totalTopics() + ' konu tamamlandı'"></span>
-    {% endif %}
+    <span class="flex items-center gap-1.5 text-xs text-[var(--muted-2)] tabular-nums"
+          x-show="selectedSubjectId !== null">
+      <svg x-show="loading" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+      <span x-show="!loading" x-text="totalFinished() + '/' + totalTopics() + ' konu tamamlandı'"></span>
+    </span>
   </div>
 
   {# ── Coach: student selector ─────────────────────────────────────────────── #}
@@ -39,7 +38,7 @@
       <select onchange="
           const url = new URL(window.location);
           url.searchParams.set('student', this.value);
-          {% if selected_subject %}url.searchParams.set('subject', '{{ selected_subject.id }}');{% endif %}
+          url.searchParams.delete('subject');
           window.location.href = url.toString();"
               class="w-full sm:w-72 bg-[var(--surface-2)] border border-[var(--border)]
                      text-[var(--heading)] rounded-xl px-4 py-2.5 text-sm font-medium
@@ -54,117 +53,178 @@
   </div>
   {% endif %}
 
-  {# ── Subject tabs ────────────────────────────────────────────────────────── #}
-  {% if subjects %}
-  <div class="flex gap-2 overflow-x-auto pb-1 -mx-3 sm:-mx-4 px-3 sm:px-4">
-    {% for subj in subjects %}
-    <a href="?{% if is_coach_view and selected_student %}student={{ selected_student.id }}&{% endif %}subject={{ subj.id }}"
-       class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-              {% if selected_subject and selected_subject.id == subj.id %}
-                bg-steel-500 text-white
-              {% else %}
-                bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]
-              {% endif %}">
-      {{ subj.display_name }}
-    </a>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {# ── Empty states ────────────────────────────────────────────────────────── #}
-  {% if not subjects %}
+  {# ── Empty state: coach with no student selected ─────────────────────────── #}
+  {% if is_coach_view and not selected_student %}
   <div class="text-center py-20 text-[var(--muted)]">
+    <p class="text-sm">Bir öğrenci seçin.</p>
+  </div>
+  {% else %}
+
+  {# ── TYT / AYT segmented control ─────────────────────────────────────────── #}
+  <div x-show="tytSubjects.length > 0 || aytSubjects.length > 0"
+       class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
+    <button @click="selectExamType('TYT')"
+            :class="examType === 'TYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+            class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+      TYT
+    </button>
+    <button @click="selectExamType('AYT')"
+            :class="examType === 'AYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+            class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+      AYT
+    </button>
+  </div>
+
+  {# ── Subject pills ────────────────────────────────────────────────────────── #}
+  <div x-show="subjects.length > 0" class="flex flex-wrap gap-2">
+    <template x-for="subj in subjects" :key="subj.id">
+      <button @click="selectSubject(subj.id)"
+              :class="selectedSubjectId === subj.id
+                ? 'bg-steel-500 text-white'
+                : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]'"
+              class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+              x-text="subj.name">
+      </button>
+    </template>
+  </div>
+
+  {# ── Empty state: no subjects for this exam type ──────────────────────────── #}
+  <div x-show="!loading && subjects.length === 0" class="text-center py-20 text-[var(--muted)]">
     <svg class="w-10 h-10 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
     </svg>
-    <p class="text-sm">Henüz konu eklenmemiş.</p>
+    <p class="text-sm">Bu sınav türü için henüz konu eklenmemiş.</p>
   </div>
-  {% elif is_coach_view and not selected_student %}
-  <div class="text-center py-20 text-[var(--muted)]">
-    <p class="text-sm">Bir öğrenci seçin.</p>
-  </div>
-  {% elif not topics_data %}
-  <div class="text-center py-20 text-[var(--muted)]">
-    <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
-  </div>
-  {% else %}
 
-  {# ── Legend ──────────────────────────────────────────────────────────────── #}
-  <div class="flex items-center gap-4 text-xs text-[var(--muted-2)] px-0.5">
-    <span class="flex items-center gap-1.5">
-      <span class="w-6 h-6 rounded-lg border-2 border-amber-400/60 bg-amber-400/10
-                   inline-flex items-center justify-center text-amber-400 text-[10px] font-bold">B</span>
-      Başla
-    </span>
-    <span class="flex items-center gap-1.5">
-      <span class="w-6 h-6 rounded-lg border-2 border-emerald-500/60 bg-emerald-500/10
-                   inline-flex items-center justify-center text-emerald-400">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
-             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <path d="M5 13l4 4L19 7"/>
-        </svg>
+  {# ── Topic area (only shown when a subject exists) ────────────────────────── #}
+  <div x-show="subjects.length > 0"
+       x-ref="topicBox"
+       :class="loading ? 'opacity-50 pointer-events-none select-none' : 'opacity-100'"
+       class="transition-opacity duration-200 space-y-4">
+
+    {# Legend #}
+    <div x-show="flatTopics.length > 0"
+         class="flex items-center gap-4 text-xs text-[var(--muted-2)] px-0.5">
+      <span class="flex items-center gap-1.5">
+        <span class="w-6 h-6 rounded-lg border-2 border-amber-400/60 bg-amber-400/10
+                     inline-flex items-center justify-center text-amber-400 text-[10px] font-bold">B</span>
+        Başla
       </span>
-      Bitti
-    </span>
-  </div>
-
-  {# ── Topic list ──────────────────────────────────────────────────────────── #}
-  <div class="rounded-2xl border border-[var(--border)] overflow-hidden
-              bg-[var(--surface-1)] divide-y divide-[var(--border)]">
-
-    {% for item in topics_data %}
-
-    {% if item.type == 'parent' %}
-    {# ── Category header (non-checkable) ──────────────────────────────────── #}
-    <div class="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)]">
-      <span class="text-sm font-bold text-[var(--heading)]">{{ item.topic.name }}</span>
-      <span class="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full
-                   bg-[var(--surface-3)] text-[var(--muted)]"
-            x-text="childFinishedCount([{{ item.child_ids|join:',' }}]) + '/{{ item.child_count }} tamamlandı'">
+      <span class="flex items-center gap-1.5">
+        <span class="w-6 h-6 rounded-lg border-2 border-emerald-500/60 bg-emerald-500/10
+                     inline-flex items-center justify-center text-emerald-400">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+        </span>
+        Bitti
       </span>
     </div>
 
-    {% for child in item.children %}
-    {# ── Child topic row ────────────────────────────────────────────────────── #}
-    <div class="flex items-center justify-between px-4 pl-7 py-2.5
-                hover:bg-[var(--surface-2)] transition-colors group">
-      <span class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
-        <span class="text-[var(--muted-2)] text-xs mr-1.5">└</span>{{ child.name }}
-      </span>
-      <div class="flex items-center gap-1.5 shrink-0">
-        {% include "konu_takip/_toggle_btn.html" with topic_id=child.id field="started" label="B" color="amber" %}
-        {% include "konu_takip/_toggle_btn.html" with topic_id=child.id field="finished" label="" color="emerald" %}
-      </div>
+    {# Empty topics state #}
+    <div x-show="!loading && flatTopics.length === 0 && selectedSubjectId !== null"
+         class="text-center py-20 text-[var(--muted)]">
+      <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
     </div>
-    {% endfor %}
 
-    {% else %}
-    {# ── Leaf topic row ─────────────────────────────────────────────────────── #}
-    <div class="flex items-center justify-between px-4 py-2.5
-                hover:bg-[var(--surface-2)] transition-colors group">
-      <span class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
-        {{ item.topic.name }}
-      </span>
-      <div class="flex items-center gap-1.5 shrink-0">
-        {% include "konu_takip/_toggle_btn.html" with topic_id=item.topic.id field="started" label="B" color="amber" %}
-        {% include "konu_takip/_toggle_btn.html" with topic_id=item.topic.id field="finished" label="" color="emerald" %}
-      </div>
+    {# ── Topic rows ──────────────────────────────────────────────────────────── #}
+    <div x-show="flatTopics.length > 0"
+         class="rounded-2xl border border-[var(--border)] overflow-hidden
+                bg-[var(--surface-1)] divide-y divide-[var(--border)]">
+
+      <template x-for="row in flatTopics" :key="row.id">
+        <div :class="rowClass(row)" class="flex items-center justify-between">
+
+          {# Header content (header_1 / header_2) #}
+          <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
+                class="text-sm flex items-center gap-1.5 flex-1 min-w-0">
+            <span x-show="row.row_type === 'header_2'"
+                  class="text-[var(--muted-2)] text-xs shrink-0">▸</span>
+            <span x-text="row.name"
+                  :class="row.row_type === 'header_1'
+                    ? 'font-bold text-[var(--heading)]'
+                    : 'font-semibold text-[var(--body)]'"></span>
+          </span>
+          <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
+                class="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full shrink-0
+                       bg-[var(--surface-3)] text-[var(--muted)]"
+                x-text="childFinishedCount(row.child_ids || []) + '/' + (row.child_count || 0) + ' tamamlandı'">
+          </span>
+
+          {# Leaf content (leaf_1 / leaf_2 / root_leaf) #}
+          <span x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
+                class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
+            <span x-show="row.row_type !== 'root_leaf'"
+                  class="text-[var(--muted-2)] text-xs mr-1.5">└</span><span x-text="row.name"></span>
+          </span>
+          <div x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
+               class="flex items-center gap-1.5 shrink-0">
+            {# Started button #}
+            <button @click="toggle(row.id, 'started')"
+                    :disabled="isPending(row.id)"
+                    :class="isStarted(row.id)
+                      ? 'bg-amber-400/15 border-amber-400 text-amber-400'
+                      : 'border-[var(--border)] text-[var(--muted-2)] hover:border-amber-400/50 hover:text-amber-400/70'"
+                    class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+                           transition-all text-[11px] font-bold disabled:opacity-40 select-none"
+                    title="Başla">
+              <span x-show="!isPending(row.id)">B</span>
+              <svg x-show="isPending(row.id)" x-cloak
+                   class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            </button>
+            {# Finished button #}
+            <button @click="toggle(row.id, 'finished')"
+                    :disabled="isPending(row.id)"
+                    :class="isFinished(row.id)
+                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400'
+                      : 'border-[var(--border)] text-[var(--muted-2)] hover:border-emerald-500/50 hover:text-emerald-400/70'"
+                    class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+                           transition-all disabled:opacity-40 select-none"
+                    title="Bitti">
+              <svg x-show="!isPending(row.id)"
+                   class="w-4 h-4" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M5 13l4 4L19 7"/>
+              </svg>
+              <svg x-show="isPending(row.id)" x-cloak
+                   class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            </button>
+          </div>
+
+        </div>
+      </template>
+
     </div>
-    {% endif %}
-
-    {% endfor %}
   </div>
 
   {% endif %}
 </div>
 
 <script>
-function konuTakip(initialProgress, toggleUrl, studentId) {
+function konuTakip(cfg) {
   return {
-    progress: initialProgress,
-    pending:  {},
+    examType:          cfg.examType,
+    tytSubjects:       cfg.tytSubjects,
+    aytSubjects:       cfg.aytSubjects,
+    selectedSubjectId: cfg.selectedSubjectId,
+    flatTopics:        cfg.flatTopics,
+    progress:          cfg.progress,
+    loading:           false,
+    pending:           {},
+    studentId:         cfg.studentId,
+    toggleUrl:         cfg.toggleUrl,
+    apiUrl:            cfg.apiUrl,
+
+    get subjects() { return this.examType === 'TYT' ? this.tytSubjects : this.aytSubjects; },
 
     isStarted(id)  { return !!(this.progress[id] && this.progress[id].started); },
     isFinished(id) { return !!(this.progress[id] && this.progress[id].finished); },
@@ -177,6 +237,66 @@ function konuTakip(initialProgress, toggleUrl, studentId) {
       return ids.filter(id => this.progress[id] && this.progress[id].finished).length;
     },
 
+    async selectExamType(type) {
+      if (this.loading || this.examType === type) return;
+      this.examType = type;
+      this.selectedSubjectId = this.subjects[0]?.id ?? null;
+      await this.loadTopics();
+      this.pushUrl();
+    },
+
+    async selectSubject(id) {
+      if (this.loading || this.selectedSubjectId === id) return;
+      this.selectedSubjectId = id;
+      await this.loadTopics();
+      this.pushUrl();
+    },
+
+    async loadTopics() {
+      // Lock the container's current height so it can't collapse during the fetch.
+      // Old topic rows stay visible at reduced opacity (see :class on topicBox).
+      const box = this.$refs.topicBox;
+      if (box && box.offsetHeight) box.style.minHeight = box.offsetHeight + 'px';
+
+      this.loading = true;
+      try {
+        const p = new URLSearchParams({ exam_type: this.examType });
+        if (this.selectedSubjectId) p.set('subject_id', this.selectedSubjectId);
+        if (this.studentId !== null) p.set('student_id', this.studentId);
+        const resp = await fetch(`${this.apiUrl}?${p}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        this.flatTopics = data.flat_topics;
+        this.progress   = data.progress;
+        if (data.selected_subject_id) this.selectedSubjectId = data.selected_subject_id;
+      } catch (e) {
+        console.error('[konuTakip.loadTopics]', e);
+      } finally {
+        this.loading = false;
+        // Release height lock after Alpine has painted the new rows.
+        this.$nextTick(() => { if (box) box.style.minHeight = ''; });
+      }
+    },
+
+    pushUrl() {
+      const url = new URL(window.location);
+      url.searchParams.set('exam_type', this.examType);
+      if (this.selectedSubjectId) url.searchParams.set('subject', this.selectedSubjectId);
+      else url.searchParams.delete('subject');
+      history.pushState({}, '', url);
+    },
+
+    rowClass(row) {
+      const m = {
+        header_1:  'px-4 py-3 bg-[var(--surface-2)]',
+        header_2:  'px-4 pl-8 py-2.5 bg-[var(--surface-2)]',
+        leaf_1:    'px-4 pl-7 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+        leaf_2:    'px-4 pl-14 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+        root_leaf: 'px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+      };
+      return m[row.row_type] ?? m.root_leaf;
+    },
+
     async toggle(topicId, field) {
       if (this.pending[topicId]) return;
       this.pending[topicId] = true;
@@ -184,20 +304,19 @@ function konuTakip(initialProgress, toggleUrl, studentId) {
       if (!this.progress[topicId]) {
         this.progress[topicId] = { started: false, finished: false };
       }
-      const prev    = { started: this.progress[topicId].started,
-                        finished: this.progress[topicId].finished };
-      const newVal  = !prev[field];
+      const prev   = { started: this.progress[topicId].started,
+                       finished: this.progress[topicId].finished };
+      const newVal = !prev[field];
 
-      /* Optimistic update with implied rules */
       this.progress[topicId][field] = newVal;
       if (field === 'finished' && newVal)  this.progress[topicId].started  = true;
       if (field === 'started'  && !newVal) this.progress[topicId].finished = false;
 
       try {
         const body = { topic_id: topicId, field, value: newVal };
-        if (studentId !== null) body.student_id = studentId;
+        if (this.studentId !== null) body.student_id = this.studentId;
 
-        const resp = await fetch(toggleUrl, {
+        const resp = await fetch(this.toggleUrl, {
           method:  'POST',
           headers: {
             'Content-Type': 'application/json',
