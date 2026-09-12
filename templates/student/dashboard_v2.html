@@ -180,6 +180,17 @@ function studentTasks() {
                 <canvas id="scatterChart"></canvas>
               </div>
             </div>
+          {% elif has_any_exams %}
+            <div class="rounded-xl border border-ink-700 bg-ink-850 text-center py-10 mb-5">
+              <div class="text-5xl mb-4">📅</div>
+              <h2 class="text-lg font-semibold text-ink-100 mb-2">{% trans "Son 30 günde deneme yok" %}</h2>
+              <p class="text-sm text-ink-400 mb-6">{% trans "Yeni bir deneme ekle ya da arşive göz at." %}</p>
+              <a href="{% url 'student:exam_step1' %}"
+                 class="inline-flex items-center gap-2 bg-steel-500 hover:bg-steel-400
+                        text-white font-semibold px-6 py-2.5 rounded-lg transition-colors">
+                {% trans "Deneme Ekle" %}
+              </a>
+            </div>
           {% else %}
             <div class="rounded-xl border border-ink-700 bg-ink-850 text-center py-10 mb-5">
               <div class="text-5xl mb-4">📝</div>

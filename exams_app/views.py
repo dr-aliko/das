@@ -1391,6 +1391,7 @@ def student_dashboard(request):
         'chart_data_json': json.dumps(chart_data),
         'scatter_data_json': json.dumps(scatter_data),
         'has_chart_data': bool(chart_data.get('labels')),
+        'has_any_exams': Exam.objects.filter(student=request.user).exists(),
         'radar_json': radar_json,
         'active_json': active_json,
         'completed_json': completed_json,

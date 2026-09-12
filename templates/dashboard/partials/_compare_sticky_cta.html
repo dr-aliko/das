@@ -10,9 +10,9 @@
      role="region"
      aria-label="{% trans 'Karşılaştırma modu' %}"
      class="fixed inset-x-0 bottom-0 z-[45] px-4 pt-6
-            pb-[calc(env(safe-area-inset-bottom)+1rem)]
-            bg-gradient-to-t from-white via-white to-white/0
-            backdrop-blur-sm">
+            pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+     style="background: linear-gradient(to top, var(--surface-1) 55%, transparent);
+            backdrop-filter: blur(4px);">
   <div class="max-w-md mx-auto flex items-center gap-4">
 
     {# Selection counter — announced to screen readers on change #}
@@ -34,7 +34,7 @@
             @click="if(selected.length === 2)
               window.location.href = '/student/karsilastir/v2/?denemeler_v2=1&exam1='
                 + selected[0].id + '&exam2=' + selected[1].id">
-      <span x-text="selected.length === 2 ? 'Devam Et' : '1 deneme daha sec'"></span>
+      <span x-text="selected.length === 2 ? 'Devam Et' : selected.length === 1 ? '1 deneme daha seç' : '2 deneme seç'"></span>
       <svg x-show="selected.length === 2"
            class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <use href="#das-icon-chev-right"/>
