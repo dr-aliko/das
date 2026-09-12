@@ -1,0 +1,3 @@
+# Ensure requirements.txt is always stored and checked out as UTF-8 LF
+# so pip install works on both Windows dev and Linux VPS without re-encoding.
+requirements.txt text eol=lf
