@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'exams_app',
     'tasks_app',
     'django_q',
+    'konu_takip_app',
     'marketing_app',
 ]
 

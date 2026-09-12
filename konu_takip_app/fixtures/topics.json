@@ -1,0 +1,52 @@
+{
+  "TYT Biyoloji": [
+    "Canlıların Ortak Özellikleri",
+    "Canlıların Temel Bileşenleri",
+    "Hücre ve Organelleri",
+    "Hücre Zarından Madde Geçişi",
+    "Canlıların Sınıflandırılması",
+    "Mitoz ve Eşeysiz Üreme",
+    "Mayoz ve Eşeyli Üreme",
+    "Kalıtım",
+    "Ekosistem Ekolojisi",
+    "Güncel Çevre Sorunları"
+  ],
+  "TYT Matematik": [
+    "Temel Kavramlar",
+    "Sayı Basamakları",
+    "Bölme ve Bölünebilme",
+    "EBOB – EKOK",
+    "Rasyonel Sayılar",
+    "Basit Eşitsizlikler",
+    "Mutlak Değer",
+    "Üslü Sayılar",
+    "Köklü Sayılar",
+    "Çarpanlara Ayırma",
+    "Oran Orantı",
+    "Denklem Çözme",
+    {
+      "name": "Problemler",
+      "checkable": false,
+      "children": [
+        "Sayı Problemleri",
+        "Kesir Problemleri",
+        "Yaş Problemleri",
+        "Hareket Hız Problemleri",
+        "İşçi Emek Problemleri",
+        "Yüzde Problemleri",
+        "Kar Zarar Problemleri",
+        "Karışım Problemleri",
+        "Grafik Problemleri",
+        "Rutin Olmayan Problemler"
+      ]
+    },
+    "Kümeler – Kartezyen Çarpım",
+    "Mantık",
+    "Fonksiyonlar",
+    "Polinomlar",
+    "2. Dereceden Denklemler",
+    "Permütasyon ve Kombinasyon",
+    "Olasılık",
+    "Veri – İstatistik"
+  ]
+}

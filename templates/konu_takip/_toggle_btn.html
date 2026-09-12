@@ -1,0 +1,31 @@
+{% comment %}
+Params: topic_id, field ("started"|"finished"), label (text or ""), color ("amber"|"emerald")
+{% endcomment %}
+{% if field == "started" %}
+<button @click="toggle({{ topic_id }}, 'started')"
+        :disabled="isPending({{ topic_id }})"
+        :class="isStarted({{ topic_id }})
+          ? 'bg-amber-400/15 border-amber-400 text-amber-400'
+          : 'border-[var(--border)] text-[var(--muted-2)] hover:border-amber-400/50 hover:text-amber-400/70'"
+        class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+               transition-all text-[11px] font-bold disabled:opacity-40 select-none"
+        title="Başla">
+  <span x-show="!isPending({{ topic_id }})">B</span>
+  {% include "konu_takip/_spinner.html" %}
+</button>
+{% else %}
+<button @click="toggle({{ topic_id }}, 'finished')"
+        :disabled="isPending({{ topic_id }})"
+        :class="isFinished({{ topic_id }})
+          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400'
+          : 'border-[var(--border)] text-[var(--muted-2)] hover:border-emerald-500/50 hover:text-emerald-400/70'"
+        class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+               transition-all disabled:opacity-40 select-none"
+        title="Bitti">
+  <svg x-show="!isPending({{ topic_id }})" class="w-4 h-4" fill="none" stroke="currentColor"
+       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <path d="M5 13l4 4L19 7"/>
+  </svg>
+  {% include "konu_takip/_spinner.html" %}
+</button>
+{% endif %}

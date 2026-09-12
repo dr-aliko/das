@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Konu Takip — Vagus{% endblock %}
+
+{% block content %}
+<script>
+  /* Initial state injected from server — keys are topic IDs (integers as strings in JSON). */
+  const __KT__ = {
+    progress:   {{ progress_json|safe }},
+    toggleUrl:  '{{ toggle_url }}',
+    studentId:  {% if is_coach_view and selected_student %}{{ selected_student.id }}{% else %}null{% endif %},
+  };
+</script>
+
+<div class="max-w-3xl mx-auto px-3 sm:px-4 pb-28 lg:pb-10 pt-4 space-y-4"
+     x-data="konuTakip(__KT__.progress, __KT__.toggleUrl, __KT__.studentId)">
+
+  {# ── Page header ────────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <h1 class="text-lg font-bold text-[var(--heading)] flex items-center gap-2">
+      <svg class="w-5 h-5 text-steel-400" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      Konu Takip
+    </h1>
+    {% if selected_subject %}
+    <span class="text-xs text-[var(--muted-2)] tabular-nums"
+          x-text="totalFinished() + '/' + totalTopics() + ' konu tamamlandı'"></span>
+    {% endif %}
+  </div>
+
+  {# ── Coach: student selector ─────────────────────────────────────────────── #}
+  {% if is_coach_view %}
+  <div>
+    {% if not students %}
+      <p class="text-sm text-[var(--muted)]">Henüz öğrenci eklenmemiş.</p>
+    {% else %}
+      <select onchange="
+          const url = new URL(window.location);
+          url.searchParams.set('student', this.value);
+          {% if selected_subject %}url.searchParams.set('subject', '{{ selected_subject.id }}');{% endif %}
+          window.location.href = url.toString();"
+              class="w-full sm:w-72 bg-[var(--surface-2)] border border-[var(--border)]
+                     text-[var(--heading)] rounded-xl px-4 py-2.5 text-sm font-medium
+                     focus:outline-none focus:ring-2 focus:ring-steel-400 transition-colors">
+        {% for s in students %}
+        <option value="{{ s.id }}" {% if selected_student and selected_student.id == s.id %}selected{% endif %}>
+          {{ s.full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── Subject tabs ────────────────────────────────────────────────────────── #}
+  {% if subjects %}
+  <div class="flex gap-2 overflow-x-auto pb-1 -mx-3 sm:-mx-4 px-3 sm:px-4">
+    {% for subj in subjects %}
+    <a href="?{% if is_coach_view and selected_student %}student={{ selected_student.id }}&{% endif %}subject={{ subj.id }}"
+       class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+              {% if selected_subject and selected_subject.id == subj.id %}
+                bg-steel-500 text-white
+              {% else %}
+                bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]
+              {% endif %}">
+      {{ subj.display_name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Empty states ────────────────────────────────────────────────────────── #}
+  {% if not subjects %}
+  <div class="text-center py-20 text-[var(--muted)]">
+    <svg class="w-10 h-10 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+    <p class="text-sm">Henüz konu eklenmemiş.</p>
+  </div>
+  {% elif is_coach_view and not selected_student %}
+  <div class="text-center py-20 text-[var(--muted)]">
+    <p class="text-sm">Bir öğrenci seçin.</p>
+  </div>
+  {% elif not topics_data %}
+  <div class="text-center py-20 text-[var(--muted)]">
+    <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
+  </div>
+  {% else %}
+
+  {# ── Legend ──────────────────────────────────────────────────────────────── #}
+  <div class="flex items-center gap-4 text-xs text-[var(--muted-2)] px-0.5">
+    <span class="flex items-center gap-1.5">
+      <span class="w-6 h-6 rounded-lg border-2 border-amber-400/60 bg-amber-400/10
+                   inline-flex items-center justify-center text-amber-400 text-[10px] font-bold">B</span>
+      Başla
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-6 h-6 rounded-lg border-2 border-emerald-500/60 bg-emerald-500/10
+                   inline-flex items-center justify-center text-emerald-400">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M5 13l4 4L19 7"/>
+        </svg>
+      </span>
+      Bitti
+    </span>
+  </div>
+
+  {# ── Topic list ──────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-[var(--border)] overflow-hidden
+              bg-[var(--surface-1)] divide-y divide-[var(--border)]">
+
+    {% for item in topics_data %}
+
+    {% if item.type == 'parent' %}
+    {# ── Category header (non-checkable) ──────────────────────────────────── #}
+    <div class="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)]">
+      <span class="text-sm font-bold text-[var(--heading)]">{{ item.topic.name }}</span>
+      <span class="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full
+                   bg-[var(--surface-3)] text-[var(--muted)]"
+            x-text="childFinishedCount([{{ item.child_ids|join:',' }}]) + '/{{ item.child_count }} tamamlandı'">
+      </span>
+    </div>
+
+    {% for child in item.children %}
+    {# ── Child topic row ────────────────────────────────────────────────────── #}
+    <div class="flex items-center justify-between px-4 pl-7 py-2.5
+                hover:bg-[var(--surface-2)] transition-colors group">
+      <span class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
+        <span class="text-[var(--muted-2)] text-xs mr-1.5">└</span>{{ child.name }}
+      </span>
+      <div class="flex items-center gap-1.5 shrink-0">
+        {% include "konu_takip/_toggle_btn.html" with topic_id=child.id field="started" label="B" color="amber" %}
+        {% include "konu_takip/_toggle_btn.html" with topic_id=child.id field="finished" label="" color="emerald" %}
+      </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    {# ── Leaf topic row ─────────────────────────────────────────────────────── #}
+    <div class="flex items-center justify-between px-4 py-2.5
+                hover:bg-[var(--surface-2)] transition-colors group">
+      <span class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
+        {{ item.topic.name }}
+      </span>
+      <div class="flex items-center gap-1.5 shrink-0">
+        {% include "konu_takip/_toggle_btn.html" with topic_id=item.topic.id field="started" label="B" color="amber" %}
+        {% include "konu_takip/_toggle_btn.html" with topic_id=item.topic.id field="finished" label="" color="emerald" %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% endfor %}
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+function konuTakip(initialProgress, toggleUrl, studentId) {
+  return {
+    progress: initialProgress,
+    pending:  {},
+
+    isStarted(id)  { return !!(this.progress[id] && this.progress[id].started); },
+    isFinished(id) { return !!(this.progress[id] && this.progress[id].finished); },
+    isPending(id)  { return !!this.pending[id]; },
+
+    totalTopics()   { return Object.keys(this.progress).length; },
+    totalFinished() { return Object.values(this.progress).filter(p => p.finished).length; },
+
+    childFinishedCount(ids) {
+      return ids.filter(id => this.progress[id] && this.progress[id].finished).length;
+    },
+
+    async toggle(topicId, field) {
+      if (this.pending[topicId]) return;
+      this.pending[topicId] = true;
+
+      if (!this.progress[topicId]) {
+        this.progress[topicId] = { started: false, finished: false };
+      }
+      const prev    = { started: this.progress[topicId].started,
+                        finished: this.progress[topicId].finished };
+      const newVal  = !prev[field];
+
+      /* Optimistic update with implied rules */
+      this.progress[topicId][field] = newVal;
+      if (field === 'finished' && newVal)  this.progress[topicId].started  = true;
+      if (field === 'started'  && !newVal) this.progress[topicId].finished = false;
+
+      try {
+        const body = { topic_id: topicId, field, value: newVal };
+        if (studentId !== null) body.student_id = studentId;
+
+        const resp = await fetch(toggleUrl, {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          this.progress[topicId] = { started: data.started, finished: data.finished };
+        } else {
+          this.progress[topicId] = { ...prev };
+        }
+      } catch (_) {
+        this.progress[topicId] = { ...prev };
+      } finally {
+        delete this.pending[topicId];
+      }
+    },
+  };
+}
+</script>
+{% endblock %}
