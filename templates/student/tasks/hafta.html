@@ -680,6 +680,7 @@ function studentMobilePanel(studentId) {
     students:[], selectedStudent:null,
     editingTask:null,
     taskForm:{ ders_title:'', subject:'mat', aktivite_tipi:'soru_cozumu', tarih:'', ozel_sure_dk:'', aciklama:'', error:'' },
+    completeForm:{ taskId:null, taskTitle:'', note:'', time:'' },
     get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
     get activeDayCompletedTasks(){ return this.activeDayTasks.filter(t=>t.done); },
@@ -772,6 +773,48 @@ function studentMobilePanel(studentId) {
         if(this.detailTask?.id===taskId){
           this.detailTask.done=task.done;
           this.detailTask.raw={...this.detailTask.raw,is_completed:task.done};
+        }
+      }
+    },
+    openCompleteForm(taskId, taskTitle, plannedDk){
+      this.completeForm={ taskId, taskTitle: taskTitle||'', note:'', time: plannedDk||'' };
+    },
+    async submitComplete(skip=false){
+      const {taskId,note,time}=this.completeForm;
+      this.completeForm={taskId:null,taskTitle:'',note:'',time:''};
+      const body={};
+      if(!skip){
+        const t=parseInt(time);
+        if(note&&note.trim()) body.student_note=note.trim();
+        if(t>0) body.time_spent_dk=t;
+      }
+      const task=this._findTask(taskId);
+      if(task){
+        task.done=true;
+        task.raw={...task.raw,is_completed:true,...body};
+        if(this.detailTask?.id===taskId){
+          this.detailTask.done=true;
+          this.detailTask.raw={...this.detailTask.raw,is_completed:true,...body};
+        }
+      }
+      try{
+        await fetch(`/student/tasks/api/complete/${taskId}`,{
+          method:'POST',headers:{'X-CSRFToken':CSRF(),'Content-Type':'application/json'},
+          body:JSON.stringify(body),
+        });
+        await this.loadWeek();
+        if(this.showDetailSheet&&this.detailTask?.id===taskId){
+          const fresh=this._findTask(taskId);
+          if(fresh) this.detailTask=fresh;
+        }
+      }catch{
+        if(task){
+          task.done=false;
+          task.raw={...task.raw,is_completed:false};
+          if(this.detailTask?.id===taskId){
+            this.detailTask.done=false;
+            this.detailTask.raw={...this.detailTask.raw,is_completed:false};
+          }
         }
       }
     },

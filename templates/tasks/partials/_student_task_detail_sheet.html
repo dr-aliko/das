@@ -128,6 +128,22 @@
             <template x-if="!detailTask?.raw?.detaylar?.length">
                 <p class="text-sm text-[var(--muted)] text-center py-6">Bu görev için ek detay bulunmuyor.</p>
             </template>
+
+            <!-- Completion note / time display (when task is done) -->
+            <template x-if="detailTask?.done && (detailTask?.raw?.time_spent_dk || detailTask?.raw?.student_note)">
+                <div class="p-3 rounded-xl space-y-1"
+                     style="background:var(--up-tint); border:1px solid rgba(34,197,94,.25);">
+                    <template x-if="detailTask.raw.time_spent_dk">
+                        <p class="text-xs font-bold" style="color:var(--up)">
+                            ⏱ <span x-text="fmtDk(detailTask.raw.time_spent_dk)"></span> çalışıldı
+                        </p>
+                    </template>
+                    <template x-if="detailTask.raw.student_note">
+                        <p class="text-xs text-[var(--muted)] leading-relaxed"
+                           x-text="detailTask.raw.student_note"></p>
+                    </template>
+                </div>
+            </template>
         </div>
 
         <!-- Footer: quality rating + completion + edit -->
@@ -156,12 +172,14 @@
                 </div>
             </template>
 
-            <!-- Completion toggle -->
-            <button @click="toggleComplete(detailTask.id)"
+            <!-- Completion toggle / open completion form -->
+            <button @click="detailTask?.done
+                        ? toggleComplete(detailTask.id)
+                        : openCompleteForm(detailTask.id, detailTask.title, detailTask.raw?.ozel_sure_dk)"
                     class="w-full py-3 rounded-xl text-sm font-bold border transition-all active:scale-95"
                     :class="detailTask?.done
                         ? 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'
-                        : 'bg-white border-green-300 text-green-600 hover:bg-green-50'"
+                        : 'bg-[var(--up-tint)] border-green-400 text-green-600'"
                     x-text="detailTask?.done ? '↩ Geri Al' : 'Tamamlandı ✓'">
             </button>
 
@@ -173,6 +191,65 @@
                 </button>
             </template>
 
+        </div>
+    </div>
+</div>
+
+{# Completion modal — z-[70] sits above the detail sheet (z-50) #}
+{# Escape closes modal only; sheet remains open behind it. #}
+<div x-show="completeForm.taskId"
+     x-transition:enter="transition ease-out duration-150"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-100"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4"
+     @click.self="completeForm.taskId = null"
+     @keydown.escape.window="completeForm.taskId = null"
+     x-cloak>
+    <div class="w-full max-w-sm rounded-2xl shadow-2xl p-6"
+         style="background:var(--surface-1);"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         @click.stop>
+        <h2 class="text-base font-bold mb-1" style="color:var(--heading)">Görevi Tamamla</h2>
+        <p class="text-sm mb-4 truncate" style="color:var(--muted)" x-text="completeForm.taskTitle"></p>
+
+        <div class="mb-3">
+            <label class="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style="color:var(--muted)">
+                Süre (dk)
+                <span class="font-normal normal-case" style="color:var(--muted-2)">— isteğe bağlı</span>
+            </label>
+            <input x-model.number="completeForm.time"
+                   type="number" inputmode="numeric" min="1" max="1440"
+                   placeholder="Kaç dakika çalıştın?"
+                   class="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none transition-colors placeholder:text-[var(--muted-2)]"
+                   style="background:var(--surface-2); border:1px solid var(--border); color:var(--heading);">
+        </div>
+
+        <div class="mb-5">
+            <label class="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style="color:var(--muted)">
+                Not
+                <span class="font-normal normal-case" style="color:var(--muted-2)">— isteğe bağlı</span>
+            </label>
+            <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
+                      class="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none transition-colors placeholder:text-[var(--muted-2)]"
+                      style="background:var(--surface-2); border:1px solid var(--border); color:var(--heading);"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2">
+            <button @click="submitComplete(true)"
+                    class="px-4 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-transform"
+                    style="background:var(--surface-2); border:1px solid var(--border); color:var(--muted);">
+                Atla
+            </button>
+            <button @click="submitComplete(false)"
+                    class="px-4 py-2.5 rounded-xl text-sm font-bold text-white active:scale-95 transition-transform"
+                    style="background:#16a34a;">
+                Tamamlandı ✓
+            </button>
         </div>
     </div>
 </div>
