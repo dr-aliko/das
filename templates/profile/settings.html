@@ -296,12 +296,12 @@ function settingsPage() {
         return;
       }
       this.notifState = Notification.permission;
-      /* If already granted, also sync the subscription state */
-      if (this.notifState === 'granted' && 'serviceWorker' in navigator) {
-        try {
-          const reg = await navigator.serviceWorker.ready;
-          this._currentSub = await reg.pushManager.getSubscription();
-        } catch (_) {}
+      /* If permission is already granted, silently re-sync the subscription with
+         the server on every settings page load. This is the self-healing step:
+         _tryPushSubscribe() is idempotent (update_or_create by endpoint) and
+         re-subscribes without a prompt if the browser lost its subscription. */
+      if (this.notifState === 'granted') {
+        await this._tryPushSubscribe();
       }
     },
 
@@ -319,7 +319,10 @@ function settingsPage() {
         const result = await Notification.requestPermission();
         this.notifState = result;
         if (result === 'granted') {
-          await this._tryPushSubscribe();
+          const ok = await this._tryPushSubscribe();
+          /* If the server POST failed, flip back to 'default' so the toggle
+             doesn't mislead the user into thinking they're subscribed. */
+          if (!ok) this.notifState = 'default';
         }
       } catch (e) {
         console.warn('[DAS] Notification.requestPermission failed:', e);
@@ -327,14 +330,15 @@ function settingsPage() {
     },
 
     async _tryPushSubscribe() {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
       if (!DAS_VAPID_PUBLIC_KEY) {
         console.info('[DAS] VAPID_PUBLIC_KEY not set — in-browser only.');
-        return;
+        return false;
       }
       try {
         const reg = await navigator.serviceWorker.ready;
-        /* Re-use existing subscription or create a new one */
+        /* Re-use existing subscription or create a new one (no prompt — permission
+           must already be 'granted' before this is called). */
         let sub = await reg.pushManager.getSubscription();
         if (!sub) {
           sub = await reg.pushManager.subscribe({
@@ -343,7 +347,7 @@ function settingsPage() {
           });
         }
         this._currentSub = sub;
-        await fetch('{% url "profil_push_subscribe" %}', {
+        const resp = await fetch('{% url "profil_push_subscribe" %}', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -351,8 +355,10 @@ function settingsPage() {
           },
           body: JSON.stringify(sub.toJSON()),
         });
+        return resp.ok;
       } catch (e) {
         console.warn('[DAS] Push subscribe failed:', e);
+        return false;
       }
     },
 
