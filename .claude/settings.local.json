@@ -85,7 +85,8 @@
       "Bash(curl *)",
       "Bash(echo \"EXIT: $?\")",
       "Bash(echo \"Exit: $?\")",
-      "Bash(pip show *)"
+      "Bash(pip show *)",
+      "Read(//tmp/**)"
     ]
   }
 }
