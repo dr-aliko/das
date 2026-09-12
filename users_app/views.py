@@ -474,3 +474,157 @@ def theme_save(request):
     request.user.theme = theme
     request.user.save(update_fields=['theme'])
     return JsonResponse({'ok': True, 'theme': theme, 'html_class': f'das-theme-{theme}'})
+
+
+@login_required
+def profil_ayarlar(request):
+    """Settings page — legal, feedback, WhatsApp, notifications."""
+    from django.conf import settings as djsettings
+    return render(request, 'profile/settings.html', {
+        'v2_shell': True,
+        'shell_hide_fab': True,
+        'vapid_public_key': djsettings.VAPID_PUBLIC_KEY,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def geri_bildirim_gonder(request):
+    """Accept feedback form submission and email it to support."""
+    from django.utils import timezone
+
+    tip     = request.POST.get('tip', '').strip()
+    mesaj   = request.POST.get('mesaj', '').strip()
+    ua      = request.POST.get('user_agent', '')
+    screen  = request.POST.get('screen_info', '')
+
+    if not mesaj:
+        return JsonResponse({'ok': False, 'error': 'Mesaj boş olamaz.'}, status=400)
+
+    user = request.user
+    ip   = (request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+            or request.META.get('REMOTE_ADDR', ''))
+    zaman = timezone.now().strftime('%Y-%m-%d %H:%M UTC')
+
+    tip_labels = {'hata': 'Hata Bildirimi', 'oneri': 'Öneri', 'soru': 'Soru'}
+    tip_label  = tip_labels.get(tip, tip or 'Genel')
+
+    subject = f'[Vagus Geri Bildirim] {tip_label} — {user.full_name}'
+    body = (
+        f"Tür: {tip_label}\n"
+        f"Kullanıcı: {user.full_name} ({user.email}) | Rol: {user.role} | ID: {user.id}\n\n"
+        f"Mesaj:\n{mesaj}\n\n"
+        f"--- Teknik Bilgiler ---\n"
+        f"Tarih: {zaman}\nIP: {ip}\nTarayıcı: {ua}\nEkran: {screen}"
+    )
+
+    email_msg = EmailMultiAlternatives(
+        subject=subject,
+        body=body,
+        from_email='Vagus <noreply@vagus.tr>',
+        to=['info@vagus.tr', 'kayaa3413@gmail.com'],
+        reply_to=[user.email],
+    )
+    gorsel = request.FILES.get('gorsel')
+    if gorsel:
+        email_msg.attach(gorsel.name, gorsel.read(), gorsel.content_type)
+
+    try:
+        email_msg.send()
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.'}, status=500)
+
+    return JsonResponse({'ok': True})
+
+
+# ── Web Push subscription management ─────────────────────────────────────────
+
+@login_required
+@require_http_methods(['POST'])
+def push_subscribe(request):
+    """Save or reactivate a browser push subscription for the current user."""
+    from .models import PushSubscription
+    try:
+        data     = json.loads(request.body)
+        endpoint = data.get('endpoint', '').strip()
+        keys     = data.get('keys', {})
+        p256dh   = keys.get('p256dh', '').strip()
+        auth_key = keys.get('auth', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    if not (endpoint and p256dh and auth_key):
+        return JsonResponse({'ok': False, 'error': 'Missing fields'}, status=400)
+
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults={
+            'user':      request.user,
+            'p256dh':    p256dh,
+            'auth':      auth_key,
+            'is_active': True,
+        },
+    )
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def push_unsubscribe(request):
+    """Deactivate a push subscription (called when user turns off notifications)."""
+    from .models import PushSubscription
+    try:
+        data     = json.loads(request.body)
+        endpoint = data.get('endpoint', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    if endpoint:
+        PushSubscription.objects.filter(user=request.user, endpoint=endpoint).update(is_active=False)
+    else:
+        PushSubscription.objects.filter(user=request.user).update(is_active=False)
+
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def push_test(request):
+    """Send a real test push notification to all active subscriptions of the logged-in user."""
+    from .models import PushSubscription
+    from pywebpush import webpush, WebPushException
+    from django.conf import settings as djsettings
+
+    if not djsettings.VAPID_PRIVATE_KEY:
+        return JsonResponse({'ok': False, 'error': 'VAPID not configured'}, status=500)
+
+    subs = PushSubscription.objects.filter(user=request.user, is_active=True)
+    if not subs.exists():
+        return JsonResponse({'ok': False, 'error': 'No active subscriptions found'}, status=404)
+
+    payload = json.dumps({
+        'title': 'Vagus Test Bildirimi',
+        'body':  'Bildirimler çalışıyor! Harika.',
+        'url':   '/profil/ayarlar/',
+    })
+
+    sent, failed = 0, 0
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    'endpoint': sub.endpoint,
+                    'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
+                },
+                data=payload,
+                vapid_private_key=djsettings.VAPID_PRIVATE_KEY,
+                vapid_claims={'sub': f'mailto:{djsettings.VAPID_ADMIN_EMAIL}'},
+            )
+            sent += 1
+        except WebPushException as exc:
+            if exc.response is not None and exc.response.status_code in (404, 410):
+                sub.is_active = False
+                sub.save(update_fields=['is_active'])
+            failed += 1
+
+    return JsonResponse({'ok': True, 'sent': sent, 'failed': failed})

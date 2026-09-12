@@ -116,3 +116,33 @@ self.addEventListener('fetch', event => {
 
   // All other same-origin requests (manifest, API calls, etc.) pass through.
 });
+
+// ── Push notifications ──────────────────────────────────────────────────
+self.addEventListener('push', event => {
+  let payload = { title: 'Vagus', body: 'Yeni bir güncelleme var.', url: '/' };
+  try { if (event.data) payload = { ...payload, ...event.data.json() }; } catch {}
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body:  payload.body,
+      icon:  '/static/vagus/pwa/icon-192.png',
+      badge: '/static/vagus/pwa/icon-192.png',
+      data:  { url: payload.url },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const target = event.notification.data?.url || '/';
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(target);
+    })
+  );
+});

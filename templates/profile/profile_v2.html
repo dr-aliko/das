@@ -26,15 +26,16 @@
             </p>
             {% if user.grade %}<p class="text-xs text-ink-500 mt-0.5">{{ user.grade }}</p>{% endif %}
           </div>
-          <button class="ml-auto w-11 h-11 rounded-lg bg-ink-800 hover:bg-ink-750
-                         text-ink-300 hover:text-white flex items-center justify-center
-                         transition-colors shrink-0"
-                  aria-label="{% trans 'Ayarlar' %}">
+          <a href="{% url 'profil_ayarlar' %}"
+             class="ml-auto w-11 h-11 rounded-lg bg-ink-800 hover:bg-ink-750
+                    text-ink-300 hover:text-white flex items-center justify-center
+                    transition-colors shrink-0"
+             aria-label="{% trans 'Ayarlar' %}">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <use href="#das-icon-settings"/>
             </svg>
-          </button>
+          </a>
         </div>
 
         {% if user.is_student %}
@@ -511,15 +512,15 @@
             </svg>
           </button>
           {% endif %}
-          <a href="#" class="px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors">
+          <a href="{% url 'profil_ayarlar' %}"
+             class="flex px-4 py-3 items-center gap-3 hover:bg-ink-800 transition-colors">
             <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <use href="#das-icon-bell"/>
+                <use href="#das-icon-settings"/>
               </svg>
             </span>
-            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Bildirimler" %}</span>
-            <span class="text-xs text-emerald-500 font-semibold">{% trans "Açık" %}</span>
+            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Ayarlar" %}</span>
             <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <use href="#das-icon-chev-right"/>

@@ -184,6 +184,11 @@ EMAIL_HOST_USER     = config('EMAIL_HOST_USER',     default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL',  default='Vagus <noreply@vagus.tr>')
 
+# Web Push (VAPID) — generate key pair once with py_vapid; store in .env
+VAPID_PUBLIC_KEY  = config('VAPID_PUBLIC_KEY',  default='')
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
+VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='info@vagus.tr')
+
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)
 

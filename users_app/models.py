@@ -263,3 +263,22 @@ class StudentInvite(models.Model):
     @staticmethod
     def generate_token():
         return secrets.token_urlsafe(32)  # 256-bit entropy, URL-safe
+
+
+class PushSubscription(models.Model):
+    """Stores a browser Web Push subscription for a user (one per endpoint)."""
+    user     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                  related_name='push_subscriptions')
+    endpoint = models.URLField(max_length=600, unique=True)
+    p256dh   = models.CharField(max_length=256)
+    auth     = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active  = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Push Aboneliği'
+        verbose_name_plural = 'Push Abonelikleri'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.full_name} — {self.endpoint[:60]}…'
