@@ -314,15 +314,17 @@ function settingsPage() {
         return;
       }
 
-      /* Turn ON: request browser permission then subscribe */
+      /* Turn ON: request browser permission then subscribe.
+         notifState must NOT be set to 'granted' until the full async chain
+         resolves — subscribe() + server POST — otherwise the test button
+         becomes visible before the DB row exists. */
       try {
         const result = await Notification.requestPermission();
-        this.notifState = result;
         if (result === 'granted') {
           const ok = await this._tryPushSubscribe();
-          /* If the server POST failed, flip back to 'default' so the toggle
-             doesn't mislead the user into thinking they're subscribed. */
-          if (!ok) this.notifState = 'default';
+          this.notifState = ok ? 'granted' : 'default';
+        } else {
+          this.notifState = result;  /* 'denied' — no async work follows */
         }
       } catch (e) {
         console.warn('[DAS] Notification.requestPermission failed:', e);
