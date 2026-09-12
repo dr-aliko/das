@@ -36,7 +36,7 @@
       <p class="text-sm text-[var(--muted)]">Henüz öğrenci eklenmemiş.</p>
     {% else %}
       <select onchange="
-          const url = new URL(window.location);
+          const url = new window.URL(window.location.href);
           url.searchParams.set('student', this.value);
           url.searchParams.delete('subject');
           window.location.href = url.toString();"
@@ -124,14 +124,24 @@
       </span>
     </div>
 
+    {# Load-error state (bad/missing student_id returned 4xx from API) #}
+    <div x-show="loadError !== null"
+         class="flex flex-col items-center gap-3 py-16 text-center">
+      <svg class="w-8 h-8 text-[var(--muted-2)] opacity-50" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p class="text-sm text-[var(--muted)]">Veriler yüklenemedi. Lütfen öğrenciyi yeniden seçin.</p>
+    </div>
+
     {# Empty topics state #}
-    <div x-show="!loading && flatTopics.length === 0 && selectedSubjectId !== null"
+    <div x-show="!loading && loadError === null && flatTopics.length === 0 && selectedSubjectId !== null"
          class="text-center py-20 text-[var(--muted)]">
       <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
     </div>
 
     {# ── Topic rows ──────────────────────────────────────────────────────────── #}
-    <div x-show="flatTopics.length > 0"
+    <div x-show="flatTopics.length > 0 && loadError === null"
          class="rounded-2xl border border-[var(--border)] overflow-hidden
                 bg-[var(--surface-1)] divide-y divide-[var(--border)]">
 
@@ -219,6 +229,7 @@ function konuTakip(cfg) {
     flatTopics:        cfg.flatTopics,
     progress:          cfg.progress,
     loading:           false,
+    loadError:         null,
     pending:           {},
     studentId:         cfg.studentId,
     toggleUrl:         cfg.toggleUrl,
@@ -258,18 +269,23 @@ function konuTakip(cfg) {
       const box = this.$refs.topicBox;
       if (box && box.offsetHeight) box.style.minHeight = box.offsetHeight + 'px';
 
-      this.loading = true;
+      this.loading   = true;
+      this.loadError = null;
       try {
         const p = new URLSearchParams({ exam_type: this.examType });
         if (this.selectedSubjectId) p.set('subject_id', this.selectedSubjectId);
         if (this.studentId !== null) p.set('student_id', this.studentId);
         const resp = await fetch(`${this.apiUrl}?${p}`);
-        if (!resp.ok) return;
+        if (!resp.ok) {
+          this.loadError = resp.status === 403 ? 'forbidden' : 'error';
+          return;
+        }
         const data = await resp.json();
         this.flatTopics = data.flat_topics;
         this.progress   = data.progress;
         if (data.selected_subject_id) this.selectedSubjectId = data.selected_subject_id;
       } catch (e) {
+        this.loadError = 'network';
         console.error('[konuTakip.loadTopics]', e);
       } finally {
         this.loading = false;
@@ -283,6 +299,8 @@ function konuTakip(cfg) {
       url.searchParams.set('exam_type', this.examType);
       if (this.selectedSubjectId) url.searchParams.set('subject', this.selectedSubjectId);
       else url.searchParams.delete('subject');
+      // Always write student so the URL survives a page refresh in coach view.
+      if (this.studentId !== null) url.searchParams.set('student', this.studentId);
       history.pushState({}, '', url);
     },
 

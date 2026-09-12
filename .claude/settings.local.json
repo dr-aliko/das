@@ -77,7 +77,14 @@
       "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip install django-import-export)",
       "Bash(\"/c/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.venv/Scripts/python.exe\" -m pip freeze)",
       "Bash(\".venv/Scripts/python.exe\" manage.py check)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(xargs ls *)",
+      "Bash(awk '{print $9, $5}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8001/accounts/login/)",
+      "Bash(curl *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(echo \"Exit: $?\")"
     ]
   }
 }

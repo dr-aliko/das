@@ -136,20 +136,23 @@ class CoachToggleView(View):
 @method_decorator(coach_required, name='dispatch')
 class CoachKonuTakipApiView(View):
     def get(self, request):
-        coached_students = list(
-            User.objects.filter(role='student', coach=request.user).order_by('full_name')
-        )
-        selected_student = None
         try:
-            sid = int(request.GET.get('student_id', 0))
-            if sid and coach_can_view_student(request.user, sid):
-                selected_student = User.objects.get(id=sid, role='student')
-        except (ValueError, User.DoesNotExist):
-            pass
-        if not selected_student and coached_students:
-            selected_student = coached_students[0]
+            sid = int(request.GET.get('student_id') or 0)
+        except (ValueError, TypeError):
+            sid = 0
 
-        tyt_subjects, ayt_subjects = _subject_groups(selected_student) if selected_student else ([], [])
+        if not sid:
+            return JsonResponse({'error': 'student_id required'}, status=400)
+
+        if not coach_can_view_student(request.user, sid):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        try:
+            selected_student = User.objects.get(id=sid, role='student')
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'student not found'}, status=400)
+
+        tyt_subjects, ayt_subjects = _subject_groups(selected_student)
         exam_type = request.GET.get('exam_type', 'TYT')
         if exam_type not in ('TYT', 'AYT'):
             exam_type = 'TYT'
