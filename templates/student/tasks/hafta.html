@@ -173,8 +173,10 @@
           <div class="w-1.5 shrink-0" :style="{ backgroundColor: task.color }"></div>
 
           <div class="flex-1 p-4 flex items-center gap-4">
-            {# Completion toggle #}
-            <button @click.stop="toggleComplete(task.id)"
+            {# Completion toggle — done: undo instantly; pending: open modal #}
+            <button @click.stop="task.done
+                        ? toggleComplete(task.id)
+                        : openCompleteForm(task.id, task.title, task.raw?.ozel_sure_dk)"
                     class="das-toggle-hit w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0
                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
                     :class="task.done
