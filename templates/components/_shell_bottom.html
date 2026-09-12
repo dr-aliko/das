@@ -1,14 +1,24 @@
 <nav class="v2-bottom-nav lg:hidden fixed inset-x-0 bottom-0 z-40
             bg-surface-1 border-t border-border-soft
             pb-[env(safe-area-inset-bottom)]"
-     role="navigation" aria-label="Ana menü">
+     role="navigation" aria-label="Ana menü"
+     x-data="{ open: false }">
+
   {% if user.is_student %}
   <div class="grid grid-cols-5 h-16">
     {% include "components/_shell_tab.html" with href="/student/" label="Panel" icon="das-icon-panel" %}
     {% include "components/_shell_tab.html" with href="/student/denemeler/" label="Denemeler" icon="das-icon-exam" %}
     {% include "components/_shell_tab.html" with href="/student/tasks/" label="Görevler" icon="das-icon-task" %}
     {% include "components/_shell_tab.html" with href="/brans/" label="Branş" icon="das-icon-trending-up" %}
-    {% include "components/_shell_tab.html" with href="/student/konu-takip/" label="Konular" icon="das-icon-book" %}
+    <button type="button" @click="open = true"
+            class="das-nav-tab {% if '/student/konu-takip' in request.path or '/profil' in request.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true">
+        <use href="#das-icon-more"/>
+      </svg>
+      <span>Diğer</span>
+    </button>
   </div>
   {% else %}
   <div class="grid grid-cols-5 h-16">
@@ -16,7 +26,121 @@
     {% include "components/_shell_tab.html" with href="/coach/denemeler/" label="Denemeler" icon="das-icon-exam" %}
     {% include "components/_shell_tab.html" with href="/coach/tasks/" label="Görevler" icon="das-icon-task" %}
     {% include "components/_shell_tab.html" with href="/coach/brans/" label="Branş" icon="das-icon-trending-up" %}
-    {% include "components/_shell_tab.html" with href="/coach/konu-takip/" label="Konular" icon="das-icon-book" %}
+    <button type="button" @click="open = true"
+            class="das-nav-tab {% if '/coach/konu-takip' in request.path or '/profil' in request.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true">
+        <use href="#das-icon-more"/>
+      </svg>
+      <span>Diğer</span>
+    </button>
   </div>
   {% endif %}
+
+  {# ── "Diğer" bottom sheet ──────────────────────────────────────────────── #}
+  <div x-show="open" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 flex items-end"
+       @keydown.escape.window="open = false">
+
+    {# Backdrop #}
+    <div @click="open = false"
+         class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+
+    {# Sheet panel #}
+    <div x-show="open"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full rounded-t-3xl shadow-2xl"
+         style="background:var(--surface-1);"
+         @click.stop>
+
+      {# Drag handle #}
+      <div class="flex justify-center pt-3 pb-2 cursor-pointer" @click="open = false">
+        <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
+      </div>
+
+      {# Sheet title #}
+      <p class="px-6 pb-3 text-xs font-bold uppercase tracking-widest"
+         style="color:var(--muted-2);">Diğer</p>
+
+      {# Menu items #}
+      <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] space-y-1">
+
+        {% if user.is_student %}
+        <a href="/student/konu-takip/" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if '/student/konu-takip' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <use href="#das-icon-book"/>
+          </svg>
+          <span class="text-sm font-medium">Konu Takip</span>
+          {% if '/student/konu-takip' in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
+        {% else %}
+        <a href="/coach/konu-takip/" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if '/coach/konu-takip' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <use href="#das-icon-book"/>
+          </svg>
+          <span class="text-sm font-medium">Konu Takip</span>
+          {% if '/coach/konu-takip' in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
+        {% endif %}
+
+        <a href="/profil/" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if '/profil' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <use href="#das-icon-user"/>
+          </svg>
+          <span class="text-sm font-medium">Profil</span>
+          {% if '/profil' in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
+
+      </div>
+    </div>
+  </div>
+
 </nav>
