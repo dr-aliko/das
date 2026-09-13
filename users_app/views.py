@@ -591,40 +591,20 @@ def push_unsubscribe(request):
 @require_http_methods(['POST'])
 def push_test(request):
     """Send a real test push notification to all active subscriptions of the logged-in user."""
-    from .models import PushSubscription
-    from pywebpush import webpush, WebPushException
+    from .services.notifications import send_push_notification
     from django.conf import settings as djsettings
 
     if not djsettings.VAPID_PRIVATE_KEY:
         return JsonResponse({'ok': False, 'error': 'VAPID not configured'}, status=500)
 
-    subs = PushSubscription.objects.filter(user=request.user, is_active=True)
-    if not subs.exists():
+    sent, failed = send_push_notification(
+        request.user,
+        title='Vagus Test Bildirimi',
+        body='Bildirimler çalışıyor! Harika.',
+        url='/profil/ayarlar/',
+    )
+
+    if sent == 0 and failed == 0:
         return JsonResponse({'ok': False, 'error': 'No active subscriptions found'}, status=404)
-
-    payload = json.dumps({
-        'title': 'Vagus Test Bildirimi',
-        'body':  'Bildirimler çalışıyor! Harika.',
-        'url':   '/profil/ayarlar/',
-    })
-
-    sent, failed = 0, 0
-    for sub in subs:
-        try:
-            webpush(
-                subscription_info={
-                    'endpoint': sub.endpoint,
-                    'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
-                },
-                data=payload,
-                vapid_private_key=djsettings.VAPID_PRIVATE_KEY,
-                vapid_claims={'sub': f'mailto:{djsettings.VAPID_ADMIN_EMAIL}'},
-            )
-            sent += 1
-        except WebPushException as exc:
-            if exc.response is not None and exc.response.status_code in (404, 410):
-                sub.is_active = False
-                sub.save(update_fields=['is_active'])
-            failed += 1
 
     return JsonResponse({'ok': True, 'sent': sent, 'failed': failed})

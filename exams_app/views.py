@@ -1867,6 +1867,18 @@ def exam_create_v2(request):
                     defaults={'wrong_count': wrong_cnt, 'blank_count': blank_cnt},
                 )
 
+        if request.user.coach:
+            from users_app.services.notifications import send_push_notification
+            coach_url = reverse('coach:student_exam_detail', kwargs={
+                'student_id': request.user.id, 'exam_id': exam.id,
+            })
+            send_push_notification(
+                request.user.coach,
+                title=f'Yeni Deneme: {request.user.full_name}',
+                body=f'{exam.custom_name} — Net: {exam.total_net():.1f}',
+                url=coach_url,
+            )
+
         from users_app.services.streak_engine import record_activity
         record_activity(request.user)
         messages.success(request, 'Sınav kaydedildi!')
@@ -1950,6 +1962,18 @@ def exam_create_step1(request):
             )
             if result.has_errors():
                 has_errors = True
+
+        if request.user.coach:
+            from users_app.services.notifications import send_push_notification
+            coach_url = reverse('coach:student_exam_detail', kwargs={
+                'student_id': request.user.id, 'exam_id': exam.id,
+            })
+            send_push_notification(
+                request.user.coach,
+                title=f'Yeni Deneme: {request.user.full_name}',
+                body=f'{exam.custom_name} — Net: {exam.total_net():.1f}',
+                url=coach_url,
+            )
 
         if has_errors:
             messages.success(request, 'Sınav kaydedildi! Hata detaylarını girmek ister misin?')
