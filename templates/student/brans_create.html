@@ -69,7 +69,8 @@
       {# Ders (Subject) — built dynamically via x-for so filtering is DOM-safe across all browsers #}
       <div>
         <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">Ders <span class="text-down">*</span></label>
-        <select name="ders" x-model="ders" required @change="d=0; y=0;"
+        <select name="ders" x-model="ders" required
+                @change="d=0; y=0; soru_sayisi = limits[$event.target.value] || 0"
                 class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2"
                 style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
           <option value="">Seçin…</option>
@@ -78,6 +79,19 @@
           </template>
         </select>
         {% if form.ders.errors %}<p class="text-down text-xs mt-1">{{ form.ders.errors.0 }}</p>{% endif %}
+      </div>
+
+      {# Soru Sayısı — editable per entry; pre-fills from subject default #}
+      <div x-show="ders" x-cloak>
+        <label class="block text-sm font-bold mb-1.5" style="color:var(--body)">
+          Soru Sayısı
+          <span class="text-xs font-normal ml-1" style="color:var(--muted)">(varsayılan: <span x-text="limits[ders] || 0"></span>)</span>
+        </label>
+        <input type="number" inputmode="numeric" name="soru_sayisi" x-model.number="soru_sayisi"
+               min="1" max="200"
+               class="w-full rounded-xl border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2"
+               style="background:var(--surface-2); border-color:var(--border-strong); color:var(--body); --tw-ring-color:var(--primary);">
+        {% if form.soru_sayisi.errors %}<p class="text-down text-xs mt-1">{{ form.soru_sayisi.errors.0 }}</p>{% endif %}
       </div>
 
       {# Date + Duration #}
@@ -213,9 +227,12 @@ function bransCreateV2() {
   const initialDers = '{{ form.ders.value|default:"" }}';
   const initialExamType = aytSubjects.some(s => s.id === initialDers) ? 'AYT' : 'TYT';
 
+  const initialDersSoru = parseInt('{{ form.soru_sayisi.value|default:"0" }}', 10) || 0;
+
   return {
     examType: initialExamType,
-    ders:   initialDers,
+    ders:        initialDers,
+    soru_sayisi: initialDersSoru || (limits[initialDers] || 0),
     tarih:  '{{ form.tarih.value|default:"" }}',
     sure:   '{{ form.sure_dakika.value|default:"" }}',
     not:    '{{ form.ogrenci_notu.value|escapejs|default:"" }}',
@@ -228,7 +245,8 @@ function bransCreateV2() {
 
     get accentColor() { return this.examType === 'AYT' ? '#A78BFA' : '#3B82F6'; },
 
-    get total()      { return limits[this.ders] || 0; },
+    // soru_sayisi overrides the subject default when set; falls back to subject default
+    get total()      { return (this.soru_sayisi > 0 ? this.soru_sayisi : limits[this.ders]) || 0; },
     get bos()        { return Math.max(0, this.total - (Math.floor(this.d)||0) - (Math.floor(this.y)||0)); },
     get totalNet()   { return (Math.floor(this.d)||0) - (Math.floor(this.y)||0) * 0.25; },
     get hasOverflow(){ return this.total > 0 && ((Math.floor(this.d)||0) + (Math.floor(this.y)||0) > this.total); },
@@ -244,6 +262,7 @@ function bransCreateV2() {
         this.ders = '';
         this.d = 0;
         this.y = 0;
+        this.soru_sayisi = 0;
       }
     },
 

@@ -3,7 +3,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api
-from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test
+from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read
 
 urlpatterns = [
     path('healthz/', healthz_view, name='healthz'),
@@ -45,4 +45,7 @@ urlpatterns = [
     path('profil/push-subscribe/',   push_subscribe,   name='profil_push_subscribe'),
     path('profil/push-unsubscribe/', push_unsubscribe, name='profil_push_unsubscribe'),
     path('profil/push-test/',        push_test,        name='profil_push_test'),
+    path('student/notifications/',              student_notifications_api,        name='student_notifications'),
+    path('student/notifications/mark-all-read/', student_notification_mark_all_read, name='student_notifications_mark_all'),
+    path('student/notifications/<int:pk>/read/', student_notification_read,          name='student_notification_read'),
 ]

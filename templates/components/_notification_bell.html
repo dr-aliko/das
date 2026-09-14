@@ -1,0 +1,116 @@
+{% if user.is_student %}
+<div x-data="notifBell()" class="relative">
+  <button @click="open = !open"
+          class="relative h-9 w-9 rounded-lg flex items-center justify-center
+                 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
+                 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+          aria-label="Bildirimler">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75"
+         stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    <span x-show="unread > 0" x-cloak
+          x-text="unread > 9 ? '9+' : unread"
+          class="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] rounded-full
+                 bg-red-500 text-white text-[10px] font-bold
+                 flex items-center justify-center px-0.5 select-none pointer-events-none">
+    </span>
+  </button>
+
+  <div x-show="open" x-cloak
+       @click.outside="open = false"
+       x-transition
+       class="absolute right-0 top-11 w-72 bg-[var(--surface-1)] border border-[var(--border)]
+              rounded-xl shadow-xl overflow-hidden z-50">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+      <span class="text-sm font-semibold text-[var(--heading)]">Bildirimler</span>
+      <button @click="markAllRead()" x-show="unread > 0"
+              class="text-[11px] text-steel-400 hover:text-steel-300 transition-colors">
+        Hepsini okundu say
+      </button>
+    </div>
+    <div class="max-h-96 overflow-y-auto divide-y divide-[var(--border)]">
+      <template x-if="loading">
+        <div class="px-4 py-8 flex justify-center">
+          <svg class="w-5 h-5 text-steel-400 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path style="opacity:.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+      </template>
+      <template x-if="!loading && notifications.length === 0">
+        <div class="px-4 py-8 text-center text-sm text-[var(--muted)]">Henüz bildirim yok</div>
+      </template>
+      <template x-for="n in notifications" :key="n.id">
+        <button @click="tap(n)"
+                :class="!n.is_read ? 'bg-steel-500/5' : ''"
+                class="w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] transition-colors block">
+          <div class="flex items-start gap-2.5">
+            <div :style="!n.is_read ? 'background:var(--primary, #6D5BFF)' : 'background:transparent'"
+                 class="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"></div>
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-[var(--heading)] truncate" x-text="n.title"></p>
+              <p class="text-[13px] text-[var(--muted)] mt-0.5" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" x-text="n.body"></p>
+              <p class="text-[11px] text-[var(--muted-2)] mt-1" x-text="n.time"></p>
+            </div>
+          </div>
+        </button>
+      </template>
+    </div>
+  </div>
+</div>
+
+<script>
+if (typeof notifBell === 'undefined') {
+  var _notifPromise = null;
+
+  function notifBell() {
+    return {
+      open: false,
+      notifications: [],
+      unread: 0,
+      loading: true,
+      init() {
+        if (!_notifPromise) {
+          _notifPromise = fetch('/student/notifications/').then(function(r) { return r.json(); });
+        }
+        var self = this;
+        _notifPromise.then(function(d) {
+          self.notifications = d.notifications || [];
+          self.unread = d.unread_count || 0;
+          self.loading = false;
+        }).catch(function() { self.loading = false; });
+      },
+      _csrf: function() {
+        return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+      },
+      tap: function(n) {
+        if (!n.is_read) {
+          n.is_read = true;
+          this.unread = Math.max(0, this.unread - 1);
+          fetch('/student/notifications/' + n.id + '/read/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': this._csrf() },
+          });
+        }
+        if (n.url) {
+          this.open = false;
+          window.location.href = n.url;
+        }
+      },
+      markAllRead: function() {
+        var self = this;
+        fetch('/student/notifications/mark-all-read/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': this._csrf() },
+        }).then(function() {
+          self.notifications.forEach(function(n) { n.is_read = true; });
+          self.unread = 0;
+        });
+      },
+    };
+  }
+}
+</script>
+{% endif %}

@@ -608,3 +608,65 @@ def push_test(request):
         return JsonResponse({'ok': False, 'error': 'No active subscriptions found'}, status=404)
 
     return JsonResponse({'ok': True, 'sent': sent, 'failed': failed})
+
+
+def _rel_time_tr(dt):
+    from django.utils import timezone
+    diff = timezone.now() - dt
+    secs = int(diff.total_seconds())
+    if secs < 60:
+        return 'Az önce'
+    mins = secs // 60
+    if mins < 60:
+        return f'{mins} dakika önce'
+    hours = mins // 60
+    if hours < 24:
+        return f'{hours} saat önce'
+    days = hours // 24
+    if days == 1:
+        return 'Dün'
+    if days < 30:
+        return f'{days} gün önce'
+    return dt.strftime('%d.%m.%Y')
+
+
+@login_required
+@require_http_methods(['GET'])
+def student_notifications_api(request):
+    from .models import Notification
+    if not request.user.is_student:
+        return JsonResponse({'ok': False}, status=403)
+    qs = Notification.objects.filter(user=request.user).order_by('-created_at')[:50]
+    notifications = [
+        {
+            'id': n.id,
+            'title': n.title,
+            'body': n.body,
+            'url': n.url,
+            'is_read': n.is_read,
+            'time': _rel_time_tr(n.created_at),
+        }
+        for n in qs
+    ]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({'ok': True, 'notifications': notifications, 'unread_count': unread_count})
+
+
+@login_required
+@require_http_methods(['POST'])
+def student_notification_read(request, pk):
+    from .models import Notification
+    if not request.user.is_student:
+        return JsonResponse({'ok': False}, status=403)
+    Notification.objects.filter(user=request.user, pk=pk).update(is_read=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def student_notification_mark_all_read(request):
+    from .models import Notification
+    if not request.user.is_student:
+        return JsonResponse({'ok': False}, status=403)
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'ok': True})

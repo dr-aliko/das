@@ -146,8 +146,8 @@
             <div class="flex items-center justify-between p-2.5 rounded-lg border
                         {% if forloop.first %}bg-ruby-tint border-ruby-500/20{% else %}bg-gray-50 dark:bg-ink-800 border-gray-100 dark:border-ink-700{% endif %}">
               <div class="min-w-0 mr-3">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-sm font-medium text-gray-800 dark:text-ink-100 truncate">{{ err.topic.name }}</span>
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span class="text-sm font-medium text-gray-800 dark:text-ink-100">{{ err.topic.name }}</span>
                   {% if forloop.first %}<span class="text-xs font-bold text-ruby-500 shrink-0">⚠ En Kritik</span>{% endif %}
                 </div>
                 {% if err.topic.sub_category %}

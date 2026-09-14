@@ -15,6 +15,7 @@ _BRANS_SUBJECT_ORDER = {
     'TYT Fizik':           5,
     'TYT Kimya':           6,
     'TYT Biyoloji':        7,
+    'TYT Problemler':      8,
 }
 
 
@@ -34,10 +35,11 @@ class BransDenemeForm(forms.ModelForm):
 
     class Meta:
         model = BransDeneme
-        fields = ('ders', 'tarih', 'dogru', 'yanlis', 'bos', 'sure_dakika', 'ogrenci_notu')
+        fields = ('ders', 'tarih', 'soru_sayisi', 'dogru', 'yanlis', 'bos', 'sure_dakika', 'ogrenci_notu')
         labels = {
             'ders':         'Ders',
             'tarih':        'Tarih',
+            'soru_sayisi':  'Soru Sayısı',
             'dogru':        'Doğru',
             'yanlis':       'Yanlış',
             'bos':          'Boş',
@@ -70,16 +72,17 @@ class BransDenemeForm(forms.ModelForm):
         if tarih and tarih > date.today():
             self.add_error('tarih', 'Gelecek bir tarih girilemez.')
 
-        # Total answers must not exceed the ders question count
-        ders   = cleaned.get('ders')
-        dogru  = cleaned.get('dogru')  or 0
-        yanlis = cleaned.get('yanlis') or 0
-        bos    = cleaned.get('bos')    or 0
-        total  = dogru + yanlis + bos
-        if ders and total > ders.question_count:
+        # Total answers must not exceed the effective question count
+        ders        = cleaned.get('ders')
+        soru_sayisi = cleaned.get('soru_sayisi')
+        dogru       = cleaned.get('dogru')  or 0
+        yanlis      = cleaned.get('yanlis') or 0
+        bos         = cleaned.get('bos')    or 0
+        total       = dogru + yanlis + bos
+        cap         = soru_sayisi if soru_sayisi else (ders.question_count if ders else None)
+        if cap is not None and total > cap:
             raise forms.ValidationError(
-                f'Toplam cevap sayısı ({total}), dersin soru sayısını '
-                f'({ders.question_count}) aşıyor.'
+                f'Toplam cevap sayısı ({total}), soru sayısını ({cap}) aşıyor.'
             )
 
         return cleaned

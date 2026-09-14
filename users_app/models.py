@@ -283,3 +283,22 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f'{self.user.full_name} — {self.endpoint[:60]}…'
+
+
+class Notification(models.Model):
+    """In-app notification log — created for every notification event regardless of push delivery."""
+    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='notifications')
+    title      = models.CharField(max_length=255)
+    body       = models.TextField()
+    url        = models.CharField(max_length=500, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read    = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Bildirim'
+        verbose_name_plural = 'Bildirimler'
+
+    def __str__(self):
+        return f'{self.user.full_name} — {self.title}'

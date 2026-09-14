@@ -8,9 +8,12 @@ def send_push_notification(user, title, body, url=None):
 
     Returns (sent_count, failed_count). Automatically deactivates
     subscriptions that return 404/410 (expired or unregistered).
+    Always creates an in-app Notification row regardless of push delivery outcome.
     """
-    from users_app.models import PushSubscription
+    from users_app.models import PushSubscription, Notification
     from pywebpush import webpush, WebPushException
+
+    Notification.objects.create(user=user, title=title, body=body, url=url or '')
 
     if not settings.VAPID_PRIVATE_KEY:
         return 0, 0

@@ -270,13 +270,14 @@ def _build_denemeler_v2_context(user, filters=None):
 
 # Hex values from tokens.css + design-consistent additions for TYT subjects
 _BRANS_HUB_SUBJECTS = [
-    ('mat',      'Matematik', '#A78BFA', 'accent-mat',      {'TYT Matematik'}),
-    ('turkce',   'Türkçe',    '#3B82F6', 'accent-turkce',   {'TYT Türkçe'}),
-    ('sosyal',   'Sosyal',    '#F59E0B', 'accent-sosyal',   {'TYT Sosyal Bilimler'}),
-    ('fen',      'Fen',       '#10B981', 'accent-fen',      {'TYT Fen Bilimleri'}),
-    ('fizik',    'Fizik',     '#06B6D4', 'accent-fizik',    {'TYT Fizik'}),
-    ('kimya',    'Kimya',     '#F97316', 'accent-kimya',    {'TYT Kimya'}),
-    ('biyoloji', 'Biyoloji',  '#22C55E', 'accent-biyoloji', {'TYT Biyoloji'}),
+    ('mat',         'Matematik',  '#A78BFA', 'accent-mat',         {'TYT Matematik'}),
+    ('turkce',      'Türkçe',     '#3B82F6', 'accent-turkce',      {'TYT Türkçe'}),
+    ('sosyal',      'Sosyal',     '#F59E0B', 'accent-sosyal',      {'TYT Sosyal Bilimler'}),
+    ('fen',         'Fen',        '#10B981', 'accent-fen',         {'TYT Fen Bilimleri'}),
+    ('fizik',       'Fizik',      '#06B6D4', 'accent-fizik',       {'TYT Fizik'}),
+    ('kimya',       'Kimya',      '#F97316', 'accent-kimya',       {'TYT Kimya'}),
+    ('biyoloji',    'Biyoloji',   '#22C55E', 'accent-biyoloji',    {'TYT Biyoloji'}),
+    ('problemler',  'Problemler', '#14B8A6', 'accent-problemler',  {'TYT Problemler'}),
 ]
 
 _BRANS_AYT_SUBJECTS = [
@@ -1115,16 +1116,38 @@ def coach_brans_create_for_student(request, student_id):
     else:
         form = BransDenemeForm()
 
-    subjects_json = json.dumps({str(s.pk): s.question_count for s in Subject.objects.only('pk', 'question_count')})
+    all_subjects = list(Subject.objects.only('pk', 'name', 'exam_type', 'question_count').order_by('exam_type', 'name'))
+    subjects_json = json.dumps({str(s.pk): s.question_count for s in all_subjects})
+    student_alan = getattr(student, 'alan', '') or ''
+    alan_keys = _AYT_ALAN_FILTER.get(student_alan)
+    ayt_names_allowed = None
+    if alan_keys is not None:
+        ayt_names_allowed = set()
+        for key, _label, _color, _klass, names in _BRANS_AYT_SUBJECTS:
+            if key in alan_keys:
+                ayt_names_allowed.update(names)
+    tyt_subjects = [
+        {'id': str(s.pk), 'name': s.display_name}
+        for s in all_subjects
+        if s.exam_type == 'TYT' and s.name not in _BRANS_TYT_EXCLUDED
+    ]
+    ayt_subjects = [
+        {'id': str(s.pk), 'name': s.display_name}
+        for s in all_subjects
+        if s.exam_type == 'AYT' and (ayt_names_allowed is None or s.name in ayt_names_allowed)
+    ]
     return render(request, 'student/brans_create.html', {
-        'form': form,
-        'subjects_json': subjects_json,
-        'next_url': next_url,
-        'back_url': next_url,
-        'coach_view': True,
-        'student': student,
-        'page_title': f'{student.full_name} için Branş Denemesi Ekle',
-        'submit_label': 'Branş Denemesini Kaydet',
+        'form':              form,
+        'subjects_json':     subjects_json,
+        'tyt_subjects_json': json.dumps(tyt_subjects),
+        'ayt_subjects_json': json.dumps(ayt_subjects),
+        'student_alan':      student_alan,
+        'next_url':          next_url,
+        'back_url':          next_url,
+        'coach_view':        True,
+        'student':           student,
+        'page_title':        f'{student.full_name} için Branş Denemesi Ekle',
+        'submit_label':      'Branş Denemesini Kaydet',
     })
 
 

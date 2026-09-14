@@ -214,7 +214,8 @@ class BransDeneme(models.Model):
         related_name='brans_denemeler',
         verbose_name='Ders',
     )
-    tarih  = models.DateField(verbose_name='Tarih')
+    tarih      = models.DateField(verbose_name='Tarih')
+    soru_sayisi = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Soru Sayısı')
     dogru  = models.PositiveSmallIntegerField(default=0, verbose_name='Doğru')
     yanlis = models.PositiveSmallIntegerField(default=0, verbose_name='Yanlış')
     bos    = models.PositiveSmallIntegerField(default=0, verbose_name='Boş')
