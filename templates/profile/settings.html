@@ -77,7 +77,8 @@
               style="transition: background-color 200ms ease-in-out;"
               :aria-checked="notifState === 'granted' ? 'true' : 'false'"
               role="switch">
-        <span class="inline-block h-4 w-4 rounded-full bg-white shadow"
+        <span class="absolute left-0 h-4 w-4 rounded-full bg-white shadow"
+              style="top: 4px;"
               :style="{ transform: notifState === 'granted' ? 'translateX(1.5rem)' : 'translateX(0.25rem)',
                         transition: 'transform 200ms ease-in-out' }"></span>
       </button>

@@ -104,6 +104,52 @@ def send_task_deadline_reminders():
     return total_sent
 
 
+def send_konu_review_reminders():
+    """Scheduled daily at 08:00 Istanbul (cron='0 8 * * *' in local time)."""
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from konu_takip_app.models import StudentSubjectSrSetting, StudentTopicProgress
+    from users_app.services.notifications import send_push_notification
+
+    User = get_user_model()
+    now = timezone.now()
+
+    students = User.objects.filter(
+        role='student',
+        is_active=True,
+        push_subscriptions__is_active=True,
+    ).distinct()
+
+    total_sent = 0
+    for student in students:
+        # Subjects where SR has been explicitly disabled for this student
+        disabled_subjects = set(
+            StudentSubjectSrSetting.objects
+            .filter(student=student, sr_enabled=False)
+            .values_list('subject_id', flat=True)
+        )
+        due_count = (
+            StudentTopicProgress.objects
+            .filter(student=student, finished=True, next_review_at__lte=now)
+            .exclude(topic__subject_id__in=disabled_subjects)
+            .count()
+        )
+
+        if due_count == 0:
+            continue
+
+        body = f'{due_count} konunun tekrar zamanı geldi! Konu Takip\'te hazır bekliyorlar.'
+        sent, _ = send_push_notification(
+            student,
+            title='Konu Tekrar Zamanı 📚',
+            body=body,
+            url='/student/konu-takip/',
+        )
+        total_sent += sent
+
+    return total_sent
+
+
 def send_motivational_notifications():
     """Scheduled daily at 19:00 Istanbul (cron='0 19 * * *' in local time)."""
     import random

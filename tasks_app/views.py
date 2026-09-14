@@ -477,14 +477,13 @@ class StudentGorevListView(View):
 class StudentGorevCompleteView(View):
     def post(self, request, pk: int):
         body = _body(request)
-        quality = body.get("quality")  # "easy" | "medium" | "hard" | None
         student_note = body.get("student_note") or None
         raw_time = body.get("time_spent_dk")
         try:
             time_spent_dk = int(raw_time) if raw_time is not None else None
         except (ValueError, TypeError):
             time_spent_dk = None
-        data = tasks.toggle_complete(request.user, pk, quality, student_note, time_spent_dk)
+        data = tasks.toggle_complete(request.user, pk, student_note, time_spent_dk)
         if not data:
             return JsonResponse({"errors": "Bulunamadı"}, status=404)
         return JsonResponse({"ok": True, "gorev": data})

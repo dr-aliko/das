@@ -86,7 +86,11 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(echo \"Exit: $?\")",
       "Bash(pip show *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8000)",
+      "Bash(wmic process *)",
+      "Bash(powershell *)"
     ]
   }
 }

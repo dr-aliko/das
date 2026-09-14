@@ -42,6 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
     denemeler_v2 = models.BooleanField(default=False)
+    sr_enabled = models.BooleanField(default=True)
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default='auto')
     grade = models.CharField(max_length=50, blank=True, default='')
     alan  = models.CharField(max_length=5, choices=ALAN_CHOICES, blank=True, default='')

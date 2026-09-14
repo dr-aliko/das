@@ -15,7 +15,6 @@ function isoMonday(iso) {
 }
 
 const AKTIVITE_LABELS = { konu_anlatimi: 'Konu Anlatımı', soru_cozumu: 'Soru Çözümü', tekrar: 'Tekrar' };
-const QUALITY_LABELS  = { easy: 'Kolay', medium: 'Orta', hard: 'Zor' };
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
 
@@ -245,7 +244,6 @@ function studentPanel(studentId, studentName) {
     aktiviteLabel: t => AKTIVITE_LABELS[t] ?? t ?? '',
     formatDetay: d => `• ${d.aciklama}${d.sure_bilgisi ? ' (' + d.sure_bilgisi + ')' : ''}`,
     durStr: dk => !dk ? '' : dk >= 60 ? `⏱ ${Math.floor(dk / 60)}s${dk % 60 ? ' ' + dk % 60 + 'dk' : ''}` : `⏱ ${dk}dk`,
-    qualityLabel: q => QUALITY_LABELS[q] ?? '',
 
     loadColorSettings() {
       try {
@@ -286,17 +284,6 @@ function studentPanel(studentId, studentName) {
         });
         if (r.ok) await this.loadWeek();
       } catch (e) { console.error('[submitComplete]', e); }
-    },
-
-    async markQuality(id, quality) {
-      try {
-        const r = await fetch(`/student/tasks/api/complete/${id}`, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quality }),
-        });
-        if (r.ok) await this.loadWeek();
-      } catch (e) { console.error('[markQuality]', e); }
     },
 
     openEditModal(g) {

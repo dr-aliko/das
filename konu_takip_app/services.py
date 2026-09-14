@@ -1,20 +1,59 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
-from .models import KonuTakipTopic, StudentTopicProgress
+from .models import KonuTakipTopic, StudentSubjectSrSetting, StudentTopicProgress
+
+VALID_QUALITIES = ('kolay', 'orta', 'zor')
 
 
-def toggle_progress(student, topic_id, field, value):
+def _compute_review(progress, quality):
+    """Apply SM2-inspired interval. Mutates progress but does NOT save."""
+    rc = progress.review_count  # before incrementing
+
+    if rc == 0:
+        interval = {'kolay': 10, 'orta': 6, 'zor': 3}[quality]
+    elif rc == 1:
+        interval = {'kolay': 21, 'orta': 14, 'zor': 4}[quality]
+    else:
+        if quality == 'kolay':
+            interval = round(progress.current_interval_days * progress.ease_factor)
+            progress.ease_factor = min(2.2, progress.ease_factor + 0.15)
+        elif quality == 'orta':
+            interval = round(progress.current_interval_days * progress.ease_factor * 0.85)
+        else:  # 'zor'
+            interval = max(3, round(progress.current_interval_days * 0.4))
+            progress.ease_factor = max(1.3, progress.ease_factor - 0.20)
+
+    now = timezone.now()
+    progress.current_interval_days = interval
+    progress.next_review_at = now + timedelta(days=interval)
+    progress.last_reviewed_at = now
+    progress.review_count += 1
+
+
+def toggle_progress(student, topic_id, field, value, quality=None):
     """
     Toggle a single progress field (started or finished) for a student.
 
     Invariants enforced:
       - finished=True  → started is also set to True
       - started=False  → finished is also cleared to False
+    When field='finished' and value=True and quality is provided, the SM2 review
+    schedule is computed and stored.
     """
     progress, _ = StudentTopicProgress.objects.get_or_create(
         topic_id=topic_id,
         student=student,
-        defaults={'started': False, 'finished': False},
+        defaults={
+            'started': False,
+            'finished': False,
+            'current_interval_days': 1,
+            'ease_factor': 2.5,
+            'review_count': 0,
+            'next_review_at': None,
+            'last_reviewed_at': None,
+        },
     )
 
     now = timezone.now()
@@ -28,6 +67,7 @@ def toggle_progress(student, topic_id, field, value):
             progress.started = False
             progress.finished = False
             progress.finished_at = None
+            progress.next_review_at = None
     elif field == 'finished':
         if value:
             progress.finished = True
@@ -37,12 +77,110 @@ def toggle_progress(student, topic_id, field, value):
                 progress.started = True
                 if not progress.started_at:
                     progress.started_at = now
+            if quality in VALID_QUALITIES:
+                _compute_review(progress, quality)
         else:
             progress.finished = False
             progress.finished_at = None
+            progress.next_review_at = None  # clear pending review; keep review_count
 
     progress.save()
     return progress
+
+
+def submit_review(student, topic_id, quality):
+    """Submit a quality rating from the 'Tekrar Zamanı Gelenler' section."""
+    if quality not in VALID_QUALITIES:
+        return None
+    progress = StudentTopicProgress.objects.filter(
+        topic_id=topic_id, student=student, finished=True
+    ).first()
+    if not progress:
+        return None
+    _compute_review(progress, quality)
+    progress.save()
+    return progress
+
+
+def get_subject_sr_settings(student):
+    """Return {subject_id: sr_enabled} for all explicitly-stored settings. Absence means True."""
+    if not student:
+        return {}
+    return {
+        row.subject_id: row.sr_enabled
+        for row in StudentSubjectSrSetting.objects.filter(student=student)
+    }
+
+
+def toggle_subject_sr(student, subject_id):
+    """Flip sr_enabled for a (student, subject) pair. Returns the new value."""
+    setting, _ = StudentSubjectSrSetting.objects.get_or_create(
+        student=student,
+        subject_id=subject_id,
+        defaults={'sr_enabled': True},
+    )
+    setting.sr_enabled = not setting.sr_enabled
+    setting.save(update_fields=['sr_enabled'])
+    return setting.sr_enabled
+
+
+def get_all_reviews_json(student):
+    """All topics in an active review cycle sorted soonest-first.
+    Topics whose subject has SR disabled for this student are excluded."""
+    if not student:
+        return []
+    sr_settings = get_subject_sr_settings(student)
+    now = timezone.now()
+    qs = (
+        StudentTopicProgress.objects.filter(
+            student=student,
+            finished=True,
+            review_count__gte=1,
+            next_review_at__isnull=False,
+        )
+        .select_related('topic__subject')
+        .order_by('next_review_at')
+    )
+    result = []
+    for p in qs:
+        subject_id = p.topic.subject_id if p.topic.subject else None
+        if not sr_settings.get(subject_id, True):
+            continue
+        result.append({
+            'topic_id': p.topic_id,
+            'topic_name': p.topic.name,
+            'subject_name': p.topic.subject.name if p.topic.subject else '',
+            'subject_id': subject_id,
+            'next_review_at': p.next_review_at.isoformat(),
+            'is_due': p.next_review_at <= now,
+            'review_count': p.review_count,
+        })
+    return result
+
+
+def get_due_reviews_json(student):
+    """Return serialized list of topics due for review, sorted soonest-first."""
+    now = timezone.now()
+    qs = (
+        StudentTopicProgress.objects.filter(
+            student=student,
+            finished=True,
+            next_review_at__lte=now,
+        )
+        .select_related('topic__subject')
+        .order_by('next_review_at')
+    )
+    result = []
+    for p in qs:
+        result.append({
+            'topic_id': p.topic_id,
+            'topic_name': p.topic.name,
+            'subject_name': p.topic.subject.name if p.topic.subject else '',
+            'next_review_at': p.next_review_at.isoformat(),
+            'is_overdue': p.next_review_at <= now,
+            'review_count': p.review_count,
+        })
+    return result
 
 
 def _gather_leaf_ids(nodes):
@@ -67,6 +205,8 @@ def _build_node(topic, children_by_parent, progress_map, progress_json):
         progress_json[topic.id] = {
             'started': cp.started if cp else False,
             'finished': cp.finished if cp else False,
+            'next_review_at': cp.next_review_at.isoformat() if cp and cp.next_review_at else None,
+            'review_count': cp.review_count if cp else 0,
         }
         return {'type': 'leaf', 'topic': topic}
 

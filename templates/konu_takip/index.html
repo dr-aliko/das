@@ -9,7 +9,7 @@
 <div class="max-w-3xl mx-auto px-3 sm:px-4 pb-28 lg:pb-10 pt-4 space-y-4"
      x-data="konuTakip(__KT__)">
 
-  {# ── Page header ────────────────────────────────────────────────────────── #}
+  {# ── Page header ──────────────────────────────────────────────────── #}
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <h1 class="text-lg font-bold text-[var(--heading)] flex items-center gap-2">
       <svg class="w-5 h-5 text-steel-400" viewBox="0 0 24 24" fill="none"
@@ -19,17 +19,20 @@
       </svg>
       Konu Takip
     </h1>
-    <span class="flex items-center gap-1.5 text-xs text-[var(--muted-2)] tabular-nums"
-          x-show="selectedSubjectId !== null">
-      <svg x-show="loading" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-      <span x-show="!loading" x-text="totalFinished() + '/' + totalTopics() + ' konu tamamlandı'"></span>
-    </span>
+    <div class="flex items-center gap-3 flex-wrap">
+      {# ── Konular tab: progress count ── #}
+      <span class="flex items-center gap-1.5 text-xs text-[var(--muted-2)] tabular-nums"
+            x-show="activeView === 'topics' && selectedSubjectId !== null">
+        <svg x-show="loading" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <span x-show="!loading" x-text="totalFinished() + '/' + totalTopics() + ' konu tamamlandı'"></span>
+      </span>
+    </div>
   </div>
 
-  {# ── Coach: student selector ─────────────────────────────────────────────── #}
+  {# ── Coach: student selector ──────────────────────────────────────── #}
   {% if is_coach_view %}
   <div>
     {% if not students %}
@@ -53,175 +56,369 @@
   </div>
   {% endif %}
 
-  {# ── Empty state: coach with no student selected ─────────────────────────── #}
+  {# ── Empty state: coach with no student ───────────────────────────── #}
   {% if is_coach_view and not selected_student %}
   <div class="text-center py-20 text-[var(--muted)]">
     <p class="text-sm">Bir öğrenci seçin.</p>
   </div>
   {% else %}
 
-  {# ── TYT / AYT segmented control ─────────────────────────────────────────── #}
-  <div x-show="tytSubjects.length > 0 || aytSubjects.length > 0"
-       class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
-    <button @click="selectExamType('TYT')"
-            :class="examType === 'TYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+  {# ── Top-level tab control (compact, content-sized — matches TYT/AYT style) ── #}
+  <div class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
+    <button @click="setView('topics')"
+            :class="activeView === 'topics' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
             class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
-      TYT
+      Konular
     </button>
-    <button @click="selectExamType('AYT')"
-            :class="examType === 'AYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
-            class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
-      AYT
+    <button @click="setView('schedule')"
+            :class="activeView === 'schedule' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+            class="flex items-center gap-2 px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+      Tekrar Takvimi
+      <span x-show="dueCount > 0" x-cloak
+            :class="activeView === 'schedule' ? 'bg-white/30 text-white' : 'bg-red-500 text-white'"
+            class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full
+                   text-[10px] font-bold px-1 leading-none"
+            x-text="dueCount"></span>
     </button>
   </div>
 
-  {# ── Subject pills ────────────────────────────────────────────────────────── #}
-  <div x-show="subjects.length > 0" class="flex flex-wrap gap-2">
-    <template x-for="subj in subjects" :key="subj.id">
-      <button @click="selectSubject(subj.id)"
-              :class="selectedSubjectId === subj.id
-                ? 'bg-steel-500 text-white'
-                : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]'"
-              class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
-              x-text="subj.name">
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# KONULAR TAB                                                            #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="activeView === 'topics'" class="space-y-4">
+
+    {# TYT / AYT segmented control #}
+    <div x-show="tytSubjects.length > 0 || aytSubjects.length > 0"
+         class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
+      <button @click="selectExamType('TYT')"
+              :class="examType === 'TYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+              class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+        TYT
       </button>
-    </template>
-  </div>
-
-  {# ── Empty state: no subjects for this exam type ──────────────────────────── #}
-  <div x-show="!loading && subjects.length === 0" class="text-center py-20 text-[var(--muted)]">
-    <svg class="w-10 h-10 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-    </svg>
-    <p class="text-sm">Bu sınav türü için henüz konu eklenmemiş.</p>
-  </div>
-
-  {# ── Topic area (only shown when a subject exists) ────────────────────────── #}
-  <div x-show="subjects.length > 0"
-       x-ref="topicBox"
-       :class="loading ? 'opacity-50 pointer-events-none select-none' : 'opacity-100'"
-       class="transition-opacity duration-200 space-y-4">
-
-    {# Legend #}
-    <div x-show="flatTopics.length > 0"
-         class="flex items-center gap-4 text-xs text-[var(--muted-2)] px-0.5">
-      <span class="flex items-center gap-1.5">
-        <span class="w-6 h-6 rounded-lg border-2 border-amber-400/60 bg-amber-400/10
-                     inline-flex items-center justify-center text-amber-400 text-[10px] font-bold">B</span>
-        Başla
-      </span>
-      <span class="flex items-center gap-1.5">
-        <span class="w-6 h-6 rounded-lg border-2 border-emerald-500/60 bg-emerald-500/10
-                     inline-flex items-center justify-center text-emerald-400">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
-               stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-            <path d="M5 13l4 4L19 7"/>
-          </svg>
-        </span>
-        Bitti
-      </span>
+      <button @click="selectExamType('AYT')"
+              :class="examType === 'AYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+              class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+        AYT
+      </button>
     </div>
 
-    {# Load-error state (bad/missing student_id returned 4xx from API) #}
-    <div x-show="loadError !== null"
-         class="flex flex-col items-center gap-3 py-16 text-center">
-      <svg class="w-8 h-8 text-[var(--muted-2)] opacity-50" fill="none" viewBox="0 0 24 24"
+    {# Subject pills #}
+    <div x-show="subjects.length > 0" class="flex flex-wrap gap-2">
+      <template x-for="subj in subjects" :key="subj.id">
+        <button @click="selectSubject(subj.id)"
+                :class="selectedSubjectId === subj.id
+                  ? 'bg-steel-500 text-white'
+                  : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]'"
+                class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                x-text="subj.name">
+        </button>
+      </template>
+    </div>
+
+    {# Empty state: no subjects #}
+    <div x-show="!loading && subjects.length === 0" class="text-center py-20 text-[var(--muted)]">
+      <svg class="w-10 h-10 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
       </svg>
-      <p class="text-sm text-[var(--muted)]">Veriler yüklenemedi. Lütfen öğrenciyi yeniden seçin.</p>
+      <p class="text-sm">Bu sınav türü için henüz konu eklenmemiş.</p>
     </div>
 
-    {# Empty topics state #}
-    <div x-show="!loading && loadError === null && flatTopics.length === 0 && selectedSubjectId !== null"
-         class="text-center py-20 text-[var(--muted)]">
-      <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
-    </div>
+    {# Topic area #}
+    <div x-show="subjects.length > 0"
+         x-ref="topicBox"
+         :class="loading ? 'opacity-50 pointer-events-none select-none' : 'opacity-100'"
+         class="transition-opacity duration-200 space-y-4">
 
-    {# ── Topic rows ──────────────────────────────────────────────────────────── #}
-    <div x-show="flatTopics.length > 0 && loadError === null"
-         class="rounded-2xl border border-[var(--border)] overflow-hidden
-                bg-[var(--surface-1)] divide-y divide-[var(--border)]">
-
-      <template x-for="row in flatTopics" :key="row.id">
-        <div :class="rowClass(row)" class="flex items-center justify-between">
-
-          {# Header content (header_1 / header_2) #}
-          <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
-                class="text-sm flex items-center gap-1.5 flex-1 min-w-0">
-            <span x-show="row.row_type === 'header_2'"
-                  class="text-[var(--muted-2)] text-xs shrink-0">▸</span>
-            <span x-text="row.name"
-                  :class="row.row_type === 'header_1'
-                    ? 'font-bold text-[var(--heading)]'
-                    : 'font-semibold text-[var(--body)]'"></span>
+      {# Legend + per-subject SR toggle #}
+      <div x-show="flatTopics.length > 0"
+           class="flex items-center justify-between px-0.5">
+        <div class="flex items-center gap-4 text-xs text-[var(--muted-2)]">
+          <span class="flex items-center gap-1.5">
+            <span class="w-6 h-6 rounded-lg border-2 border-amber-400/60 bg-amber-400/10
+                         inline-flex items-center justify-center text-amber-400 text-[10px] font-bold">B</span>
+            Başla
           </span>
-          <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
-                class="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full shrink-0
-                       bg-[var(--surface-3)] text-[var(--muted)]"
-                x-text="childFinishedCount(row.child_ids || []) + '/' + (row.child_count || 0) + ' tamamlandı'">
-          </span>
-
-          {# Leaf content (leaf_1 / leaf_2 / root_leaf) #}
-          <span x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
-                class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
-            <span x-show="row.row_type !== 'root_leaf'"
-                  class="text-[var(--muted-2)] text-xs mr-1.5">└</span><span x-text="row.name"></span>
-          </span>
-          <div x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
-               class="flex items-center gap-1.5 shrink-0">
-            {# Started button #}
-            <button @click="toggle(row.id, 'started')"
-                    :disabled="isPending(row.id)"
-                    :class="isStarted(row.id)
-                      ? 'bg-amber-400/15 border-amber-400 text-amber-400'
-                      : 'border-[var(--border)] text-[var(--muted-2)] hover:border-amber-400/50 hover:text-amber-400/70'"
-                    class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
-                           transition-all text-[11px] font-bold disabled:opacity-40 select-none"
-                    title="Başla">
-              <span x-show="!isPending(row.id)">B</span>
-              <svg x-show="isPending(row.id)" x-cloak
-                   class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-            </button>
-            {# Finished button #}
-            <button @click="toggle(row.id, 'finished')"
-                    :disabled="isPending(row.id)"
-                    :class="isFinished(row.id)
-                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400'
-                      : 'border-[var(--border)] text-[var(--muted-2)] hover:border-emerald-500/50 hover:text-emerald-400/70'"
-                    class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
-                           transition-all disabled:opacity-40 select-none"
-                    title="Bitti">
-              <svg x-show="!isPending(row.id)"
-                   class="w-4 h-4" fill="none" stroke="currentColor"
-                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <span class="flex items-center gap-1.5">
+            <span class="w-6 h-6 rounded-lg border-2 border-emerald-500/60 bg-emerald-500/10
+                         inline-flex items-center justify-center text-emerald-400">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <path d="M5 13l4 4L19 7"/>
               </svg>
-              <svg x-show="isPending(row.id)" x-cloak
-                   class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-            </button>
-          </div>
-
+            </span>
+            Bitti
+          </span>
         </div>
-      </template>
 
+        {# Per-subject SR toggle #}
+        <button @click="toggleSr()"
+                title="Bu ders için aralıklı tekrar sistemini aç/kapat"
+                class="flex items-center gap-1.5 text-xs font-medium select-none"
+                :class="srEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--muted-2)]'">
+          <span x-text="srEnabled ? 'Tekrar Açık' : 'Tekrar Kapalı'"></span>
+          <span class="relative inline-flex h-4 w-7 shrink-0 rounded-full"
+                :style="{ backgroundColor: srEnabled ? '#10b981' : 'var(--border)', transition: 'background-color 200ms ease-in-out' }">
+            <span class="absolute left-0 h-3 w-3 rounded-full bg-white shadow-sm"
+                  style="top: 2px;"
+                  :style="{ transform: srEnabled ? 'translateX(0.875rem)' : 'translateX(0.125rem)', transition: 'transform 200ms ease-in-out' }">
+            </span>
+          </span>
+        </button>
+      </div>
+
+      {# Load-error state #}
+      <div x-show="loadError !== null"
+           class="flex flex-col items-center gap-3 py-16 text-center">
+        <svg class="w-8 h-8 text-[var(--muted-2)] opacity-50" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p class="text-sm text-[var(--muted)]">Veriler yüklenemedi. Lütfen öğrenciyi yeniden seçin.</p>
+      </div>
+
+      {# Empty topics state #}
+      <div x-show="!loading && loadError === null && flatTopics.length === 0 && selectedSubjectId !== null"
+           class="text-center py-20 text-[var(--muted)]">
+        <p class="text-sm">Bu ders için henüz konu eklenmemiş.</p>
+      </div>
+
+      {# Topic rows #}
+      <div x-show="flatTopics.length > 0 && loadError === null"
+           class="rounded-2xl border border-[var(--border)] overflow-hidden
+                  bg-[var(--surface-1)] divide-y divide-[var(--border)]">
+
+        <template x-for="row in flatTopics" :key="row.id">
+          <div :class="rowClass(row)" class="flex items-center justify-between">
+
+            {# Header content #}
+            <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
+                  class="text-sm flex items-center gap-1.5 flex-1 min-w-0">
+              <span x-show="row.row_type === 'header_2'"
+                    class="text-[var(--muted-2)] text-xs shrink-0">▸</span>
+              <span x-text="row.name"
+                    :class="row.row_type === 'header_1'
+                      ? 'font-bold text-[var(--heading)]'
+                      : 'font-semibold text-[var(--body)]'"></span>
+            </span>
+            <span x-show="row.row_type === 'header_1' || row.row_type === 'header_2'"
+                  class="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full shrink-0
+                         bg-[var(--surface-3)] text-[var(--muted)]"
+                  x-text="childFinishedCount(row.child_ids || []) + '/' + (row.child_count || 0) + ' tamamlandı'">
+            </span>
+
+            {# Leaf content #}
+            <span x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
+                  class="text-sm text-[var(--body)] flex-1 min-w-0 pr-3 leading-snug">
+              <span x-show="row.row_type !== 'root_leaf'"
+                    class="text-[var(--muted-2)] text-xs mr-1.5">└</span><span x-text="row.name"></span>
+            </span>
+            <div x-show="row.row_type !== 'header_1' && row.row_type !== 'header_2'"
+                 class="flex items-center gap-1.5 shrink-0">
+              <button @click="toggle(row.id, 'started')"
+                      :disabled="isPending(row.id)"
+                      :class="isStarted(row.id)
+                        ? 'bg-amber-400/15 border-amber-400 text-amber-400'
+                        : 'border-[var(--border)] text-[var(--muted-2)] hover:border-amber-400/50 hover:text-amber-400/70'"
+                      class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+                             transition-all text-[11px] font-bold disabled:opacity-40 select-none"
+                      title="Başla">
+                <span x-show="!isPending(row.id)">B</span>
+                <svg x-show="isPending(row.id)" x-cloak
+                     class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+              <button @click="toggle(row.id, 'finished')"
+                      :disabled="isPending(row.id)"
+                      :class="isFinished(row.id)
+                        ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400'
+                        : 'border-[var(--border)] text-[var(--muted-2)] hover:border-emerald-500/50 hover:text-emerald-400/70'"
+                      class="w-9 h-9 rounded-xl border-2 flex items-center justify-center
+                             transition-all disabled:opacity-40 select-none"
+                      title="Bitti">
+                <svg x-show="!isPending(row.id)"
+                     class="w-4 h-4" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7"/>
+                </svg>
+                <svg x-show="isPending(row.id)" x-cloak
+                     class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>{# end konular tab #}
+
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# TEKRAR TAKVİMİ TAB                                                     #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="activeView === 'schedule'" x-cloak class="space-y-4">
+
+      {# TYT / AYT filter for schedule #}
+      <div x-show="allReviews.length > 0"
+           class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
+        <button @click="selectScheduleExamType('TYT')"
+                :class="scheduleExamType === 'TYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+          TYT
+        </button>
+        <button @click="selectScheduleExamType('AYT')"
+                :class="scheduleExamType === 'AYT' ? 'bg-steel-500 text-white' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors">
+          AYT
+        </button>
+      </div>
+
+      {# Subject pills: Tümü + individual subjects #}
+      <div x-show="scheduleSubjects.length > 0" class="flex flex-wrap gap-2">
+        <button @click="selectScheduleSubject(null)"
+                :class="scheduleSubjectFilter === null
+                  ? 'bg-steel-500 text-white'
+                  : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]'"
+                class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">
+          Tümü
+        </button>
+        <template x-for="subj in scheduleSubjects" :key="subj">
+          <button @click="selectScheduleSubject(subj)"
+                  :class="scheduleSubjectFilter === subj
+                    ? 'bg-steel-500 text-white'
+                    : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]'"
+                  class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+                  x-text="subj">
+          </button>
+        </template>
+      </div>
+
+      {# Empty state: no reviews at all #}
+      <div x-show="allReviews.length === 0"
+           class="flex flex-col items-center gap-3 py-20 text-center text-[var(--muted)]">
+        <svg class="w-10 h-10 opacity-30" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <div>
+          <p class="text-sm font-medium mb-1">Aktif tekrar döngüsü yok</p>
+          <p class="text-xs text-[var(--muted-2)]">Konuları "Bitti" işaretleyip zorluk seçince<br>tekrar takvimi burada görünür.</p>
+        </div>
+      </div>
+
+      {# Empty state: filter returns nothing #}
+      <div x-show="allReviews.length > 0 && filteredReviews.length === 0"
+           class="text-center py-12 text-sm text-[var(--muted)]">
+        Bu filtreleme için aktif tekrar yok.
+      </div>
+
+      {# Schedule list #}
+      <div x-show="filteredReviews.length > 0"
+           class="rounded-2xl border border-[var(--border)] overflow-hidden
+                  bg-[var(--surface-1)] divide-y divide-[var(--border)]">
+        <template x-for="r in filteredReviews" :key="r.topic_id">
+          <div class="px-4 py-3"
+               :class="isDue(r.next_review_at) ? 'bg-amber-50/60 dark:bg-amber-900/10' : ''">
+
+            {# Topic + date row #}
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-semibold text-[var(--heading)] leading-snug"
+                     x-text="r.topic_name"></div>
+                <div class="text-xs text-[var(--muted)] mt-0.5" x-text="r.subject_name"></div>
+              </div>
+              <span class="text-xs font-bold whitespace-nowrap shrink-0 mt-0.5"
+                    :class="isDue(r.next_review_at)
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-[var(--muted)]'"
+                    x-text="formatDate(r.next_review_at)">
+              </span>
+            </div>
+
+            {# Rating buttons — due items only #}
+            <div x-show="isDue(r.next_review_at)" class="mt-2.5 flex gap-1.5 justify-end">
+              <button @click="submitReview(r.topic_id, 'kolay')"
+                      class="px-3 py-1.5 text-xs font-bold rounded-lg border transition active:scale-95
+                             bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                             dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400">
+                Kolay
+              </button>
+              <button @click="submitReview(r.topic_id, 'orta')"
+                      class="px-3 py-1.5 text-xs font-bold rounded-lg border transition active:scale-95
+                             bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                             dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
+                Orta
+              </button>
+              <button @click="submitReview(r.topic_id, 'zor')"
+                      class="px-3 py-1.5 text-xs font-bold rounded-lg border transition active:scale-95
+                             bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                             dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
+                Zor
+              </button>
+            </div>
+
+          </div>
+        </template>
+      </div>
+
+  </div>{# end schedule tab #}
+
+  {% endif %}{# end is_coach_view and not selected_student #}
+
+  {# ── Bitti rating modal ───────────────────────────────────────────── #}
+  <div x-show="ratingModal.show" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4"
+       @click.self="ratingModal = { show: false, topicId: null }">
+    <div class="w-full max-w-sm rounded-2xl shadow-2xl p-6 bg-[var(--surface-1)]"
+         @click.stop
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+      <h2 class="text-base font-bold text-[var(--heading)] mb-1">Bu konuyu nasıl buldun?</h2>
+      <p class="text-sm text-[var(--muted)] mb-4">Sonraki tekrar aralığını belirlemek için bir zorluk seç.</p>
+      <div class="flex gap-2">
+        <button @click="submitBittiRating('kolay')"
+                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                       bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                       dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400">
+          Kolay
+        </button>
+        <button @click="submitBittiRating('orta')"
+                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                       bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                       dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
+          Orta
+        </button>
+        <button @click="submitBittiRating('zor')"
+                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                       bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                       dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
+          Zor
+        </button>
+      </div>
+      <button @click="ratingModal = { show: false, topicId: null }"
+              class="mt-3 w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--body)] transition">
+        İptal
+      </button>
     </div>
   </div>
 
-  {% endif %}
 </div>
 
 <script>
 function konuTakip(cfg) {
   return {
+    // ── Core state ───────────────────────────────────────────────────────
     examType:          cfg.examType,
     tytSubjects:       cfg.tytSubjects,
     aytSubjects:       cfg.aytSubjects,
@@ -234,9 +431,64 @@ function konuTakip(cfg) {
     studentId:         cfg.studentId,
     toggleUrl:         cfg.toggleUrl,
     apiUrl:            cfg.apiUrl,
+    reviewUrl:         cfg.reviewUrl,
+    allReviewsApiUrl:  cfg.allReviewsApiUrl,
+    toggleSrUrl:       cfg.toggleSrUrl,
+    allReviews:        cfg.allReviews ?? [],
+    subjectSrSettings: cfg.subjectSrSettings ?? {},
+    activeView:        'topics',
+    ratingModal:       { show: false, topicId: null },
 
+    // ── Schedule tab filter state ────────────────────────────────────────
+    scheduleExamType:    'TYT',
+    scheduleSubjectFilter: null,  // null = Tümü
+
+    init() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'schedule') this.activeView = 'schedule';
+      if (params.get('s_type') === 'AYT') this.scheduleExamType = 'AYT';
+      const sSubj = params.get('s_subj');
+      if (sSubj) this.scheduleSubjectFilter = sSubj;
+      this.loadAllReviews();
+    },
+
+    // ── Computed ─────────────────────────────────────────────────────────
     get subjects() { return this.examType === 'TYT' ? this.tytSubjects : this.aytSubjects; },
 
+    get srEnabled() {
+      // allReviews is already filtered server-side; this drives the per-subject toggle UI
+      return this.subjectSrSettings[this.selectedSubjectId] ?? true;
+    },
+
+    get dueCount() {
+      // allReviews already excludes SR-disabled subjects (server-filtered)
+      const now = new Date();
+      return this.allReviews.filter(r => new Date(r.next_review_at) <= now).length;
+    },
+
+    get scheduleSubjects() {
+      const seen = new Set();
+      const names = [];
+      const prefix = this.scheduleExamType + ' ';
+      for (const r of this.allReviews) {
+        if (r.subject_name.startsWith(prefix) && !seen.has(r.subject_name)) {
+          seen.add(r.subject_name);
+          names.push(r.subject_name);
+        }
+      }
+      return names.sort();
+    },
+
+    get filteredReviews() {
+      const prefix = this.scheduleExamType + ' ';
+      return this.allReviews.filter(r => {
+        if (!r.subject_name.startsWith(prefix)) return false;
+        if (this.scheduleSubjectFilter !== null && r.subject_name !== this.scheduleSubjectFilter) return false;
+        return true;
+      });
+    },
+
+    // ── Topic checklist helpers ──────────────────────────────────────────
     isStarted(id)  { return !!(this.progress[id] && this.progress[id].started); },
     isFinished(id) { return !!(this.progress[id] && this.progress[id].finished); },
     isPending(id)  { return !!this.pending[id]; },
@@ -248,6 +500,69 @@ function konuTakip(cfg) {
       return ids.filter(id => this.progress[id] && this.progress[id].finished).length;
     },
 
+    rowClass(row) {
+      const m = {
+        header_1:  'px-4 py-3 bg-[var(--surface-2)]',
+        header_2:  'px-4 pl-8 py-2.5 bg-[var(--surface-2)]',
+        leaf_1:    'px-4 pl-7 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+        leaf_2:    'px-4 pl-14 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+        root_leaf: 'px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
+      };
+      return m[row.row_type] ?? m.root_leaf;
+    },
+
+    // ── Navigation ───────────────────────────────────────────────────────
+    setView(view) {
+      this.activeView = view;
+      const url = new URL(window.location);
+      url.searchParams.set('view', view);
+      history.pushState({}, '', url);
+    },
+
+    selectScheduleExamType(type) {
+      if (this.scheduleExamType === type) return;
+      this.scheduleExamType = type;
+      this.scheduleSubjectFilter = null;
+      this._pushScheduleUrl();
+    },
+
+    selectScheduleSubject(name) {
+      this.scheduleSubjectFilter = name;
+      this._pushScheduleUrl();
+    },
+
+    _pushScheduleUrl() {
+      const url = new URL(window.location);
+      url.searchParams.set('view', 'schedule');
+      url.searchParams.set('s_type', this.scheduleExamType);
+      if (this.scheduleSubjectFilter) url.searchParams.set('s_subj', this.scheduleSubjectFilter);
+      else url.searchParams.delete('s_subj');
+      history.pushState({}, '', url);
+    },
+
+    // ── Date helpers ─────────────────────────────────────────────────────
+    isDue(isoStr) {
+      return new Date(isoStr) <= new Date();
+    },
+
+    formatDate(isoStr) {
+      const d = new Date(isoStr);
+      const now = new Date();
+      const diffMs = d.getTime() - now.getTime();
+      if (diffMs <= 0) {
+        const daysLate = Math.floor(-diffMs / 86400000);
+        return daysLate === 0 ? 'Bugün' : `${daysLate} gün gecikmiş`;
+      }
+      const diffDays = Math.ceil(diffMs / 86400000);
+      if (diffDays === 1) return 'Yarın';
+      if (diffDays <= 6) return `${diffDays} gün sonra`;
+      const opts = d.getFullYear() !== now.getFullYear()
+        ? { day: 'numeric', month: 'long', year: 'numeric' }
+        : { day: 'numeric', month: 'long' };
+      return d.toLocaleDateString('tr-TR', opts);
+    },
+
+    // ── Topic loading ─────────────────────────────────────────────────────
     async selectExamType(type) {
       if (this.loading || this.examType === type) return;
       this.examType = type;
@@ -264,8 +579,6 @@ function konuTakip(cfg) {
     },
 
     async loadTopics() {
-      // Lock the container's current height so it can't collapse during the fetch.
-      // Old topic rows stay visible at reduced opacity (see :class on topicBox).
       const box = this.$refs.topicBox;
       if (box && box.offsetHeight) box.style.minHeight = box.offsetHeight + 'px';
 
@@ -284,14 +597,26 @@ function konuTakip(cfg) {
         this.flatTopics = data.flat_topics;
         this.progress   = data.progress;
         if (data.selected_subject_id) this.selectedSubjectId = data.selected_subject_id;
+        if ('sr_enabled' in data) this.subjectSrSettings[data.selected_subject_id] = data.sr_enabled;
       } catch (e) {
         this.loadError = 'network';
         console.error('[konuTakip.loadTopics]', e);
       } finally {
         this.loading = false;
-        // Release height lock after Alpine has painted the new rows.
         this.$nextTick(() => { if (box) box.style.minHeight = ''; });
       }
+    },
+
+    async loadAllReviews() {
+      try {
+        const p = new URLSearchParams();
+        if (this.studentId !== null) p.set('student_id', this.studentId);
+        const resp = await fetch(`${this.allReviewsApiUrl}?${p}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          this.allReviews = data.reviews;
+        }
+      } catch (e) { console.error('[konuTakip.loadAllReviews]', e); }
     },
 
     pushUrl() {
@@ -299,32 +624,41 @@ function konuTakip(cfg) {
       url.searchParams.set('exam_type', this.examType);
       if (this.selectedSubjectId) url.searchParams.set('subject', this.selectedSubjectId);
       else url.searchParams.delete('subject');
-      // Always write student so the URL survives a page refresh in coach view.
       if (this.studentId !== null) url.searchParams.set('student', this.studentId);
       history.pushState({}, '', url);
     },
 
-    rowClass(row) {
-      const m = {
-        header_1:  'px-4 py-3 bg-[var(--surface-2)]',
-        header_2:  'px-4 pl-8 py-2.5 bg-[var(--surface-2)]',
-        leaf_1:    'px-4 pl-7 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
-        leaf_2:    'px-4 pl-14 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
-        root_leaf: 'px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors group',
-      };
-      return m[row.row_type] ?? m.root_leaf;
+    // ── CSRF ─────────────────────────────────────────────────────────────
+    _csrf() {
+      return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
     },
 
+    // ── Toggle actions ────────────────────────────────────────────────────
     async toggle(topicId, field) {
+      const newVal = !(this.progress[topicId]?.[field] ?? false);
+      // Only show rating modal when SR is enabled and finishing a topic
+      if (field === 'finished' && newVal && this.srEnabled) {
+        this.ratingModal = { show: true, topicId };
+        return;
+      }
+      await this._doToggle(topicId, field, newVal, null);
+    },
+
+    async submitBittiRating(quality) {
+      const topicId = this.ratingModal.topicId;
+      this.ratingModal = { show: false, topicId: null };
+      await this._doToggle(topicId, 'finished', true, quality);
+      await this.loadAllReviews();
+    },
+
+    async _doToggle(topicId, field, newVal, quality) {
       if (this.pending[topicId]) return;
       this.pending[topicId] = true;
 
       if (!this.progress[topicId]) {
-        this.progress[topicId] = { started: false, finished: false };
+        this.progress[topicId] = { started: false, finished: false, next_review_at: null, review_count: 0 };
       }
-      const prev   = { started: this.progress[topicId].started,
-                       finished: this.progress[topicId].finished };
-      const newVal = !prev[field];
+      const prev = { ...this.progress[topicId] };
 
       this.progress[topicId][field] = newVal;
       if (field === 'finished' && newVal)  this.progress[topicId].started  = true;
@@ -333,18 +667,21 @@ function konuTakip(cfg) {
       try {
         const body = { topic_id: topicId, field, value: newVal };
         if (this.studentId !== null) body.student_id = this.studentId;
+        if (quality) body.quality = quality;
 
         const resp = await fetch(this.toggleUrl, {
           method:  'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
-          },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
           body: JSON.stringify(body),
         });
         const data = await resp.json();
         if (data.ok) {
-          this.progress[topicId] = { started: data.started, finished: data.finished };
+          this.progress[topicId] = {
+            started:        data.started,
+            finished:       data.finished,
+            next_review_at: data.next_review_at ?? null,
+            review_count:   data.review_count ?? 0,
+          };
         } else {
           this.progress[topicId] = { ...prev };
         }
@@ -352,6 +689,44 @@ function konuTakip(cfg) {
         this.progress[topicId] = { ...prev };
       } finally {
         delete this.pending[topicId];
+      }
+    },
+
+    async submitReview(topicId, quality) {
+      const prev = [...this.allReviews];
+      this.allReviews = this.allReviews.filter(r => r.topic_id !== topicId);
+      try {
+        const body = { topic_id: topicId, quality };
+        if (this.studentId !== null) body.student_id = this.studentId;
+        const resp = await fetch(this.reviewUrl, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+          body: JSON.stringify(body),
+        });
+        if (resp.ok) {
+          await this.loadAllReviews();
+        } else {
+          this.allReviews = prev;
+        }
+      } catch (e) {
+        console.error('[konuTakip.submitReview]', e);
+        this.allReviews = prev;
+      }
+    },
+
+    async toggleSr() {
+      if (this.selectedSubjectId === null) return;
+      const body = { subject_id: this.selectedSubjectId };
+      if (this.studentId !== null) body.student_id = this.studentId;
+      const resp = await fetch(this.toggleSrUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+        body: JSON.stringify(body),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        this.subjectSrSettings[data.subject_id] = data.sr_enabled;
+        await this.loadAllReviews();
       }
     },
   };

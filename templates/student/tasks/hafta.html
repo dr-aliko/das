@@ -370,14 +370,6 @@
                           : {background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
                         x-text="aktiviteLabel(g.aktivite_tipi)"></span>
                   <span x-show="g.ozel_sure_dk" class="text-xs font-medium text-gray-500" x-text="durStr(g.ozel_sure_dk)"></span>
-                  <span x-show="g.tekrar_quality"
-                        class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                        :class="{
-                          'bg-green-100 text-green-700':  g.tekrar_quality === 'easy',
-                          'bg-yellow-100 text-yellow-700': g.tekrar_quality === 'medium',
-                          'bg-red-100 text-red-700':      g.tekrar_quality === 'hard',
-                        }"
-                        x-text="qualityLabel(g.tekrar_quality)"></span>
                 </div>
 
               </div>
@@ -407,13 +399,6 @@
                 <div x-show="g.is_completed && (g.time_spent_dk || g.student_note)" class="text-xs text-gray-400 space-y-0.5">
                   <div x-show="g.time_spent_dk" x-text="'⏱ ' + fmtDk(g.time_spent_dk)"></div>
                   <div x-show="g.student_note" class="italic truncate" x-text="'📝 ' + g.student_note"></div>
-                </div>
-
-                {# Tekrar quality — only when not yet rated #}
-                <div x-show="g.aktivite_tipi === 'tekrar' && !g.tekrar_quality" class="flex gap-1">
-                  <button @click="markQuality(g.id, 'easy')"  class="flex-1 text-xs font-semibold py-1 bg-green-50  border border-green-200  text-green-600  rounded-lg hover:bg-green-100  transition">Kolay</button>
-                  <button @click="markQuality(g.id, 'medium')" class="flex-1 text-xs font-semibold py-1 bg-yellow-50 border border-yellow-200 text-yellow-600 rounded-lg hover:bg-yellow-100 transition">Orta</button>
-                  <button @click="markQuality(g.id, 'hard')"  class="flex-1 text-xs font-semibold py-1 bg-red-50    border border-red-200    text-red-500    rounded-lg hover:bg-red-100    transition">Zor</button>
                 </div>
 
                 {# Edit + reorder + delete — when student has edit rights and task is editable copy #}
@@ -473,9 +458,6 @@
                               :style="g.is_completed ? 'background:#e5e7eb;color:#6b7280' : {background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
                               x-text="aktiviteLabel(g.aktivite_tipi)"></span>
                         <span x-show="g.ozel_sure_dk" class="text-xs font-medium text-gray-500" x-text="durStr(g.ozel_sure_dk)"></span>
-                        <span x-show="g.tekrar_quality" class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                              :class="{'bg-green-100 text-green-700': g.tekrar_quality==='easy','bg-yellow-100 text-yellow-700': g.tekrar_quality==='medium','bg-red-100 text-red-700': g.tekrar_quality==='hard'}"
-                              x-text="qualityLabel(g.tekrar_quality)"></span>
                       </div>
                     </div>
                     <button @click="sheetOpen = false"
@@ -504,11 +486,6 @@
                             :class="g.is_completed ? 'bg-white border-gray-200 text-gray-500' : 'bg-white border-green-300 text-green-600 hover:bg-green-50'"
                             x-text="g.is_completed ? 'Geri Al' : 'Tamamlandı ✓'">
                     </button>
-                    <div x-show="g.aktivite_tipi === 'tekrar' && !g.tekrar_quality" class="flex gap-2">
-                      <button @click="markQuality(g.id, 'easy')"  class="flex-1 text-sm font-semibold py-2.5 bg-green-50  border border-green-200  text-green-600  rounded-xl">Kolay</button>
-                      <button @click="markQuality(g.id, 'medium')" class="flex-1 text-sm font-semibold py-2.5 bg-yellow-50 border border-yellow-200 text-yellow-600 rounded-xl">Orta</button>
-                      <button @click="markQuality(g.id, 'hard')"  class="flex-1 text-sm font-semibold py-2.5 bg-red-50    border border-red-200    text-red-500    rounded-xl">Zor</button>
-                    </div>
                     <template x-if="g.student_can_edit">
                       <div class="flex gap-2">
                         <button @click="openEditModal(g); sheetOpen = false"
@@ -829,25 +806,6 @@ function studentMobilePanel(studentId) {
     exportUrl(ext){ return `/student/tasks/export/${ext}?hafta=${encodeURIComponent(this.weekStart)}`; },
     _exportDays(){ return this.days.map(d=>({label:d.label,tarih:d.iso,gorevler:d.tasks.map(t=>t.raw),isWeekend:d.isWeekend})); },
     exportHTML(){ _downloadWeeklyHTML_s(this._exportDays(), DEFAULT_COLORS, '', this.weekLabel, `hafta_${this.weekStart}.html`); },
-    async markQuality(taskId,quality){
-      const task=this._findTask(taskId);
-      if(!task)return;
-      /* Optimistic: mark done + set quality */
-      task.done=true;
-      task.raw={...task.raw,tekrar_quality:quality};
-      if(this.detailTask?.id===taskId){
-        this.detailTask.done=true;
-        this.detailTask.raw={...this.detailTask.raw,tekrar_quality:quality};
-      }
-      try{
-        await fetch(`/student/tasks/api/complete/${taskId}`,{
-          method:'POST',headers:{'X-CSRFToken':CSRF(),'Content-Type':'application/json'},
-          body:JSON.stringify({quality}),
-        });
-        /* Reload so the week strip dots and day counts stay accurate */
-        await this.loadWeek();
-      }catch{ /* leave optimistic state — user will see stale quality on reload */ }
-    },
     openAdd(){
       this.editingTask=null;
       const dayIso=this.days[this.activeDay-1]?.iso??this.weekStart;

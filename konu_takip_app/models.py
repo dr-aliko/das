@@ -46,6 +46,12 @@ class StudentTopicProgress(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished = models.BooleanField(default=False)
     finished_at = models.DateTimeField(null=True, blank=True)
+    # Spaced-repetition review state (SM2-inspired)
+    next_review_at        = models.DateTimeField(null=True, blank=True)
+    last_reviewed_at      = models.DateTimeField(null=True, blank=True)
+    current_interval_days = models.PositiveIntegerField(default=1)
+    ease_factor           = models.FloatField(default=2.5)
+    review_count          = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = 'Öğrenci Konu İlerlemesi'
@@ -54,3 +60,20 @@ class StudentTopicProgress(models.Model):
 
     def __str__(self):
         return f'{self.student} — {self.topic.name}'
+
+
+class StudentSubjectSrSetting(models.Model):
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subject_sr_settings',
+    )
+    subject = models.ForeignKey(
+        'exams_app.Subject',
+        on_delete=models.CASCADE,
+        related_name='student_sr_settings',
+    )
+    sr_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [('student', 'subject')]

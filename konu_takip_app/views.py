@@ -10,7 +10,11 @@ from users_app.decorators import coach_can_view_student, coach_required, student
 from users_app.models import User
 
 from .models import KonuTakipTopic
-from .services import build_flat_topics, build_topic_list, toggle_progress
+from .services import (
+    build_flat_topics, build_topic_list,
+    get_all_reviews_json, get_due_reviews_json, get_subject_sr_settings,
+    submit_review, toggle_progress, toggle_subject_sr,
+)
 
 
 def _serialize_subjects(subjects):
@@ -58,6 +62,16 @@ def _resolve_subject(subjects, subject_id_str):
     return subjects[0] if subjects else None
 
 
+def _progress_response(progress):
+    return {
+        'ok': True,
+        'started': progress.started,
+        'finished': progress.finished,
+        'next_review_at': progress.next_review_at.isoformat() if progress.next_review_at else None,
+        'review_count': progress.review_count,
+    }
+
+
 # ── Coach views ───────────────────────────────────────────────────────────────
 
 @method_decorator(coach_required, name='dispatch')
@@ -88,6 +102,8 @@ class CoachKonuTakipView(View):
             selected_subject, selected_student
         )
 
+        all_reviews = get_all_reviews_json(selected_student) if selected_student else []
+        sr_settings = get_subject_sr_settings(selected_student) if selected_student else {}
         qs_student = f'student={selected_student.id}&' if selected_student else ''
         return render(request, 'konu_takip/index.html', {
             'students': coached_students,
@@ -103,7 +119,12 @@ class CoachKonuTakipView(View):
                 'progress': progress_json,
                 'toggleUrl': '/coach/konu-takip/toggle/',
                 'apiUrl': '/coach/konu-takip/api/',
+                'reviewUrl': '/coach/konu-takip/review/',
+                'allReviewsApiUrl': '/coach/konu-takip/schedule/',
+                'toggleSrUrl': '/coach/konu-takip/toggle-sr/',
                 'studentId': selected_student.id if selected_student else None,
+                'allReviews': all_reviews,
+                'subjectSrSettings': sr_settings,
             }),
         })
 
@@ -129,8 +150,9 @@ class CoachToggleView(View):
         topic = get_object_or_404(KonuTakipTopic, pk=topic_id, checkable=True)
         student = get_object_or_404(User, pk=student_id, role='student')
 
-        progress = toggle_progress(student, topic.id, field, value)
-        return JsonResponse({'ok': True, 'started': progress.started, 'finished': progress.finished})
+        quality = body.get('quality') or None
+        progress = toggle_progress(student, topic.id, field, value, quality)
+        return JsonResponse(_progress_response(progress))
 
 
 @method_decorator(coach_required, name='dispatch')
@@ -160,11 +182,58 @@ class CoachKonuTakipApiView(View):
         selected_subject = _resolve_subject(subjects, request.GET.get('subject_id'))
 
         flat_topics, progress_json, selected_subject_id = _serialize_topics(selected_subject, selected_student)
+        sr_settings = get_subject_sr_settings(selected_student)
         return JsonResponse({
             'flat_topics': flat_topics,
             'progress': progress_json,
             'selected_subject_id': selected_subject_id,
+            'sr_enabled': sr_settings.get(selected_subject_id, True),
         })
+
+
+@method_decorator(coach_required, name='dispatch')
+class CoachReviewView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body or b'{}')
+            topic_id = int(body['topic_id'])
+            quality = str(body.get('quality', '')).lower()
+            student_id = int(body['student_id'])
+        except (KeyError, ValueError, TypeError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'invalid'}, status=400)
+
+        if not coach_can_view_student(request.user, student_id):
+            return HttpResponseForbidden()
+
+        student = get_object_or_404(User, pk=student_id, role='student')
+        progress = submit_review(student, topic_id, quality)
+        if not progress:
+            return JsonResponse({'ok': False, 'error': 'not found or invalid quality'}, status=400)
+
+        return JsonResponse({
+            'ok': True,
+            'next_review_at': progress.next_review_at.isoformat() if progress.next_review_at else None,
+            'review_count': progress.review_count,
+        })
+
+
+@method_decorator(coach_required, name='dispatch')
+class CoachReviewsApiView(View):
+    def get(self, request):
+        try:
+            sid = int(request.GET.get('student_id') or 0)
+        except (ValueError, TypeError):
+            sid = 0
+
+        if not sid or not coach_can_view_student(request.user, sid):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        try:
+            student = User.objects.get(id=sid, role='student')
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'not found'}, status=404)
+
+        return JsonResponse({'reviews': get_due_reviews_json(student)})
 
 
 # ── Student views ─────────────────────────────────────────────────────────────
@@ -193,7 +262,12 @@ class StudentKonuTakipView(View):
                 'progress': progress_json,
                 'toggleUrl': '/student/konu-takip/toggle/',
                 'apiUrl': '/student/konu-takip/api/',
+                'reviewUrl': '/student/konu-takip/review/',
+                'allReviewsApiUrl': '/student/konu-takip/schedule/',
+                'toggleSrUrl': '/student/konu-takip/toggle-sr/',
                 'studentId': None,
+                'allReviews': get_all_reviews_json(request.user),
+                'subjectSrSettings': get_subject_sr_settings(request.user),
             }),
         })
 
@@ -213,8 +287,9 @@ class StudentToggleView(View):
             return JsonResponse({'ok': False, 'error': 'invalid field'}, status=400)
 
         topic = get_object_or_404(KonuTakipTopic, pk=topic_id, checkable=True)
-        progress = toggle_progress(request.user, topic.id, field, value)
-        return JsonResponse({'ok': True, 'started': progress.started, 'finished': progress.finished})
+        quality = body.get('quality') or None
+        progress = toggle_progress(request.user, topic.id, field, value, quality)
+        return JsonResponse(_progress_response(progress))
 
 
 @method_decorator(student_required, name='dispatch')
@@ -228,8 +303,93 @@ class StudentKonuTakipApiView(View):
         selected_subject = _resolve_subject(subjects, request.GET.get('subject_id'))
 
         flat_topics, progress_json, selected_subject_id = _serialize_topics(selected_subject, request.user)
+        sr_settings = get_subject_sr_settings(request.user)
         return JsonResponse({
             'flat_topics': flat_topics,
             'progress': progress_json,
             'selected_subject_id': selected_subject_id,
+            'sr_enabled': sr_settings.get(selected_subject_id, True),
         })
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentReviewView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body or b'{}')
+            topic_id = int(body['topic_id'])
+            quality = str(body.get('quality', '')).lower()
+        except (KeyError, ValueError, TypeError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'invalid'}, status=400)
+
+        progress = submit_review(request.user, topic_id, quality)
+        if not progress:
+            return JsonResponse({'ok': False, 'error': 'not found or invalid quality'}, status=400)
+
+        return JsonResponse({
+            'ok': True,
+            'next_review_at': progress.next_review_at.isoformat() if progress.next_review_at else None,
+            'review_count': progress.review_count,
+        })
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentReviewsApiView(View):
+    def get(self, request):
+        return JsonResponse({'reviews': get_due_reviews_json(request.user)})
+
+
+@method_decorator(coach_required, name='dispatch')
+class CoachToggleSrView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body or b'{}')
+            student_id = int(body['student_id'])
+            subject_id = int(body['subject_id'])
+        except (KeyError, ValueError, TypeError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'invalid'}, status=400)
+
+        if not coach_can_view_student(request.user, student_id):
+            return HttpResponseForbidden()
+
+        student = get_object_or_404(User, pk=student_id, role='student')
+        new_value = toggle_subject_sr(student, subject_id)
+        return JsonResponse({'ok': True, 'sr_enabled': new_value, 'subject_id': subject_id})
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentToggleSrView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body or b'{}')
+            subject_id = int(body['subject_id'])
+        except (KeyError, ValueError, TypeError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'invalid'}, status=400)
+
+        new_value = toggle_subject_sr(request.user, subject_id)
+        return JsonResponse({'ok': True, 'sr_enabled': new_value, 'subject_id': subject_id})
+
+
+@method_decorator(coach_required, name='dispatch')
+class CoachAllReviewsApiView(View):
+    def get(self, request):
+        try:
+            sid = int(request.GET.get('student_id') or 0)
+        except (ValueError, TypeError):
+            sid = 0
+
+        if not sid or not coach_can_view_student(request.user, sid):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        try:
+            student = User.objects.get(id=sid, role='student')
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'not found'}, status=404)
+
+        return JsonResponse({'reviews': get_all_reviews_json(student)})
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentAllReviewsApiView(View):
+    def get(self, request):
+        return JsonResponse({'reviews': get_all_reviews_json(request.user)})
