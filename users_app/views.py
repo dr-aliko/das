@@ -527,6 +527,21 @@ def geri_bildirim_gonder(request):
     )
     gorsel = request.FILES.get('gorsel')
     if gorsel:
+        _ALLOWED_MIME = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+        _MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+        if gorsel.size > _MAX_SIZE:
+            return JsonResponse({'ok': False, 'error': 'Görsel 5 MB\'dan büyük olamaz.'}, status=400)
+        if gorsel.content_type not in _ALLOWED_MIME:
+            return JsonResponse({'ok': False, 'error': 'Yalnızca JPEG, PNG, WebP veya GIF yükleyebilirsiniz.'}, status=400)
+        try:
+            from PIL import Image
+            img = Image.open(gorsel)
+            img.verify()
+            gorsel.seek(0)
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'Geçersiz görsel dosyası.'}, status=400)
+
         email_msg.attach(gorsel.name, gorsel.read(), gorsel.content_type)
 
     try:

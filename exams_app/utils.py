@@ -1,5 +1,12 @@
+import json
 from datetime import date, timedelta
 from math import ceil
+
+
+def safe_json(data, **kwargs):
+    """json.dumps that escapes < > & as Unicode escapes so </script> can't break out of <script> blocks."""
+    raw = json.dumps(data, **kwargs)
+    return raw.replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
 
 
 def get_student_status(student):

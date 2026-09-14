@@ -1,6 +1,8 @@
 import json
 
 from django.http import HttpResponseForbidden, JsonResponse
+
+from exams_app.utils import safe_json
 from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -110,7 +112,7 @@ class CoachKonuTakipView(View):
             'selected_student': selected_student,
             'is_coach_view': True,
             'qs_student': qs_student,
-            'kt_cfg': json.dumps({
+            'kt_cfg': safe_json({
                 'examType': exam_type,
                 'tytSubjects': _serialize_subjects(tyt_subjects),
                 'aytSubjects': _serialize_subjects(ayt_subjects),
@@ -253,7 +255,7 @@ class StudentKonuTakipView(View):
         return render(request, 'konu_takip/index.html', {
             'is_coach_view': False,
             'qs_student': '',
-            'kt_cfg': json.dumps({
+            'kt_cfg': safe_json({
                 'examType': exam_type,
                 'tytSubjects': _serialize_subjects(tyt_subjects),
                 'aytSubjects': _serialize_subjects(ayt_subjects),

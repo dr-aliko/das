@@ -24,6 +24,7 @@ isodate==0.7.2
 model-bakery==1.20.0
 openpyxl==3.1.5
 packaging==26.2
+Pillow==12.2.0
 pluggy==1.6.0
 proto-plus==1.28.0
 protobuf==7.35.0

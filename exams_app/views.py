@@ -1,5 +1,6 @@
 import json
 from datetime import date, timedelta
+from .utils import safe_json
 from types import SimpleNamespace
 from urllib.parse import urlencode
 
@@ -221,7 +222,7 @@ def _build_denemeler_v2_context(user, filters=None):
     # Total before period filter — drives sparse/empty-state banner logic
     all_exam_count = len(exam_objs)
     # Build chart points from unfiltered set (chronological, newest 20)
-    chart_data = json.dumps([
+    chart_data = safe_json([
         {'d': e.date.strftime('%d %b').lstrip('0'), 'n': float(e.net)}
         for e in reversed(exam_objs[:20])
     ])
@@ -599,11 +600,11 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
             for t in branch_completed_qs
         ]
 
-        branch_radar_json = json.dumps(branch_radar)
-        branch_active_json = json.dumps(branch_active)
-        branch_completed_json = json.dumps(branch_completed)
+        branch_radar_json = safe_json(branch_radar)
+        branch_active_json = safe_json(branch_active)
+        branch_completed_json = safe_json(branch_completed)
 
-    topics_json = json.dumps([
+    topics_json = safe_json([
         {
             'id': t['id'],
             'name': t['name'],
@@ -628,7 +629,7 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
             exams=month_exams,
         ))
 
-    exams_json = json.dumps([
+    exams_json = safe_json([
         {
             'id': e.id,
             'key': e.compare_key,
@@ -662,8 +663,8 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
         'subjectSlug': subject_slug,
         'export_period': period,
         'stats': stats_by_source['all'],
-        'stats_by_source_json': json.dumps(stats_by_source),
-        'chart_points_json': json.dumps(chart_points),
+        'stats_by_source_json': safe_json(stats_by_source),
+        'chart_points_json': safe_json(chart_points),
         'topics': topics,
         'topics_json': topics_json,
         'exams': SimpleNamespace(
@@ -820,7 +821,7 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
             exams=month_exams,
         ))
 
-    compare_entries_json = json.dumps([
+    compare_entries_json = safe_json([
         {
             'id': e.id,
             'subject': e.subject,
@@ -862,14 +863,14 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
                 'spanGaps':           True,
             })
 
-    brans_chart_json = json.dumps({
+    brans_chart_json = safe_json({
         'labels':   all_date_labels,
         'datasets': chart_datasets,
         'has_data': bool(all_date_labels),
     })
 
     base_url = f"/coach/student/{student.id}/brans/" if coach_view else '/brans/'
-    subjects_json = json.dumps([
+    subjects_json = safe_json([
         {
             'key':       s.key,
             'name':      s.name,
@@ -1117,7 +1118,7 @@ def coach_brans_create_for_student(request, student_id):
         form = BransDenemeForm()
 
     all_subjects = list(Subject.objects.only('pk', 'name', 'exam_type', 'question_count').order_by('exam_type', 'name'))
-    subjects_json = json.dumps({str(s.pk): s.question_count for s in all_subjects})
+    subjects_json = safe_json({str(s.pk): s.question_count for s in all_subjects})
     student_alan = getattr(student, 'alan', '') or ''
     alan_keys = _AYT_ALAN_FILTER.get(student_alan)
     ayt_names_allowed = None
@@ -1139,8 +1140,8 @@ def coach_brans_create_for_student(request, student_id):
     return render(request, 'student/brans_create.html', {
         'form':              form,
         'subjects_json':     subjects_json,
-        'tyt_subjects_json': json.dumps(tyt_subjects),
-        'ayt_subjects_json': json.dumps(ayt_subjects),
+        'tyt_subjects_json': safe_json(tyt_subjects),
+        'ayt_subjects_json': safe_json(ayt_subjects),
         'student_alan':      student_alan,
         'next_url':          next_url,
         'back_url':          next_url,
@@ -1386,18 +1387,18 @@ def student_dashboard(request):
         .order_by('topic__subject__name', '-completed_at')[:50]
     )
 
-    radar_json = json.dumps([
+    radar_json = safe_json([
         {'id': t['topic__id'], 'name': t['topic__name'], 'subject': t['topic__subject__name'],
          'sub': t['topic__sub_category'] or '', 'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
         for t in radar_topics
     ])
-    active_json = json.dumps([
+    active_json = safe_json([
         {'id': t.id, 'topic_id': t.topic_id, 'name': t.topic.name, 'subject': t.topic.subject.name,
          'sub': t.topic.sub_category or '', 'byCoach': t.assigned_by_coach,
          'created_at': _fmt_task_date(t.created_at)}
         for t in active_qs
     ])
-    completed_json = json.dumps([
+    completed_json = safe_json([
         {'id': t.id, 'topic_id': t.topic_id, 'name': t.topic.name, 'subject': t.topic.subject.name,
          'sub': t.topic.sub_category or '',
          'created_at':  _fmt_task_date(t.created_at),
@@ -1411,8 +1412,8 @@ def student_dashboard(request):
 
     ctx = {
         'exams': exams,
-        'chart_data_json': json.dumps(chart_data),
-        'scatter_data_json': json.dumps(scatter_data),
+        'chart_data_json': safe_json(chart_data),
+        'scatter_data_json': safe_json(scatter_data),
         'has_chart_data': bool(chart_data.get('labels')),
         'has_any_exams': Exam.objects.filter(student=request.user).exists(),
         'radar_json': radar_json,
@@ -1761,7 +1762,7 @@ def exam_edit(request, exam_id):
     ctx.update({
         'is_edit':    True,
         'exam':       exam,
-        'prefill_json': json.dumps(prefill),
+        'prefill_json': safe_json(prefill),
     })
     return render(request, 'student/exam_create_v2.html', ctx)
 
@@ -1819,7 +1820,7 @@ def _build_topics_json():
     qs = Topic.objects.select_related('subject').order_by(
         'subject__name', 'sub_category', 'name'
     )
-    return json.dumps([
+    return safe_json([
         {
             'id': t.id,
             'name': t.name,
@@ -1912,7 +1913,7 @@ def exam_create_v2(request):
 
 def _v2_create_ctx(subjects, publishers, request):
     topics_json   = _build_topics_json()
-    subjects_json = json.dumps([{'id': s.id, 'name': s.name} for s in subjects])
+    subjects_json = safe_json([{'id': s.id, 'name': s.name} for s in subjects])
     return {
         'subjects':      subjects,
         'publishers':    publishers,
@@ -2020,7 +2021,7 @@ def exam_create_step2(request, exam_id):
     topics_qs = Topic.objects.select_related('subject').order_by(
         'subject__name', 'sub_category', 'name'
     )
-    topics_json = json.dumps([
+    topics_json = safe_json([
         {
             'id': t.id,
             'name': t.name,
@@ -2071,9 +2072,9 @@ def exam_create_step2(request, exam_id):
     return render(request, 'student/exam_create_step2.html', {
         'exam': exam,
         'topics_json': topics_json,
-        'subjects_json': json.dumps(subjects),
-        'existing_json': json.dumps(existing),
-        'step1_results_json': json.dumps(step1_results),
+        'subjects_json': safe_json(subjects),
+        'existing_json': safe_json(existing),
+        'step1_results_json': safe_json(step1_results),
     })
 
 
@@ -2279,20 +2280,20 @@ def coach_student_detail(request, student_id):
                                    task_source=StudentTask.SOURCE_TRIAL)
         .select_related('topic__subject').order_by('-completed_at')[:30]
     )
-    trial_radar_json = json.dumps([
+    trial_radar_json = safe_json([
         {'id': t['topic__id'], 'name': t['topic__name'],
          'subject': t['topic__subject__name'], 'sub': t['topic__sub_category'] or '',
          'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
         for t in radar_topics
     ])
-    trial_active_json = json.dumps([
+    trial_active_json = safe_json([
         {'id': t.id, 'topic_id': t.topic_id, 'name': t.topic.name,
          'subject': t.topic.subject.name, 'sub': t.topic.sub_category or '',
          'byCoach': t.assigned_by_coach,
          'created_at': _fmt_task_date(t.created_at)}
         for t in trial_active_qs
     ])
-    trial_completed_json = json.dumps([
+    trial_completed_json = safe_json([
         {'id': t.id, 'topic_id': t.topic_id, 'name': t.topic.name,
          'sub': t.topic.sub_category or '',
          'created_at':   _fmt_task_date(t.created_at),
@@ -2326,7 +2327,7 @@ def coach_student_detail(request, student_id):
         'trial_active_json':    trial_active_json,
         'trial_completed_json': trial_completed_json,
         'student_badges':       recent_badges,
-        'chart_data_json':      json.dumps(chart_data),
+        'chart_data_json':      safe_json(chart_data),
         'has_chart_data':       bool(chart_data.get('labels')),
         'chart_period':         chart_period_str,
         'chart_period_label':   chart_period_label,
@@ -2821,7 +2822,7 @@ def _build_v2_chart_data(comparison, exam_a, exam_b):
             'correct_b': cb, 'wrong_b': yb, 'blank_b': bb,
         })
 
-    chart_json = json.dumps({
+    chart_json = safe_json({
         'labels':      labels,
         'deltas':      deltas,
         'net_a':       net_a_total,
@@ -2938,7 +2939,7 @@ def _build_comparison(exam_1, exam_2):
         'exam_b': exam_b,
         'deltas': deltas,
         'closed_gaps': closed_gaps,
-        'radar_json': json.dumps({
+        'radar_json': safe_json({
             'labels': [_s(d['subject'].name) for d in deltas],
             'data_a': [d['net_a'] for d in deltas],
             'data_b': [d['net_b'] for d in deltas],
@@ -3176,7 +3177,7 @@ def _build_brans_compare_context(entry_a, entry_b):
     if entry_a.tarih > entry_b.tarih:
         entry_a, entry_b = entry_b, entry_a
 
-    chart_data = json.dumps({
+    chart_data = safe_json({
         'labels': [entry_a.tarih.isoformat(), entry_b.tarih.isoformat()],
         'datasets': [{
             'label': 'Net',
@@ -3246,7 +3247,7 @@ def brans_create(request):
 
     all_subjects = list(Subject.objects.only('pk', 'name', 'exam_type', 'question_count').order_by('exam_type', 'name'))
     # pk → question_count for stepper limit
-    subjects_json = json.dumps({str(s.pk): s.question_count for s in all_subjects})
+    subjects_json = safe_json({str(s.pk): s.question_count for s in all_subjects})
 
     # AYT alan filter
     student_alan = getattr(request.user, 'alan', '') or ''
@@ -3274,8 +3275,8 @@ def brans_create(request):
     return render(request, 'student/brans_create.html', {
         'form':              form,
         'subjects_json':     subjects_json,
-        'tyt_subjects_json': json.dumps(tyt_subjects),
-        'ayt_subjects_json': json.dumps(ayt_subjects),
+        'tyt_subjects_json': safe_json(tyt_subjects),
+        'ayt_subjects_json': safe_json(ayt_subjects),
         'student_alan':      student_alan,
         'next_url':          next_url,
         'back_url':          next_url,
@@ -3326,7 +3327,7 @@ def brans_edit(request, pk):
             return redirect('student:brans_topic_errors', pk=entry.pk)
     else:
         form = BransDenemeForm(instance=entry)
-    subjects_json = json.dumps({str(s.pk): s.question_count for s in Subject.objects.only('pk', 'question_count')})
+    subjects_json = safe_json({str(s.pk): s.question_count for s in Subject.objects.only('pk', 'question_count')})
     return render(request, 'student/brans_edit.html', {'form': form, 'entry': entry, 'subjects_json': subjects_json})
 
 
@@ -3420,7 +3421,7 @@ def coach_brans_student_detail(request, student_id):
     return render(request, 'coach/brans_student_detail.html', {
         'student': student,
         'grouped': dict(grouped),
-        'chart_data_json': json.dumps(chart_data),
+        'chart_data_json': safe_json(chart_data),
         'has_entries': bool(entries),
         'period': period,
         'period_choices': [('all', 'Tümü'), ('90', '3 Ay'), ('30', '30 Gün')],
@@ -3459,7 +3460,7 @@ def _render_brans_topic_errors(request, entry, *, final_fallback, back_fallback)
 
     # All topics for the entry's subject, as JSON for the Alpine UI
     topics_qs = Topic.objects.filter(subject=entry.ders).order_by('sub_category', 'name')
-    topics_json = json.dumps([
+    topics_json = safe_json([
         {
             'id': t.id,
             'name': t.name,
@@ -3469,7 +3470,7 @@ def _render_brans_topic_errors(request, entry, *, final_fallback, back_fallback)
     ])
 
     # Existing errors pre-populate the form on re-edit
-    existing_json = json.dumps([
+    existing_json = safe_json([
         {'topicId': e.topic_id, 'topicName': e.topic.name,
          'subCat': e.topic.sub_category, 'yanlisSayisi': e.yanlis_sayisi}
         for e in entry.topic_errors.select_related('topic').order_by('topic__sub_category', 'topic__name')
@@ -3620,7 +3621,7 @@ def placement_take(request, attempt_id):
 
     return render(request, 'student/placement/take.html', {
         'attempt': attempt,
-        'questions_json': json.dumps(questions_data),
+        'questions_json': safe_json(questions_data),
         'total': len(questions),
         'remaining_seconds': remaining,
         'shell_hide_fab': True,

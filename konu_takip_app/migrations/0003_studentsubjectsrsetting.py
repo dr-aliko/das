@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('konu_takip_app', '0002_studenttopicprogress_spaced_repetition'),
         ('exams_app', '__first__'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('users_app', '0016_user_sr_enabled'),
     ]
 
     operations = [
