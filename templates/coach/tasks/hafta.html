@@ -245,6 +245,7 @@
 {# ── END MOBILE VIEW ─────────────────────────────────────────────────────────── #}
 
 <script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
+<script>const _STUDENT_ALAN_MAP = { {% for s in students %}{{ s.id }}: '{{ s.alan }}',{% endfor %} };</script>
 <div class="hidden md:block">
 <div x-data="panel()" x-init="init()" x-cloak
      @playlist-imported.window="onPlaylistImported($event.detail)">
@@ -784,9 +785,14 @@ function coachMobilePanel() {
     get filteredYtListeler(){
       const tip=this.taskForm.sinav_tipi;
       const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
+      const alan=this.selectedStudent?.alan??'';
       return this.ytListeler.filter(l=>{
         if(tip && l.exam_type!==tip) return false;
         if(ders) return l.subject_display===ders.ad;
+        if(l.exam_type==='AYT' && alan && l.subject_display){
+          const allowed=_PLAYLIST_AYT_MAP[alan];
+          if(allowed && !allowed.has(l.subject_display)) return false;
+        }
         return true;
       });
     },

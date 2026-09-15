@@ -18,6 +18,14 @@ function isoMonday(iso) {
 }
 
 const AKTIVITE_LABELS = { konu_anlatimi: 'Konu Anlatımı', soru_cozumu: 'Soru Çözümü', tekrar: 'Tekrar' };
+
+// AYT subject display_names allowed per alan (extends konu_takip map with Geometri for SAY/EA)
+const _PLAYLIST_AYT_MAP = {
+  SAY: new Set(['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri']),
+  EA:  new Set(['Matematik', 'Türk Dili ve Edebiyatı', 'Geometri']),
+  SOZ: new Set(['Türk Dili ve Edebiyatı', 'Tarih 2', 'Coğrafya 2', 'Felsefe Grubu']),
+  DIL: new Set(['Yabancı Dil']),
+};
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
 
@@ -376,9 +384,15 @@ function panel() {
     get filteredYtListeler() {
       const tip  = this.taskForm.sinav_tipi;
       const ders = this.dersler.find(d => d.id == this.taskForm.konu_ders_id);
+      const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
+        ? (_STUDENT_ALAN_MAP[this.studentId] ?? '') : '';
       return this.ytListeler.filter(l => {
         if (tip && l.exam_type !== tip) return false;
         if (ders) return l.subject_display === ders.ad;
+        if (l.exam_type === 'AYT' && alan && l.subject_display) {
+          const allowed = _PLAYLIST_AYT_MAP[alan];
+          if (allowed && !allowed.has(l.subject_display)) return false;
+        }
         return true;
       });
     },

@@ -152,7 +152,7 @@
               <select x-model="selectedSubjectId"
                       class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
                              text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
-                <option value="">Seçilmedi</option>
+                <option value="">Diğer</option>
                 <template x-for="s in subjects.filter(s => !selectedExamType || s.exam_type === selectedExamType)"
                           :key="s.id">
                   <option :value="s.id" x-text="s.display_name"></option>

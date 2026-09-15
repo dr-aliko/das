@@ -62,7 +62,7 @@ class HaftaView(View):
 class StudentListView(View):
     def get(self, request):
         data = [
-            {"id": s.id, "full_name": s.full_name}
+            {"id": s.id, "full_name": s.full_name, "alan": s.alan}
             for s in students.list_for_coach(request.user)
         ]
         return JsonResponse({"students": data})
@@ -240,7 +240,9 @@ class YoutubePlaylistPreviewView(View):
         existing = YouTubePlaylist.objects.filter(playlist_id=pid, imported_by=request.user).first()
 
         from exams_app.models import Subject
-        subj_qs = Subject.objects.order_by('exam_type', 'name')
+        subj_qs = Subject.objects.exclude(excluded_from_planning=True).exclude(
+            name__in=['TYT Fen Bilimleri', 'TYT Sosyal Bilimler']
+        ).order_by('exam_type', 'name')
         if exam_type:
             subj_qs = subj_qs.filter(exam_type=exam_type)
         subjects = [{'id': s.pk, 'display_name': s.display_name, 'exam_type': s.exam_type} for s in subj_qs]
