@@ -33,6 +33,8 @@ const _DERS_AYT_MAP = {
   SOZ: new Set(['Edebiyat', 'Tarih', 'Coğrafya', 'Felsefe']),
   DIL: new Set(['Yabancı Dil']),
 };
+// TYT ders fixed allow-list — alan-independent (Edebiyat, Geometri, Yabancı Dil are AYT-only)
+const _DERS_TYT_ALLOW = new Set(['Matematik', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Diğer', 'Din Kültürü', 'Fizik', 'Kimya', 'Biyoloji']);
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
 
@@ -406,12 +408,16 @@ function panel() {
     },
 
     get filteredDersler() {
-      if (this.taskForm.sinav_tipi !== 'AYT') return this.dersler;
-      const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
-        ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
-      const allowed = _DERS_AYT_MAP[alan];
-      if (!allowed) return this.dersler;
-      return this.dersler.filter(d => d.ad === 'Diğer' || allowed.has(d.ad));
+      const sinav = this.taskForm.sinav_tipi;
+      if (sinav === 'TYT') return this.dersler.filter(d => _DERS_TYT_ALLOW.has(d.ad));
+      if (sinav === 'AYT') {
+        const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
+          ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
+        const allowed = _DERS_AYT_MAP[alan];
+        if (!allowed) return this.dersler;
+        return this.dersler.filter(d => d.ad === 'Diğer' || allowed.has(d.ad));
+      }
+      return this.dersler;
     },
 
     aktiviteLabel: t => AKTIVITE_LABELS[t] ?? t ?? '',

@@ -797,11 +797,15 @@ function coachMobilePanel() {
       });
     },
     get filteredDersler(){
-      if(this.taskForm.sinav_tipi!=='AYT') return this.dersler;
-      const alan=this.selectedStudent?.alan||'SAY';
-      const allowed=_DERS_AYT_MAP[alan];
-      if(!allowed) return this.dersler;
-      return this.dersler.filter(d=>d.ad==='Diğer'||allowed.has(d.ad));
+      const sinav=this.taskForm.sinav_tipi;
+      if(sinav==='TYT') return this.dersler.filter(d=>_DERS_TYT_ALLOW.has(d.ad));
+      if(sinav==='AYT'){
+        const alan=this.selectedStudent?.alan||'SAY';
+        const allowed=_DERS_AYT_MAP[alan];
+        if(!allowed) return this.dersler;
+        return this.dersler.filter(d=>d.ad==='Diğer'||allowed.has(d.ad));
+      }
+      return this.dersler;
     },
     get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },
