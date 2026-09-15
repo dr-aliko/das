@@ -416,6 +416,10 @@
 </div>
 
 <script>
+// Reload when browser restores this page from bfcache so AYT subjects
+// always reflect the current user.alan rather than a frozen snapshot.
+window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+
 function konuTakip(cfg) {
   return {
     // ── Core state ───────────────────────────────────────────────────────
