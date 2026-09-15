@@ -52,9 +52,15 @@
       margin-bottom: 5px; min-height: 22px;
     }
     .bar-label {
-      width: 72px; font-size: 10px; color: #64748b;
-      text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis;
+      width: 130px; font-size: 10px; color: #1e293b; font-weight: 600;
+      text-align: right; flex-shrink: 0; overflow: hidden;
+    }
+    .bar-label-name {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+    }
+    .bar-label-date {
+      font-size: 9px; color: #94a3b8; font-weight: 400;
+      white-space: nowrap; display: block;
     }
     .bar-track {
       flex: 1; background: #e2e8f0; border-radius: 3px; height: 16px;
@@ -82,12 +88,15 @@
       padding: 6px 8px; text-align: center; font-weight: 600;
       color: #475569; white-space: nowrap;
     }
-    .exam-table thead th.col-exam { text-align: left; min-width: 140px; }
+    .exam-table thead th.col-exam { text-align: left; min-width: 160px; max-width: 220px; }
     .exam-table tbody td {
       border: 1px solid #e2e8f0; padding: 5px 8px;
       text-align: center; color: #334155;
     }
-    .exam-table tbody td.col-exam { text-align: left; }
+    .exam-table tbody td.col-exam {
+      text-align: left; max-width: 220px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .exam-table tbody tr:nth-child(even) td { background: #f8fafc; }
     .exam-table tbody td.total-net { font-weight: 700; color: #0f172a; background: #eff6ff !important; }
     .exam-table tbody td.null-cell { color: #cbd5e1; }
@@ -242,7 +251,10 @@
       {% if chart_rows %}
         {% for row in chart_rows %}
         <div class="bar-row">
-          <div class="bar-label" title="{{ row.label }}">{{ row.label }}</div>
+          <div class="bar-label">
+            <span class="bar-label-name" title="{{ row.label }}">{{ row.label }}</span>
+            <span class="bar-label-date">{{ row.date }}</span>
+          </div>
           <div class="bar-track">
             <div class="bar-fill {% if row.pct < 40 %}low{% elif row.pct < 70 %}mid{% else %}high{% endif %}"
                  style="width: {{ row.pct }}%"></div>
@@ -264,7 +276,7 @@
     <table class="exam-table">
       <thead>
         <tr>
-          <th class="col-exam">Deneme</th>
+          <th class="col-exam">Deneme Adı</th>
           <th>Tarih</th>
           {% for s in all_subjects %}
           <th title="{{ s.name }}">{{ s.display_name }}</th>

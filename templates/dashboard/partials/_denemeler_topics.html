@@ -7,7 +7,8 @@
       {% trans "En Çok Hata Yapılan Konular" %}
     </h2>
 
-    {# Period chips — same state as top filter, calls setPeriod() to sync both sections #}
+    {# Period chips — hidden in coach view (coach uses page-level period filter) #}
+    {% if not coach_view %}
     <div class="flex items-center gap-1.5 flex-wrap">
       <button @click="setPeriod('')"
               class="h-7 px-2.5 rounded-full text-[10px] font-semibold transition-colors"
@@ -35,6 +36,7 @@
         {% trans "1Y" %}
       </button>
     </div>
+    {% endif %}
   </div>
 
   {# Subject chips — topic-section-only filter, calls setTopicSubject() #}

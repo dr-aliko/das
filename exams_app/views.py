@@ -2459,10 +2459,35 @@ def coach_student_exams(request, student_id):
             student, filters['period'],
             coach_view=True, student_id=student_id,
         ),
+        'topic_subjects': _ENTRY_SUBJECTS_HARDCODED,
         'v2_shell': True,
         'shell_active': 'Denemeler',
     })
     return render(request, 'coach/student_exams.html', ctx)
+
+
+@coach_required
+def coach_student_topics_partial(request, student_id):
+    """AJAX: returns the topics partial HTML for subject filter changes on the coach overview."""
+    from users_app.models import User
+    if not coach_can_view_student(request.user, student_id):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+    student = get_object_or_404(User, id=student_id, role='student')
+    period  = request.GET.get('period', '')
+    subject = request.GET.get('subject', '')
+    topics  = _build_trial_topic_errors(
+        student, period,
+        coach_view=True, student_id=student_id,
+        subject_name=subject,
+    )
+    ctx = {
+        'trial_topics':   topics,
+        'topic_subjects': _ENTRY_SUBJECTS_HARDCODED,
+        'filters':        {'period': period},
+        'coach_view':     True,
+    }
+    return render(request, 'dashboard/partials/_denemeler_topics.html', ctx)
 
 
 @coach_required
@@ -3916,7 +3941,8 @@ def _build_exam_export_context(student, period_str, *, is_pdf=False, coach_view=
     for row in reversed(table_rows[:20]):
         pct = round(min(100.0, max(0.0, row['total_net'] / max_for_bar * 100)), 1)
         chart_rows.append({
-            'label': row['date'].strftime('%d %b').lstrip('0'),
+            'label': row['name'],
+            'date':  row['date'].strftime('%d.%m.%Y'),
             'net':   row['total_net'],
             'pct':   pct,
         })
