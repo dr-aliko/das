@@ -785,7 +785,7 @@ function coachMobilePanel() {
     get filteredYtListeler(){
       const tip=this.taskForm.sinav_tipi;
       const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
-      const alan=this.selectedStudent?.alan??'';
+      const alan=this.selectedStudent?.alan||'SAY';
       return this.ytListeler.filter(l=>{
         if(tip && l.exam_type!==tip) return false;
         if(l.exam_type==='AYT' && alan && l.subject_display){

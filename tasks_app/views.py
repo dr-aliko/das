@@ -241,7 +241,8 @@ class YoutubePlaylistPreviewView(View):
 
         from exams_app.models import Subject
         subj_qs = Subject.objects.exclude(excluded_from_planning=True).exclude(
-            name__in=['TYT Fen Bilimleri', 'TYT Sosyal Bilimler']
+            name__in=['TYT Fen Bilimleri', 'TYT Sosyal Bilimler',
+                      'AYT Tarih', 'AYT Coğrafya', 'AYT Din Kültürü']
         ).order_by('exam_type', 'name')
         if exam_type:
             subj_qs = subj_qs.filter(exam_type=exam_type)

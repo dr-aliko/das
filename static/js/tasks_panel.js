@@ -386,7 +386,7 @@ function panel() {
       const tip  = this.taskForm.sinav_tipi;
       const ders = this.dersler.find(d => d.id == this.taskForm.konu_ders_id);
       const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
-        ? (_STUDENT_ALAN_MAP[this.studentId] ?? '') : '';
+        ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
       return this.ytListeler.filter(l => {
         if (tip && l.exam_type !== tip) return false;
         if (l.exam_type === 'AYT' && alan && l.subject_display) {
