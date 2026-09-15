@@ -248,6 +248,7 @@ function panel() {
       this.loadColorSettings();
       this.buildDays();
       await this.loadDersler();
+      await this.loadYtListeler();
       window.addEventListener('darkmode-change', (e) => { this.isDark = e.detail.isDark; });
       window.addEventListener('yt-playlist-deleted', (e) => {
         this.ytListeler = this.ytListeler.filter(l => l.pk !== e.detail.pk);
@@ -388,11 +389,11 @@ function panel() {
         ? (_STUDENT_ALAN_MAP[this.studentId] ?? '') : '';
       return this.ytListeler.filter(l => {
         if (tip && l.exam_type !== tip) return false;
-        if (ders) return l.subject_display === ders.ad;
         if (l.exam_type === 'AYT' && alan && l.subject_display) {
           const allowed = _PLAYLIST_AYT_MAP[alan];
           if (allowed && !allowed.has(l.subject_display)) return false;
         }
+        if (ders) return l.subject_display === ders.ad;
         return true;
       });
     },

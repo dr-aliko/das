@@ -788,11 +788,11 @@ function coachMobilePanel() {
       const alan=this.selectedStudent?.alan??'';
       return this.ytListeler.filter(l=>{
         if(tip && l.exam_type!==tip) return false;
-        if(ders) return l.subject_display===ders.ad;
         if(l.exam_type==='AYT' && alan && l.subject_display){
           const allowed=_PLAYLIST_AYT_MAP[alan];
           if(allowed && !allowed.has(l.subject_display)) return false;
         }
+        if(ders) return l.subject_display===ders.ad;
         return true;
       });
     },
