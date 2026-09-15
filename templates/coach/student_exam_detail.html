@@ -93,39 +93,10 @@
     </div>
     {% endif %}
 
-    {# ── Topic errors (grouped by subject) ── #}
+    {# ── Topic errors — shared partial with student view (collapsible accordions) ── #}
     {% if has_topic_errors %}
     <div>
-      <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">
-        Konu Hataları
-        <span class="ml-2 text-ruby-500 font-bold">{{ total_topic_errors }} hata</span>
-      </h3>
-      <div class="space-y-3">
-        {% for group in topic_error_groups %}
-        <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
-          <div class="px-4 py-2.5 border-b border-ink-700 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background:{{ group.color }}"></span>
-            <span class="text-xs font-semibold text-ink-200 uppercase tracking-wider">{{ group.name }}</span>
-          </div>
-          <div class="divide-y divide-ink-700">
-            {% for t in group.topics %}
-            <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-ink-800 transition-colors">
-              <div class="w-8 h-8 rounded-lg bg-ruby-tint flex items-center justify-center
-                          text-ruby-500 font-bold text-[10px] shrink-0">
-                {{ t.error_count }}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-ink-100">{{ t.name }}</p>
-                {% if t.sub_category %}
-                <p class="text-xs text-ink-500">{{ t.sub_category }}</p>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
+      {% include "dashboard/partials/_detail_topic_errors.html" %}
     </div>
     {% endif %}
 
