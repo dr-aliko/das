@@ -199,6 +199,7 @@
                                       : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--heading)] active:bg-[var(--surface-1)]'"
                                   x-text="l.title + ' (' + l.exam_type + ')'"></button>
                           <button type="button"
+                                  x-show="l.is_mine"
                                   @click="deleteYtPlaylist(l.pk)"
                                   title="Sil"
                                   class="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl

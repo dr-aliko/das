@@ -110,30 +110,55 @@ function playlistImporter() {
     step: 'input',       // 'input' | 'preview' | 'importing' | 'success' | 'error'
     url: '',
     errorMsg: '',
-    preview: null,       // server response from /preview
-    subjects: [],        // [{pk, display_name, exam_type}] for manual subject picker
+    preview: null,
+    subjects: [],
     selectedSubjectId: '',
     selectedExamType: 'TYT',
-    importResult: null,  // server response from /import
+    importResult: null,
+    myPlaylists: [],
+    loadingPlaylists: false,
+    pendingDeletePk: null,
+    deleteError: '',
 
-    open() { this.reset(); this.show = true; },
+    open() { this.reset(); this.show = true; this.loadMyPlaylists(); },
     close() { this.show = false; },
     reset() {
       this.step = 'input'; this.url = ''; this.errorMsg = '';
       this.preview = null; this.importResult = null;
       this.selectedSubjectId = ''; this.selectedExamType = 'TYT';
+      this.pendingDeletePk = null; this.deleteError = '';
     },
 
-    async fetchSubjects() {
-      if (this.subjects.length) return;
+    async loadMyPlaylists() {
+      this.loadingPlaylists = true;
       try {
         const r = await fetch('/coach/tasks/api/youtube/list');
-        // We just need subjects — we use a lightweight endpoint that returns playlists,
-        // but actually we need Subject list. Use Django admin is not available here.
-        // Instead, build subjects from the playlists already imported (won't cover all).
-        // Better: call /api/dersler (external) or a dedicated endpoint.
-        // For now keep subjects empty — manual picker loads from preview's data.
-      } catch (_) {}
+        const d = await r.json();
+        this.myPlaylists = d.playlists ?? [];
+      } catch (_) { this.myPlaylists = []; }
+      this.loadingPlaylists = false;
+    },
+
+    async deletePl(pk) {
+      if (this.pendingDeletePk !== pk) {
+        this.pendingDeletePk = pk;
+        setTimeout(() => { if (this.pendingDeletePk === pk) this.pendingDeletePk = null; }, 3000);
+        return;
+      }
+      this.pendingDeletePk = null;
+      this.deleteError = '';
+      try {
+        const r = await fetch(`/coach/tasks/api/youtube/${pk}`, {
+          method: 'DELETE', headers: { 'X-CSRFToken': _csrf() },
+        });
+        if (r.ok) {
+          this.myPlaylists = this.myPlaylists.filter(p => p.pk !== pk);
+          window.dispatchEvent(new CustomEvent('yt-playlist-deleted', { detail: { pk } }));
+        } else {
+          const d = await r.json().catch(() => ({}));
+          this.deleteError = d.error || 'Silme işlemi başarısız.';
+        }
+      } catch (_) { this.deleteError = 'Bağlantı hatası.'; }
     },
 
     async doPreview() {
@@ -214,9 +239,15 @@ function panel() {
     async init() {
       this.loadColorSettings();
       this.buildDays();
-      // dersler loaded once at init for Soru/Tekrar dropdowns; failure leaves empty array.
       await this.loadDersler();
       window.addEventListener('darkmode-change', (e) => { this.isDark = e.detail.isDark; });
+      window.addEventListener('yt-playlist-deleted', (e) => {
+        this.ytListeler = this.ytListeler.filter(l => l.pk !== e.detail.pk);
+        if (this.taskForm.liste_id === 'yt:' + e.detail.pk) {
+          this.taskForm.liste_id = ''; this.taskForm.ytPlaylistPk = null;
+          this.videolar = []; this.taskForm.selectedVideos = []; this.updateSure();
+        }
+      });
     },
 
     buildDays() {
@@ -514,14 +545,15 @@ function panel() {
           method: 'DELETE',
           headers: { 'X-CSRFToken': CSRF },
         });
-        if (!r.ok) { alert('Silme işlemi başarısız.'); return; }
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          alert(d.error || 'Silme işlemi başarısız.');
+          return;
+        }
         this.ytListeler = this.ytListeler.filter(l => l.pk !== pk);
         if (this.taskForm.liste_id === 'yt:' + pk) {
-          this.taskForm.liste_id = '';
-          this.taskForm.ytPlaylistPk = null;
-          this.videolar = [];
-          this.taskForm.selectedVideos = [];
-          this.updateSure();
+          this.taskForm.liste_id = ''; this.taskForm.ytPlaylistPk = null;
+          this.videolar = []; this.taskForm.selectedVideos = []; this.updateSure();
         }
       } catch (e) { console.error('[deleteYtPlaylist]', e); }
     },

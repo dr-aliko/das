@@ -587,7 +587,7 @@
                 </template>
               </select>
               <button type="button"
-                      x-show="String(taskForm.liste_id).startsWith('yt:')"
+                      x-show="String(taskForm.liste_id).startsWith('yt:') && (ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).is_mine"
                       @click="deleteYtPlaylist(taskForm.ytPlaylistPk || parseInt(String(taskForm.liste_id).slice(3)))"
                       title="Playlisti sil"
                       class="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-[var(--border)]
@@ -805,6 +805,13 @@ function coachMobilePanel() {
       this.weekStart=ISO(mon); this.taskForm.tarih=ISO(today);
       this._build();
       await Promise.all([this._loadStudents(), this._loadDersler(), this.loadYtListeler()]);
+      window.addEventListener('yt-playlist-deleted', e => {
+        this.ytListeler = this.ytListeler.filter(l => l.pk !== e.detail.pk);
+        if(this.taskForm.liste_id === 'yt:' + e.detail.pk){
+          this.taskForm.liste_id=''; this.taskForm.ytPlaylistPk=null;
+          this.videolar=[]; this.taskForm.selectedVideos=[]; this.updateSure();
+        }
+      });
     },
 
     async _loadStudents(){
@@ -949,7 +956,7 @@ function coachMobilePanel() {
       if(!confirm('Bu playlisti ve tüm videolarını silmek istiyor musunuz?'))return;
       try{
         const r=await fetch(`/coach/tasks/api/youtube/${pk}`,{method:'DELETE',headers:{'X-CSRFToken':CSRF()}});
-        if(!r.ok){alert('Silme işlemi başarısız.');return;}
+        if(!r.ok){const d=await r.json().catch(()=>({}));alert(d.error||'Silme işlemi başarısız.');return;}
         this.ytListeler=this.ytListeler.filter(l=>l.pk!==pk);
         if(this.taskForm.liste_id==='yt:'+pk){
           this.taskForm.liste_id=''; this.taskForm.ytPlaylistPk=null;

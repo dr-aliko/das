@@ -19,8 +19,54 @@
       {# ── Input / Error ── #}
       <template x-if="step === 'input' || step === 'error'">
         <div class="space-y-4">
+
+          {# ── My Playlists list ── #}
+          <template x-if="loadingPlaylists && myPlaylists.length === 0">
+            <p class="text-xs text-[var(--muted-2)] text-center py-1">Yükleniyor…</p>
+          </template>
+          <template x-if="myPlaylists.length > 0">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Playlistlerim</p>
+                <span class="text-[10px] text-[var(--muted-2)]" x-text="myPlaylists.length + ' playlist'"></span>
+              </div>
+              <div class="space-y-1 max-h-44 overflow-y-auto rounded-xl">
+                <template x-for="p in myPlaylists" :key="p.pk">
+                  <div class="flex items-center gap-2 px-3 py-2 rounded-lg
+                              bg-[var(--surface-2)] border border-[var(--border)]">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-medium text-[var(--heading)] truncate" x-text="p.title"></p>
+                      <p class="text-[10px] text-[var(--muted-2)]"
+                         x-text="p.exam_type + (p.subject_display ? ' · ' + p.subject_display : '') + ' · ' + p.video_count + ' video'"></p>
+                    </div>
+                    <template x-if="p.is_mine">
+                      <button @click="deletePl(p.pk)"
+                              :title="pendingDeletePk === p.pk ? 'Onaylamak için tekrar tıkla' : 'Sil'"
+                              :class="pendingDeletePk === p.pk
+                                ? 'text-ruby-500 bg-ruby-tint border-ruby-500/30'
+                                : 'text-[var(--muted-2)] hover:text-ruby-400 hover:bg-ruby-500/10 border-transparent'"
+                              class="shrink-0 h-7 flex items-center justify-center rounded-lg border
+                                     transition px-1.5 gap-1 text-[10px] font-bold">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <template x-if="pendingDeletePk === p.pk">
+                          <span>Emin misin?</span>
+                        </template>
+                      </button>
+                    </template>
+                  </div>
+                </template>
+              </div>
+              <p x-show="deleteError" x-text="deleteError"
+                 class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"></p>
+            </div>
+          </template>
+
+          {# ── URL input ── #}
           <div>
-            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Playlist URL</label>
+            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Yeni Playlist URL</label>
             <input x-model="url" type="text"
                    placeholder="https://youtube.com/playlist?list=…"
                    @keydown.enter="doPreview()"

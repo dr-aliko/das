@@ -329,6 +329,7 @@ class YoutubePlaylistListView(View):
                 "exam_type":       p.exam_type,
                 "subject_display": p.subject.display_name if p.subject else "",
                 "video_count":     p.videos.count(),
+                "is_mine":         p.imported_by_id == request.user.pk,
             }
             for p in qs
         ]
@@ -366,7 +367,7 @@ class YoutubePlaylistDeleteView(View):
             playlist = YouTubePlaylist.objects.get(pk=pk)
         except YouTubePlaylist.DoesNotExist:
             return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
-        if playlist.imported_by_id is not None and playlist.imported_by_id != request.user.pk:
+        if playlist.imported_by_id != request.user.pk:
             return JsonResponse({"error": "Bu playlist'i silme yetkiniz yok."}, status=403)
         playlist.delete()
         return JsonResponse({"deleted": pk})
