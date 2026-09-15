@@ -3838,3 +3838,150 @@ def coach_placement_detail(request, student_id, attempt_id):
         'overall':  overall,
         'subjects': subjects,
     })
+
+
+# ──────────────────────────────────────────────
+# EXAM PERFORMANCE EXPORT (HTML + PDF)
+# ──────────────────────────────────────────────
+
+_EXPORT_PERIOD_LABELS = {
+    '7': 'Son 7 gün', '30': 'Son 30 gün',
+    '90': 'Son 3 ay', '365': 'Son 1 yıl', '': 'Tüm zamanlar',
+}
+
+
+def _build_exam_export_context(student, period_str, *, is_pdf=False, coach_view=False):
+    qs = (
+        Exam.objects
+        .filter(student=student)
+        .select_related('publisher')
+        .prefetch_related('results__subject')
+        .order_by('-exam_date', '-id')
+    )
+    if period_str in _PERIOD_DAYS:
+        since = date.today() - timedelta(days=_PERIOD_DAYS[period_str])
+        qs = qs.filter(exam_date__gte=since)
+    exams = list(qs)
+
+    # Collect ordered subject list across all filtered exams
+    seen_subj = {}
+    for exam in exams:
+        for r in exam.results.all():
+            if r.subject_id not in seen_subj:
+                seen_subj[r.subject_id] = r.subject
+    all_subjects = sorted(seen_subj.values(), key=lambda s: (s.exam_type, s.name))
+
+    # Build per-exam rows with aligned cells
+    subject_ids = [s.id for s in all_subjects]
+    table_rows = []
+    for exam in exams:
+        result_map = {r.subject_id: r for r in exam.results.all()}
+        cells = [result_map.get(sid) for sid in subject_ids]
+        total_net = round(sum(r.net_score for r in result_map.values()), 2)
+        table_rows.append({
+            'id':        exam.id,
+            'date':      exam.exam_date,
+            'name':      exam.custom_name,
+            'publisher': exam.publisher.name,
+            'cells':     cells,
+            'total_net': total_net,
+        })
+
+    # Subject averages
+    subject_sums = {s.id: [0.0, 0] for s in all_subjects}
+    for row in table_rows:
+        for s, cell in zip(all_subjects, row['cells']):
+            if cell is not None:
+                subject_sums[s.id][0] += cell.net_score
+                subject_sums[s.id][1] += 1
+    subject_averages = [
+        {
+            'name':         s.name,
+            'display_name': s.display_name,
+            'avg':          round(subject_sums[s.id][0] / subject_sums[s.id][1], 2)
+                            if subject_sums[s.id][1] else 0,
+            'exam_count':   subject_sums[s.id][1],
+        }
+        for s in all_subjects
+    ]
+
+    # Summary stats
+    nets = [r['total_net'] for r in table_rows]
+    avg_net      = round(sum(nets) / len(nets), 2) if nets else 0
+    max_total_net = max(nets, default=0)
+    max_for_bar   = max_total_net or 1
+
+    # Chart data — chronological (oldest→newest), up to 20 exams
+    chart_rows = []
+    for row in reversed(table_rows[:20]):
+        pct = round(min(100.0, max(0.0, row['total_net'] / max_for_bar * 100)), 1)
+        chart_rows.append({
+            'label': row['date'].strftime('%d %b').lstrip('0'),
+            'net':   row['total_net'],
+            'pct':   pct,
+        })
+
+    return {
+        'student':          student,
+        'period_str':       period_str,
+        'period_label':     _EXPORT_PERIOD_LABELS.get(period_str, 'Tüm zamanlar'),
+        'export_date':      date.today(),
+        'is_pdf':           is_pdf,
+        'coach_view':       coach_view,
+        'all_subjects':     all_subjects,
+        'table_rows':       table_rows,
+        'subject_averages': subject_averages,
+        'trial_topics':     _build_trial_topic_errors(student, period_str),
+        'chart_rows':       chart_rows,
+        'chart_data_json':  safe_json([{'d': r['label'], 'n': float(r['net'])} for r in chart_rows]),
+        'exam_count':       len(exams),
+        'avg_net':          avg_net,
+        'max_total_net':    max_total_net,
+    }
+
+
+def _render_export_pdf(request, ctx, student, period_str):
+    from django.template.loader import render_to_string
+    try:
+        from weasyprint import HTML as WeasyHTML
+    except ImportError:
+        return HttpResponse('PDF dışa aktarma için weasyprint kurulu değil.', status=503)
+    html_str = render_to_string('reports/student_exam_report.html', ctx, request=request)
+    try:
+        pdf_bytes = WeasyHTML(
+            string=html_str,
+            base_url=request.build_absolute_uri('/'),
+        ).write_pdf()
+    except Exception as exc:
+        return HttpResponse(f'PDF oluşturulurken hata: {exc}', status=500)
+    slug = period_str or 'tumu'
+    filename = f'deneme_raporu_{student.id}_{slug}.pdf'
+    resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return resp
+
+
+@student_required
+def student_exam_export(request):
+    period_str = request.GET.get('period', '')
+    fmt        = request.GET.get('format', 'html')
+    is_pdf     = fmt == 'pdf'
+    ctx = _build_exam_export_context(request.user, period_str, is_pdf=is_pdf)
+    if is_pdf:
+        return _render_export_pdf(request, ctx, request.user, period_str)
+    return render(request, 'reports/student_exam_report.html', ctx)
+
+
+@coach_required
+def coach_student_exam_export(request, student_id):
+    from users_app.models import User
+    if not coach_can_view_student(request.user, student_id):
+        return HttpResponseForbidden('Bu öğrenciye erişim yetkiniz yok.')
+    student = get_object_or_404(User, id=student_id, role='student')
+    period_str = request.GET.get('period', '')
+    fmt        = request.GET.get('format', 'html')
+    is_pdf     = fmt == 'pdf'
+    ctx = _build_exam_export_context(student, period_str, is_pdf=is_pdf, coach_view=True)
+    if is_pdf:
+        return _render_export_pdf(request, ctx, student, period_str)
+    return render(request, 'reports/student_exam_report.html', ctx)

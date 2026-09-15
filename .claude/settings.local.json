@@ -101,7 +101,10 @@
       "Bash(.venv/Scripts/python -m pytest exams_app/tests/test_sm2.py -v --tb=long)",
       "Bash(.venv/Scripts/python -m pytest exams_app/tests/test_sm2.py::test_quality5_first_review -v --tb=long)",
       "Bash(.venv/Scripts/python manage.py migrate tasks_app)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(.venv/Scripts/python.exe -m pip install weasyprint)",
+      "Bash(.venv/Scripts/python.exe manage.py shell)",
+      "Bash(.venv/Scripts/pip.exe freeze *)"
     ]
   }
 }

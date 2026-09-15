@@ -8,6 +8,7 @@ urlpatterns = [
     path('analytics/', views.dashboard_analytics_partial, name='dashboard_analytics'),
     path('analytics/chart/', views.dashboard_chart_data, name='dashboard_chart_data'),
     path('denemeler/', views.denemeler_list, name='denemeler_list'),
+    path('denemeler/export/', views.student_exam_export, name='exam_export'),
     path('denemeler/cards/', views.denemeler_cards_partial, name='denemeler_cards'),
     path('denemeler/topics/', views.denemeler_topics_partial, name='denemeler_topics'),
     path('compare/', views.exam_compare, name='exam_compare'),
