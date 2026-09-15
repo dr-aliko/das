@@ -99,7 +99,8 @@
       "Bash(.venv/Scripts/python -m pytest exams_app/tests/ users_app/tests/ --tb=short -q)",
       "Bash(.venv/Scripts/python manage.py showmigrations users_app)",
       "Bash(.venv/Scripts/python -m pytest exams_app/tests/test_sm2.py -v --tb=long)",
-      "Bash(.venv/Scripts/python -m pytest exams_app/tests/test_sm2.py::test_quality5_first_review -v --tb=long)"
+      "Bash(.venv/Scripts/python -m pytest exams_app/tests/test_sm2.py::test_quality5_first_review -v --tb=long)",
+      "Bash(.venv/Scripts/python manage.py migrate tasks_app)"
     ]
   }
 }

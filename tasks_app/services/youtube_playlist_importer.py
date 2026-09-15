@@ -159,12 +159,12 @@ def import_playlist(playlist_id: str, subject, exam_type: str, imported_by) -> '
 
         playlist_obj, _ = YouTubePlaylist.objects.update_or_create(
             playlist_id=playlist_id,
+            imported_by=imported_by,
             defaults={
                 'title':         meta['title'],
                 'channel_title': meta['channel_title'],
                 'subject':       subject,
                 'exam_type':     exam_type,
-                'imported_by':   imported_by,
             },
         )
 

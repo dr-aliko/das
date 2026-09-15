@@ -237,7 +237,7 @@ class YoutubePlaylistPreviewView(View):
             return JsonResponse({"error": str(exc)}, status=502)
 
         subject, exam_type = detect_subject_and_exam_type(meta['title'])
-        existing = YouTubePlaylist.objects.filter(playlist_id=pid).first()
+        existing = YouTubePlaylist.objects.filter(playlist_id=pid, imported_by=request.user).first()
 
         from exams_app.models import Subject
         subj_qs = Subject.objects.order_by('exam_type', 'name')
@@ -286,9 +286,8 @@ class YoutubePlaylistImportView(View):
             except (Subject.DoesNotExist, ValueError):
                 return JsonResponse({"error": "Seçilen ders bulunamadı."}, status=400)
 
-        was_update = False
         from tasks_app.models import YouTubePlaylist
-        was_update = YouTubePlaylist.objects.filter(playlist_id=pid).exists()
+        was_update = YouTubePlaylist.objects.filter(playlist_id=pid, imported_by=request.user).exists()
 
         try:
             playlist = import_playlist(pid, subject, exam_type, request.user)
@@ -316,8 +315,12 @@ class YoutubePlaylistImportView(View):
 @method_decorator(coach_required, name='dispatch')
 class YoutubePlaylistListView(View):
     def get(self, request):
+        from django.db.models import Q
         from tasks_app.models import YouTubePlaylist
-        qs = YouTubePlaylist.objects.select_related('subject').order_by('exam_type', 'title')
+        qs = (YouTubePlaylist.objects
+              .filter(Q(imported_by=request.user) | Q(imported_by__isnull=True))
+              .select_related('subject')
+              .order_by('exam_type', 'title'))
         playlists = [
             {
                 "pk":              p.pk,
@@ -340,6 +343,8 @@ class YoutubePlaylistVideosView(View):
             playlist = YouTubePlaylist.objects.get(pk=pk)
         except YouTubePlaylist.DoesNotExist:
             return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
+        if playlist.imported_by_id is not None and playlist.imported_by_id != request.user.pk:
+            return JsonResponse({"error": "Bu playlist'e erişim yetkiniz yok."}, status=403)
         videos = [
             {"id": v.pk, "title": v.title, "duration": v.duration_min}
             for v in playlist.videos.order_by('position')
@@ -361,6 +366,8 @@ class YoutubePlaylistDeleteView(View):
             playlist = YouTubePlaylist.objects.get(pk=pk)
         except YouTubePlaylist.DoesNotExist:
             return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
+        if playlist.imported_by_id is not None and playlist.imported_by_id != request.user.pk:
+            return JsonResponse({"error": "Bu playlist'i silme yetkiniz yok."}, status=403)
         playlist.delete()
         return JsonResponse({"deleted": pk})
 

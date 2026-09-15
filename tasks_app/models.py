@@ -67,7 +67,7 @@ class GrupDetay(models.Model):
 
 
 class YouTubePlaylist(models.Model):
-    playlist_id   = models.CharField(max_length=64, unique=True)
+    playlist_id   = models.CharField(max_length=64)
     title         = models.CharField(max_length=255)
     channel_title = models.CharField(max_length=255, blank=True)
     subject       = models.ForeignKey(
@@ -92,6 +92,7 @@ class YouTubePlaylist(models.Model):
         verbose_name = 'YouTube Playlist'
         verbose_name_plural = 'YouTube Playlistler'
         ordering = ['exam_type', 'title']
+        unique_together = [('playlist_id', 'imported_by')]
 
     def __str__(self):
         return self.title
