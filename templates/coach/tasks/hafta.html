@@ -530,7 +530,7 @@
                     class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
                            text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
               <option value="">Ders seçin</option>
-              <template x-for="d in dersler" :key="d.id">
+              <template x-for="d in filteredDersler" :key="d.id">
                 <option :value="d.id" x-text="d.ad"></option>
               </template>
             </select>
@@ -555,7 +555,7 @@
                       class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
                              text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
                 <option value="">Ders seçin</option>
-                <template x-for="d in dersler" :key="d.id">
+                <template x-for="d in filteredDersler" :key="d.id">
                   <option :value="d.id" x-text="d.ad"></option>
                 </template>
               </select>
@@ -795,6 +795,13 @@ function coachMobilePanel() {
         if(ders) return l.subject_display===ders.ad;
         return true;
       });
+    },
+    get filteredDersler(){
+      if(this.taskForm.sinav_tipi!=='AYT') return this.dersler;
+      const alan=this.selectedStudent?.alan||'SAY';
+      const allowed=_DERS_AYT_MAP[alan];
+      if(!allowed) return this.dersler;
+      return this.dersler.filter(d=>d.ad==='Diğer'||allowed.has(d.ad));
     },
     get activeDayTasks(){ return this.days[this.activeDay-1]?.tasks ?? []; },
     get activeDayActiveTasks(){ return this.activeDayTasks.filter(t=>!t.done); },

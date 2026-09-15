@@ -169,7 +169,7 @@
                     <div x-show="dersler.length > 0"
                          class="space-y-1.5 max-h-36 overflow-y-auto"
                          style="-ms-overflow-style:none;scrollbar-width:none;">
-                        <template x-for="d in dersler" :key="d.id">
+                        <template x-for="d in filteredDersler" :key="d.id">
                             <button type="button"
                                     @click="taskForm.konu_ders_id = String(d.id); taskForm.liste_id = ''; taskForm.selectedVideos = []; videolar = []; loadListeler()"
                                     class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors"

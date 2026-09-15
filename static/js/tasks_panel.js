@@ -26,6 +26,13 @@ const _PLAYLIST_AYT_MAP = {
   SOZ: new Set(['Türk Dili ve Edebiyatı', 'Tarih 2', 'Coğrafya 2', 'Felsefe Grubu']),
   DIL: new Set(['Yabancı Dil']),
 };
+// AYT ders titles (legacy API field "ad") allowed per alan — matches kocluk.db Title values
+const _DERS_AYT_MAP = {
+  SAY: new Set(['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri']),
+  EA:  new Set(['Matematik', 'Edebiyat', 'Geometri']),
+  SOZ: new Set(['Edebiyat', 'Tarih', 'Coğrafya', 'Felsefe']),
+  DIL: new Set(['Yabancı Dil']),
+};
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
 
@@ -397,6 +404,16 @@ function panel() {
         return true;
       });
     },
+
+    get filteredDersler() {
+      if (this.taskForm.sinav_tipi !== 'AYT') return this.dersler;
+      const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
+        ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
+      const allowed = _DERS_AYT_MAP[alan];
+      if (!allowed) return this.dersler;
+      return this.dersler.filter(d => d.ad === 'Diğer' || allowed.has(d.ad));
+    },
+
     aktiviteLabel: t => AKTIVITE_LABELS[t] ?? t ?? '',
     formatDetay: d => `• ${d.aciklama}${d.sure_bilgisi ? ' (' + d.sure_bilgisi + ')' : ''}`,
     durStr: dk => !dk ? '' : dk >= 60 ? `⏱ ${Math.floor(dk / 60)}s${dk % 60 ? ' ' + dk % 60 + 'dk' : ''}` : `⏱ ${dk}dk`,
