@@ -33,8 +33,8 @@ const _DERS_AYT_MAP = {
   SOZ: new Set(['Edebiyat', 'Tarih', 'Coğrafya', 'Felsefe']),
   DIL: new Set(['Yabancı Dil']),
 };
-// TYT ders fixed allow-list — alan-independent (Edebiyat, Geometri, Yabancı Dil are AYT-only)
-const _DERS_TYT_ALLOW = new Set(['Matematik', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Diğer', 'Din Kültürü', 'Fizik', 'Kimya', 'Biyoloji']);
+// TYT ders fixed allow-list — alan-independent (Edebiyat, Yabancı Dil are AYT-only)
+const _DERS_TYT_ALLOW = new Set(['Matematik', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Diğer', 'Din Kültürü', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri']);
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
 
