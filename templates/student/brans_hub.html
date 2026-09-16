@@ -43,20 +43,20 @@
              x-transition:enter-end="opacity-100 scale-100"
              class="absolute right-0 mt-2 w-48 rounded-2xl border border-ink-700 bg-ink-850 shadow-xl overflow-hidden z-50">
           <div class="p-2 space-y-1">
-            <a :href="exportUrl('xlsx')" @click="open = false"
+            <a :href="exportUrl('html')" @click="open = false"
                class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl text-ink-200 hover:bg-ink-800 transition-colors">
-              <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Excel Olarak İndir
-            </a>
-            <button @click="exportHTML(); open = false"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl text-ink-200 hover:bg-ink-800 transition-colors text-left">
               <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
               </svg>
-              HTML Olarak İndir
-            </button>
+              HTML Raporu
+            </a>
+            <a :href="exportUrl('pdf')" @click="open = false"
+               class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold rounded-xl text-ink-200 hover:bg-ink-800 transition-colors">
+              <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              PDF Raporu
+            </a>
           </div>
         </div>
       </div>
@@ -142,12 +142,12 @@
 
         <div class="relative" x-data="{ open: false }">
           <button @click="open = !open" type="button"
-                  class="h-9 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500
-                         text-xs font-semibold hover:bg-emerald-500/20 transition-colors inline-flex items-center gap-1.5">
+                  class="h-9 px-3 rounded-lg bg-violet-500/10 border border-violet-500/30 text-violet-400
+                         text-xs font-semibold hover:bg-violet-500/20 transition-colors inline-flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
             </svg>
-            Excel
+            Rapor
           </button>
           <div x-show="open" @click.away="open = false" x-cloak
                x-transition:enter="transition ease-out duration-100"
@@ -155,20 +155,20 @@
                x-transition:enter-end="opacity-100 scale-100"
                class="absolute right-0 mt-2 w-44 rounded-xl border border-ink-700 bg-ink-850 shadow-xl overflow-hidden z-50">
             <div class="p-1.5 space-y-0.5">
-              <a :href="exportUrl('xlsx')" @click="open = false"
+              <a :href="exportUrl('html')" @click="open = false"
                  class="flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors">
-                <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                </svg>
-                Excel
-              </a>
-              <button @click="exportHTML(); open = false"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors text-left">
                 <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
                 </svg>
-                HTML
-              </button>
+                HTML Raporu
+              </a>
+              <a :href="exportUrl('pdf')" @click="open = false"
+                 class="flex items-center gap-2 px-3 py-2 text-xs font-medium text-ink-200 hover:bg-ink-800 rounded-lg transition-colors">
+                <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                PDF Raporu
+              </a>
             </div>
           </div>
         </div>
@@ -405,13 +405,13 @@ function bransHubState() {
     clearSubject()    { this.activeSubject = ''; this.activeSubjectName = ''; },
     visibleCount()    { return this.entries.filter(e => !this.activeSubject || e.subjectKey === this.activeSubject).length; },
     hasMonth(label)   { return this.entries.some(e => e.monthLabel === label && (!this.activeSubject || e.subjectKey === this.activeSubject)); },
-    exportUrl(ext) {
-      const params = new URLSearchParams({ period: this.exportPeriod });
-      if (this.studentId)   params.set('student_id', this.studentId);
-      if (this.subjectSlug) params.set('subject', this.subjectSlug);
-      return `/brans/export.${ext}?${params.toString()}`;
+    exportUrl(format) {
+      const params = new URLSearchParams({ period: this.exportPeriod, type: this.activeExamType, format });
+      const base = this.coachView
+        ? `/coach/student/${this.studentId}/brans/report/`
+        : '/brans/report/';
+      return `${base}?${params.toString()}`;
     },
-    exportHTML() { window.location.href = this.exportUrl('html'); },
 
     async setFilter(period, examType) {
       if (this.activePeriod === period && this.activeExamType === examType) return;

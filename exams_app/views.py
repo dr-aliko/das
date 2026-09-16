@@ -389,6 +389,31 @@ def _brans_export_period_query(period):
     return period if period in {'7g', '30g', '3 ay', '1 yıl', 'Tümü'} else '30g'
 
 
+def _build_brans_topic_errors(student, subject_names, period_days, current_cutoff=None):
+    from django.db.models import Sum
+    if current_cutoff is None:
+        current_cutoff = _brans_period_cutoff('30g')
+    qs = BransTopicError.objects.filter(
+        brans_deneme__student=student,
+        topic__subject__name__in=subject_names,
+    )
+    if period_days:
+        qs = qs.filter(brans_deneme__tarih__gte=current_cutoff)
+    qs = qs.values('topic__id', 'topic__name', 'topic__subject__name').annotate(
+        total_errors=Sum('yanlis_sayisi')
+    )
+    topic_map = {}
+    for r in qs:
+        tid = r['topic__id']
+        if tid not in topic_map:
+            topic_map[tid] = {
+                'id': tid,
+                'name': r['topic__name'],
+                'subject': r['topic__subject__name'],
+                'errors': 0,
+            }
+        topic_map[tid]['errors'] += (r['total_errors'] or 0)
+    return sorted(topic_map.values(), key=lambda x: x['errors'], reverse=True)[:15]
 
 
 def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, coach_view=False):
@@ -483,30 +508,18 @@ def _build_brans_subject_detail_context(student, subject_slug, period='30g', *, 
     }
     chart_points = _subject_detail_chart_points(exam_objs, current_cutoff)
     
-    # Topic errors — BRANCH EXAMS ONLY (BransTopicError; trial exam errors excluded)
-    brans_errors = (
-        BransTopicError.objects
-        .filter(brans_deneme__student=student, topic__subject__name__in=subject_info['names'])
+    topics = _build_brans_topic_errors(
+        student, subject_info['names'], period_days, current_cutoff
     )
-    if period_days:
-        brans_errors = brans_errors.filter(brans_deneme__tarih__gte=current_cutoff)
-    brans_errors = brans_errors.values('topic__id', 'topic__name').annotate(total_errors=Sum('yanlis_sayisi'))
 
-    topic_errors_map = {}
     study_base_url = reverse('tasks:hafta') if coach_view else reverse('student_tasks:hafta')
-    for r in brans_errors:
-        tid = r['topic__id']
-        if tid not in topic_errors_map:
-            topic_errors_map[tid] = {'id': tid, 'name': r['topic__name'], 'errors': 0}
-        topic_errors_map[tid]['errors'] += (r['total_errors'] or 0)
-
-    for topic in topic_errors_map.values():
+    topic_errors_map = {}
+    for topic in topics:
         query = {'topic_id': topic['id'], 'mode': 'konu_anlatimi'}
         if coach_view:
             query['student_id'] = student.id
         topic['study_url'] = f'{study_base_url}?{urlencode(query)}'
-        
-    topics = sorted(topic_errors_map.values(), key=lambda x: x['errors'], reverse=True)[:10]
+        topic_errors_map[topic['id']] = topic
 
     # ── Per-topic exam breakdown (accordion drill-down data) ─────────────────
     top_topic_ids = [t['id'] for t in topics]
@@ -992,110 +1005,275 @@ def brans_hub_coach_api(request, student_id):
     })
 
 
-def _brans_export_student(request):
+def _resolve_brans_export_student(request, path_student_id=None):
+    """
+    Resolve and authorise the export subject.
+    Coach views pass path_student_id from the URL path.
+    Student views pass nothing and always get their own data.
+    """
     if not request.user.is_authenticated:
         return None, HttpResponseForbidden('Giriş gerekli.')
-    student_id = request.GET.get('student_id')
-    if request.user.role == 'coach':
-        if not student_id or not coach_can_view_student(request.user, student_id):
-            return None, HttpResponseForbidden('Bu öğrenciyi dışa aktarma yetkiniz yok.')
+    if path_student_id is not None:
+        if request.user.role != 'coach' or not coach_can_view_student(request.user, path_student_id):
+            return None, HttpResponseForbidden('Bu öğrenciye erişim yetkiniz yok.')
         from users_app.models import User as UserModel
-        return get_object_or_404(UserModel, id=student_id, role='student'), None
-    if student_id and str(request.user.id) != str(student_id):
-        return None, HttpResponseForbidden('Bu veriyi dışa aktarma yetkiniz yok.')
+        return get_object_or_404(UserModel, id=path_student_id, role='student'), None
+    if request.user.role != 'student':
+        return None, HttpResponseForbidden('Erişim yetkiniz yok.')
     return request.user, None
 
 
-def _brans_export_entries(student, period, subject_slug=None):
-    cutoff = _brans_period_cutoff(period)
-    qs = BransDeneme.objects.filter(student=student).select_related('ders').order_by('-tarih', '-id')
-    if cutoff != date.min:
-        qs = qs.filter(tarih__gte=cutoff)
-    if subject_slug:
-        subject_names = next((names for key, _label, _color, _klass, names in _BRANS_ALL_SUBJECTS if key == subject_slug), None)
-        if subject_names:
-            qs = qs.filter(ders__name__in=subject_names)
-    return list(qs)
+_BRANS_PERIOD_LABELS = {
+    '7g': 'Son 7 Gün', '30g': 'Son 30 Gün',
+    '3 ay': 'Son 3 Ay', '1 yıl': 'Son 1 Yıl', 'Tümü': 'Tüm Zamanlar',
+}
 
 
-def brans_export_xlsx(request):
-    student, error_response = _brans_export_student(request)
-    if error_response:
-        return error_response
+def _build_brans_hub_export_context(student, period, exam_type='TYT', *, is_pdf=False, coach_view=False):
+    period = _brans_export_period_query(period)
+    period_days = {'7g': 7, '30g': 30, '3 ay': 90, '1 yıl': 365}.get(period)
+    current_cutoff = _brans_period_cutoff(period)
 
-    period = _brans_export_period_query(request.GET.get('period', '30g'))
-    entries = _brans_export_entries(student, period, request.GET.get('subject'))
+    if exam_type not in ('TYT', 'AYT'):
+        exam_type = 'TYT'
 
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
+    if exam_type == 'AYT':
+        alan = getattr(student, 'alan', '') or ''
+        allowed_keys = _AYT_ALAN_FILTER.get(alan)
+        active_subs = [s for s in _BRANS_AYT_SUBJECTS if allowed_keys is None or s[0] in allowed_keys]
+    else:
+        active_subs = _BRANS_HUB_SUBJECTS
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = 'Brans Hub'
-    headers = ['Tarih', 'Ders', 'Dogru', 'Yanlis', 'Bos', 'Net', 'Sure (dk)', 'Not']
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill('solid', fgColor='FFEDE9FE')
-    for entry in entries:
-        ws.append([
-            entry.tarih.isoformat(),
-            entry.ders.display_name,
-            entry.dogru,
-            entry.yanlis,
-            entry.bos,
-            entry.net,
-            entry.sure_dakika or '',
-            entry.ogrenci_notu or '',
-        ])
-    for column in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in column)
-        ws.column_dimensions[column[0].column_letter].width = min(max_len + 2, 40)
-
-    import io
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    response = HttpResponse(
-        buf.getvalue(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    qs = (
+        BransDeneme.objects
+        .filter(student=student)
+        .select_related('ders')
+        .order_by('tarih', 'id')
     )
-    response['Content-Disposition'] = f'attachment; filename="brans_{student.id}_{period}.xlsx"'
-    return response
+    all_entries = list(qs)
+    type_entries = [e for e in all_entries if e.ders.name.startswith(exam_type + ' ')]
+    if period_days:
+        period_entries = [e for e in type_entries if e.tarih >= current_cutoff]
+    else:
+        period_entries = type_entries
+
+    subject_stats = []
+    for key, label, color, klass, names in active_subs:
+        subj = [e for e in period_entries if e.ders.name in names]
+        if subj:
+            nets = [float(e.net) for e in subj]
+            avg_net = round(sum(nets) / len(nets), 2)
+            max_net = round(max(nets), 2)
+        else:
+            avg_net = max_net = 0.0
+        subject_stats.append({
+            'key': key, 'name': label, 'color': color,
+            'avg_net': avg_net, 'max_net': max_net, 'count': len(subj),
+        })
+
+    all_nets = [float(e.net) for e in period_entries]
+    total_exams = len(period_entries)
+    overall_avg = round(sum(all_nets) / len(all_nets), 2) if all_nets else 0.0
+
+    max_avg = max((s['avg_net'] for s in subject_stats if s['count']), default=1) or 1
+    chart_rows = [
+        {
+            'label': s['name'],
+            'net': s['avg_net'],
+            'count': s['count'],
+            'pct': round(min(100.0, max(0.0, s['avg_net'] / max_avg * 100)), 1),
+        }
+        for s in subject_stats if s['count'] > 0
+    ]
+
+    all_names = [n for _, _, _, _, names in active_subs for n in names]
+    topic_errors = _build_brans_topic_errors(student, all_names, period_days, current_cutoff)
+
+    exam_history = [
+        {
+            'date': e.tarih,
+            'subject': e.ders.display_name,
+            'dogru': e.dogru,
+            'yanlis': e.yanlis,
+            'bos': e.bos,
+            'net': round(float(e.net), 2),
+            'duration': e.sure_dakika,
+        }
+        for e in sorted(period_entries, key=lambda e: e.tarih, reverse=True)[:40]
+    ]
+
+    return {
+        'student':       student,
+        'scope':         'hub',
+        'exam_type':     exam_type,
+        'period':        period,
+        'period_label':  _BRANS_PERIOD_LABELS.get(period, period),
+        'export_date':   date.today(),
+        'is_pdf':        is_pdf,
+        'coach_view':    coach_view,
+        'subject_stats': subject_stats,
+        'chart_rows':    chart_rows,
+        'chart_data_json': safe_json([{'d': r['label'], 'n': r['net']} for r in chart_rows]),
+        'topic_errors':  topic_errors,
+        'exam_history':  exam_history,
+        'total_exams':   total_exams,
+        'overall_avg':   overall_avg,
+    }
 
 
-def brans_export_html(request):
-    student, error_response = _brans_export_student(request)
-    if error_response:
-        return error_response
+def _build_brans_subject_export_context(student, subject_slug, period='30g', *, is_pdf=False, coach_view=False):
+    subject_info = None
+    for key, label, color, klass, names in _BRANS_ALL_SUBJECTS:
+        if key == subject_slug:
+            subject_info = {'key': key, 'name': label, 'color': color, 'names': names}
+            break
+    if not subject_info:
+        return None
 
-    period = _brans_export_period_query(request.GET.get('period', '30g'))
-    entries = _brans_export_entries(student, period, request.GET.get('subject'))
+    period = _brans_export_period_query(period)
+    period_days = {'7g': 7, '30g': 30, '3 ay': 90, '1 yıl': 365}.get(period)
+    current_cutoff = _brans_period_cutoff(period)
 
-    from django.utils.html import escape
-
-    rows = ''.join(
-        '<tr>'
-        f'<td>{escape(entry.tarih.isoformat())}</td>'
-        f'<td>{escape(entry.ders.display_name)}</td>'
-        f'<td>{entry.dogru}</td>'
-        f'<td>{entry.yanlis}</td>'
-        f'<td>{entry.bos}</td>'
-        f'<td>{entry.net:.2f}</td>'
-        f'<td>{entry.sure_dakika or ""}</td>'
-        f'<td>{escape(entry.ogrenci_notu or "")}</td>'
-        '</tr>'
-        for entry in entries
+    qs = (
+        BransDeneme.objects
+        .filter(student=student, ders__name__in=subject_info['names'])
+        .select_related('ders')
+        .order_by('-tarih', '-id')
     )
-    html = f'''<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><title>Branş Hub Export</title>
-<style>body{{font-family:Arial,sans-serif;padding:24px}}table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #ddd;padding:8px;text-align:left}}th{{background:#ede9fe}}</style>
-</head><body><h1>{escape(student.full_name)} - Branş Hub</h1><p>Periyot: {escape(period)}</p>
-<table><thead><tr><th>Tarih</th><th>Ders</th><th>Doğru</th><th>Yanlış</th><th>Boş</th><th>Net</th><th>Süre</th><th>Not</th></tr></thead><tbody>{rows}</tbody></table>
-</body></html>'''
-    response = HttpResponse(html, content_type='text/html; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="brans_{student.id}_{period}.html"'
-    return response
+    if period_days:
+        qs = qs.filter(tarih__gte=current_cutoff)
+    entries = list(qs)
+
+    total_exams = len(entries)
+    if entries:
+        nets = [float(e.net) for e in entries]
+        avg_net   = round(sum(nets) / len(nets), 2)
+        max_net   = round(max(nets), 2)
+        min_net   = round(min(nets), 2)
+        dur_vals  = [e.sure_dakika for e in entries if e.sure_dakika]
+        avg_dur   = round(sum(dur_vals) / len(dur_vals), 1) if dur_vals else None
+        total_correct = sum(e.dogru for e in entries)
+        total_wrong   = sum(e.yanlis for e in entries)
+        total_blank   = sum(e.bos for e in entries)
+    else:
+        avg_net = max_net = min_net = 0.0
+        avg_dur = None
+        total_correct = total_wrong = total_blank = 0
+
+    topic_errors = _build_brans_topic_errors(student, subject_info['names'], period_days, current_cutoff)
+
+    sorted_asc = sorted(entries, key=lambda e: e.tarih)
+    max_bar = max((float(e.net) for e in entries), default=1) or 1
+    chart_rows = [
+        {
+            'label': e.tarih.strftime('%d.%m'),
+            'net':   round(float(e.net), 2),
+            'pct':   round(min(100.0, max(0.0, float(e.net) / max_bar * 100)), 1),
+        }
+        for e in sorted_asc[-20:]
+    ]
+
+    exam_history = [
+        {
+            'date':     e.tarih,
+            'subject':  e.ders.display_name,
+            'dogru':    e.dogru,
+            'yanlis':   e.yanlis,
+            'bos':      e.bos,
+            'net':      round(float(e.net), 2),
+            'duration': e.sure_dakika,
+        }
+        for e in entries
+    ]
+
+    return {
+        'student':       student,
+        'scope':         'subject',
+        'subject_name':  subject_info['name'],
+        'subject_slug':  subject_slug,
+        'subject_color': subject_info['color'],
+        'period':        period,
+        'period_label':  _BRANS_PERIOD_LABELS.get(period, period),
+        'export_date':   date.today(),
+        'is_pdf':        is_pdf,
+        'coach_view':    coach_view,
+        'total_exams':   total_exams,
+        'avg_net':       avg_net,
+        'max_net':       max_net,
+        'min_net':       min_net,
+        'avg_dur':       avg_dur,
+        'total_correct': total_correct,
+        'total_wrong':   total_wrong,
+        'total_blank':   total_blank,
+        'chart_rows':    chart_rows,
+        'chart_data_json': safe_json([{'d': r['label'], 'n': r['net']} for r in chart_rows]),
+        'topic_errors':  topic_errors,
+        'exam_history':  exam_history,
+    }
+
+
+@student_required
+def brans_hub_export(request):
+    student, err = _resolve_brans_export_student(request)
+    if err:
+        return err
+    period    = _brans_export_period_query(request.GET.get('period', '30g'))
+    exam_type = request.GET.get('type', 'TYT')
+    is_pdf    = request.GET.get('format', 'html') == 'pdf'
+    ctx = _build_brans_hub_export_context(student, period, exam_type, is_pdf=is_pdf)
+    if is_pdf:
+        return _render_export_pdf(request, 'reports/brans_report.html', ctx,
+                                  f'brans_hub_{student.id}_{period}.pdf')
+    return render(request, 'reports/brans_report.html', ctx)
+
+
+@coach_required
+def brans_hub_export_coach(request, student_id):
+    student, err = _resolve_brans_export_student(request, path_student_id=student_id)
+    if err:
+        return err
+    period    = _brans_export_period_query(request.GET.get('period', '30g'))
+    exam_type = request.GET.get('type', 'TYT')
+    is_pdf    = request.GET.get('format', 'html') == 'pdf'
+    ctx = _build_brans_hub_export_context(student, period, exam_type, is_pdf=is_pdf, coach_view=True)
+    if is_pdf:
+        return _render_export_pdf(request, 'reports/brans_report.html', ctx,
+                                  f'brans_hub_{student.id}_{period}.pdf')
+    return render(request, 'reports/brans_report.html', ctx)
+
+
+@student_required
+def brans_subject_export(request, subject_slug):
+    student, err = _resolve_brans_export_student(request)
+    if err:
+        return err
+    period = _brans_export_period_query(request.GET.get('period', '30g'))
+    is_pdf = request.GET.get('format', 'html') == 'pdf'
+    ctx = _build_brans_subject_export_context(student, subject_slug, period, is_pdf=is_pdf)
+    if ctx is None:
+        from django.http import Http404
+        raise Http404
+    if is_pdf:
+        return _render_export_pdf(request, 'reports/brans_report.html', ctx,
+                                  f'brans_{subject_slug}_{student.id}_{period}.pdf')
+    return render(request, 'reports/brans_report.html', ctx)
+
+
+@coach_required
+def brans_subject_export_coach(request, student_id, subject_slug):
+    student, err = _resolve_brans_export_student(request, path_student_id=student_id)
+    if err:
+        return err
+    period = _brans_export_period_query(request.GET.get('period', '30g'))
+    is_pdf = request.GET.get('format', 'html') == 'pdf'
+    ctx = _build_brans_subject_export_context(student, subject_slug, period, is_pdf=is_pdf, coach_view=True)
+    if ctx is None:
+        from django.http import Http404
+        raise Http404
+    if is_pdf:
+        return _render_export_pdf(request, 'reports/brans_report.html', ctx,
+                                  f'brans_{subject_slug}_{student.id}_{period}.pdf')
+    return render(request, 'reports/brans_report.html', ctx)
 
 
 @coach_required
@@ -3966,13 +4144,13 @@ def _build_exam_export_context(student, period_str, *, is_pdf=False, coach_view=
     }
 
 
-def _render_export_pdf(request, ctx, student, period_str):
+def _render_export_pdf(request, template_name, ctx, filename):
     from django.template.loader import render_to_string
     try:
         from weasyprint import HTML as WeasyHTML
     except ImportError:
         return HttpResponse('PDF dışa aktarma için weasyprint kurulu değil.', status=503)
-    html_str = render_to_string('reports/student_exam_report.html', ctx, request=request)
+    html_str = render_to_string(template_name, ctx, request=request)
     try:
         pdf_bytes = WeasyHTML(
             string=html_str,
@@ -3980,8 +4158,6 @@ def _render_export_pdf(request, ctx, student, period_str):
         ).write_pdf()
     except Exception as exc:
         return HttpResponse(f'PDF oluşturulurken hata: {exc}', status=500)
-    slug = period_str or 'tumu'
-    filename = f'deneme_raporu_{student.id}_{slug}.pdf'
     resp = HttpResponse(pdf_bytes, content_type='application/pdf')
     resp['Content-Disposition'] = f'attachment; filename="{filename}"'
     return resp
@@ -3994,7 +4170,8 @@ def student_exam_export(request):
     is_pdf     = fmt == 'pdf'
     ctx = _build_exam_export_context(request.user, period_str, is_pdf=is_pdf)
     if is_pdf:
-        return _render_export_pdf(request, ctx, request.user, period_str)
+        filename = f'deneme_raporu_{request.user.id}_{period_str or "tumu"}.pdf'
+        return _render_export_pdf(request, 'reports/student_exam_report.html', ctx, filename)
     return render(request, 'reports/student_exam_report.html', ctx)
 
 
@@ -4009,5 +4186,6 @@ def coach_student_exam_export(request, student_id):
     is_pdf     = fmt == 'pdf'
     ctx = _build_exam_export_context(student, period_str, is_pdf=is_pdf, coach_view=True)
     if is_pdf:
-        return _render_export_pdf(request, ctx, student, period_str)
+        filename = f'deneme_raporu_{student.id}_{period_str or "tumu"}.pdf'
+        return _render_export_pdf(request, 'reports/student_exam_report.html', ctx, filename)
     return render(request, 'reports/student_exam_report.html', ctx)

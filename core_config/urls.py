@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
-from exams_app.views import brans_export_html, brans_export_xlsx, brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api
+from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
 from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read
 
 urlpatterns = [
@@ -31,8 +31,8 @@ urlpatterns = [
     path('student/konu-takip/', include('konu_takip_app.student_urls', namespace='student_konu_takip')),
     path('brans/', brans_hub_student, name='brans_hub'),
     path('brans/api/', brans_hub_api, name='brans_hub_api'),
-    path('brans/export.xlsx', brans_export_xlsx, name='brans_export_xlsx'),
-    path('brans/export.html', brans_export_html, name='brans_export_html'),
+    path('brans/report/', brans_hub_export, name='brans_hub_export'),
+    path('brans/<slug:subject_slug>/report/', brans_subject_export, name='brans_subject_export'),
     path('brans/<slug:subject_slug>/', brans_subject_detail_student, name='brans_subject_detail'),
     path('brans/<slug:subject_slug>/api/', brans_subject_detail_student_api, name='brans_subject_detail_api'),
     path('analiz/', RedirectView.as_view(pattern_name='brans_hub', permanent=True), name='analiz_redirect'),
