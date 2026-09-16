@@ -104,7 +104,16 @@
       "Bash(del *)",
       "Bash(.venv/Scripts/python.exe -m pip install weasyprint)",
       "Bash(.venv/Scripts/python.exe manage.py shell)",
-      "Bash(.venv/Scripts/pip.exe freeze *)"
+      "Bash(.venv/Scripts/pip.exe freeze *)",
+      "Bash(cp C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.claude/worktrees/agent-a0ef216327286b28f/exams_app/views.py C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/exams_app/views.py)",
+      "Bash(cp C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.claude/worktrees/agent-a0ef216327286b28f/core_config/urls.py C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/core_config/urls.py)",
+      "Bash(cp C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.claude/worktrees/agent-a0ef216327286b28f/exams_app/coach_urls.py C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/exams_app/coach_urls.py)",
+      "Bash(cp C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.claude/worktrees/agent-a0ef216327286b28f/templates/student/brans_hub.html C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/templates/student/brans_hub.html)",
+      "Bash(cp C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/.claude/worktrees/agent-a0ef216327286b28f/templates/student/subject_drill_down.html C:/Users/kayaa/OneDrive/Masaüstü/vagus-wordpress/projem/templates/student/subject_drill_down.html)",
+      "Bash(where libgobject-2.0-0.dll)",
+      "Bash(dir \"C:\\\\Program Files\\\\GTK3-Runtime*\" /B)",
+      "Bash(dir \"C:\\\\GTK*\" /B)",
+      "Bash(dir \"C:\\\\msys64\\\\mingw64\\\\bin\\\\libgobject*\")"
     ]
   }
 }
