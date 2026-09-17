@@ -125,7 +125,9 @@
       "Bash(py -3.10 -X utf8 print_test.py)",
       "PowerShell(py *)",
       "Bash(py -3.10 -m playwright install --dry-run)",
-      "Bash(py *)"
+      "Bash(py *)",
+      "Bash(.venv/Scripts/python -m playwright install chromium)",
+      "Bash(.venv/Scripts/python -c \"import playwright; print\\('ok', playwright.__version__\\)\")"
     ]
   }
 }

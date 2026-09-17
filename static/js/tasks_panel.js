@@ -67,7 +67,7 @@ function _buildTaskHTML(g, cs) {
   </div>`;
 }
 
-function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filename) {
+function _buildWeeklyHTML(days, colorSettings, studentName, weekLabel) {
   const cols = days.map((gun, idx) => {
     const weekend = gun.isWeekend ?? idx >= 5;
     const tasks = (gun.gorevler||[]).map(g => _buildTaskHTML(g, colorSettings)).join('');
@@ -85,7 +85,7 @@ function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filena
     </div>`;
   }).join('');
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
@@ -139,7 +139,10 @@ function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filena
 <div class="grid">${cols}</div>
 </body>
 </html>`;
+}
 
+function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filename) {
+  const html = _buildWeeklyHTML(days, colorSettings, studentName, weekLabel);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
@@ -474,21 +477,32 @@ function panel() {
     async exportPNG() {
       if (this.pngExporting) return;
       this.pngExporting = true;
-      const toHide = [...document.querySelectorAll('[data-pdf-hide]')];
-      toHide.forEach(el => { el.dataset.wasDisplay = el.style.display; el.style.display = 'none'; });
-      document.body.classList.add('pdf-mode');
-      const grid = document.getElementById('weekly-grid');
-      await this.$nextTick();
+      let iframe = null;
       try {
-        const canvas = await html2canvas(grid, {
+        const studentName = document.querySelector('select[x-model="studentId"]')
+          ?.selectedOptions[0]?.text?.trim() || '';
+        const html = _buildWeeklyHTML(this.days, this.colorSettings, studentName, this.weekLabel);
+
+        iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1400px;height:900px;border:none;visibility:hidden';
+        document.body.appendChild(iframe);
+
+        await new Promise(resolve => { iframe.onload = resolve; iframe.srcdoc = html; });
+        await new Promise(r => setTimeout(r, 150));
+
+        const body = iframe.contentDocument.body;
+        const W = body.scrollWidth;
+        const H = body.scrollHeight;
+
+        const canvas = await html2canvas(body, {
           scale: 2,
           useCORS: true,
-          scrollX: 0,
-          scrollY: 0,
           backgroundColor: '#f3f4f6',
           logging: false,
-          windowWidth:  grid.scrollWidth,
-          windowHeight: grid.scrollHeight,
+          width: W,
+          height: H,
+          windowWidth: W,
+          windowHeight: H,
         });
         canvas.toBlob(blob => {
           const url = URL.createObjectURL(blob);
@@ -499,8 +513,7 @@ function panel() {
       } catch (e) {
         console.error('[exportPNG]', e);
       } finally {
-        document.body.classList.remove('pdf-mode');
-        toHide.forEach(el => { el.style.display = el.dataset.wasDisplay ?? ''; delete el.dataset.wasDisplay; });
+        if (iframe) iframe.remove();
         this.pngExporting = false;
       }
     },
