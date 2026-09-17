@@ -14,7 +14,8 @@ from django.core.mail import EmailMultiAlternatives
 from django_ratelimit.decorators import ratelimit
 
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
-from .models import CoachAlert, StudentAchievement, StudentInvite, User
+from .models import CoachAlert, CoachStudent, StudentAchievement, StudentInvite, User
+from .services.billing import coach_billing_summary
 
 
 class CustomLoginView(LoginView):
@@ -141,6 +142,12 @@ def invite_register_view(request, token):
             user.is_approved = True
             user.is_active = True
             user.save(update_fields=['coach', 'is_approved', 'is_active'])
+
+            CoachStudent.objects.get_or_create(
+                coach=invite.coach,
+                student=user,
+                defaults={'active': True, 'source': CoachStudent.SOURCE_COACH},
+            )
 
             invite.is_used = True
             invite.save(update_fields=['is_used'])
@@ -685,3 +692,13 @@ def student_notification_mark_all_read(request):
         return JsonResponse({'ok': False}, status=403)
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return JsonResponse({'ok': True})
+
+
+# ── Coach billing view ────────────────────────────────────────────────────────
+
+@login_required
+def coach_billing_view(request):
+    if not request.user.is_coach:
+        return redirect('/')
+    summary = coach_billing_summary(request.user)
+    return render(request, 'coach/odeme.html', {'summary': summary})

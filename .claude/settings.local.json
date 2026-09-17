@@ -127,7 +127,8 @@
       "Bash(py -3.10 -m playwright install --dry-run)",
       "Bash(py *)",
       "Bash(.venv/Scripts/python -m playwright install chromium)",
-      "Bash(.venv/Scripts/python -c \"import playwright; print\\('ok', playwright.__version__\\)\")"
+      "Bash(.venv/Scripts/python -c \"import playwright; print\\('ok', playwright.__version__\\)\")",
+      "Bash(kill 619 612)"
     ]
   }
 }

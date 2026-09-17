@@ -77,7 +77,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class CoachStudent(models.Model):
-    """Explicit coach-student relationship for access control and auditing (DAS-411)."""
+    """Explicit coach-student relationship for access control and billing (DAS-411)."""
+    SOURCE_VAGUS = 'vagus'
+    SOURCE_COACH = 'coach'
+    SOURCE_CHOICES = [('vagus', 'Vagus'), ('coach', 'Koç')]
+
     coach = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -91,6 +95,8 @@ class CoachStudent(models.Model):
         limit_choices_to={'role': 'student'},
     )
     active = models.BooleanField(default=True)
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, null=True, blank=True)
+    next_payment_due = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -100,6 +106,13 @@ class CoachStudent(models.Model):
 
     def __str__(self):
         return f'{self.coach.full_name} → {self.student.full_name}'
+
+    @property
+    def days_remaining(self):
+        if self.next_payment_due is None:
+            return None
+        from datetime import date
+        return (self.next_payment_due - date.today()).days
 
 
 class CoachAuditLog(models.Model):
