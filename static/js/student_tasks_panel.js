@@ -111,6 +111,7 @@ function studentPanel(studentId, studentName) {
     showEditModal: false,
     showAddModal: false,
     pdfExporting: false,
+    pngExporting: false,
     editForm: { id: null, ozel_sure_dk: 0, aciklama: '', error: '' },
     addForm:  { tarih: '', aktivite_tipi: 'tekrar', ders_title: '', ozel_sure_dk: 0, aciklama: '', error: '' },
     completeForm: { taskId: null, taskTitle: '', note: '', time: '' },
@@ -384,6 +385,40 @@ function studentPanel(studentId, studentName) {
 
     exportHTML() {
       _downloadWeeklyHTML_s(this.days, this.colorSettings, studentName, this.weekLabel, `hafta_${this.refDate}.html`);
+    },
+
+    async exportPNG() {
+      if (this.pngExporting) return;
+      this.pngExporting = true;
+      const toHide = [...document.querySelectorAll('[data-pdf-hide]')];
+      toHide.forEach(el => { el.dataset.wasDisplay = el.style.display; el.style.display = 'none'; });
+      document.body.classList.add('pdf-mode');
+      const grid = document.getElementById('student-weekly-grid');
+      await this.$nextTick();
+      try {
+        const canvas = await html2canvas(grid, {
+          scale: 2,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          backgroundColor: '#f3f4f6',
+          logging: false,
+          windowWidth:  grid.scrollWidth,
+          windowHeight: grid.scrollHeight,
+        });
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement('a'), { href: url, download: `hafta_${this.refDate}.png` });
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      } catch (e) {
+        console.error('[exportPNG]', e);
+      } finally {
+        document.body.classList.remove('pdf-mode');
+        toHide.forEach(el => { el.style.display = el.dataset.wasDisplay ?? ''; delete el.dataset.wasDisplay; });
+        this.pngExporting = false;
+      }
     },
 
     async exportPDF() {

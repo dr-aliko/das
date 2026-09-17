@@ -51,6 +51,12 @@
             <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             HTML Olarak İndir
           </button>
+          <button @click="exportPNG(); open = false"
+                  :disabled="!selectedStudent || pngExporting"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left disabled:opacity-40 disabled:pointer-events-none">
+            <svg class="w-4 h-4 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span x-text="pngExporting ? 'Hazırlanıyor…' : 'PNG Olarak İndir'"></span>
+          </button>
           <a :href="selectedStudent ? exportUrl('hafta.pdf') : '#'"
              @click="open = false"
              class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left"
@@ -315,6 +321,12 @@
               class="h-9 px-3 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--body)] rounded-lg text-xs
                      font-medium hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed transition">
         HTML
+      </button>
+      <button @click="exportPNG()" :disabled="!studentId || pngExporting"
+              class="h-9 px-3 flex items-center gap-1.5 bg-purple-50 border border-purple-500/30
+                     text-purple-700 rounded-lg text-xs font-semibold hover:bg-purple-100
+                     disabled:opacity-40 disabled:cursor-not-allowed transition">
+        <span x-text="pngExporting ? '…' : 'PNG'"></span>
       </button>
       <a :href="studentId ? exportUrl('hafta.pdf') : '#'"
          :class="studentId ? '' : 'opacity-40 pointer-events-none'"

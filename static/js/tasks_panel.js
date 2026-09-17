@@ -268,6 +268,7 @@ function panel() {
     showTaskModal: false,
     showSettingsModal: false,
     pdfExporting: false,
+    pngExporting: false,
     colorSettings: { ...DEFAULT_COLORS },
     isDark: document.documentElement.classList.contains('dark'),
     showCompleted: false,
@@ -468,6 +469,40 @@ function panel() {
       const studentName = document.querySelector('select[x-model="studentId"]')
         ?.selectedOptions[0]?.text?.trim() || '';
       _downloadWeeklyHTML(this.days, this.colorSettings, studentName, this.weekLabel, `hafta_${this.refDate}.html`);
+    },
+
+    async exportPNG() {
+      if (this.pngExporting) return;
+      this.pngExporting = true;
+      const toHide = [...document.querySelectorAll('[data-pdf-hide]')];
+      toHide.forEach(el => { el.dataset.wasDisplay = el.style.display; el.style.display = 'none'; });
+      document.body.classList.add('pdf-mode');
+      const grid = document.getElementById('weekly-grid');
+      await this.$nextTick();
+      try {
+        const canvas = await html2canvas(grid, {
+          scale: 2,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          backgroundColor: '#f3f4f6',
+          logging: false,
+          windowWidth:  grid.scrollWidth,
+          windowHeight: grid.scrollHeight,
+        });
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement('a'), { href: url, download: `hafta_${this.refDate}.png` });
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      } catch (e) {
+        console.error('[exportPNG]', e);
+      } finally {
+        document.body.classList.remove('pdf-mode');
+        toHide.forEach(el => { el.style.display = el.dataset.wasDisplay ?? ''; delete el.dataset.wasDisplay; });
+        this.pngExporting = false;
+      }
     },
 
     async exportPDF() {
