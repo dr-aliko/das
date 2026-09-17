@@ -56,14 +56,13 @@ function _buildTaskHTML(g, cs) {
   const r = parseInt(base.slice(1,3),16), gr = parseInt(base.slice(3,5),16), b = parseInt(base.slice(5,7),16);
   const bg     = `rgba(${r},${gr},${b},0.12)`;
   const border = `rgba(${r},${gr},${b},0.45)`;
-  const title  = `rgb(${Math.round(r*.6)},${Math.round(gr*.6)},${Math.round(b*.6)})`;
-  const LABELS = { konu_anlatimi: 'Konu Anlatımı', soru_cozumu: 'Soru Çözümü', tekrar: 'Tekrar' };
-  const dur = g.ozel_sure_dk ? `<span style="font-size:11px;color:#6b7280">⏱ ${g.ozel_sure_dk}dk</span>` : '';
+  const titleColor = `rgb(${Math.round(r*.6)},${Math.round(gr*.6)},${Math.round(b*.6)})`;
+  const dur = g.ozel_sure_dk ? `<span class="task-dur">⏱ ${g.ozel_sure_dk}dk</span>` : '';
   const details = (g.detaylar||[]).map(d =>
-    `<div style="font-size:11px;color:#6b7280;margin-top:2px">• ${d.aciklama||''}${d.sure_bilgisi?' ('+d.sure_bilgisi+')':''}</div>`
+    `<div class="task-detail">• ${d.aciklama||''}${d.sure_bilgisi?' ('+d.sure_bilgisi+')':''}</div>`
   ).join('');
-  return `<div style="background:${bg};border:2px solid ${border};border-radius:10px;padding:8px 10px;margin-bottom:6px;break-inside:avoid">
-    <div style="font-size:13px;font-weight:700;color:${title};line-height:1.3;margin-bottom:3px">${g.ders_title||''}</div>
+  return `<div class="task-card" style="background:${bg};border-color:${border}">
+    <div class="task-title" style="color:${titleColor}">${g.ders_title||''}</div>
     ${dur}${details}
   </div>`;
 }
@@ -72,13 +71,17 @@ function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filena
   const cols = days.map((gun, idx) => {
     const weekend = gun.isWeekend ?? idx >= 5;
     const tasks = (gun.gorevler||[]).map(g => _buildTaskHTML(g, colorSettings)).join('');
-    const empty = !gun.gorevler?.length ? `<div style="color:#d1d5db;font-size:12px;text-align:center;padding:16px 0">—</div>` : '';
-    return `<div style="min-width:0;background:${weekend?'#f8fafc':'#fff'};border:1px solid ${weekend?'#e2e8f0':'#f3f4f6'};border-radius:16px;overflow:hidden">
-      <div style="padding:10px 12px 8px;background:${weekend?'#f1f5f9':'#f9fafb'};border-bottom:1px solid ${weekend?'#e2e8f0':'#f3f4f6'}">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${weekend?'#64748b':'#4b5563'}">${gun.label}</div>
-        <div style="font-size:11px;color:#9ca3af;margin-top:1px">${gun.tarih}</div>
+    const empty = !gun.gorevler?.length ? `<div class="empty-msg">—</div>` : '';
+    const colBg   = weekend ? '#f8fafc' : '#fff';
+    const colBord = weekend ? '#e2e8f0' : '#f3f4f6';
+    const headBg  = weekend ? '#f1f5f9' : '#f9fafb';
+    const labelColor = weekend ? '#64748b' : '#4b5563';
+    return `<div class="day-col" style="background:${colBg};border-color:${colBord}">
+      <div class="day-head" style="background:${headBg};border-bottom-color:${colBord}">
+        <div class="day-label" style="color:${labelColor}">${gun.label}</div>
+        <div class="day-date">${gun.tarih}</div>
       </div>
-      <div style="padding:10px">${tasks}${empty}</div>
+      <div class="day-body">${tasks}${empty}</div>
     </div>`;
   }).join('');
 
@@ -95,12 +98,36 @@ function _downloadWeeklyHTML(days, colorSettings, studentName, weekLabel, filena
   .header h1{font-size:20px;font-weight:700;color:#111827}
   .header .meta{font-size:13px;color:#6b7280;margin-top:4px}
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .day-col{min-width:0;border:1px solid;border-radius:16px;overflow:hidden}
+  .day-head{padding:10px 12px 8px;border-bottom:1px solid}
+  .day-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .day-date{font-size:11px;color:#9ca3af;margin-top:1px}
+  .day-body{padding:10px}
+  .task-card{border:2px solid;border-radius:10px;padding:8px 10px;margin-bottom:6px;break-inside:avoid;page-break-inside:avoid}
+  .task-title{font-size:13px;font-weight:700;line-height:1.3;margin-bottom:3px}
+  .task-dur{font-size:11px;color:#6b7280}
+  .task-detail{font-size:11px;color:#6b7280;margin-top:2px}
+  .empty-msg{color:#d1d5db;font-size:12px;text-align:center;padding:16px 0}
   @media(max-width:900px){.grid{grid-template-columns:repeat(4,1fr)}}
   @media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @page{size:A4 landscape;margin:8mm}
   @media print{
-    body{background:#fff;padding:10px}
-    .grid{gap:6px}
-    @page{size:A4 landscape;margin:10mm}
+    *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    body{background:#fff;padding:4px}
+    .header{margin-bottom:6px}
+    .header h1{font-size:14px}
+    .header .meta{font-size:10px;margin-top:2px}
+    .grid{gap:3px}
+    .day-col{border-radius:6px}
+    .day-head{padding:4px 6px}
+    .day-label{font-size:8px}
+    .day-date{font-size:9px;margin-top:0}
+    .day-body{padding:4px}
+    .task-card{padding:4px 6px;margin-bottom:3px;border-radius:5px;border-width:1px}
+    .task-title{font-size:10px;margin-bottom:1px;line-height:1.2}
+    .task-dur{font-size:9px}
+    .task-detail{font-size:9px;margin-top:0}
+    .empty-msg{font-size:9px;padding:4px 0}
   }
 </style>
 </head>

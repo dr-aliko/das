@@ -20,6 +20,7 @@ urlpatterns = [
 
     # Export
     path('export/hafta.xlsx', views.ExportXlsxView.as_view(), name='export-xlsx'),
+    path('export/hafta.pdf', views.ExportHaftaPdfView.as_view(), name='export-hafta-pdf'),
 
     # External API proxies
     path('api/dersler', views.DerslerView.as_view(), name='api-dersler'),

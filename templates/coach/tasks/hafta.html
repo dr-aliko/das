@@ -51,6 +51,13 @@
             <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             HTML Olarak İndir
           </button>
+          <a :href="selectedStudent ? exportUrl('hafta.pdf') : '#'"
+             @click="open = false"
+             class="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[var(--heading)] hover:bg-[var(--surface-2)] rounded-xl transition-colors text-left"
+             :class="selectedStudent ? '' : 'opacity-40 pointer-events-none'">
+            <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            PDF Olarak İndir
+          </a>
         </div>
       </div>
     </div>
@@ -309,6 +316,12 @@
                      font-medium hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed transition">
         HTML
       </button>
+      <a :href="studentId ? exportUrl('hafta.pdf') : '#'"
+         :class="studentId ? '' : 'opacity-40 pointer-events-none'"
+         class="h-9 px-3 flex items-center gap-1.5 bg-red-50 border border-red-500/30
+                text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition">
+        PDF
+      </a>
       <button @click="showSettingsModal = true"
               class="h-9 px-3 bg-[var(--surface-1)] border border-[var(--border)] rounded-lg text-xs font-medium
                      text-[var(--muted)] hover:bg-[var(--surface-2)] transition"

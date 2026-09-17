@@ -113,7 +113,19 @@
       "Bash(where libgobject-2.0-0.dll)",
       "Bash(dir \"C:\\\\Program Files\\\\GTK3-Runtime*\" /B)",
       "Bash(dir \"C:\\\\GTK*\" /B)",
-      "Bash(dir \"C:\\\\msys64\\\\mingw64\\\\bin\\\\libgobject*\")"
+      "Bash(dir \"C:\\\\msys64\\\\mingw64\\\\bin\\\\libgobject*\")",
+      "Bash(npx playwright *)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npm list *)",
+      "Bash(where playwright *)",
+      "Bash(C:\\\\Users\\\\kayaa\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python310\\\\python.exe *)",
+      "Bash(python3.10 -c \"from playwright.sync_api import sync_playwright; print\\('ok'\\)\")",
+      "Bash(py -3.10 -c \"from playwright.sync_api import sync_playwright; print\\('ok'\\)\")",
+      "Bash(py -3.10 print_test.py)",
+      "Bash(py -3.10 -X utf8 print_test.py)",
+      "PowerShell(py *)",
+      "Bash(py -3.10 -m playwright install --dry-run)",
+      "Bash(py *)"
     ]
   }
 }

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>{{ student.full_name }} — Haftalık Program</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      font-size: {{ scale_pct }}%;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+      font-size: 0.875rem;
+      color: #1e293b;
+      background: #fff;
+      line-height: 1.4;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 0.45em;
+      border-bottom: 2px solid #6366f1;
+      margin-bottom: 0.5em;
+    }
+    .page-header h1 { font-size: 1em; font-weight: 700; color: #0f172a; }
+    .page-header .meta { font-size: 0.75em; color: #64748b; }
+    .weekly-grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 3px;
+      table-layout: fixed;
+    }
+    .day-header-cell {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px 4px 0 0;
+      padding: 0.35em 0.4em;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .day-name { font-size: 0.68em; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.06em; }
+    .day-date { font-size: 0.78em; color: #1e293b; font-weight: 600; margin-top: 1px; }
+    .day-tasks-cell {
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      padding: 3px;
+      background: #fafafa;
+      vertical-align: top;
+    }
+    .task-card {
+      border-radius: 4px;
+      border: 1.5px solid;
+      padding: 0.3em 0.4em;
+      margin-bottom: 3px;
+      break-inside: avoid;
+    }
+    .task-card:last-child { margin-bottom: 0; }
+    .task-title { font-size: 0.78em; font-weight: 600; line-height: 1.3; }
+    .task-meta { margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .task-badge {
+      font-size: 0.62em;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      display: inline-block;
+      line-height: 1.4;
+    }
+    .task-time { font-size: 0.68em; color: #64748b; }
+    .task-detail { font-size: 0.68em; color: #64748b; margin-top: 2px; line-height: 1.3; }
+    .empty-day { font-size: 0.7em; color: #cbd5e1; text-align: center; padding: 0.8em 0; }
+    .dense-warning {
+      margin-top: 0.5em;
+      padding: 0.4em 0.6em;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      font-size: 0.75em;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>{{ student.full_name }} — Haftalık Program</h1>
+    <div class="meta">{{ hafta_basi|date:"d.m.Y" }} – {{ hafta_sonu|date:"d.m.Y" }}</div>
+  </div>
+
+  <table class="weekly-grid">
+    <thead>
+      <tr>
+        {% for day in days %}
+        <th class="day-header-cell">
+          <div class="day-name">{{ day.label }}</div>
+          <div class="day-date">{{ day.tarih }}</div>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        {% for day in days %}
+        <td class="day-tasks-cell">
+          {% for g in day.gorevler %}
+          <div class="task-card"
+               style="background:{{ g.aktivite_info.bg }};border-color:{{ g.aktivite_info.border }};">
+            <div class="task-title" style="color:{{ g.aktivite_info.text }};">{{ g.ders_title|default:"—" }}</div>
+            <div class="task-meta">
+              <span class="task-badge"
+                    style="background:{{ g.aktivite_info.badge_bg }};color:{{ g.aktivite_info.text }};">{{ g.aktivite_info.label }}</span>
+              {% if g.ozel_sure_dk %}<span class="task-time">{{ g.ozel_sure_dk }}dk</span>{% endif %}
+            </div>
+            {% for d in g.detaylar %}{% if d.aciklama %}<div class="task-detail">{{ d.aciklama }}</div>{% endif %}{% endfor %}
+          </div>
+          {% empty %}
+          <div class="empty-day">—</div>
+          {% endfor %}
+        </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+
+  {% if too_dense %}
+  <div class="dense-warning">
+    &#9888; Bu hafta çok yoğun ({{ max_tasks }} görev/gün). Minimum ölçekte (%{{ scale_pct }}) gösterildi — bazı görevler sayfa dışına taşıyor olabilir.
+  </div>
+  {% endif %}
+</body>
+</html>

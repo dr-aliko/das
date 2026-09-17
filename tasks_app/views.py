@@ -1,13 +1,13 @@
 import io
 import json
-from datetime import date
+from datetime import date, timedelta
 
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from users_app.decorators import coach_required, student_required
+from users_app.decorators import coach_can_view_student, coach_required, student_required
 from tasks_app.forms import GorevForm
 from tasks_app.models import AktiviteTipi
 from tasks_app.services import api_client, tasks, week as week_svc
@@ -454,6 +454,87 @@ class ExportXlsxView(View):
         )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+
+def _render_export_pdf(request, template_name, ctx, filename):
+    from django.template.loader import render_to_string
+    try:
+        from weasyprint import HTML as WeasyHTML
+    except ImportError:
+        return HttpResponse('PDF dışa aktarma için weasyprint kurulu değil.', status=503)
+    html_str = render_to_string(template_name, ctx, request=request)
+    try:
+        pdf_bytes = WeasyHTML(
+            string=html_str,
+            base_url=request.build_absolute_uri('/'),
+        ).write_pdf()
+    except Exception as exc:
+        return HttpResponse(f'PDF oluşturulurken hata: {exc}', status=500)
+    resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return resp
+
+
+_AKTIVITE_INFO = {
+    'konu_anlatimi': {'label': 'Konu Anlatımı', 'bg': '#dbeafe', 'border': '#60a5fa', 'text': '#1e40af', 'badge_bg': '#bfdbfe'},
+    'soru_cozumu':   {'label': 'Soru Çözümü',   'bg': '#fef9c3', 'border': '#fbbf24', 'text': '#78350f', 'badge_bg': '#fde68a'},
+    'tekrar':        {'label': 'Tekrar',          'bg': '#dcfce7', 'border': '#4ade80', 'text': '#15803d', 'badge_bg': '#bbf7d0'},
+}
+_AKTIVITE_DEFAULT = {'label': '—', 'bg': '#f1f5f9', 'border': '#cbd5e1', 'text': '#475569', 'badge_bg': '#e2e8f0'}
+
+
+@method_decorator(coach_required, name='dispatch')
+class ExportHaftaPdfView(View):
+    _GUNLER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+
+    def get(self, request):
+        try:
+            student_id = int(request.GET['student_id'])
+            hafta = date.fromisoformat(request.GET['hafta'])
+        except (KeyError, ValueError):
+            return HttpResponse('student_id ve hafta=YYYY-MM-DD gerekli', status=400)
+
+        if not coach_can_view_student(request.user, student_id):
+            return HttpResponseForbidden('Bu öğrenciye erişim yetkiniz yok.')
+
+        from django.contrib.auth import get_user_model
+        student = get_object_or_404(get_user_model(), id=student_id, role='student')
+        basi, sonu = week_svc.week_bounds(hafta)
+        gorevler = tasks.week_for_student(request.user, student_id, basi, sonu)
+
+        by_dow = {i: [] for i in range(7)}
+        for g in gorevler:
+            g['aktivite_info'] = _AKTIVITE_INFO.get(g.get('aktivite_tipi', ''), _AKTIVITE_DEFAULT)
+            dow = date.fromisoformat(g['tarih']).weekday()
+            by_dow[dow].append(g)
+
+        days = [
+            {'label': self._GUNLER[i], 'tarih': (basi + timedelta(days=i)).strftime('%d.%m'), 'gorevler': by_dow[i]}
+            for i in range(7)
+        ]
+        max_tasks = max((len(v) for v in by_dow.values()), default=0)
+
+        AVAILABLE_PX = 710
+        BASE_OVERHEAD_PX = 100
+        ROW_PX = 50
+        MIN_SCALE = 0.65
+
+        needed = BASE_OVERHEAD_PX + max_tasks * ROW_PX
+        raw_scale = (AVAILABLE_PX / needed) if needed > 0 else 1.0
+        scale = round(max(MIN_SCALE, min(1.0, raw_scale)), 4)
+        too_dense = max_tasks > 0 and raw_scale < MIN_SCALE
+
+        ctx = {
+            'student': student,
+            'hafta_basi': basi,
+            'hafta_sonu': sonu,
+            'days': days,
+            'max_tasks': max_tasks,
+            'scale_pct': round(scale * 100),
+            'too_dense': too_dense,
+        }
+        filename = f'haftalik_program_{student_id}_{basi}.pdf'
+        return _render_export_pdf(request, 'reports/hafta_report.html', ctx, filename)
 
 
 # ── Student views (read-only + completion) ────────────────────────────────────
