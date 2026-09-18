@@ -8,7 +8,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from django.core.mail import EmailMultiAlternatives
@@ -903,6 +903,40 @@ def panel_davetler_view(request):
         'success': success,
         'active_tab': 'invites',
     })
+
+
+@staff_required
+def panel_ogrenciler_view(request):
+    from django.db.models import Prefetch
+    coaches = (
+        User.objects.filter(role='coach', is_active=True)
+        .prefetch_related(
+            Prefetch(
+                'coach_student_links',
+                queryset=CoachStudent.objects.filter(active=True)
+                    .select_related('student')
+                    .order_by('student__full_name'),
+                to_attr='active_links',
+            )
+        )
+        .order_by('full_name')
+    )
+    return render(request, 'panel/ogrenciler.html', {
+        'coaches': coaches,
+        'active_tab': 'students',
+    })
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_student_unlink(request, coach_id, student_id):
+    coach   = get_object_or_404(User, pk=coach_id, role='coach')
+    student = get_object_or_404(User, pk=student_id, role='student')
+    CoachStudent.objects.filter(coach=coach, student=student).update(active=False)
+    if student.coach_id == coach.id:
+        student.coach = None
+        student.save(update_fields=['coach'])
+    return JsonResponse({'ok': True})
 
 
 # ── Staff panel — fee tier CRUD ───────────────────────────────────────────────

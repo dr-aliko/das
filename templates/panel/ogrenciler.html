@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Öğrenciler{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Öğrenciler</h1>
+      </div>
+      <p class="text-sm text-ink-400">Koç-öğrenci ilişkilerini yönet — kaldırmak için satır sonundaki butonu kullan.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+        <a href="{% url 'panel_davetler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Davetler
+        </a>
+        <a href="{% url 'panel_ogrenciler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'students' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Öğrenciler
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Coach groups ──────────────────────────────────────────────────────── #}
+  {% for coach in coaches %}
+  {% if coach.active_links %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden"
+       id="coach-{{ coach.pk }}">
+
+    {# Coach header #}
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-full bg-steel-500/15 border border-steel-500/25
+                     flex items-center justify-center text-steel-400 text-xs font-bold shrink-0">
+          {{ coach.full_name|first|upper }}
+        </span>
+        <div>
+          <p class="text-sm font-semibold text-ink-100 leading-tight">{{ coach.full_name }}</p>
+          <p class="text-xs text-ink-500">{{ coach.email }}</p>
+        </div>
+      </div>
+      <span class="text-xs text-ink-500" id="count-{{ coach.pk }}">{{ coach.active_links|length }} öğrenci</span>
+    </div>
+
+    {# Students table #}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" id="table-{{ coach.pk }}">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Öğrenci</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">E-posta</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28">Kaynak</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-24"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for link in coach.active_links %}
+          <tr class="hover:bg-ink-900/40 transition-colors" id="row-{{ link.pk }}">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-violet-500/15 border border-violet-500/25
+                             flex items-center justify-center text-violet-400 text-[10px] font-bold shrink-0">
+                  {{ link.student.full_name|first|upper }}
+                </span>
+                <span class="font-medium text-ink-100 pii">{{ link.student.full_name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-ink-400 pii">{{ link.student.email }}</td>
+            <td class="px-4 py-3">
+              {% if link.source == 'vagus' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-steel-500/10 border border-steel-500/20 text-steel-400">Vagus</span>
+              {% elif link.source == 'coach' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-ink-700/50 border border-ink-600/30 text-ink-400">Koç</span>
+              {% else %}
+                <span class="text-ink-700">—</span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-right">
+              <button type="button"
+                      onclick="unlinkStudent({{ coach.pk }}, {{ link.student.pk }}, {{ link.pk }}, this)"
+                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
+                             text-ruby-400 hover:bg-ruby-500/10 transition-colors">
+                Kaldır
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  {% empty %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-12 text-center">
+    <p class="text-ink-600 text-sm">Henüz aktif koç yok.</p>
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+function unlinkStudent(coachId, studentId, linkPk, btn) {
+  if (!confirm('Bu öğrenciyi koçtan kaldırmak istediğinden emin misin?')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/panel/student/' + coachId + '/' + studentId + '/unlink/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var row = document.getElementById('row-' + linkPk);
+      if (row) row.remove();
+      var countEl = document.getElementById('count-' + coachId);
+      if (countEl) {
+        var n = parseInt(countEl.textContent) - 1;
+        countEl.textContent = n + ' öğrenci';
+      }
+      window.dasToast && window.dasToast('Öğrenci kaldırıldı.', 'ruby');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Kaldır';
+      window.dasToast && window.dasToast('Bir hata oluştu.', 'ruby');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Kaldır';
+    window.dasToast && window.dasToast('Bağlantı hatası.', 'ruby');
+  });
+}
+
+function getCookie(name) {
+  var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+</script>
+{% endblock %}

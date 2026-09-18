@@ -98,6 +98,25 @@
           {% endif %}
         </a>
         {% else %}
+        <a href="/coach/" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if request.path == '/coach/' or '/coach/student' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <use href="#das-icon-user"/>
+          </svg>
+          <span class="text-sm font-medium">Öğrencilerim</span>
+          {% if request.path == '/coach/' or '/coach/student' in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
         <a href="/coach/konu-takip/" @click="open = false"
            class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
                   {% if '/coach/konu-takip' in request.path %}

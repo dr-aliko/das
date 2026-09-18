@@ -29,6 +29,10 @@
            class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
           Davetler
         </a>
+        <a href="{% url 'panel_ogrenciler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'students' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Öğrenciler
+        </a>
       </div>
       {% if pending %}
       <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
