@@ -1,6 +1,35 @@
 {% comment %}
-  Params: row (dict with .link and .days), amber (bool), show_coach (optional bool)
+  Params:
+    row   — dict with .link (CoachStudent), .days (int|None), .inactive (bool)
+    amber — True in the unclassified triage section (adds coach column)
 {% endcomment %}
+
+{% if row.inactive %}
+{# ── Inactive / soft-deleted row — read-only, dimmed ─────────────────────── #}
+<tr class="opacity-40">
+  {% if amber %}<td class="px-4 py-2.5 text-ink-400 text-xs">{{ row.link.coach.full_name }}</td>{% endif %}
+  <td class="px-4 py-2.5">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
+                   bg-ruby-500/15 border border-ruby-500/30 text-ruby-400 shrink-0">Kaldırıldı</span>
+      <div>
+        <div class="font-medium text-ink-300 leading-tight line-through">{{ row.link.student.full_name }}</div>
+        <div class="text-xs text-ink-600 mt-0.5">{{ row.link.student.email }}</div>
+      </div>
+    </div>
+  </td>
+  <td class="px-4 py-2.5 text-xs text-ink-600">
+    {% if row.link.source %}{{ row.link.get_source_display }}{% else %}—{% endif %}
+  </td>
+  <td class="px-4 py-2.5 text-xs text-ink-600">
+    {% if row.link.next_payment_due %}{{ row.link.next_payment_due|date:"d.m.Y" }}{% else %}—{% endif %}
+  </td>
+  {% if not amber %}<td class="px-4 py-2.5"></td>{% endif %}
+  <td class="px-4 py-2.5"></td>
+</tr>
+
+{% else %}
+{# ── Active row — inline editable ────────────────────────────────────────── #}
 <tr x-data="{
       source: '{{ row.link.source|default:'' }}',
       due: '{{ row.link.next_payment_due|date:'Y-m-d'|default:'' }}',
@@ -27,18 +56,15 @@
     }"
     :class="source === '' ? '{% if amber %}bg-amber-950/5{% else %}bg-amber-950/10{% endif %}' : ''">
 
-  {# Coach column (only shown in the unclassified section) #}
   {% if amber %}
   <td class="px-4 py-2.5 text-ink-300 text-xs">{{ row.link.coach.full_name }}</td>
   {% endif %}
 
-  {# Student name #}
   <td class="px-4 py-2.5">
     <div class="font-medium text-ink-100 leading-tight">{{ row.link.student.full_name }}</div>
     <div class="text-xs text-ink-500 mt-0.5">{{ row.link.student.email }}</div>
   </td>
 
-  {# Source dropdown #}
   <td class="px-4 py-2.5">
     <select x-model="source" @change="dirty = true"
             class="w-full h-8 px-2 rounded-lg text-xs font-medium border transition-colors focus:outline-none focus:ring-1 focus:ring-steel-500
@@ -50,7 +76,6 @@
     </select>
   </td>
 
-  {# next_payment_due date input #}
   <td class="px-4 py-2.5">
     <input type="date" x-model="due" @change="dirty = true"
            class="h-8 px-2 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-steel-500
@@ -59,20 +84,14 @@
            :disabled="source !== 'vagus'">
   </td>
 
-  {# days remaining — shown in coach group rows only #}
   {% if not amber %}
   <td class="px-4 py-2.5 text-right tabular-nums">
     {% if row.link.source == 'vagus' %}
-      {% if row.days is None %}
-        <span class="text-xs text-ink-600">—</span>
-      {% elif row.days < 0 %}
-        <span class="text-xs font-semibold text-ruby-400">{{ row.days|stringformat:'d' }} gün</span>
-      {% elif row.days <= 3 %}
-        <span class="text-xs font-semibold text-ruby-400">{{ row.days }} gün</span>
-      {% elif row.days <= 7 %}
-        <span class="text-xs font-semibold text-amber-400">{{ row.days }} gün</span>
-      {% else %}
-        <span class="text-xs text-ink-400">{{ row.days }} gün</span>
+      {% if row.days is None %}<span class="text-xs text-ink-600">—</span>
+      {% elif row.days < 0 %}<span class="text-xs font-semibold text-ruby-400">{{ row.days|stringformat:'d' }} gün</span>
+      {% elif row.days <= 3 %}<span class="text-xs font-semibold text-ruby-400">{{ row.days }} gün</span>
+      {% elif row.days <= 7 %}<span class="text-xs font-semibold text-amber-400">{{ row.days }} gün</span>
+      {% else %}<span class="text-xs text-ink-400">{{ row.days }} gün</span>
       {% endif %}
     {% else %}
       <span class="text-xs text-ink-700">—</span>
@@ -80,10 +99,8 @@
   </td>
   {% endif %}
 
-  {# Save button #}
   <td class="px-4 py-2.5 text-right">
-    <button @click="save()"
-            :disabled="saving"
+    <button @click="save()" :disabled="saving"
             class="h-7 px-3 rounded-lg text-xs font-semibold transition-all border"
             :class="{
               'bg-steel-500 border-steel-500 text-white hover:bg-steel-400': dirty && !saving && !saved && !err,
@@ -104,3 +121,4 @@
     </button>
   </td>
 </tr>
+{% endif %}

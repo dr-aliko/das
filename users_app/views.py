@@ -709,33 +709,53 @@ def coach_billing_view(request):
 
 @staff_required
 def panel_billing_view(request):
-    links = (
+    coach_filter_id = None
+    raw = request.GET.get('coach_id', '').strip()
+    if raw:
+        try:
+            coach_filter_id = int(raw)
+        except ValueError:
+            pass
+
+    qs = (
         CoachStudent.objects
-        .filter(active=True, student__is_active=True)
+        .filter(student__is_active=True)  # include active=False rows for audit history
         .select_related('coach', 'student')
         .order_by('coach__full_name', 'student__full_name')
     )
+    if coach_filter_id:
+        qs = qs.filter(coach_id=coach_filter_id)
 
     today = date.today()
-    unclassified = []
+    unclassified = []  # only active + unclassified (triage queue)
     coaches_map = {}
+    active_link_count = 0
 
-    for link in links:
-        days = (link.next_payment_due - today).days if link.next_payment_due else None
-        row = {'link': link, 'days': days}
-        if link.source is None:
-            unclassified.append(row)
+    for link in qs:
+        days = (link.next_payment_due - today).days if (link.next_payment_due and link.active) else None
+        row = {'link': link, 'days': days, 'inactive': not link.active}
+        if link.active:
+            active_link_count += 1
+            if link.source is None:
+                unclassified.append(row)
         cid = link.coach_id
         if cid not in coaches_map:
-            coaches_map[cid] = {'coach': link.coach, 'rows': []}
+            coaches_map[cid] = {'coach': link.coach, 'rows': [], 'removed_count': 0}
         coaches_map[cid]['rows'].append(row)
+        if not link.active:
+            coaches_map[cid]['removed_count'] += 1
 
-    link_list = list(links)
+    all_coaches = list(
+        User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    )
+
     return render(request, 'panel/odeme.html', {
         'unclassified': unclassified,
         'coaches': list(coaches_map.values()),
-        'total_links': len(link_list),
+        'total_links': active_link_count,
         'unclassified_count': len(unclassified),
+        'all_coaches': all_coaches,
+        'coach_filter_id': coach_filter_id or '',
         'fee_tier_sections': [
             ('vagus', 'Vagus', list(FeeTier.objects.filter(source='vagus').order_by('order'))),
             ('coach', 'Koç',   list(FeeTier.objects.filter(source='coach').order_by('order'))),
