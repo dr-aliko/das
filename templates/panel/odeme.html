@@ -172,7 +172,7 @@
           <tr x-data="{
                 min_s: {{ tier.min_students }},
                 max_s: '{{ tier.max_students|default:'' }}',
-                fee: '{{ tier.monthly_fee_try }}',
+                fee: '{{ tier.monthly_fee_try|stringformat:"s" }}',
                 ord: {{ tier.order }},
                 saving: false, saved: false, err: false, errMsg: '', dirty: false,
                 async save() {
