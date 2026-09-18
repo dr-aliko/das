@@ -1,32 +1,45 @@
 from datetime import date
+from decimal import Decimal
 
-from ..models import CoachStudent
+from django.db.models import Q
 
-# Monthly fee in TL per number of Vagus-sourced active students.
-# Each band applies up to (and including) the given count.
-_FEE_BANDS = [
-    (0,   0),
-    (3,  150),
-    (7,  300),
-    (float('inf'), 500),
-]
+from ..models import CoachStudent, FeeTier
 
 
-def _monthly_fee(vagus_count: int) -> int:
-    for threshold, fee in _FEE_BANDS:
-        if vagus_count <= threshold:
-            return fee
-    return _FEE_BANDS[-1][1]
+def _lookup_fee(source: str, count: int):
+    """Return (fee: Decimal, undefined: bool) for the given source and student count."""
+    if count == 0:
+        return Decimal('0'), False
+    tier = (
+        FeeTier.objects
+        .filter(source=source, min_students__lte=count)
+        .filter(Q(max_students__isnull=True) | Q(max_students__gte=count))
+        .order_by('order')
+        .first()
+    )
+    if tier is None:
+        return None, True
+    return tier.monthly_fee_try, False
 
 
 def coach_billing_summary(coach) -> dict:
     """
-    Returns live billing state for a coach:
-      vagus_students  — list of {link, days_remaining} for source='vagus' active students
-      coach_students  — list of {link} for source='coach' active students
-      unclassified    — list of {link} for source=NULL active students
-      monthly_fee     — int TL based on vagus_count tier
-      warning_count   — vagus students with payment overdue or due within 7 days
+    Returns live billing state for a coach.
+
+    Keys:
+      vagus_students      list of {link, days_remaining}
+      coach_students      list of {link}
+      unclassified        list of {link}
+      vagus_count / coach_count / unclassified_count
+      vagus_fee           Decimal or None (None = no matching tier)
+      coach_fee           Decimal or None
+      total_fee           Decimal or None (sum; None if either is undefined when count > 0)
+      monthly_fee         alias of total_fee for backward compat
+      vagus_fee_undefined bool
+      coach_fee_undefined bool
+      warning_count       vagus students with payment overdue or due within 7 days
+      current_vagus_tier  FeeTier instance matching current vagus count, or None
+      vagus_tiers         ordered queryset of all vagus FeeTier rows (for legend)
     """
     links = (
         CoachStudent.objects
@@ -52,13 +65,42 @@ def coach_billing_summary(coach) -> dict:
         else:
             unclassified.append({'link': link})
 
+    vagus_count = len(vagus_students)
+    coach_count = len(coach_students)
+
+    vagus_fee, vagus_fee_undefined = _lookup_fee('vagus', vagus_count)
+    coach_fee, coach_fee_undefined = _lookup_fee('coach', coach_count)
+
+    if vagus_fee is not None and coach_fee is not None:
+        total_fee = vagus_fee + coach_fee
+    else:
+        total_fee = None
+
+    vagus_tiers = list(FeeTier.objects.filter(source='vagus').order_by('order'))
+
+    # Find the specific tier that applies to current vagus_count for legend highlight
+    current_vagus_tier = None
+    if vagus_count > 0:
+        for tier in vagus_tiers:
+            max_ok = tier.max_students is None or tier.max_students >= vagus_count
+            if tier.min_students <= vagus_count and max_ok:
+                current_vagus_tier = tier
+                break
+
     return {
         'vagus_students': vagus_students,
         'coach_students': coach_students,
         'unclassified': unclassified,
-        'vagus_count': len(vagus_students),
-        'coach_count': len(coach_students),
+        'vagus_count': vagus_count,
+        'coach_count': coach_count,
         'unclassified_count': len(unclassified),
-        'monthly_fee': _monthly_fee(len(vagus_students)),
+        'vagus_fee': vagus_fee,
+        'coach_fee': coach_fee,
+        'total_fee': total_fee,
+        'monthly_fee': total_fee,  # backward-compat alias
+        'vagus_fee_undefined': vagus_fee_undefined,
+        'coach_fee_undefined': coach_fee_undefined,
         'warning_count': warning_count,
+        'current_vagus_tier': current_vagus_tier,
+        'vagus_tiers': vagus_tiers,
     }

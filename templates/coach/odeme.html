@@ -24,8 +24,15 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
       <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Aylık Ücret</p>
-        <p class="text-2xl font-bold text-white">{{ summary.monthly_fee }} <span class="text-base font-normal text-ink-400">₺</span></p>
+        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Aylık Toplam</p>
+        {% if summary.total_fee is not None %}
+          <p class="text-2xl font-bold text-white">{{ summary.total_fee|floatformat:0 }} <span class="text-base font-normal text-ink-400">₺</span></p>
+          {% if summary.vagus_fee and summary.coach_fee %}
+            <p class="text-xs text-ink-500 mt-1">{{ summary.vagus_fee|floatformat:0 }} + {{ summary.coach_fee|floatformat:0 }} ₺</p>
+          {% endif %}
+        {% else %}
+          <p class="text-base font-semibold text-amber-400">Tarife tanımlanmamış</p>
+        {% endif %}
       </div>
 
       <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
@@ -137,28 +144,23 @@
     </div>
     {% endif %}
 
-    {# ── Fee band legend ─────────────────────────────────────────── #}
+    {# ── Fee band legend (dynamic from DB) ──────────────────────── #}
+    {% if summary.vagus_tiers %}
     <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
       <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">Tarife Bantları (Vagus Öğrencileri)</h3>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-        <div class="rounded-lg bg-ink-800 px-3 py-2 {% if summary.vagus_count == 0 %}ring-1 ring-steel-500{% endif %}">
-          <span class="text-ink-400 text-xs">0 öğrenci</span>
-          <p class="font-semibold text-white mt-0.5">0 ₺/ay</p>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
+        {% for tier in summary.vagus_tiers %}
+        <div class="rounded-lg bg-ink-800 px-3 py-2
+                    {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}ring-1 ring-steel-500{% endif %}">
+          <span class="text-ink-400 text-xs">
+            {{ tier.min_students }}{% if tier.max_students %}–{{ tier.max_students }}{% else %}+{% endif %} öğrenci
+          </span>
+          <p class="font-semibold text-white mt-0.5">{{ tier.monthly_fee_try|floatformat:0 }} ₺/ay</p>
         </div>
-        <div class="rounded-lg bg-ink-800 px-3 py-2 {% if summary.vagus_count >= 1 and summary.vagus_count <= 3 %}ring-1 ring-steel-500{% endif %}">
-          <span class="text-ink-400 text-xs">1–3 öğrenci</span>
-          <p class="font-semibold text-white mt-0.5">150 ₺/ay</p>
-        </div>
-        <div class="rounded-lg bg-ink-800 px-3 py-2 {% if summary.vagus_count >= 4 and summary.vagus_count <= 7 %}ring-1 ring-steel-500{% endif %}">
-          <span class="text-ink-400 text-xs">4–7 öğrenci</span>
-          <p class="font-semibold text-white mt-0.5">300 ₺/ay</p>
-        </div>
-        <div class="rounded-lg bg-ink-800 px-3 py-2 {% if summary.vagus_count >= 8 %}ring-1 ring-steel-500{% endif %}">
-          <span class="text-ink-400 text-xs">8+ öğrenci</span>
-          <p class="font-semibold text-white mt-0.5">500 ₺/ay</p>
-        </div>
+        {% endfor %}
       </div>
     </div>
+    {% endif %}
 
   </div>
 </div>

@@ -115,6 +115,46 @@ class CoachStudent(models.Model):
         return (self.next_payment_due - date.today()).days
 
 
+class FeeTier(models.Model):
+    """DB-driven fee band for billing calculation (DAS-billing).
+
+    The original spec lists vagus tiers up to 16–20 students (6000 TL) and then
+    marks "20+ öğrenci: Özel görüşme" (individual negotiation). The top vagus tier
+    is seeded as open-ended (max=null = 16+) as a practical simplification — staff
+    should be aware that coaches with more than 20 vagus-sourced students are outside
+    the standard tariff and require a manual agreement.
+    """
+    SOURCE_VAGUS = 'vagus'
+    SOURCE_COACH = 'coach'
+    SOURCE_CHOICES = [('vagus', 'Vagus'), ('coach', 'Koç')]
+
+    source          = models.CharField(max_length=10, choices=SOURCE_CHOICES, db_index=True)
+    min_students    = models.PositiveIntegerField()
+    max_students    = models.PositiveIntegerField(null=True, blank=True)
+    monthly_fee_try = models.DecimalField(max_digits=9, decimal_places=2)
+    order           = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ['source', 'order']
+        unique_together = ('source', 'order')
+        verbose_name = 'Ücret Tarifesi'
+        verbose_name_plural = 'Ücret Tarifeleri'
+
+    def __str__(self):
+        max_str = str(self.max_students) if self.max_students is not None else '+'
+        return f'{self.get_source_display()} {self.min_students}–{max_str} = {self.monthly_fee_try} ₺'
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        self_max = self.max_students if self.max_students is not None else float('inf')
+        for other in FeeTier.objects.filter(source=self.source).exclude(pk=self.pk):
+            other_max = other.max_students if other.max_students is not None else float('inf')
+            if self.min_students <= other_max and other.min_students <= self_max:
+                raise ValidationError(
+                    f"Aralık çakışması: {other} ile örtüşüyor."
+                )
+
+
 class CoachAuditLog(models.Model):
     """Tracks coach access to student data for privacy accountability (DAS-420)."""
     coach = models.ForeignKey(

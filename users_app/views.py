@@ -15,7 +15,7 @@ from django_ratelimit.decorators import ratelimit
 
 from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
-from .models import CoachAlert, CoachStudent, StudentAchievement, StudentInvite, User
+from .models import CoachAlert, CoachStudent, FeeTier, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
 
 
@@ -730,11 +730,16 @@ def panel_billing_view(request):
             coaches_map[cid] = {'coach': link.coach, 'rows': []}
         coaches_map[cid]['rows'].append(row)
 
+    link_list = list(links)
     return render(request, 'panel/odeme.html', {
         'unclassified': unclassified,
         'coaches': list(coaches_map.values()),
-        'total_links': len(list(links)),
+        'total_links': len(link_list),
         'unclassified_count': len(unclassified),
+        'fee_tier_sections': [
+            ('vagus', 'Vagus', list(FeeTier.objects.filter(source='vagus').order_by('order'))),
+            ('coach', 'Koç',   list(FeeTier.objects.filter(source='coach').order_by('order'))),
+        ],
     })
 
 
@@ -757,4 +762,74 @@ def panel_billing_update(request, pk):
     except CoachStudent.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
     except (ValueError, json.JSONDecodeError) as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+# ── Staff panel — fee tier CRUD ───────────────────────────────────────────────
+
+def _apply_tier_fields(tier, data):
+    """Set fields on a FeeTier from parsed JSON dict. Returns error string or None."""
+    try:
+        tier.min_students = int(data['min_students'])
+        max_s = data.get('max_students', '')
+        tier.max_students = int(max_s) if str(max_s).strip() else None
+        tier.monthly_fee_try = data['monthly_fee_try']
+        tier.order = int(data['order'])
+    except (KeyError, ValueError, TypeError) as e:
+        return f'Geçersiz alan: {e}'
+    return None
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_fee_tier_add(request):
+    try:
+        data = json.loads(request.body)
+        source = data.get('source', '')
+        if source not in ('vagus', 'coach'):
+            return JsonResponse({'ok': False, 'error': 'Geçersiz kaynak'}, status=400)
+        tier = FeeTier(source=source)
+        err = _apply_tier_fields(tier, data)
+        if err:
+            return JsonResponse({'ok': False, 'error': err}, status=400)
+        from django.core.exceptions import ValidationError
+        try:
+            tier.full_clean()
+        except ValidationError as e:
+            return JsonResponse({'ok': False, 'error': ' '.join(e.messages)}, status=400)
+        tier.save()
+        return JsonResponse({'ok': True, 'id': tier.pk})
+    except json.JSONDecodeError as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_fee_tier_update(request, pk):
+    try:
+        data = json.loads(request.body)
+        tier = FeeTier.objects.get(pk=pk)
+        err = _apply_tier_fields(tier, data)
+        if err:
+            return JsonResponse({'ok': False, 'error': err}, status=400)
+        from django.core.exceptions import ValidationError
+        try:
+            tier.full_clean()
+        except ValidationError as e:
+            return JsonResponse({'ok': False, 'error': ' '.join(e.messages)}, status=400)
+        tier.save()
+        return JsonResponse({'ok': True})
+    except FeeTier.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
+    except json.JSONDecodeError as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_fee_tier_delete(request, pk):
+    try:
+        FeeTier.objects.filter(pk=pk).delete()
+        return JsonResponse({'ok': True})
+    except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)

@@ -98,5 +98,147 @@
   </div>
   {% endfor %}
 
+
+  {# ── Ücret Tarifeleri ──────────────────────────────────────────────────── #}
+  {% for source_val, source_label, tiers in fee_tier_sections %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-ink-200">Ücret Tarifeleri — {{ source_label }}</h2>
+      <span class="text-xs text-ink-500">{{ tiers|length }} bant</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-16">Sıra</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-32">Min Öğrenci</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-32">Max Öğrenci</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Aylık Ücret (₺)</th>
+            <th class="px-4 py-2.5 w-32"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60" id="tier-rows-{{ source_val }}">
+          {% for tier in tiers %}
+          <tr x-data="{
+                min_s: {{ tier.min_students }},
+                max_s: '{{ tier.max_students|default:'' }}',
+                fee: '{{ tier.monthly_fee_try }}',
+                ord: {{ tier.order }},
+                saving: false, saved: false, err: false, errMsg: '', dirty: false,
+                async save() {
+                  if (this.saving) return;
+                  this.saving = true; this.saved = false; this.err = false; this.errMsg = '';
+                  try {
+                    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+                    const r = await fetch('{% url 'panel_fee_tier_update' tier.pk %}', {
+                      method: 'POST',
+                      headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+                      body: JSON.stringify({min_students: this.min_s, max_students: this.max_s, monthly_fee_try: this.fee, order: this.ord}),
+                    });
+                    const d = await r.json();
+                    if (!r.ok) { this.err = true; this.errMsg = d.error || 'Hata'; setTimeout(() => { this.err = false; this.errMsg = ''; }, 5000); return; }
+                    this.saved = true; this.dirty = false;
+                    setTimeout(() => this.saved = false, 2500);
+                  } catch { this.err = true; this.errMsg = 'Bağlantı hatası'; setTimeout(() => { this.err = false; }, 4000); }
+                  finally { this.saving = false; }
+                },
+                async del() {
+                  if (!confirm('Bu tarife bandı silinsin mi?')) return;
+                  const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+                  const r = await fetch('{% url 'panel_fee_tier_delete' tier.pk %}', {
+                    method: 'POST', headers: {'X-CSRFToken': csrf},
+                  });
+                  if (r.ok) this.$el.remove();
+                }
+              }">
+            <td class="px-4 py-2.5">
+              <input type="number" x-model.number="ord" @input="dirty=true" min="1"
+                     class="w-14 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+            </td>
+            <td class="px-4 py-2.5">
+              <input type="number" x-model.number="min_s" @input="dirty=true" min="0"
+                     class="w-24 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+            </td>
+            <td class="px-4 py-2.5">
+              <input type="number" x-model="max_s" @input="dirty=true" min="1" placeholder="sonsuz"
+                     class="w-24 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500">
+            </td>
+            <td class="px-4 py-2.5">
+              <input type="number" x-model="fee" @input="dirty=true" min="0" step="0.01"
+                     class="w-28 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+            </td>
+            <td class="px-4 py-2.5">
+              <div class="flex items-center gap-2 justify-end">
+                <span x-show="err" x-cloak class="text-xs text-ruby-400 max-w-32 truncate" x-text="errMsg"></span>
+                <button @click="save()" :disabled="saving"
+                        class="h-7 px-3 rounded-lg text-xs font-semibold transition-all border"
+                        :class="{
+                          'bg-steel-500 border-steel-500 text-white hover:bg-steel-400': dirty && !saving && !saved,
+                          'bg-ink-800 border-ink-700 text-ink-500 cursor-default': !dirty && !saved,
+                          'opacity-60 cursor-wait': saving,
+                          'bg-emerald-500/15 border-emerald-500/40 text-emerald-400': saved,
+                        }">
+                  <span x-show="!saving && !saved" x-cloak>Kaydet</span>
+                  <span x-show="saving" x-cloak>...</span>
+                  <span x-show="saved" x-cloak>✓</span>
+                </button>
+                <button @click="del()"
+                        class="h-7 px-2 rounded-lg text-xs border border-ruby-500/30 text-ruby-500 hover:bg-ruby-500/10 transition-colors">
+                  Sil
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-ink-600">Bu kaynak için tarife yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Add tier row #}
+    <div class="border-t border-ink-800 px-5 py-3 bg-ink-900/30"
+         x-data="{
+           min_s: '', max_s: '', fee: '', ord: '',
+           saving: false, err: false, errMsg: '',
+           async add() {
+             if (this.saving) return;
+             this.saving = true; this.err = false; this.errMsg = '';
+             try {
+               const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+               const r = await fetch('{% url 'panel_fee_tier_add' %}', {
+                 method: 'POST',
+                 headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'},
+                 body: JSON.stringify({source: '{{ source_val }}', min_students: this.min_s, max_students: this.max_s, monthly_fee_try: this.fee, order: this.ord}),
+               });
+               const d = await r.json();
+               if (!r.ok) { this.err = true; this.errMsg = d.error || 'Hata'; setTimeout(() => { this.err = false; this.errMsg = ''; }, 5000); return; }
+               window.location.reload();
+             } catch { this.err = true; this.errMsg = 'Bağlantı hatası'; }
+             finally { this.saving = false; }
+           }
+         }">
+      <p class="text-[11px] font-semibold text-ink-500 uppercase tracking-wider mb-2">Yeni Bant Ekle</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <input type="number" x-model="ord" placeholder="Sıra" min="1"
+               class="w-16 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        <input type="number" x-model="min_s" placeholder="Min" min="0"
+               class="w-20 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        <input type="number" x-model="max_s" placeholder="Max (boş=sonsuz)" min="1"
+               class="w-36 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        <input type="number" x-model="fee" placeholder="Ücret ₺" min="0" step="0.01"
+               class="w-28 h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        <button @click="add()" :disabled="saving"
+                class="h-8 px-4 rounded-lg text-xs font-semibold bg-steel-500 hover:bg-steel-400 text-white transition-colors disabled:opacity-60">
+          <span x-show="!saving" x-cloak>+ Ekle</span>
+          <span x-show="saving" x-cloak>...</span>
+        </button>
+        <span x-show="err" x-cloak class="text-xs text-ruby-400" x-text="errMsg"></span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
 </div>
 {% endblock %}

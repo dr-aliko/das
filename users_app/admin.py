@@ -3,7 +3,7 @@ from datetime import date
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import CoachStudent, StudentInvite, User
+from .models import CoachStudent, FeeTier, StudentInvite, User
 
 
 # ── Custom admin action ───────────────────────────────────────────────────────
@@ -104,3 +104,16 @@ class CoachStudentAdmin(admin.ModelAdmin):
         if days <= 7:
             return f'⚠ {days} gün'
         return f'{days} gün'
+
+
+# ── FeeTier admin ─────────────────────────────────────────────────────────────
+
+@admin.register(FeeTier)
+class FeeTierAdmin(admin.ModelAdmin):
+    list_display  = ('source', 'order', 'min_students', 'max_students_display', 'monthly_fee_try')
+    list_filter   = ('source',)
+    ordering      = ('source', 'order')
+
+    @admin.display(description='Max öğrenci')
+    def max_students_display(self, obj):
+        return obj.max_students if obj.max_students is not None else '+'
