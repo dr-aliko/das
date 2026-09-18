@@ -149,7 +149,7 @@
 
 
   {# ── Ücret Tarifeleri ──────────────────────────────────────────────────── #}
-  {% for source_val, source_label, tiers in fee_tier_sections %}
+  {% for source_val, source_label, tiers, next_order, next_min in fee_tier_sections %}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
       <h2 class="text-sm font-semibold text-ink-200">Ücret Tarifeleri — {{ source_label }}</h2>
@@ -249,7 +249,7 @@
     {# Add tier row #}
     <div class="border-t border-ink-800 px-5 py-3 bg-ink-900/30"
          x-data="{
-           min_s: '', max_s: '', fee: '', ord: '',
+           min_s: {{ next_min }}, max_s: '', fee: '', ord: {{ next_order }},
            saving: false, err: false, errMsg: '',
            async add() {
              if (this.saving) return;

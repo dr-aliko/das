@@ -717,6 +717,25 @@ def coach_billing_view(request):
     return render(request, 'coach/odeme.html', {'summary': summary})
 
 
+def _tier_add_defaults(tiers):
+    """Return (next_order, next_min) as pre-fill suggestions for the add-tier form."""
+    if not tiers:
+        return 1, 1
+    next_order = max(t.order for t in tiers) + 1
+    non_null_maxes = [t.max_students for t in tiers if t.max_students is not None]
+    next_min = max(non_null_maxes) + 1 if non_null_maxes else max(t.min_students for t in tiers) + 1
+    return next_order, next_min
+
+
+def _fee_tier_sections():
+    sections = []
+    for source_val, source_label in (('vagus', 'Vagus'), ('coach', 'Koç')):
+        tiers = list(FeeTier.objects.filter(source=source_val).order_by('order'))
+        next_order, next_min = _tier_add_defaults(tiers)
+        sections.append((source_val, source_label, tiers, next_order, next_min))
+    return sections
+
+
 # ── Staff panel — billing management ─────────────────────────────────────────
 
 @staff_required
@@ -773,10 +792,7 @@ def panel_billing_view(request):
         'all_coaches': all_coaches,
         'coach_filter_id': coach_filter_id or '',
         'active_tab': 'classification',
-        'fee_tier_sections': [
-            ('vagus', 'Vagus', list(FeeTier.objects.filter(source='vagus').order_by('order'))),
-            ('coach', 'Koç',   list(FeeTier.objects.filter(source='coach').order_by('order'))),
-        ],
+        'fee_tier_sections': _fee_tier_sections(),
     })
 
 
