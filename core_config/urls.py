@@ -3,7 +3,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
-from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, coach_billing_view
+from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update
 
 urlpatterns = [
     path('healthz/', healthz_view, name='healthz'),
@@ -49,4 +49,6 @@ urlpatterns = [
     path('student/notifications/mark-all-read/', student_notification_mark_all_read, name='student_notifications_mark_all'),
     path('student/notifications/<int:pk>/read/', student_notification_read,          name='student_notification_read'),
     path('coach/odeme/', coach_billing_view, name='coach_billing'),
+    path('panel/odeme/', panel_billing_view, name='panel_billing'),
+    path('panel/odeme/<int:pk>/update/', panel_billing_update, name='panel_billing_update'),
 ]

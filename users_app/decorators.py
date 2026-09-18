@@ -47,3 +47,14 @@ def coach_required(view_func):
             return redirect('users_app:awaiting_approval')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def staff_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('users_app:login')
+        if not request.user.is_staff:
+            return redirect('/')
+        return view_func(request, *args, **kwargs)
+    return wrapper

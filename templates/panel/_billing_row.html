@@ -1,0 +1,106 @@
+{% comment %}
+  Params: row (dict with .link and .days), amber (bool), show_coach (optional bool)
+{% endcomment %}
+<tr x-data="{
+      source: '{{ row.link.source|default:'' }}',
+      due: '{{ row.link.next_payment_due|date:'Y-m-d'|default:'' }}',
+      saving: false,
+      saved: false,
+      err: false,
+      dirty: false,
+      async save() {
+        if (this.saving) return;
+        this.saving = true; this.saved = false; this.err = false;
+        try {
+          const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
+          const r = await fetch('{% url 'panel_billing_update' row.link.id %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: this.source, next_payment_due: this.due }),
+          });
+          if (!r.ok) throw new Error();
+          this.saved = true; this.dirty = false;
+          setTimeout(() => this.saved = false, 2500);
+        } catch { this.err = true; setTimeout(() => this.err = false, 3000); }
+        finally { this.saving = false; }
+      }
+    }"
+    :class="source === '' ? '{% if amber %}bg-amber-950/5{% else %}bg-amber-950/10{% endif %}' : ''">
+
+  {# Coach column (only shown in the unclassified section) #}
+  {% if amber %}
+  <td class="px-4 py-2.5 text-ink-300 text-xs">{{ row.link.coach.full_name }}</td>
+  {% endif %}
+
+  {# Student name #}
+  <td class="px-4 py-2.5">
+    <div class="font-medium text-ink-100 leading-tight">{{ row.link.student.full_name }}</div>
+    <div class="text-xs text-ink-500 mt-0.5">{{ row.link.student.email }}</div>
+  </td>
+
+  {# Source dropdown #}
+  <td class="px-4 py-2.5">
+    <select x-model="source" @change="dirty = true"
+            class="w-full h-8 px-2 rounded-lg text-xs font-medium border transition-colors focus:outline-none focus:ring-1 focus:ring-steel-500
+                   bg-ink-800 border-ink-700 text-ink-200"
+            :class="source === '' ? 'border-amber-500/50 text-amber-300 bg-amber-950/20' : ''">
+      <option value="">— Belirsiz —</option>
+      <option value="vagus">Vagus</option>
+      <option value="coach">Koç</option>
+    </select>
+  </td>
+
+  {# next_payment_due date input #}
+  <td class="px-4 py-2.5">
+    <input type="date" x-model="due" @change="dirty = true"
+           class="h-8 px-2 rounded-lg text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-steel-500
+                  bg-ink-800 border-ink-700 text-ink-200 w-full"
+           :class="source !== 'vagus' ? 'opacity-40 pointer-events-none' : ''"
+           :disabled="source !== 'vagus'">
+  </td>
+
+  {# days remaining — shown in coach group rows only #}
+  {% if not amber %}
+  <td class="px-4 py-2.5 text-right tabular-nums">
+    {% if row.link.source == 'vagus' %}
+      {% if row.days is None %}
+        <span class="text-xs text-ink-600">—</span>
+      {% elif row.days < 0 %}
+        <span class="text-xs font-semibold text-ruby-400">{{ row.days|stringformat:'d' }} gün</span>
+      {% elif row.days <= 3 %}
+        <span class="text-xs font-semibold text-ruby-400">{{ row.days }} gün</span>
+      {% elif row.days <= 7 %}
+        <span class="text-xs font-semibold text-amber-400">{{ row.days }} gün</span>
+      {% else %}
+        <span class="text-xs text-ink-400">{{ row.days }} gün</span>
+      {% endif %}
+    {% else %}
+      <span class="text-xs text-ink-700">—</span>
+    {% endif %}
+  </td>
+  {% endif %}
+
+  {# Save button #}
+  <td class="px-4 py-2.5 text-right">
+    <button @click="save()"
+            :disabled="saving"
+            class="h-7 px-3 rounded-lg text-xs font-semibold transition-all border"
+            :class="{
+              'bg-steel-500 border-steel-500 text-white hover:bg-steel-400': dirty && !saving && !saved && !err,
+              'bg-ink-800 border-ink-700 text-ink-500 cursor-default': !dirty && !saved && !err,
+              'opacity-60 cursor-wait': saving,
+              'bg-emerald-500/15 border-emerald-500/40 text-emerald-400': saved,
+              'bg-ruby-500/15 border-ruby-500/40 text-ruby-400': err,
+            }">
+      <span x-show="!saving && !saved && !err" x-cloak>Kaydet</span>
+      <span x-show="saving" x-cloak>
+        <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </span>
+      <span x-show="saved" x-cloak>✓</span>
+      <span x-show="err" x-cloak>Hata</span>
+    </button>
+  </td>
+</tr>

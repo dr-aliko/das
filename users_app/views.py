@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import EmailMultiAlternatives
 from django_ratelimit.decorators import ratelimit
 
+from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, CoachStudent, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
@@ -702,3 +703,58 @@ def coach_billing_view(request):
         return redirect('/')
     summary = coach_billing_summary(request.user)
     return render(request, 'coach/odeme.html', {'summary': summary})
+
+
+# ── Staff panel — billing management ─────────────────────────────────────────
+
+@staff_required
+def panel_billing_view(request):
+    links = (
+        CoachStudent.objects
+        .filter(active=True, student__is_active=True)
+        .select_related('coach', 'student')
+        .order_by('coach__full_name', 'student__full_name')
+    )
+
+    today = date.today()
+    unclassified = []
+    coaches_map = {}
+
+    for link in links:
+        days = (link.next_payment_due - today).days if link.next_payment_due else None
+        row = {'link': link, 'days': days}
+        if link.source is None:
+            unclassified.append(row)
+        cid = link.coach_id
+        if cid not in coaches_map:
+            coaches_map[cid] = {'coach': link.coach, 'rows': []}
+        coaches_map[cid]['rows'].append(row)
+
+    return render(request, 'panel/odeme.html', {
+        'unclassified': unclassified,
+        'coaches': list(coaches_map.values()),
+        'total_links': len(list(links)),
+        'unclassified_count': len(unclassified),
+    })
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_billing_update(request, pk):
+    try:
+        data = json.loads(request.body)
+        link = CoachStudent.objects.get(pk=pk)
+        source_val = data.get('source', '')
+        link.source = source_val if source_val in ('vagus', 'coach') else None
+        due_str = data.get('next_payment_due', '').strip()
+        if due_str:
+            from datetime import datetime as _dt
+            link.next_payment_due = _dt.strptime(due_str, '%Y-%m-%d').date()
+        else:
+            link.next_payment_due = None
+        link.save(update_fields=['source', 'next_payment_due'])
+        return JsonResponse({'ok': True})
+    except CoachStudent.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
+    except (ValueError, json.JSONDecodeError) as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
