@@ -25,6 +25,10 @@
            class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
           Ödemeler
         </a>
+        <a href="{% url 'panel_davetler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Davetler
+        </a>
       </div>
       <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
         <p class="text-[10px] text-ink-500 uppercase tracking-wider">Toplam</p>

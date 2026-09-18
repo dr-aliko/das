@@ -304,6 +304,8 @@ class StudentInvite(models.Model):
     full_name = models.CharField(max_length=150, blank=True)
     token     = models.CharField(max_length=64, unique=True)
     is_used   = models.BooleanField(default=False)
+    initiated_by_staff = models.BooleanField(default=False)
+    start_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

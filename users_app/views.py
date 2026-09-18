@@ -145,10 +145,21 @@ def invite_register_view(request, token):
             user.is_active = True
             user.save(update_fields=['coach', 'is_approved', 'is_active'])
 
+            source = (
+                CoachStudent.SOURCE_VAGUS if invite.initiated_by_staff
+                else CoachStudent.SOURCE_COACH
+            )
+            next_payment_due = None
+            if invite.start_date:
+                next_payment_due = invite.start_date + timedelta(days=30)
             CoachStudent.objects.get_or_create(
                 coach=invite.coach,
                 student=user,
-                defaults={'active': True, 'source': CoachStudent.SOURCE_COACH},
+                defaults={
+                    'active': True,
+                    'source': source,
+                    'next_payment_due': next_payment_due,
+                },
             )
 
             invite.is_used = True
@@ -814,6 +825,67 @@ def panel_odemeler_view(request):
         'rows': rows,
         'grand_total': grand_total,
         'active_tab': 'payments',
+    })
+
+
+@staff_required
+def panel_davetler_view(request):
+    coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    error = None
+    success = None
+
+    if request.method == 'POST':
+        email     = request.POST.get('email', '').strip().lower()
+        full_name = request.POST.get('full_name', '').strip()
+        coach_id  = request.POST.get('coach_id', '').strip()
+        start_date_str = request.POST.get('start_date', '').strip()
+
+        if not email:
+            error = 'E-posta adresi zorunludur.'
+        elif User.objects.filter(email=email).exists():
+            error = 'Bu e-posta zaten kayıtlı bir kullanıcıya ait.'
+        elif StudentInvite.objects.filter(email=email, is_used=False).exists():
+            error = 'Bu e-postaya zaten bekleyen bir davet gönderilmiş.'
+        elif not coach_id:
+            error = 'Koç seçimi zorunludur.'
+        else:
+            try:
+                coach = User.objects.get(pk=coach_id, role='coach', is_active=True)
+            except User.DoesNotExist:
+                error = 'Geçersiz koç seçimi.'
+            else:
+                from datetime import datetime as _dt
+                start_date = None
+                if start_date_str:
+                    try:
+                        start_date = _dt.strptime(start_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        error = 'Geçersiz başlama tarihi.'
+
+                if not error:
+                    invite = StudentInvite.objects.create(
+                        coach=coach,
+                        email=email,
+                        full_name=full_name,
+                        token=StudentInvite.generate_token(),
+                        initiated_by_staff=True,
+                        start_date=start_date,
+                    )
+                    _send_invite_email(invite, request)
+                    success = f'{email} adresine davet gönderildi.'
+
+    pending = (
+        StudentInvite.objects
+        .filter(initiated_by_staff=True, is_used=False)
+        .select_related('coach')
+        .order_by('-created_at')
+    )
+    return render(request, 'panel/davetler.html', {
+        'coaches': coaches,
+        'pending': pending,
+        'error': error,
+        'success': success,
+        'active_tab': 'invites',
     })
 
 

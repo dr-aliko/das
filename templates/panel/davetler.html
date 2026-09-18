@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Davetler{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Davetler</h1>
+      </div>
+      <p class="text-sm text-ink-400">Öğrencilere koç atamalı davet gönder.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+        <a href="{% url 'panel_davetler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Davetler
+        </a>
+      </div>
+      {% if pending %}
+      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider">Bekleyen</p>
+        <p class="text-xl font-bold text-white">{{ pending|length }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Invite form ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Yeni Davet Gönder</h2>
+    </div>
+    <div class="px-5 py-4">
+
+      {% if error %}
+      <div class="mb-4 rounded-lg border border-ruby-500/30 bg-ruby-500/10 px-4 py-3 text-sm text-ruby-400">
+        {{ error }}
+      </div>
+      {% endif %}
+      {% if success %}
+      <div class="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+        {{ success }}
+      </div>
+      {% endif %}
+
+      <form method="post" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        {% csrf_token %}
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-ink-400 uppercase tracking-wider">E-posta *</label>
+          <input type="email" name="email" required
+                 value="{{ request.POST.email|default:'' }}"
+                 placeholder="ogrenci@ornek.com"
+                 class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-100
+                        placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-ink-400 uppercase tracking-wider">Ad Soyad</label>
+          <input type="text" name="full_name"
+                 value="{{ request.POST.full_name|default:'' }}"
+                 placeholder="İsteğe bağlı"
+                 class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-100
+                        placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-ink-400 uppercase tracking-wider">Koç *</label>
+          <select name="coach_id" required
+                  class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                         focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+            <option value="">— Seç —</option>
+            {% for coach in coaches %}
+            <option value="{{ coach.pk }}" {% if request.POST.coach_id == coach.pk|stringformat:'s' %}selected{% endif %}>
+              {{ coach.full_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-ink-400 uppercase tracking-wider">Başlama Tarihi</label>
+          <div class="flex gap-2">
+            <input type="date" name="start_date"
+                   value="{{ request.POST.start_date|default:'' }}"
+                   class="flex-1 h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                          focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+            <button type="submit"
+                    class="h-9 px-4 rounded-lg text-xs font-semibold bg-steel-500 hover:bg-steel-400
+                           text-white transition-colors shrink-0">
+              Gönder
+            </button>
+          </div>
+          <p class="text-[10px] text-ink-600">Ödeme vadesi otomatik +30 gün hesaplanır.</p>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  {# ── Pending invites list ──────────────────────────────────────────────── #}
+  {% if pending %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-ink-200">Bekleyen Davetler</h2>
+      <span class="text-xs text-ink-500">{{ pending|length }} davet</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">E-posta</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Ad</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-32">Başlama</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-32">Gönderildi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for inv in pending %}
+          <tr class="hover:bg-ink-900/40 transition-colors">
+            <td class="px-5 py-3 font-medium text-ink-100">{{ inv.email }}</td>
+            <td class="px-4 py-3 text-ink-400">{{ inv.full_name|default:"—" }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-steel-500/15 border border-steel-500/25 flex items-center justify-center text-steel-400 text-[10px] font-bold shrink-0">
+                  {{ inv.coach.full_name|first|upper }}
+                </span>
+                <span class="text-ink-300">{{ inv.coach.full_name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-ink-400 tabular-nums">
+              {% if inv.start_date %}{{ inv.start_date|date:"d.m.Y" }}{% else %}<span class="text-ink-700">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-500 tabular-nums text-xs">{{ inv.created_at|date:"d.m.Y H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-12 text-center">
+    <p class="text-ink-600 text-sm">Henüz bekleyen admin daveti yok.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
