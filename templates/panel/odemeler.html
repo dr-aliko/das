@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Ödemeler{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Ödemeler</h1>
+      </div>
+      <p class="text-sm text-ink-400">Koçlara göre aylık ücret özeti — yüksekten düşüğe sıralı.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+      </div>
+      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider">Toplam</p>
+        <p class="text-xl font-bold text-emerald-400 tabular-nums">{{ grand_total|floatformat:0 }} ₺</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Summary table ─────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Vagus Öğr.</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Vagus Ücret</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Koç Öğr.</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Koç Ücret</th>
+            <th class="text-right px-5 py-3 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-40">Aylık Toplam</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for row in rows %}
+          <tr class="hover:bg-ink-900/40 transition-colors">
+
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2.5">
+                <span class="w-7 h-7 rounded-full bg-steel-500/15 border border-steel-500/25 flex items-center justify-center text-steel-400 text-xs font-bold shrink-0">
+                  {{ row.coach.full_name|first|upper }}
+                </span>
+                <div>
+                  <p class="font-medium text-ink-100 leading-tight">{{ row.coach.full_name }}</p>
+                  <p class="text-xs text-ink-500 mt-0.5">{{ row.coach.email }}</p>
+                </div>
+              </div>
+              {% if row.unclassified_count %}
+              <span class="mt-1 inline-flex items-center gap-1 text-[10px] text-amber-400/80">
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                {{ row.unclassified_count }} belirsiz
+              </span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-3 text-right tabular-nums">
+              {% if row.vagus_count > 0 %}
+              <span class="text-ink-200">{{ row.vagus_count }}</span>
+              {% else %}
+              <span class="text-ink-700">—</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-3 text-right tabular-nums">
+              {% if row.vagus_fee_undefined %}
+              <span class="text-xs text-amber-400">Tanımsız</span>
+              {% elif row.vagus_count == 0 %}
+              <span class="text-ink-700">—</span>
+              {% else %}
+              <span class="text-ink-200">{{ row.vagus_fee|floatformat:0 }} ₺</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-3 text-right tabular-nums">
+              {% if row.coach_count > 0 %}
+              <span class="text-ink-200">{{ row.coach_count }}</span>
+              {% else %}
+              <span class="text-ink-700">—</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-3 text-right tabular-nums">
+              {% if row.coach_fee_undefined %}
+              <span class="text-xs text-amber-400">Tanımsız</span>
+              {% elif row.coach_count == 0 %}
+              <span class="text-ink-700">—</span>
+              {% else %}
+              <span class="text-ink-200">{{ row.coach_fee|floatformat:0 }} ₺</span>
+              {% endif %}
+            </td>
+
+            <td class="px-5 py-3 text-right tabular-nums">
+              {% if row.total_fee is not None %}
+              <span class="text-base font-semibold text-emerald-400">{{ row.total_fee|floatformat:0 }} ₺</span>
+              {% elif row.vagus_count > 0 or row.coach_count > 0 %}
+              <span class="text-xs text-amber-400">Tarife tanımsız</span>
+              {% else %}
+              <span class="text-ink-700">—</span>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="px-5 py-16 text-center text-ink-600 text-sm">
+              Henüz aktif koç yok.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if rows %}
+        <tfoot>
+          <tr class="border-t-2 border-ink-700 bg-ink-900/30">
+            <td class="px-5 py-3 text-xs font-semibold text-ink-400 uppercase tracking-wider">Toplam</td>
+            <td class="px-4 py-3 text-right tabular-nums text-xs text-ink-400">
+              {{ rows|length }} koç
+            </td>
+            <td colspan="3" class="px-4 py-3"></td>
+            <td class="px-5 py-3 text-right tabular-nums">
+              <span class="text-base font-bold text-emerald-400">{{ grand_total|floatformat:0 }} ₺</span>
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 import json
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.db import models
@@ -749,13 +750,18 @@ def panel_billing_view(request):
         User.objects.filter(role='coach', is_active=True).order_by('full_name')
     )
 
+    coaches_list = list(coaches_map.values())
+    for group in coaches_list:
+        group['summary'] = coach_billing_summary(group['coach'])
+
     return render(request, 'panel/odeme.html', {
         'unclassified': unclassified,
-        'coaches': list(coaches_map.values()),
+        'coaches': coaches_list,
         'total_links': active_link_count,
         'unclassified_count': len(unclassified),
         'all_coaches': all_coaches,
         'coach_filter_id': coach_filter_id or '',
+        'active_tab': 'classification',
         'fee_tier_sections': [
             ('vagus', 'Vagus', list(FeeTier.objects.filter(source='vagus').order_by('order'))),
             ('coach', 'Koç',   list(FeeTier.objects.filter(source='coach').order_by('order'))),
@@ -783,6 +789,32 @@ def panel_billing_update(request, pk):
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
     except (ValueError, json.JSONDecodeError) as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@staff_required
+def panel_odemeler_view(request):
+    coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    rows = []
+    for coach in coaches:
+        s = coach_billing_summary(coach)
+        rows.append({
+            'coach': coach,
+            'vagus_count': s['vagus_count'],
+            'coach_count': s['coach_count'],
+            'vagus_fee': s['vagus_fee'],
+            'coach_fee': s['coach_fee'],
+            'total_fee': s['total_fee'],
+            'vagus_fee_undefined': s['vagus_fee_undefined'],
+            'coach_fee_undefined': s['coach_fee_undefined'],
+            'unclassified_count': s['unclassified_count'],
+        })
+    rows.sort(key=lambda r: (r['total_fee'] is None, -(r['total_fee'] or 0)))
+    grand_total = sum((r['total_fee'] for r in rows if r['total_fee'] is not None), Decimal('0'))
+    return render(request, 'panel/odemeler.html', {
+        'rows': rows,
+        'grand_total': grand_total,
+        'active_tab': 'payments',
+    })
 
 
 # ── Staff panel — fee tier CRUD ───────────────────────────────────────────────

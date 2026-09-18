@@ -15,12 +15,22 @@
       </div>
       <p class="text-sm text-ink-400">Tüm koç-öğrenci ilişkilerini sınıflandır ve ödeme tarihlerini yönet.</p>
     </div>
-    <div class="flex items-center gap-3 shrink-0 text-right">
-      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5">
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+      </div>
+      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
         <p class="text-[10px] text-ink-500 uppercase tracking-wider">Aktif</p>
         <p class="text-xl font-bold text-white">{{ total_links }}</p>
       </div>
-      <div class="rounded-xl border {% if unclassified_count %}border-amber-500/40 bg-amber-950/30{% else %}border-ink-700 bg-ink-900{% endif %} px-4 py-2.5">
+      <div class="rounded-xl border {% if unclassified_count %}border-amber-500/40 bg-amber-950/30{% else %}border-ink-700 bg-ink-900{% endif %} px-4 py-2.5 text-right">
         <p class="text-[10px] {% if unclassified_count %}text-amber-400{% else %}text-ink-500{% endif %} uppercase tracking-wider">Belirsiz</p>
         <p class="text-xl font-bold {% if unclassified_count %}text-amber-400{% else %}text-white{% endif %}">{{ unclassified_count }}</p>
       </div>
@@ -91,9 +101,21 @@
           <p class="text-xs text-ink-500">{{ group.coach.email }}</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 text-xs text-ink-500">
-        <span>{{ group.rows|length }} kayıt</span>
-        {% if group.removed_count %}<span class="text-ruby-400/70">• {{ group.removed_count }} kaldırıldı</span>{% endif %}
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          {% if group.summary.total_fee is not None %}
+          <p class="text-sm font-semibold text-emerald-400 tabular-nums">{{ group.summary.total_fee|floatformat:0 }} ₺</p>
+          {% elif group.summary.vagus_count > 0 or group.summary.coach_count > 0 %}
+          <p class="text-xs text-amber-400">Tarife tanımsız</p>
+          {% else %}
+          <p class="text-xs text-ink-600">—</p>
+          {% endif %}
+          <p class="text-[10px] text-ink-600 uppercase tracking-wider">Aylık toplam</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-ink-500">
+          <span>{{ group.rows|length }} kayıt</span>
+          {% if group.removed_count %}<span class="text-ruby-400/70">• {{ group.removed_count }} kaldırıldı</span>{% endif %}
+        </div>
       </div>
     </div>
     <div class="overflow-x-auto">
