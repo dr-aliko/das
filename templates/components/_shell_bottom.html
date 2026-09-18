@@ -27,7 +27,7 @@
     {% include "components/_shell_tab.html" with href="/coach/tasks/" label="Görevler" icon="das-icon-task" %}
     {% include "components/_shell_tab.html" with href="/coach/brans/" label="Branş" icon="das-icon-trending-up" %}
     <button type="button" @click="open = true"
-            class="das-nav-tab {% if '/coach/konu-takip' in request.path or '/profil' in request.path %}active{% endif %}">
+            class="das-nav-tab {% if '/coach/konu-takip' in request.path or '/profil' in request.path or '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path or '/panel/davetler' in request.path or '/panel/ogrenciler' in request.path %}active{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
            aria-hidden="true">
@@ -130,6 +130,29 @@
           </svg>
           <span class="text-sm font-medium">Konu Takip</span>
           {% if '/coach/konu-takip' in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
+        {% endif %}
+
+        {% if not user.is_student %}
+        <a href="{% if user.is_staff %}/panel/odeme/{% else %}/coach/odeme/{% endif %}" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M2 10h20"/>
+          </svg>
+          <span class="text-sm font-medium">Ödeme takibi</span>
+          {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}
           <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
                stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 13l4 4L19 7"/>

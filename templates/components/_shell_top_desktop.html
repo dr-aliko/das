@@ -58,6 +58,10 @@
            class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
                   {% if '/coach/konu-takip' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Konu Takip</a>
 
+        <a href="{% if user.is_staff %}/panel/odeme/{% else %}/coach/odeme/{% endif %}"
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Ödeme takibi</a>
+
         <a href="/profil/"
            class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
                   {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Profil</a>
