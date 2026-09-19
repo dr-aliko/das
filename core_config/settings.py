@@ -281,13 +281,17 @@ Q_CLUSTER = {
 }
 
 # ── Sentry — error tracking ───────────────────────────────────────────────────
-# Activates only in production (DEBUG=False) when SENTRY_DSN is provided.
-# Set SENTRY_DSN in your production .env. Leave unset locally.
+# Activates whenever SENTRY_DSN is non-empty — set it in .env for both production
+# and local testing. Leave it unset (or empty) to disable entirely.
+# The `environment` tag lets you filter production vs. local events in the dashboard.
 SENTRY_DSN = config('SENTRY_DSN', default='')
-if not DEBUG and SENTRY_DSN:
+if SENTRY_DSN:
     import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
     sentry_sdk.init(
         dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        environment='development' if DEBUG else 'production',
         traces_sample_rate=0.1,   # capture 10% of requests for performance tracing
-        send_default_pii=False,   # never send personally identifiable info to Sentry
+        send_default_pii=False,   # never attach user PII (name/email) to Sentry events
     )

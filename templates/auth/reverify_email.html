@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}E-posta Dogrulamasi — DAS{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+
+    {% if sent %}
+      <div class="text-center">
+        <div class="text-4xl mb-4">📬</div>
+        <h1 class="text-2xl font-bold text-gray-800 mb-3">E-postanizi Kontrol Edin</h1>
+        <p class="text-gray-500 text-sm mb-6">
+          Bu adres kayitli ve dogrulama bekliyorsa, yeni bir kod gonderildi.<br>
+          Gelen kutunuzu (ve spam klasorunu) kontrol edin.
+        </p>
+        <a href="{% url 'users_app:verify_email' %}"
+           class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition">
+          Kodu Gir
+        </a>
+      </div>
+    {% else %}
+      <div class="text-center mb-8">
+        <div class="text-4xl mb-3">🔑</div>
+        <h1 class="text-2xl font-bold text-indigo-700">Dogrulamayi Tamamla</h1>
+        <p class="text-gray-500 mt-2 text-sm">
+          Kayit sirasiyla gelen dogrulama koduna ulasamadiniz mi?<br>
+          E-posta adresinizi girin, yeni bir kod gonderelim.
+        </p>
+      </div>
+
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">E-posta Adresi</label>
+          <input
+            type="email"
+            name="email"
+            autofocus
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition">
+          Kod Gonder
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-500 mt-6">
+        <a href="/auth/login/" class="text-indigo-600 hover:underline">Giris sayfasina don</a>
+      </p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

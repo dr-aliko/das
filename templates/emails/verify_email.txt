@@ -1,0 +1,12 @@
+Merhaba {{ user.full_name }},
+
+Vagus koc hesabiniz icin e-posta dogrulama kodunuz:
+
+{{ code }}
+
+Bu kod {{ expiry_minutes }} dakika gecerlidir ve tek kullanimlikdir.
+
+Bu istegi siz yapmadıysanız bu e-postayı dikkate almayın.
+
+Basarilar,
+Vagus Ekibi

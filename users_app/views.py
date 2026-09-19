@@ -1,5 +1,6 @@
 import hashlib
 import json
+import secrets
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -14,6 +15,7 @@ from django.contrib.auth.views import (
     PasswordResetView as DjangoPRView,
     PasswordResetConfirmView as DjangoPRConfirmView,
 )
+from django.forms.utils import ErrorDict
 from django.views.generic import TemplateView
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -24,7 +26,7 @@ from django_ratelimit.decorators import ratelimit
 
 from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
-from .models import CoachAlert, CoachStudent, FeeTier, StudentAchievement, StudentInvite, User
+from .models import CoachAlert, CoachStudent, EmailVerificationCode, FeeTier, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
 
 
@@ -36,17 +38,145 @@ def _reset_timeout_display():
     return f'{secs // 60} dakika'
 
 
+# ── Login brute-force protection ──────────────────────────────────────────────
+# Two independent DatabaseCache counters per login attempt:
+#   login_pair_{hash(email|ip)} — failures for this email FROM this specific IP
+#   login_ip_{hash(ip)}         — total failures from this IP across all accounts
+#
+# Thresholds: 10 per pair, 20 per IP, both within a 15-minute fixed window.
+# Per-email global lockout is intentionally absent — it would let an attacker DoS
+# any account by deliberately failing 10 times from a different IP.
+
+_LOGIN_WINDOW      = 900   # seconds — both the counting window and the lockout duration
+_PAIR_MAX_FAILURES = 10
+_IP_MAX_FAILURES   = 20
+_LOGIN_RATE_MSG    = (
+    'Çok fazla başarısız giriş denemesi. '
+    'Lütfen 15 dakika sonra tekrar deneyin.'
+)
+
+
+def _login_get_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '127.0.0.1')
+
+
+def _login_cache_keys(email, ip):
+    """Return (pair_key, ip_key) for the given email + IP combination."""
+    pair_hash = hashlib.md5(f'{email}|{ip}'.encode()).hexdigest()
+    ip_hash   = hashlib.md5(ip.encode()).hexdigest()
+    return f'login_pair_{pair_hash}', f'login_ip_{ip_hash}'
+
+
+# ── Email verification (coach self-registration) ──────────────────────────────
+# A 6-digit code is emailed after registration. The user has 10 minutes and 5
+# attempts. Resend is rate-limited: 2-min cooldown + max 5 resends per 30 min
+# (per IP+email pair via DatabaseCache, same approach as login rate limiting).
+
+_VERIFY_CODE_EXPIRY     = 600   # 10 minutes
+_VERIFY_RESEND_COOLDOWN = 120   # 2 minutes
+_VERIFY_RESEND_WINDOW   = 1800  # 30 minutes
+_VERIFY_RESEND_MAX      = 5     # resends per window
+
+
+def _verify_get_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '127.0.0.1')
+
+
+def _verify_resend_keys(email, ip):
+    email_hash    = hashlib.md5(email.lower().encode()).hexdigest()
+    ip_email_hash = hashlib.md5(f'{ip}|{email.lower()}'.encode()).hexdigest()
+    return f'verify_cool_{email_hash}', f'verify_cnt_{ip_email_hash}'
+
+
+def _create_verification_code(user):
+    """Generate a fresh 6-digit code, persist it (replacing any prior one), return it."""
+    from django.utils import timezone
+    code       = f'{secrets.randbelow(1000000):06d}'
+    expires_at = timezone.now() + timedelta(seconds=_VERIFY_CODE_EXPIRY)
+    EmailVerificationCode.objects.update_or_create(
+        user=user,
+        defaults={'code': code, 'expires_at': expires_at, 'attempts': 0},
+    )
+    return code
+
+
+def _send_verification_email(user, code):
+    from django.template.loader import render_to_string
+    context  = {'user': user, 'code': code, 'expiry_minutes': _VERIFY_CODE_EXPIRY // 60}
+    subject  = 'Vagus — E-posta Dogrulama'
+    text_body = render_to_string('emails/verify_email.txt', context)
+    html_body = render_to_string('emails/verify_email.html', context)
+    msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [user.email])
+    msg.attach_alternative(html_body, 'text/html')
+    msg.send()
+
+
 class CustomLoginView(LoginView):
     form_class = EmailAuthenticationForm
     template_name = 'auth/login.html'
 
+    # ── rate-limit helpers ───────────────────────────────────────────────────
+
+    def _is_rate_limited(self, email, ip):
+        key_pair, key_ip = _login_cache_keys(email, ip)
+        return (
+            (cache.get(key_pair) or 0) >= _PAIR_MAX_FAILURES
+            or (cache.get(key_ip)   or 0) >= _IP_MAX_FAILURES
+        )
+
+    def _increment_counters(self, email, ip):
+        """Fixed-window counter: first failure sets the TTL, subsequent ones only incr."""
+        key_pair, key_ip = _login_cache_keys(email, ip)
+        for key in (key_pair, key_ip):
+            try:
+                cache.incr(key)
+            except ValueError:          # key absent (first failure or window expired)
+                cache.set(key, 1, _LOGIN_WINDOW)
+
+    def _clear_counters(self, email, ip):
+        key_pair, key_ip = _login_cache_keys(email, ip)
+        cache.delete(key_pair)
+        cache.delete(key_ip)
+
+    # ── view overrides ───────────────────────────────────────────────────────
+
+    def post(self, request, *args, **kwargs):
+        email = request.POST.get('username', '').lower().strip()
+        ip    = _login_get_ip(request)
+        if self._is_rate_limited(email, ip):
+            form = self.get_form()
+            # Write directly to _errors to avoid full_clean() (which would attempt
+            # authentication) and to avoid add_error()'s cleaned_data dependency
+            # on an unvalidated form.
+            form._errors = ErrorDict()
+            form._errors['__all__'] = form.error_class([_LOGIN_RATE_MSG])
+            return self.render_to_response(self.get_context_data(form=form))
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         user = form.get_user()
         is_first_login = user.last_login is None
+        email = form.cleaned_data.get('username', '').lower()
+        ip    = _login_get_ip(self.request)
+        self._clear_counters(email, ip)
         response = super().form_valid(form)
         if user.is_coach and is_first_login:
             self.request.session['first_run'] = True
         return response
+
+    def form_invalid(self, form):
+        # Only count genuine credential failures, not empty/malformed-field errors.
+        if form.non_field_errors():
+            email = self.request.POST.get('username', '').lower().strip()
+            ip    = _login_get_ip(self.request)
+            self._increment_counters(email, ip)
+        return super().form_invalid(form)
 
     def get_success_url(self):
         user = self.request.user
@@ -142,7 +272,7 @@ class CustomPasswordResetConfirmView(DjangoPRConfirmView):
 
 
 def register_view(request):
-    """Public registration — creates coach accounts pending admin approval."""
+    """Public registration — creates coach account, requires email verification before approval."""
     if request.user.is_authenticated:
         return redirect('/')
     if request.method == 'POST':
@@ -157,10 +287,147 @@ def register_view(request):
             user.is_approved = False
             user.is_active = False   # blocked until admin approves
             user.save(update_fields=['is_approved', 'is_active'])
-            return redirect('users_app:awaiting_approval')
+            code = _create_verification_code(user)
+            _send_verification_email(user, code)
+            request.session['pending_verification_uid'] = user.id
+            return redirect('users_app:verify_email')
     else:
         form = CoachRegistrationForm()
     return render(request, 'auth/register.html', {'form': form})
+
+
+def verify_email_view(request):
+    """Coach enters the 6-digit code they received after registration."""
+    from django.utils import timezone
+
+    uid = request.session.get('pending_verification_uid')
+    if not uid:
+        return redirect('users_app:reverify_email')
+
+    try:
+        user = User.objects.get(pk=uid)
+    except User.DoesNotExist:
+        request.session.pop('pending_verification_uid', None)
+        return redirect('users_app:register')
+
+    if user.email_verified:
+        request.session.pop('pending_verification_uid', None)
+        return redirect('users_app:awaiting_approval')
+
+    error       = None
+    max_attempts = False
+    expired      = False
+
+    if request.method == 'POST':
+        try:
+            evc = EmailVerificationCode.objects.get(user=user)
+        except EmailVerificationCode.DoesNotExist:
+            error = 'Dogrulama kodunuz bulunamadi. Lutfen yeni kod isteyin.'
+            return render(request, 'auth/verify_email.html',
+                          {'error': error, 'max_attempts': True})
+
+        if evc.attempts >= 5:
+            max_attempts = True
+            error = 'Cok fazla yanlis deneme. Lutfen yeni bir kod isteyin.'
+        elif timezone.now() > evc.expires_at:
+            expired = True
+            error = 'Dogrulama kodunuzun suresi dolmus. Lutfen yeni bir kod isteyin.'
+        else:
+            entered = request.POST.get('code', '').strip()
+            if entered == evc.code:
+                user.email_verified = True
+                user.save(update_fields=['email_verified'])
+                evc.delete()
+                request.session.pop('pending_verification_uid', None)
+                return redirect('users_app:awaiting_approval')
+            else:
+                evc.attempts += 1
+                evc.save(update_fields=['attempts'])
+                if evc.attempts >= 5:
+                    max_attempts = True
+                    error = 'Cok fazla yanlis deneme. Lutfen yeni bir kod isteyin.'
+                else:
+                    remaining = 5 - evc.attempts
+                    error = f'Yanlis kod. {remaining} deneme hakkiniz kaldi.'
+
+    return render(request, 'auth/verify_email.html', {
+        'error': error,
+        'max_attempts': max_attempts,
+        'expired': expired,
+    })
+
+
+def resend_verification_view(request):
+    """Resend verification code to the coach's email (rate-limited)."""
+    if request.method != 'POST':
+        return redirect('users_app:verify_email')
+
+    uid = request.session.get('pending_verification_uid')
+    if not uid:
+        return redirect('users_app:reverify_email')
+
+    try:
+        user = User.objects.get(pk=uid)
+    except User.DoesNotExist:
+        return redirect('users_app:register')
+
+    ip             = _verify_get_ip(request)
+    key_cool, key_cnt = _verify_resend_keys(user.email, ip)
+
+    if cache.get(key_cool):
+        messages.error(request, 'Yeni kod icin lutfen 2 dakika bekleyin.')
+        return redirect('users_app:verify_email')
+
+    count = cache.get(key_cnt) or 0
+    if count >= _VERIFY_RESEND_MAX:
+        messages.error(request, 'Cok fazla kod istediniz. Lutfen 30 dakika sonra tekrar deneyin.')
+        return redirect('users_app:verify_email')
+
+    code = _create_verification_code(user)
+    _send_verification_email(user, code)
+
+    cache.set(key_cool, 1, _VERIFY_RESEND_COOLDOWN)
+    try:
+        cache.incr(key_cnt)
+    except ValueError:
+        cache.set(key_cnt, 1, _VERIFY_RESEND_WINDOW)
+
+    messages.success(request, 'Yeni dogrulama kodu e-posta adresinize gonderildi.')
+    return redirect('users_app:verify_email')
+
+
+def reverify_email_view(request):
+    """Entry point for coaches who registered but lost or never used their verification code."""
+    if request.user.is_authenticated:
+        return redirect('/')
+
+    sent = False
+    if request.method == 'POST':
+        email = request.POST.get('email', '').lower().strip()
+        ip    = _verify_get_ip(request)
+        key_cool, key_cnt = _verify_resend_keys(email, ip)
+
+        try:
+            user = User.objects.get(
+                email=email, role='coach',
+                email_verified=False, is_active=False, is_approved=False,
+            )
+        except User.DoesNotExist:
+            user = None
+
+        if user and not cache.get(key_cool) and (cache.get(key_cnt) or 0) < _VERIFY_RESEND_MAX:
+            code = _create_verification_code(user)
+            _send_verification_email(user, code)
+            request.session['pending_verification_uid'] = user.id
+            cache.set(key_cool, 1, _VERIFY_RESEND_COOLDOWN)
+            try:
+                cache.incr(key_cnt)
+            except ValueError:
+                cache.set(key_cnt, 1, _VERIFY_RESEND_WINDOW)
+
+        sent = True
+
+    return render(request, 'auth/reverify_email.html', {'sent': sent})
 
 
 def awaiting_approval_view(request):

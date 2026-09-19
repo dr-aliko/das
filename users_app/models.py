@@ -54,6 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_activity_date = models.DateField(null=True, blank=True)
     tyt_target_date    = models.DateField(null=True, blank=True)
     ayt_target_date    = models.DateField(null=True, blank=True)
+    email_verified     = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['full_name']
@@ -319,6 +320,26 @@ class StudentInvite(models.Model):
     @staticmethod
     def generate_token():
         return secrets.token_urlsafe(32)  # 256-bit entropy, URL-safe
+
+
+class EmailVerificationCode(models.Model):
+    """One-time 6-digit code for verifying a coach's email address at registration."""
+    user       = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_verification',
+    )
+    code       = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts   = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'E-posta Dogrulama Kodu'
+        verbose_name_plural = 'E-posta Dogrulama Kodlari'
+
+    def __str__(self):
+        return f'{self.user.email} — {self.code}'
 
 
 class PushSubscription(models.Model):
