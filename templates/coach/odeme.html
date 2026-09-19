@@ -222,33 +222,70 @@
   </div>
   {% endif %}
 
-  {# ── Fee band legend ───────────────────────────────────────────────────── #}
-  {% if summary.vagus_tiers %}
-  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
-    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-ink-100">Tarife Bantları</h3>
-      <span class="text-xs text-ink-500">Vagus öğrencileri için</span>
-    </div>
-    <div class="p-4">
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {% for tier in summary.vagus_tiers %}
-        <div class="rounded-xl bg-ink-900 border p-3 text-center
-                    {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
-                      border-steel-500/40 ring-1 ring-steel-500/30
-                    {% else %}
-                      border-ink-700
-                    {% endif %}">
-          <p class="text-[10px] text-ink-500 font-medium mb-1">
-            {{ tier.min_students }}{% if tier.max_students %}–{{ tier.max_students }}{% else %}+{% endif %} öğrenci
-          </p>
-          <p class="text-base font-bold text-white tabular-nums">{{ tier.monthly_fee_try|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
-          {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
-          <p class="text-[10px] text-steel-400 font-semibold mt-1">Aktif</p>
-          {% endif %}
+  {# ── Fee band legends ─────────────────────────────────────────────────── #}
+  {% if summary.vagus_tiers or summary.coach_tiers %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+
+    {# Vagus tiers #}
+    {% if summary.vagus_tiers %}
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-ink-100">Tarife Bantları</h3>
+        <span class="text-xs text-ink-500">Vagus öğrencileri için</span>
+      </div>
+      <div class="p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {% for tier in summary.vagus_tiers %}
+          <div class="rounded-xl bg-ink-900 border p-3 text-center
+                      {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
+                        border-steel-500/40 ring-1 ring-steel-500/30
+                      {% else %}
+                        border-ink-700
+                      {% endif %}">
+            <p class="text-[10px] text-ink-500 font-medium mb-1">
+              {{ tier.min_students }}{% if tier.max_students %}–{{ tier.max_students }}{% else %}+{% endif %} öğrenci
+            </p>
+            <p class="text-base font-bold text-white tabular-nums">{{ tier.monthly_fee_try|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+            {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
+            <p class="text-[10px] text-steel-400 font-semibold mt-1">Aktif</p>
+            {% endif %}
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
+    {% endif %}
+
+    {# Coach tiers #}
+    {% if summary.coach_tiers %}
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-ink-100">Tarife Bantları</h3>
+        <span class="text-xs text-ink-500">Koç öğrencileri için</span>
+      </div>
+      <div class="p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {% for tier in summary.coach_tiers %}
+          <div class="rounded-xl bg-ink-900 border p-3 text-center
+                      {% if summary.current_coach_tier and summary.current_coach_tier.pk == tier.pk %}
+                        border-steel-500/40 ring-1 ring-steel-500/30
+                      {% else %}
+                        border-ink-700
+                      {% endif %}">
+            <p class="text-[10px] text-ink-500 font-medium mb-1">
+              {{ tier.min_students }}{% if tier.max_students %}–{{ tier.max_students }}{% else %}+{% endif %} öğrenci
+            </p>
+            <p class="text-base font-bold text-white tabular-nums">{{ tier.monthly_fee_try|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+            {% if summary.current_coach_tier and summary.current_coach_tier.pk == tier.pk %}
+            <p class="text-[10px] text-steel-400 font-semibold mt-1">Aktif</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
   {% endif %}
 

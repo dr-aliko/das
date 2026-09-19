@@ -77,15 +77,19 @@ def coach_billing_summary(coach) -> dict:
         total_fee = None
 
     vagus_tiers = list(FeeTier.objects.filter(source='vagus').order_by('order'))
+    coach_tiers = list(FeeTier.objects.filter(source='coach').order_by('order'))
 
-    # Find the specific tier that applies to current vagus_count for legend highlight
-    current_vagus_tier = None
-    if vagus_count > 0:
-        for tier in vagus_tiers:
-            max_ok = tier.max_students is None or tier.max_students >= vagus_count
-            if tier.min_students <= vagus_count and max_ok:
-                current_vagus_tier = tier
-                break
+    def _find_active_tier(tiers, count):
+        if count == 0:
+            return None
+        for tier in tiers:
+            max_ok = tier.max_students is None or tier.max_students >= count
+            if tier.min_students <= count and max_ok:
+                return tier
+        return None
+
+    current_vagus_tier = _find_active_tier(vagus_tiers, vagus_count)
+    current_coach_tier = _find_active_tier(coach_tiers, coach_count)
 
     return {
         'vagus_students': vagus_students,
@@ -103,4 +107,6 @@ def coach_billing_summary(coach) -> dict:
         'warning_count': warning_count,
         'current_vagus_tier': current_vagus_tier,
         'vagus_tiers': vagus_tiers,
+        'current_coach_tier': current_coach_tier,
+        'coach_tiers': coach_tiers,
     }
