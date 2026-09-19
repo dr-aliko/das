@@ -128,7 +128,8 @@
       "Bash(py *)",
       "Bash(.venv/Scripts/python -m playwright install chromium)",
       "Bash(.venv/Scripts/python -c \"import playwright; print\\('ok', playwright.__version__\\)\")",
-      "Bash(kill 619 612)"
+      "Bash(kill 619 612)",
+      "Bash(set PYTHONIOENCODING=utf-8)"
     ]
   }
 }

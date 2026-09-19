@@ -1,0 +1,286 @@
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+Found 7 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: import_export, messages, staticfiles
+  Apply all migrations: admin, auth, contenttypes, django_q, exams_app, konu_takip_app, marketing_app, sessions, tasks_app, users_app
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying users_app.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying django_q.0001_initial... OK
+  Applying django_q.0002_auto_20150630_1624... OK
+  Applying django_q.0003_auto_20150708_1326... OK
+  Applying django_q.0004_auto_20150710_1043... OK
+  Applying django_q.0005_auto_20150718_1506... OK
+  Applying django_q.0006_auto_20150805_1817... OK
+  Applying django_q.0007_ormq... OK
+  Applying django_q.0008_auto_20160224_1026... OK
+  Applying django_q.0009_auto_20171009_0915... OK
+  Applying django_q.0010_auto_20200610_0856... OK
+  Applying django_q.0011_auto_20200628_1055... OK
+  Applying django_q.0012_auto_20200702_1608... OK
+  Applying django_q.0013_task_attempt_count... OK
+  Applying django_q.0014_schedule_cluster... OK
+  Applying django_q.0015_alter_schedule_schedule_type... OK
+  Applying django_q.0016_schedule_intended_date_kwarg... OK
+  Applying django_q.0017_task_cluster_alter... OK
+  Applying django_q.0018_task_success_index... OK
+  Applying exams_app.0001_initial... OK
+  Applying exams_app.0002_initial... OK
+  Applying exams_app.0003_add_question_count... OK
+  Applying exams_app.0004_restructure_topic_errors... OK
+  Applying exams_app.0005_examresult_subject_duration_minutes... OK
+  Applying exams_app.0006_exam_student_note_studenttask... OK
+  Applying exams_app.0007_alter_studenttask_assigned_by_coach... OK
+  Applying exams_app.0008_studenttask_easiness_factor_and_more... OK
+  Applying exams_app.0009_bransdeneme... OK
+  Applying exams_app.0010_bransdeneme_ogrenci_notu_bransdeneme_sure_dakika... OK
+  Applying exams_app.0011_branstopicerror... OK
+  Applying exams_app.0012_task_source_isolation... OK
+  Applying exams_app.0013_alter_studenttask_next_review_date... OK
+  Applying exams_app.0014_topic_depends_on_topic_expected_hours_and_more... OK
+  Applying exams_app.0015_split_umbrella_subjects... OK
+  Applying exams_app.0016_subject_excluded_from_planning... OK
+  Applying exams_app.0017_topic_excluded_from_planning... OK
+  Applying exams_app.0018_topic_order_index... OK
+  Applying exams_app.0019_publisher_is_active_curated_list... OK
+  Applying exams_app.0020_placement_exam... OK
+  Applying exams_app.0021_examquestion_subject... OK
+  Applying exams_app.0022_studentquestionanswer_time_spent_seconds... OK
+  Applying exams_app.0023_bransdeneme_soru_sayisi... OK
+  Applying exams_app.0024_tyt_problemler_data... OK
+  Applying users_app.0002_user_coach... OK
+  Applying users_app.0003_user_is_approved_studentinvite... OK
+  Applying users_app.0004_user_denemeler_v2_flag... OK
+  Applying users_app.0005_add_theme_and_grade... OK
+  Applying users_app.0006_add_coach_student_and_audit_log... OK
+  Applying users_app.0007_add_coach_task_and_private_note... OK
+  Applying users_app.0008_remove_coach_task_and_private_note... OK
+  Applying users_app.0009_user_brans_v2... OK
+  Applying users_app.0010_coach_alert_inbox... OK
+  Applying users_app.0011_streak_and_achievements... OK
+  Applying users_app.0012_remove_user_brans_v2... OK
+  Applying users_app.0013_user_target_exam_dates... OK
+  Applying users_app.0014_add_alan_sinif... OK
+  Applying users_app.0015_pushsubscription... OK
+  Applying users_app.0016_user_sr_enabled... OK
+  Applying konu_takip_app.0001_initial... OK
+  Applying konu_takip_app.0002_studenttopicprogress_spaced_repetition... OK
+  Applying konu_takip_app.0003_studentsubjectsrsetting... OK
+  Applying marketing_app.0001_initial... OK
+  Applying marketing_app.0002_initial_content... OK
+  Applying marketing_app.0003_remove_trial_copy... OK
+  Applying marketing_app.0004_coachrequest... OK
+  Applying sessions.0001_initial... OK
+  Applying tasks_app.0001_initial... OK
+  Applying tasks_app.0002_gorevgrubu_completed_at_gorevgrubu_is_completed_and_more... OK
+  Applying tasks_app.0003_gorevgrubu_student_can_edit... OK
+  Applying tasks_app.0004_gorevgrubu_is_master_gorevgrubu_parent... OK
+  Applying tasks_app.0005_gorevgrubu_is_hidden_by_student... OK
+  Applying tasks_app.0006_youtubeplaylist_youtubevideo... OK
+  Applying tasks_app.0007_gorevgrubu_student_note_time_spent... OK
+  Applying tasks_app.0008_remove_gorevgrubu_tekrar_quality... OK
+  Applying tasks_app.0009_youtubeplaylist_unique_per_coach... OK
+  Applying users_app.0017_notification... OK
+  Applying users_app.0018_coachstudent_billing... OK
+  Applying users_app.0019_fee_tier... OK
+  Applying users_app.0020_fix_coach_tier1_fee... OK
+  Applying users_app.0021_studentinvite_staff_fields...test_1_no_user_enumeration (users_app.test_password_reset.PasswordResetSecurityTests.test_1_no_user_enumeration) ... ok
+test_2_rate_limiting (users_app.test_password_reset.PasswordResetSecurityTests.test_2_rate_limiting) ... ok
+test_3_email_rendering (users_app.test_password_reset.PasswordResetSecurityTests.test_3_email_rendering) ... ok
+test_4a_full_flow_coach (users_app.test_password_reset.PasswordResetSecurityTests.test_4a_full_flow_coach) ... ERROR
+test_4b_full_flow_student (users_app.test_password_reset.PasswordResetSecurityTests.test_4b_full_flow_student) ... ERROR
+test_5_token_single_use (users_app.test_password_reset.PasswordResetSecurityTests.test_5_token_single_use) ... ok
+test_6_ui_login_page_link (users_app.test_password_reset.PasswordResetSecurityTests.test_6_ui_login_page_link) ... ok
+
+======================================================================
+ERROR: test_4a_full_flow_coach (users_app.test_password_reset.PasswordResetSecurityTests.test_4a_full_flow_coach)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\kayaa\OneDrive\Masaüstü\vagus-wordpress\projem\users_app\test_password_reset.py", line 274, in test_4a_full_flow_coach
+    self._full_flow('coach_pr@test.com', 'CoachOld1!', 'CoachNew9@!', 'coach')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kayaa\OneDrive\Masaüstü\vagus-wordpress\projem\users_app\test_password_reset.py", line 265, in _full_flow
+    print(f'  6. New password login : {"WORKS \u2713" if ok_new else "FAILS \u2717"}')
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1254.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 32: character maps to <undefined>
+
+======================================================================
+ERROR: test_4b_full_flow_student (users_app.test_password_reset.PasswordResetSecurityTests.test_4b_full_flow_student)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\kayaa\OneDrive\Masaüstü\vagus-wordpress\projem\users_app\test_password_reset.py", line 280, in test_4b_full_flow_student
+    self._full_flow('student_pr@test.com', 'StuOld1!', 'StuNew9@!', 'student')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kayaa\OneDrive\Masaüstü\vagus-wordpress\projem\users_app\test_password_reset.py", line 265, in _full_flow
+    print(f'  6. New password login : {"WORKS \u2713" if ok_new else "FAILS \u2717"}')
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1254.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 32: character maps to <undefined>
+
+----------------------------------------------------------------------
+Ran 7 tests in 9.721s
+
+FAILED (errors=2)
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+ OK
+System check identified no issues (0 silenced).
+
+============================================================
+TEST 1: USER ENUMERATION CHECK
+============================================================
+  Real email  -> status=302  Location=/auth/password-reset/done/
+  Fake email  -> status=302  Location=/auth/password-reset/done/
+  Status codes identical : True
+  Redirect target identical: True
+  "E-posta gönderildi" on real-email done page: True
+  "E-posta gönderildi" on fake-email done page: True
+  Final page content identical: True
+
+============================================================
+TEST 2: RATE LIMIT CHECK
+============================================================
+
+  [Real email — 2 requests]
+  1st -> status=302 Location=/auth/password-reset/done/
+  2nd -> status=302 Location=/auth/password-reset/done/
+  Emails after 1st request : 1
+  Emails after 2nd request : 1
+  Only 1 email sent total  : True
+  HTTP responses identical : True
+
+  [Fake email — 2 requests]
+  1st -> status=302 Location=/auth/password-reset/done/
+  2nd -> status=302 Location=/auth/password-reset/done/
+  Cache key set after 1st request : True
+  Cache key still set after 2nd   : True
+  Emails sent (none expected)      : 0
+  HTTP responses identical         : True
+
+  [2nd request — real vs fake comparison]
+  Real (2nd, throttled) -> status=302 Location=/auth/password-reset/done/
+  Fake (2nd, throttled) -> status=302 Location=/auth/password-reset/done/
+  Behaviorally identical: True
+
+============================================================
+TEST 3: EMAIL RENDERING
+============================================================
+  Subject   : Vagus — Þifre Sýfýrlama
+  From      : Vagus <noreply@vagus.tr>
+  To        : ['coach_pr@test.com']
+  Alternatives: 1 (should be 1 — HTML part)
+  MIME type : text/html
+  HTML size : 3,333 chars
+  PASS  Vagus brand header
+  PASS  Indigo color #6366F1
+  PASS  CTA button text
+  PASS  Reset link in button href
+  PASS  tek kullanýmlýk note
+  PASS  1 saat expiry note
+  PASS  Vagus Ekibi footer
+  PASS  f9fafb footer bg (invite pattern)
+
+  --- HTML snippet (first 500 chars) ---
+  <!DOCTYPE html>
+  <html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vagus — Þifre Sýfýrlama</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table width=
+
+  --- Plain text body ---
+  Merhaba,
+  
+  Vagus hesabýnýz için bir þifre sýfýrlama isteði aldýk.
+  
+  Þifrenizi sýfýrlamak için aþaðýdaki linke týklayýn:
+  
+  http://testserver/auth/password-reset/confirm/MQ/df5cqg-9c8b0c314b57535a7b8d8fd2e40f338d/
+  
+  Bu link 1 saat geçerlidir ve yalnýzca bir kez kullanýlabilir.
+  
+  Bu isteði siz yapmadýysanýz bu e-postayý dikkate almayýn. Þifreniz deðiþmeyecektir.
+  
+  Baþarýlar,
+  Vagus Ekibi
+  
+
+============================================================
+TEST 4a: FULL FLOW — COACH ACCOUNT
+============================================================
+
+  [coach]
+  1. Reset request   -> 302 /auth/password-reset/done/
+  2. Email link      : ...rd-reset/confirm/MQ/df5cqg-61845112457e6f4e830fba128df84fad/
+  3. GET confirm     -> 200, form shown: True
+  4. POST new password -> 302
+  5. Complete page   -> 200, "güncellendi": True
+
+============================================================
+TEST 4b: FULL FLOW — STUDENT ACCOUNT
+============================================================
+
+  [student]
+  1. Reset request   -> 302 /auth/password-reset/done/
+  2. Email link      : ...rd-reset/confirm/Mg/df5cqi-d485777dd49a92273eb64f5cac3019ad/
+  3. GET confirm     -> 200, form shown: True
+  4. POST new password -> 302
+  5. Complete page   -> 200, "güncellendi": True
+
+============================================================
+TEST 5: TOKEN SINGLE-USE
+============================================================
+  Original link: ...rd-reset/confirm/MQ/df5cqk-336461fb6ec19d825b9d5e0cc5ab2fe5/
+  1st use (complete reset) -> 302
+  2nd use (reuse original link):
+    HTTP status        : 200
+    "Yeni Link Ýste" shown: True
+    Password form shown: False
+    Token invalidated  : True
+
+============================================================
+TEST 6: UI — "Þifremi unuttum" LINK ON LOGIN PAGE
+============================================================
+  GET /auth/login/ -> 200
+  Link href present (/auth/password-reset/) : True
+  Link text present (Þifremi unuttum)       : True
+  Single shared login page for all roles    : True
+  Mobile: same template; brand panel hidden via CSS at <900px
+  (No separate mobile login URL exists in this app)
+
+  Context around link:
+  ...form>
+
+      <p style="margin-top:16px; font-size:13px; color:var(--muted); text-align:center;">
+        <a href="/auth/password-reset/" style="color:var(--muted);">Þifremi unuttum</a>
+      </p>
+      <p style="margin-top:12px; font-size:1...
