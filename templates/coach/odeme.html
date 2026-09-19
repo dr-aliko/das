@@ -68,14 +68,25 @@
     <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
       <div>
         <h2 class="text-sm font-semibold text-ink-100">Vagus Öğrencileri</h2>
+        {% if summary.warning_count %}
+        <p class="text-xs text-ink-500 mt-0.5">
+          {{ summary.vagus_count }} öğrenci · Ödeme takibi ·
+          <span class="text-amber-400 font-medium">{{ summary.warning_count }} yaklaşıyor</span>
+        </p>
+        {% else %}
         <p class="text-xs text-ink-500 mt-0.5">{{ summary.vagus_count }} öğrenci · Ödeme takibi</p>
+        {% endif %}
       </div>
-      {% if summary.warning_count %}
-      <div class="flex items-center gap-1.5 text-xs text-amber-400 font-medium shrink-0">
-        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-        {{ summary.warning_count }} yaklaşıyor
+      <div class="shrink-0 text-right">
+        <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-0.5">Bu ay</p>
+        {% if summary.vagus_fee is not None %}
+          <p class="text-base font-bold text-ink-100 tabular-nums">{{ summary.vagus_fee|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+        {% elif summary.vagus_fee_undefined %}
+          <p class="text-xs text-amber-400 font-semibold">Tarife tanımsız</p>
+        {% else %}
+          <p class="text-base font-bold text-ink-100 tabular-nums">0<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
 
     {# Card rows — one per student #}
@@ -169,7 +180,10 @@
           <p class="text-sm font-medium text-ink-100 truncate">{{ entry.link.student.full_name }}</p>
           <p class="text-xs text-ink-500 truncate">{{ entry.link.student.email }}</p>
         </div>
-        <p class="text-xs text-ink-600 shrink-0 hidden sm:block">Kayıt: {{ entry.link.created_at|date:"d.m.Y" }}</p>
+        <div class="hidden sm:block shrink-0 text-right">
+          <p class="text-xs text-ink-500">Kayıt tarihi</p>
+          <p class="text-xs font-medium text-ink-300 mt-0.5">{{ entry.link.created_at|date:"d.m.Y" }}</p>
+        </div>
       </div>
       {% endfor %}
     </div>
