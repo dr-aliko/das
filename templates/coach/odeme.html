@@ -3,166 +3,254 @@
 {% block title %}Ödeme & Öğrenciler — DAS{% endblock %}
 
 {% block content %}
+<div class="space-y-4">
 
-<div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
-
-  <div class="px-4 md:px-6 pt-5 md:pt-6 pb-4 border-b border-ink-700 flex items-start justify-between gap-4">
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-xl md:text-2xl font-semibold tracking-tight text-white">Ödeme & Öğrenciler</h1>
-      <p class="text-sm text-ink-400 mt-1">Vagus'un sağladığı öğrenciler ve aylık ücret özeti.</p>
+      <h1 class="text-lg font-semibold text-white">Ödeme &amp; Öğrenciler</h1>
+      <p class="text-sm text-ink-400 mt-0.5">Vagus'un sağladığı öğrenciler ve aylık ücret özeti.</p>
     </div>
     {% if summary.warning_count %}
     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold shrink-0">
-      ⚠ {{ summary.warning_count }} ödeme yaklaşıyor
+      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      {{ summary.warning_count }} ödeme yaklaşıyor
     </span>
     {% endif %}
   </div>
 
-  <div class="p-4 md:p-6 space-y-6">
+  {# ── Summary stat cards ───────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
-    {# ── Fee summary cards ───────────────────────────────────────── #}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Aylık Toplam</p>
+      {% if summary.total_fee is not None %}
+        <p class="text-2xl font-bold text-white tabular-nums">
+          {{ summary.total_fee|floatformat:0 }}<span class="text-sm font-normal text-ink-500 ml-1">₺</span>
+        </p>
+        {% if summary.vagus_fee is not None and summary.coach_fee is not None and summary.coach_fee > 0 %}
+          <p class="text-xs text-ink-400 mt-1 tabular-nums">{{ summary.vagus_fee|floatformat:0 }} Vagus + {{ summary.coach_fee|floatformat:0 }} Koç ₺</p>
+        {% endif %}
+      {% else %}
+        <p class="text-sm font-semibold text-amber-400 mt-1">Tarife tanımlanmamış</p>
+      {% endif %}
+    </div>
 
-      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Aylık Toplam</p>
-        {% if summary.total_fee is not None %}
-          <p class="text-2xl font-bold text-white">{{ summary.total_fee|floatformat:0 }} <span class="text-base font-normal text-ink-400">₺</span></p>
-          {% if summary.vagus_fee and summary.coach_fee %}
-            <p class="text-xs text-ink-500 mt-1">{{ summary.vagus_fee|floatformat:0 }} + {{ summary.coach_fee|floatformat:0 }} ₺</p>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Vagus Öğrenci</p>
+      <p class="text-2xl font-bold text-white tabular-nums">{{ summary.vagus_count }}</p>
+    </div>
+
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Kendi Öğrenci</p>
+      <p class="text-2xl font-bold text-white tabular-nums">{{ summary.coach_count }}</p>
+    </div>
+
+    <div class="rounded-xl border {% if summary.unclassified_count %}border-amber-500/30 bg-amber-950/20{% else %}border-ink-700 bg-ink-900{% endif %} p-4">
+      <p class="text-[10px] {% if summary.unclassified_count %}text-amber-400{% else %}text-ink-500{% endif %} font-semibold uppercase tracking-wider mb-1.5">
+        Sınıflandırılmamış
+      </p>
+      <p class="text-2xl font-bold {% if summary.unclassified_count %}text-amber-400{% else %}text-white{% endif %} tabular-nums">
+        {{ summary.unclassified_count }}
+      </p>
+    </div>
+
+  </div>
+
+  {# ── Vagus students ───────────────────────────────────────────────────── #}
+  {% if summary.vagus_students %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    {# Section header #}
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-ink-100">Vagus Öğrencileri</h2>
+        <p class="text-xs text-ink-500 mt-0.5">{{ summary.vagus_count }} öğrenci · Ödeme takibi</p>
+      </div>
+      {% if summary.warning_count %}
+      <div class="flex items-center gap-1.5 text-xs text-amber-400 font-medium shrink-0">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+        {{ summary.warning_count }} yaklaşıyor
+      </div>
+      {% endif %}
+    </div>
+
+    {# Card rows — one per student #}
+    <div class="divide-y divide-ink-800">
+      {% for entry in summary.vagus_students %}
+      {% with link=entry.link days=entry.days_remaining %}
+
+      <div class="flex items-center gap-3 px-4 py-3.5 border-l-4 transition-colors
+                  {% if days is not None and days < 0 %}border-ruby-500 bg-ruby-950/25
+                  {% elif days is not None and days <= 3 %}border-ruby-400 bg-ruby-950/15
+                  {% elif days is not None and days <= 7 %}border-amber-400 bg-amber-950/10
+                  {% else %}border-transparent{% endif %}">
+
+        {# Avatar #}
+        <span class="w-8 h-8 rounded-full bg-ink-800 border border-ink-700 flex items-center justify-center text-xs font-bold text-ink-400 shrink-0 select-none">
+          {{ link.student.full_name|first|upper }}
+        </span>
+
+        {# Name + email #}
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-ink-100 truncate">{{ link.student.full_name }}</p>
+          <p class="text-xs text-ink-500 truncate">{{ link.student.email }}</p>
+        </div>
+
+        {# Payment date (hidden on very small screens) #}
+        <div class="hidden sm:block shrink-0 text-right">
+          <p class="text-xs text-ink-500">Sonraki ödeme</p>
+          <p class="text-xs font-medium text-ink-300 mt-0.5">
+            {% if link.next_payment_due %}{{ link.next_payment_due|date:"d.m.Y" }}{% else %}<span class="text-ink-600">Tarih yok</span>{% endif %}
+          </p>
+        </div>
+
+        {# Status badge #}
+        <div class="shrink-0 text-right min-w-[72px]">
+          {% if days is None %}
+            <span class="text-xs text-ink-600 font-medium">—</span>
+          {% elif days < 0 %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-ruby-500/15 border border-ruby-500/30 text-ruby-400">
+              <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ days|floatformat:0|slice:"1:" }} gün gecikmeli
+            </span>
+          {% elif days <= 3 %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-ruby-500/15 border border-ruby-500/30 text-ruby-400">
+              <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ days }} gün kaldı
+            </span>
+          {% elif days <= 7 %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/12 border border-amber-500/30 text-amber-400">
+              <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ days }} gün kaldı
+            </span>
+          {% else %}
+            <span class="text-sm font-semibold text-ink-400 tabular-nums">{{ days }} gün</span>
           {% endif %}
-        {% else %}
-          <p class="text-base font-semibold text-amber-400">Tarife tanımlanmamış</p>
+        </div>
+
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+
+  </div>
+  {% endif %}
+
+  {# ── Coach's own students ─────────────────────────────────────────────── #}
+  {% if summary.coach_students %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-ink-100">Kendi Öğrencilerim</h2>
+        <p class="text-xs text-ink-500 mt-0.5">{{ summary.coach_count }} öğrenci · Ödeme takibi dışında</p>
+      </div>
+      <div class="shrink-0 text-right">
+        <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-0.5">Bu ay</p>
+        {% if summary.coach_fee is not None %}
+          <p class="text-base font-bold text-ink-100 tabular-nums">{{ summary.coach_fee|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+        {% elif summary.coach_fee_undefined %}
+          <p class="text-xs text-amber-400 font-semibold">Tarife tanımsız</p>
         {% endif %}
       </div>
-
-      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Vagus Öğrenci</p>
-        <p class="text-2xl font-bold text-white">{{ summary.vagus_count }}</p>
-      </div>
-
-      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Kendi Öğrenci</p>
-        <p class="text-2xl font-bold text-white">{{ summary.coach_count }}</p>
-      </div>
-
-      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-xs text-ink-400 font-medium uppercase tracking-wider mb-1">Sınıflandırılmamış</p>
-        <p class="text-2xl font-bold {% if summary.unclassified_count %}text-amber-400{% else %}text-white{% endif %}">{{ summary.unclassified_count }}</p>
-      </div>
-
     </div>
 
-    {# ── Vagus students ──────────────────────────────────────────── #}
-    {% if summary.vagus_students %}
-    <div>
-      <h2 class="text-sm font-semibold text-ink-300 uppercase tracking-wider mb-3">Vagus Öğrencileri</h2>
-      <div class="rounded-xl border border-ink-700 overflow-hidden">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-ink-700 bg-ink-900">
-              <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider">Öğrenci</th>
-              <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider hidden sm:table-cell">Email</th>
-              <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider">Sonraki Ödeme</th>
-              <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider">Kalan</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-ink-800">
-            {% for entry in summary.vagus_students %}
-            {% with link=entry.link days=entry.days_remaining %}
-            <tr class="{% if days is not None and days <= 3 %}bg-ruby-950/30{% elif days is not None and days <= 7 %}bg-amber-950/20{% endif %}">
-              <td class="px-4 py-3 font-medium text-ink-100">{{ link.student.full_name }}</td>
-              <td class="px-4 py-3 text-ink-400 hidden sm:table-cell">{{ link.student.email }}</td>
-              <td class="px-4 py-3 text-right text-ink-300">
-                {% if link.next_payment_due %}{{ link.next_payment_due|date:"d.m.Y" }}{% else %}<span class="text-ink-600">—</span>{% endif %}
-              </td>
-              <td class="px-4 py-3 text-right font-semibold">
-                {% if days is None %}
-                  <span class="text-ink-600">—</span>
-                {% elif days < 0 %}
-                  <span class="text-ruby-400">{{ days|floatformat:0 }} gün gecikmiş</span>
-                {% elif days <= 3 %}
-                  <span class="text-ruby-400">{{ days }} gün</span>
-                {% elif days <= 7 %}
-                  <span class="text-amber-400">{{ days }} gün</span>
-                {% else %}
-                  <span class="text-ink-300">{{ days }} gün</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endwith %}
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="divide-y divide-ink-800">
+      {% for entry in summary.coach_students %}
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="w-8 h-8 rounded-full bg-ink-800 border border-ink-700 flex items-center justify-center text-xs font-bold text-ink-400 shrink-0 select-none">
+          {{ entry.link.student.full_name|first|upper }}
+        </span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-ink-100 truncate">{{ entry.link.student.full_name }}</p>
+          <p class="text-xs text-ink-500 truncate">{{ entry.link.student.email }}</p>
+        </div>
+        <p class="text-xs text-ink-600 shrink-0 hidden sm:block">Kayıt: {{ entry.link.created_at|date:"d.m.Y" }}</p>
       </div>
+      {% endfor %}
     </div>
-    {% endif %}
 
-    {# ── Coach's own students ────────────────────────────────────── #}
-    {% if summary.coach_students %}
-    <div>
-      <h2 class="text-sm font-semibold text-ink-300 uppercase tracking-wider mb-3">Kendi Öğrencilerim</h2>
-      <div class="rounded-xl border border-ink-700 overflow-hidden">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-ink-700 bg-ink-900">
-              <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider">Öğrenci</th>
-              <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider hidden sm:table-cell">Email</th>
-              <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-400 uppercase tracking-wider hidden sm:table-cell">Kayıt</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-ink-800">
-            {% for entry in summary.coach_students %}
-            <tr>
-              <td class="px-4 py-3 font-medium text-ink-100">{{ entry.link.student.full_name }}</td>
-              <td class="px-4 py-3 text-ink-400 hidden sm:table-cell">{{ entry.link.student.email }}</td>
-              <td class="px-4 py-3 text-ink-400 hidden sm:table-cell">{{ entry.link.created_at|date:"d.m.Y" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+  </div>
+  {% endif %}
+
+  {# ── Unclassified ─────────────────────────────────────────────────────── #}
+  {% if summary.unclassified %}
+  <div class="rounded-2xl border border-amber-500/30 bg-amber-950/10 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-amber-500/20 flex items-center gap-2">
+      <svg class="w-4 h-4 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <h2 class="text-sm font-semibold text-amber-300">Sınıflandırılmamış ({{ summary.unclassified_count }})</h2>
     </div>
-    {% endif %}
-
-    {# ── Unclassified ────────────────────────────────────────────── #}
-    {% if summary.unclassified %}
-    <div class="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">
-      <h2 class="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-2">Sınıflandırılmamış ({{ summary.unclassified_count }})</h2>
+    <div class="px-5 py-3">
       <p class="text-xs text-ink-400 mb-3">Bu öğrencilerin kaynağı belirsiz. Admin panelinden kaynak atayın.</p>
-      <ul class="space-y-1">
+      <ul class="space-y-2">
         {% for entry in summary.unclassified %}
-        <li class="text-sm text-ink-300">{{ entry.link.student.full_name }} <span class="text-ink-500">— {{ entry.link.student.email }}</span></li>
+        <li class="flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-full bg-amber-950/40 border border-amber-500/20 flex items-center justify-center text-[10px] font-bold text-amber-500 shrink-0 select-none">
+            {{ entry.link.student.full_name|first|upper }}
+          </span>
+          <span class="text-sm text-ink-300">{{ entry.link.student.full_name }}</span>
+          <span class="text-xs text-ink-600 truncate">{{ entry.link.student.email }}</span>
+        </li>
         {% endfor %}
       </ul>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    {# ── Empty state ─────────────────────────────────────────────── #}
-    {% if not summary.vagus_students and not summary.coach_students and not summary.unclassified %}
-    <div class="text-center py-16 text-ink-500">
-      <p class="text-lg">Henüz aktif öğrenci yok.</p>
+  {# ── Empty state ──────────────────────────────────────────────────────── #}
+  {% if not summary.vagus_students and not summary.coach_students and not summary.unclassified %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 py-16 flex flex-col items-center text-center gap-4">
+    <div class="w-14 h-14 rounded-2xl bg-ink-900 border border-ink-700 flex items-center justify-center">
+      <svg class="w-6 h-6 text-ink-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
     </div>
-    {% endif %}
+    <div>
+      <p class="text-sm font-medium text-ink-300">Henüz öğrenci atanmadı</p>
+      <p class="text-xs text-ink-600 mt-1">Vagus platformundan öğrenci atandığında burada görünecek.</p>
+    </div>
+  </div>
+  {% endif %}
 
-    {# ── Fee band legend (dynamic from DB) ──────────────────────── #}
-    {% if summary.vagus_tiers %}
-    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
-      <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">Tarife Bantları (Vagus Öğrencileri)</h3>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-sm">
+  {# ── Fee band legend ───────────────────────────────────────────────────── #}
+  {% if summary.vagus_tiers %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-ink-100">Tarife Bantları</h3>
+      <span class="text-xs text-ink-500">Vagus öğrencileri için</span>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         {% for tier in summary.vagus_tiers %}
-        <div class="rounded-lg bg-ink-800 px-3 py-2
-                    {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}ring-1 ring-steel-500{% endif %}">
-          <span class="text-ink-400 text-xs">
+        <div class="rounded-xl bg-ink-900 border p-3 text-center
+                    {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
+                      border-steel-500/40 ring-1 ring-steel-500/30
+                    {% else %}
+                      border-ink-700
+                    {% endif %}">
+          <p class="text-[10px] text-ink-500 font-medium mb-1">
             {{ tier.min_students }}{% if tier.max_students %}–{{ tier.max_students }}{% else %}+{% endif %} öğrenci
-          </span>
-          <p class="font-semibold text-white mt-0.5">{{ tier.monthly_fee_try|floatformat:0 }} ₺/ay</p>
+          </p>
+          <p class="text-base font-bold text-white tabular-nums">{{ tier.monthly_fee_try|floatformat:0 }}<span class="text-xs font-normal text-ink-500 ml-0.5">₺</span></p>
+          {% if summary.current_vagus_tier and summary.current_vagus_tier.pk == tier.pk %}
+          <p class="text-[10px] text-steel-400 font-semibold mt-1">Aktif</p>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
     </div>
-    {% endif %}
-
   </div>
-</div>
+  {% endif %}
 
+</div>
 {% endblock %}

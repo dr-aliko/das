@@ -114,6 +114,26 @@
         </div>
       </div>
       <div class="flex items-center gap-4">
+        {% if group.summary.vagus_count > 0 %}
+        <div class="text-right">
+          {% if group.summary.vagus_fee is not None %}
+          <p class="text-sm font-semibold text-ink-200 tabular-nums">{{ group.summary.vagus_fee|floatformat:0 }} ₺</p>
+          {% else %}
+          <p class="text-xs text-amber-400">Tanımsız</p>
+          {% endif %}
+          <p class="text-[10px] text-ink-600 uppercase tracking-wider">Vagus ({{ group.summary.vagus_count }})</p>
+        </div>
+        {% endif %}
+        {% if group.summary.coach_count > 0 %}
+        <div class="text-right">
+          {% if group.summary.coach_fee is not None %}
+          <p class="text-sm font-semibold text-ink-200 tabular-nums">{{ group.summary.coach_fee|floatformat:0 }} ₺</p>
+          {% else %}
+          <p class="text-xs text-amber-400">Tanımsız</p>
+          {% endif %}
+          <p class="text-[10px] text-ink-600 uppercase tracking-wider">Koç ({{ group.summary.coach_count }})</p>
+        </div>
+        {% endif %}
         <div class="text-right">
           {% if group.summary.total_fee is not None %}
           <p class="text-sm font-semibold text-emerald-400 tabular-nums">{{ group.summary.total_fee|floatformat:0 }} ₺</p>
