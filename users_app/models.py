@@ -55,6 +55,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     tyt_target_date    = models.DateField(null=True, blank=True)
     ayt_target_date    = models.DateField(null=True, blank=True)
     email_verified     = models.BooleanField(default=False)
+    # ── WordPress integration (coaches only) ──────────────────────────────────
+    wordpress_post_id  = models.IntegerField(null=True, blank=True)
+    wp_is_available    = models.BooleanField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['full_name']

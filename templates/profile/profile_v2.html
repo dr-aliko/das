@@ -552,6 +552,30 @@
               </p>
             </div>
           </div>
+          {% if user.is_coach and user.wordpress_post_id %}
+          <button id="wp-avail-btn"
+                  onclick="toggleWpAvailability()"
+                  class="w-full px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors text-left">
+            <span id="wp-avail-icon"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                         {% if wp_is_available %}bg-emerald-500/15 text-emerald-400{% else %}bg-ink-800 text-ink-400{% endif %}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </span>
+            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Müsaitlik Durumu" %}</span>
+            <span id="wp-avail-label" class="text-xs
+                  {% if wp_is_available %}text-emerald-400{% else %}text-ink-400{% endif %}">
+              {% if wp_is_available %}{% trans "Müsait" %}{% else %}{% trans "Meşgul" %}{% endif %}
+            </span>
+            <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#das-icon-chev-right"/>
+            </svg>
+          </button>
+          {% endif %}
           <a href="{% url 'profil_ayarlar' %}"
              class="flex px-4 py-3 items-center gap-3 hover:bg-ink-800 transition-colors">
             <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
@@ -719,5 +743,49 @@ document.addEventListener('DOMContentLoaded', function () {
     if (iosHint)  iosHint.classList.add('hidden');
   }, { once: true });
 });
+
+{% if user.is_coach and user.wordpress_post_id %}
+var _wpAvailBusy = false;
+var _wpAvailCurrent = {{ wp_is_available|yesno:"true,false,false" }};
+
+function toggleWpAvailability() {
+  if (_wpAvailBusy) return;
+  _wpAvailBusy = true;
+  var next = !_wpAvailCurrent;
+  fetch('/profil/wp-availability/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
+    },
+    body: JSON.stringify({ is_available: next }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    _wpAvailBusy = false;
+    if (data.ok) {
+      _wpAvailCurrent = data.is_available;
+      var icon = document.getElementById('wp-avail-icon');
+      var label = document.getElementById('wp-avail-label');
+      if (_wpAvailCurrent) {
+        icon.className = icon.className.replace('bg-ink-800 text-ink-400', 'bg-emerald-500/15 text-emerald-400');
+        label.textContent = 'Müsait';
+        label.className = label.className.replace('text-ink-400', 'text-emerald-400');
+      } else {
+        icon.className = icon.className.replace('bg-emerald-500/15 text-emerald-400', 'bg-ink-800 text-ink-400');
+        label.textContent = 'Meşgul';
+        label.className = label.className.replace('text-emerald-400', 'text-ink-400');
+      }
+      window.dasToast && window.dasToast(_wpAvailCurrent ? 'Müsait olarak işaretlendi.' : 'Meşgul olarak işaretlendi.', _wpAvailCurrent ? 'emerald' : 'steel');
+    } else {
+      window.dasToast && window.dasToast(data.error || 'Web sitesi güncellenemedi, tekrar deneyin.', 'ruby');
+    }
+  })
+  .catch(function() {
+    _wpAvailBusy = false;
+    window.dasToast && window.dasToast('Web sitesine ulaşılamadı, tekrar deneyin.', 'ruby');
+  });
+}
+{% endif %}
 </script>
 {% endblock %}

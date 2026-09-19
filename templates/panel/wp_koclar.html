@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — WordPress Koçlar{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">WordPress Koçlar</h1>
+      </div>
+      <p class="text-sm text-ink-400">Django koçları ile vagus.tr WordPress profillerini eşleştir ve müsaitlik senkronizasyonunu etkinleştir.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+        <a href="{% url 'panel_davetler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Davetler
+        </a>
+        <a href="{% url 'panel_ogrenciler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'students' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Öğrenciler
+        </a>
+        <a href="{% url 'panel_wp_koclar' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'wp_koclar' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          WP Koçlar
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Suggested matches ──────────────────────────────────────────────────── #}
+  {% if suggested %}
+  <div class="rounded-2xl border border-amber-500/25 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+      <h2 class="text-sm font-semibold text-ink-100">Önerilen Eşleşmeler</h2>
+      <span class="ml-auto text-xs text-ink-500">{{ suggested|length }} öneri — isim slug'ına göre otomatik bulundu</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" id="suggested-table">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Django Koç</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">WP Profil</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-24">WP ID</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-40"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for match in suggested %}
+          <tr class="hover:bg-ink-900/40 transition-colors" id="srow-{{ match.coach.pk }}">
+            <td class="px-5 py-3">
+              <p class="font-medium text-ink-100">{{ match.coach.full_name }}</p>
+              <p class="text-xs text-ink-500">{{ match.coach.email }}</p>
+            </td>
+            <td class="px-4 py-3">
+              <p class="text-ink-200">{{ match.wp.title.rendered }}</p>
+              <p class="text-xs text-ink-500 font-mono">{{ match.wp.slug }}</p>
+            </td>
+            <td class="px-4 py-3 text-ink-400 font-mono">{{ match.wp.id }}</td>
+            <td class="px-5 py-3 text-right flex items-center justify-end gap-2">
+              <input type="number" placeholder="WP ID geçersizse değiştir"
+                     id="override-{{ match.coach.pk }}"
+                     value="{{ match.wp.id }}"
+                     class="w-28 h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-600 text-ink-200 text-center
+                            focus:outline-none focus:border-indigo-500" />
+              <button type="button"
+                      onclick="confirmMatch({{ match.coach.pk }}, 'override-{{ match.coach.pk }}', 'srow-{{ match.coach.pk }}', this)"
+                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-emerald-500/40
+                             text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                Onayla
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Linked coaches ─────────────────────────────────────────────────────── #}
+  {% if linked_coaches %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+      <h2 class="text-sm font-semibold text-ink-100">Bağlı Koçlar</h2>
+      <span class="ml-auto text-xs text-ink-500">{{ linked_coaches|length }} bağlı</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" id="linked-table">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Django Koç</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28">WP ID</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-24">Müsaitlik</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for coach in linked_coaches %}
+          <tr class="hover:bg-ink-900/40 transition-colors" id="lrow-{{ coach.pk }}">
+            <td class="px-5 py-3">
+              <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
+              <p class="text-xs text-ink-500">{{ coach.email }}</p>
+            </td>
+            <td class="px-4 py-3 text-ink-400 font-mono">{{ coach.wordpress_post_id }}</td>
+            <td class="px-4 py-3">
+              {% if coach.wp_is_available is None %}
+                <span class="text-ink-600 text-xs">—</span>
+              {% elif coach.wp_is_available %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">Müsait</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-ink-700/50 border border-ink-600/30 text-ink-400">Meşgul</span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-right">
+              <button type="button"
+                      onclick="unlinkCoach({{ coach.pk }}, this)"
+                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
+                             text-ruby-400 hover:bg-ruby-500/10 transition-colors">
+                Bağı Kes
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Unmatched coaches ──────────────────────────────────────────────────── #}
+  {% if unmatched_coaches %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-ink-500 shrink-0"></span>
+      <h2 class="text-sm font-semibold text-ink-100">Eşleşme Bulunamayan Django Koçlar</h2>
+      <span class="ml-auto text-xs text-ink-500">{{ unmatched_coaches|length }} koç</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-56">Manuel WP ID ile Bağla</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for coach in unmatched_coaches %}
+          <tr class="hover:bg-ink-900/40 transition-colors" id="urow-{{ coach.pk }}">
+            <td class="px-5 py-3">
+              <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
+              <p class="text-xs text-ink-500">{{ coach.email }}</p>
+            </td>
+            <td class="px-5 py-3 text-right flex items-center justify-end gap-2">
+              <input type="number" placeholder="WP Post ID"
+                     id="manual-{{ coach.pk }}"
+                     class="w-28 h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-600 text-ink-200 text-center
+                            focus:outline-none focus:border-indigo-500" />
+              <button type="button"
+                      onclick="confirmMatch({{ coach.pk }}, 'manual-{{ coach.pk }}', 'urow-{{ coach.pk }}', this)"
+                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-steel-500/30
+                             text-steel-400 hover:bg-steel-500/10 transition-colors">
+                Bağla
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Unmatched WP posts ─────────────────────────────────────────────────── #}
+  {% if unmatched_wp %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-ink-500 shrink-0"></span>
+      <h2 class="text-sm font-semibold text-ink-100">Django Koçu Olmayan WP Profiller</h2>
+      <span class="ml-auto text-xs text-ink-500">{{ unmatched_wp|length }} profil — bilgi amaçlı, işlem gerekmez</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">WP Profil</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-24">WP ID</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for wp in unmatched_wp %}
+          <tr class="hover:bg-ink-900/40 transition-colors">
+            <td class="px-5 py-3">
+              <p class="text-ink-200">{{ wp.title.rendered }}</p>
+              <p class="text-xs text-ink-500 font-mono">{{ wp.slug }}</p>
+            </td>
+            <td class="px-4 py-3 text-ink-500 font-mono">{{ wp.id }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not suggested and not linked_coaches and not unmatched_coaches %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-12 text-center">
+    <p class="text-ink-600 text-sm">WordPress'e bağlanılamadı veya hiç koç bulunamadı.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function getCookie(name) {
+  var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+
+function confirmMatch(coachId, inputId, rowId, btn) {
+  var wpId = parseInt(document.getElementById(inputId).value, 10);
+  if (!wpId) {
+    window.dasToast && window.dasToast('Geçerli bir WP ID girin.', 'ruby');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/panel/wp-koclar/confirm/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({ coach_id: coachId, wp_post_id: wpId }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var row = document.getElementById(rowId);
+      if (row) row.remove();
+      window.dasToast && window.dasToast('Eşleşme kaydedildi.', 'emerald');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Onayla';
+      window.dasToast && window.dasToast('Hata: ' + (data.error || '?'), 'ruby');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Onayla';
+    window.dasToast && window.dasToast('Bağlantı hatası.', 'ruby');
+  });
+}
+
+function unlinkCoach(coachId, btn) {
+  if (!confirm('Bu koçun WP bağlantısını kesmek istediğinden emin misin?')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/panel/wp-koclar/' + coachId + '/unlink/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var row = document.getElementById('lrow-' + coachId);
+      if (row) row.remove();
+      window.dasToast && window.dasToast('Bağlantı kesildi.', 'emerald');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Bağı Kes';
+      window.dasToast && window.dasToast('Hata: ' + (data.error || '?'), 'ruby');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Bağı Kes';
+    window.dasToast && window.dasToast('Bağlantı hatası.', 'ruby');
+  });
+}
+</script>
+{% endblock %}

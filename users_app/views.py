@@ -801,6 +801,7 @@ def profil_view(request):
         'has_completed_placement': has_completed_placement,
         'v2_shell':                True,
         'shell_hide_fab':          True,
+        'wp_is_available':         user.wp_is_available,
     })
 
 
@@ -1376,3 +1377,70 @@ def panel_fee_tier_delete(request, pk):
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+# ── Staff panel — WordPress coach matching ────────────────────────────────────
+
+@staff_required
+def panel_wp_koclar_view(request):
+    from .services.wordpress import suggest_wp_matches
+    coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    linked = coaches.filter(wordpress_post_id__isnull=False)
+
+    matches = suggest_wp_matches(coaches)
+    return render(request, 'panel/wp_koclar.html', {
+        'suggested':         matches['suggested'],
+        'unmatched_coaches': matches['unmatched_coaches'],
+        'unmatched_wp':      matches['unmatched_wp'],
+        'linked_coaches':    linked,
+        'active_tab':        'wp_koclar',
+    })
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_wp_koclar_confirm(request):
+    try:
+        data = json.loads(request.body)
+        coach_id = int(data['coach_id'])
+        wp_post_id = int(data['wp_post_id'])
+    except (KeyError, ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Geçersiz istek'}, status=400)
+    coach = get_object_or_404(User, pk=coach_id, role='coach')
+    coach.wordpress_post_id = wp_post_id
+    coach.save(update_fields=['wordpress_post_id'])
+    return JsonResponse({'ok': True})
+
+
+@staff_required
+@require_http_methods(['POST'])
+def panel_wp_koclar_unlink(request, coach_id):
+    coach = get_object_or_404(User, pk=coach_id, role='coach')
+    coach.wordpress_post_id = None
+    coach.wp_is_available = None
+    coach.save(update_fields=['wordpress_post_id', 'wp_is_available'])
+    return JsonResponse({'ok': True})
+
+
+# ── Coach profil — WordPress availability toggle ──────────────────────────────
+
+@login_required
+@require_http_methods(['POST'])
+def profil_wp_availability(request):
+    from .services.wordpress import update_wp_coach_availability
+    user = request.user
+    if not user.is_coach or not user.wordpress_post_id:
+        return JsonResponse({'ok': False, 'error': 'Yetkisiz'}, status=403)
+    try:
+        data = json.loads(request.body)
+        is_available = bool(data['is_available'])
+    except (KeyError, ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Geçersiz istek'}, status=400)
+
+    ok, err = update_wp_coach_availability(user.wordpress_post_id, is_available)
+    if not ok:
+        return JsonResponse({'ok': False, 'error': err}, status=502)
+
+    user.wp_is_available = is_available
+    user.save(update_fields=['wp_is_available'])
+    return JsonResponse({'ok': True, 'is_available': is_available})
