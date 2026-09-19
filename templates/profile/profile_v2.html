@@ -512,6 +512,46 @@
             </svg>
           </button>
           {% endif %}
+          <button id="profil-a2hs-btn"
+                  class="hidden w-full px-4 py-3 flex items-center gap-3 hover:bg-ink-800 transition-colors text-left">
+            <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </span>
+            <span class="flex-1 text-sm font-medium text-ink-100">{% trans "Uygulamayı İndir" %}</span>
+            <span class="text-xs text-ink-300">{% trans "Ana ekrana ekle" %}</span>
+            <svg class="w-4 h-4 text-ink-500 shrink-0" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#das-icon-chev-right"/>
+            </svg>
+          </button>
+          <div id="profil-ios-hint" class="hidden px-4 py-3 flex items-start gap-3">
+            <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0 mt-0.5">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-ink-100">{% trans "Uygulamayı Yükle" %}</p>
+              <p class="text-xs text-ink-400 mt-0.5 leading-relaxed">
+                {% trans "Safari'de" %}
+                <svg class="inline w-3.5 h-3.5 mx-0.5 -mt-0.5 text-ink-300" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/>
+                  <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+                {% trans "simgesine dokun → "Ana Ekrana Ekle"yi seç." %}
+              </p>
+            </div>
+          </div>
           <a href="{% url 'profil_ayarlar' %}"
              class="flex px-4 py-3 items-center gap-3 hover:bg-ink-800 transition-colors">
             <span class="w-8 h-8 rounded-lg bg-ink-800 text-ink-400 flex items-center justify-center shrink-0">
@@ -646,5 +686,38 @@ function akademikProfil(initialAlan, initialSinif, initialTargetYear) {
     },
   };
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  var api = window.a2hs;
+  var chromBtn = document.getElementById('profil-a2hs-btn');
+  var iosHint  = document.getElementById('profil-ios-hint');
+
+  if (!chromBtn && !iosHint) return;
+  if (!api || api.isInstalled()) return;
+
+  if (api.isIOS()) {
+    if (iosHint) iosHint.classList.remove('hidden');
+    return;
+  }
+
+  function showChromium() {
+    if (chromBtn) chromBtn.classList.remove('hidden');
+  }
+
+  if (api.isReady) {
+    showChromium();
+  } else {
+    window.addEventListener('a2hs:ready', showChromium, { once: true });
+  }
+
+  if (chromBtn) {
+    chromBtn.addEventListener('click', function () { api.install(); });
+  }
+
+  window.addEventListener('a2hs:installed', function () {
+    if (chromBtn) chromBtn.classList.add('hidden');
+    if (iosHint)  iosHint.classList.add('hidden');
+  }, { once: true });
+});
 </script>
 {% endblock %}

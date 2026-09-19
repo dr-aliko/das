@@ -37,6 +37,8 @@
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
+    window.a2hs.isReady = true;
+    window.dispatchEvent(new CustomEvent('a2hs:ready'));
 
     if (isInstalled() || isDismissed() || isSuppressedPage()) return;
 
@@ -47,6 +49,7 @@
   window.addEventListener('appinstalled', function () {
     var banner = document.getElementById('a2hs-banner');
     if (banner) banner.setAttribute('hidden', '');
+    window.dispatchEvent(new CustomEvent('a2hs:installed'));
     if (typeof window.dasToast === 'function') {
       window.dasToast('Vagus ana ekrana eklendi!', 'emerald');
     }
@@ -92,4 +95,19 @@
       });
     }
   });
+
+  // ── Public API ───────────────────────────────────────────────────────────────
+  window.a2hs = {
+    isInstalled: isInstalled,
+    isIOS: isIOS,
+    isReady: false,
+    install: function () {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (choice) {
+        deferredPrompt = null;
+        if (choice.outcome !== 'accepted') setDismissed();
+      });
+    },
+  };
 })();
