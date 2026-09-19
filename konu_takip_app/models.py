@@ -73,7 +73,7 @@ class StudentSubjectSrSetting(models.Model):
         on_delete=models.CASCADE,
         related_name='student_sr_settings',
     )
-    sr_enabled = models.BooleanField(default=True)
+    sr_enabled = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [('student', 'subject')]

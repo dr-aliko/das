@@ -189,7 +189,7 @@ class CoachKonuTakipApiView(View):
             'flat_topics': flat_topics,
             'progress': progress_json,
             'selected_subject_id': selected_subject_id,
-            'sr_enabled': sr_settings.get(selected_subject_id, True),
+            'sr_enabled': sr_settings.get(selected_subject_id, False),
         })
 
 
@@ -310,7 +310,7 @@ class StudentKonuTakipApiView(View):
             'flat_topics': flat_topics,
             'progress': progress_json,
             'selected_subject_id': selected_subject_id,
-            'sr_enabled': sr_settings.get(selected_subject_id, True),
+            'sr_enabled': sr_settings.get(selected_subject_id, False),
         })
 
 

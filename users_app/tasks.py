@@ -122,16 +122,18 @@ def send_konu_review_reminders():
 
     total_sent = 0
     for student in students:
-        # Subjects where SR has been explicitly disabled for this student
-        disabled_subjects = set(
+        # SR is opt-in: only count reviews for subjects explicitly enabled for this student
+        enabled_subjects = set(
             StudentSubjectSrSetting.objects
-            .filter(student=student, sr_enabled=False)
+            .filter(student=student, sr_enabled=True)
             .values_list('subject_id', flat=True)
         )
+        if not enabled_subjects:
+            continue
         due_count = (
             StudentTopicProgress.objects
-            .filter(student=student, finished=True, next_review_at__lte=now)
-            .exclude(topic__subject_id__in=disabled_subjects)
+            .filter(student=student, finished=True, next_review_at__lte=now,
+                    topic__subject_id__in=enabled_subjects)
             .count()
         )
 

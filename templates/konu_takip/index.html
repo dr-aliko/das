@@ -461,7 +461,7 @@ function konuTakip(cfg) {
 
     get srEnabled() {
       // allReviews is already filtered server-side; this drives the per-subject toggle UI
-      return this.subjectSrSettings[this.selectedSubjectId] ?? true;
+      return this.subjectSrSettings[this.selectedSubjectId] ?? false;
     },
 
     get dueCount() {

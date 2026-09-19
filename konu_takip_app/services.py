@@ -103,7 +103,7 @@ def submit_review(student, topic_id, quality):
 
 
 def get_subject_sr_settings(student):
-    """Return {subject_id: sr_enabled} for all explicitly-stored settings. Absence means True."""
+    """Return {subject_id: sr_enabled} for all explicitly-stored settings. Absence means False."""
     if not student:
         return {}
     return {
@@ -113,11 +113,15 @@ def get_subject_sr_settings(student):
 
 
 def toggle_subject_sr(student, subject_id):
-    """Flip sr_enabled for a (student, subject) pair. Returns the new value."""
+    """Flip sr_enabled for a (student, subject) pair. Returns the new value.
+
+    No row (never touched) resolves to False (opt-in default), so the first
+    toggle creates a row and sets it to True (turning SR on).
+    """
     setting, _ = StudentSubjectSrSetting.objects.get_or_create(
         student=student,
         subject_id=subject_id,
-        defaults={'sr_enabled': True},
+        defaults={'sr_enabled': False},
     )
     setting.sr_enabled = not setting.sr_enabled
     setting.save(update_fields=['sr_enabled'])
@@ -126,7 +130,7 @@ def toggle_subject_sr(student, subject_id):
 
 def get_all_reviews_json(student):
     """All topics in an active review cycle sorted soonest-first.
-    Topics whose subject has SR disabled for this student are excluded."""
+    Topics whose subject has SR disabled (or not explicitly enabled) are excluded."""
     if not student:
         return []
     sr_settings = get_subject_sr_settings(student)
@@ -144,7 +148,7 @@ def get_all_reviews_json(student):
     result = []
     for p in qs:
         subject_id = p.topic.subject_id if p.topic.subject else None
-        if not sr_settings.get(subject_id, True):
+        if not sr_settings.get(subject_id, False):
             continue
         result.append({
             'topic_id': p.topic_id,
