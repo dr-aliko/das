@@ -102,6 +102,30 @@ class CustomPasswordResetDoneView(TemplateView):
         return ctx
 
 
+def _invalidate_other_sessions(request, user):
+    """Delete all active DB sessions belonging to user except the current one.
+
+    Django's session auth hash check would eventually reject the stale sessions
+    on next request, but explicit deletion is immediate and leaves no DB clutter.
+    """
+    from django.contrib.sessions.models import Session
+    from django.utils import timezone
+
+    current_key = request.session.session_key
+    victim_keys = []
+    for session in Session.objects.filter(expire_date__gt=timezone.now()):
+        if session.session_key == current_key:
+            continue
+        try:
+            data = session.get_decoded()
+            if str(data.get('_auth_user_id')) == str(user.pk):
+                victim_keys.append(session.session_key)
+        except Exception:
+            pass
+    if victim_keys:
+        Session.objects.filter(session_key__in=victim_keys).delete()
+
+
 class CustomPasswordResetConfirmView(DjangoPRConfirmView):
     template_name = 'auth/password_reset_confirm.html'
     success_url = '/auth/password-reset/complete/'
@@ -110,6 +134,11 @@ class CustomPasswordResetConfirmView(DjangoPRConfirmView):
         ctx = super().get_context_data(**kwargs)
         ctx['reset_timeout_display'] = _reset_timeout_display()
         return ctx
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _invalidate_other_sessions(self.request, self.user)
+        return response
 
 
 def register_view(request):

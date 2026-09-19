@@ -363,3 +363,105 @@ class PasswordResetSecurityTests(TestCase):
 
         self.assertTrue(has_href)
         self.assertTrue(has_text)
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    CACHES=LOCMEM,
+)
+class SessionInvalidationTests(TestCase):
+    """
+    Verify that completing a password reset invalidates all OTHER active sessions
+    for that user (cross-device / cross-browser logout).
+    """
+
+    RESET_URL = '/auth/password-reset/'
+    # login_required GET endpoint — returns 200 JSON for students, 302 for anonymous.
+    PROBE_URL = '/student/notifications/'
+
+    def setUp(self):
+        mail.outbox = []
+        cache.clear()
+        self.user = User.objects.create_user(
+            'victim@sessions.test', 'Victim', 'student', 'OldPass1!'
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _extract_confirm_path(self, body):
+        m = re.search(
+            r'/auth/password-reset/confirm/([A-Za-z0-9_=-]+)/([A-Za-z0-9_-]+)/',
+            body,
+        )
+        return m.group(0) if m else None
+
+    def _navigate_confirm(self, client, path):
+        resp = client.get(path)
+        if resp.status_code == 302:
+            final_path = resp['Location']
+            client.get(final_path)
+        else:
+            final_path = path
+        return final_path
+
+    def test_7_cross_device_session_invalidated_after_reset(self):
+        from django.contrib.sessions.models import Session
+
+        print('\n' + '='*60)
+        print('TEST 7: CROSS-DEVICE SESSION INVALIDATION')
+        print('='*60)
+
+        client_a = Client()
+        client_b = Client()
+
+        # Device A logs in via the test-client helper (bypasses form parsing)
+        login_ok = client_a.login(email='victim@sessions.test', password='OldPass1!')
+        print(f'  Device A login() returned        : {login_ok}')
+        self.assertTrue(login_ok, 'Device A login must succeed')
+
+        # Capture Device A session key after login
+        session_key_a = client_a.session.session_key
+        print(f'  Device A session key             : {session_key_a[:20]}...')
+
+        in_db_before = Session.objects.filter(session_key=session_key_a).exists()
+        print(f'  Session in DB before reset       : {in_db_before}  (must be True)')
+        self.assertTrue(in_db_before, 'Device A session must exist in DB before reset')
+
+        # Confirm Device A can reach a protected endpoint
+        probe_before = client_a.get(self.PROBE_URL).status_code
+        print(f'  Probe GET {self.PROBE_URL} before : {probe_before}  (must NOT be 302)')
+        self.assertNotEqual(probe_before, 302, 'Device A must be authenticated before reset')
+
+        # Device B (anonymous) requests + completes password reset
+        mail.outbox = []
+        cache.clear()
+        client_b.post(self.RESET_URL, {'email': 'victim@sessions.test'})
+        self.assertEqual(len(mail.outbox), 1, 'Reset email must be sent')
+
+        confirm_path = self._extract_confirm_path(mail.outbox[0].body)
+        self.assertIsNotNone(confirm_path)
+        print(f'  Reset link                       : ...{confirm_path[-40:]}')
+
+        final_path = self._navigate_confirm(client_b, confirm_path)
+        resp_post = client_b.post(
+            final_path,
+            {'new_password1': 'NewPass9@!', 'new_password2': 'NewPass9@!'},
+        )
+        print(f'  Device B reset POST              -> {resp_post.status_code}')
+        self.assertIn(resp_post.status_code, [200, 302], 'Reset must succeed')
+
+        # The session row must be EXPLICITLY deleted from DB by our fix
+        in_db_after = Session.objects.filter(session_key=session_key_a).exists()
+        print(f'  Session in DB after reset        : {in_db_after}  (must be False)')
+        self.assertFalse(
+            in_db_after,
+            '_invalidate_other_sessions() must have deleted the session row',
+        )
+
+        # End-to-end: Device A's next request must redirect to login
+        probe_after = client_a.get(self.PROBE_URL).status_code
+        print(f'  Probe GET {self.PROBE_URL} after  : {probe_after}  (must be 302)')
+        self.assertEqual(probe_after, 302, 'Device A must be redirected to login after reset')
+
+        print('  PASS: cross-device session invalidation confirmed')
