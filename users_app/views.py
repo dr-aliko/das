@@ -1180,8 +1180,24 @@ def panel_billing_update(request, pk):
             link.next_payment_due = _dt.strptime(due_str, '%Y-%m-%d').date()
         else:
             link.next_payment_due = None
-        link.save(update_fields=['source', 'next_payment_due'])
-        return JsonResponse({'ok': True})
+
+        update_fields = ['source', 'next_payment_due']
+
+        # Auto-reactivate when staff extends the due date on a payment_overdue row
+        reactivated = False
+        if (
+            not link.active
+            and link.deactivation_reason == CoachStudent.DEACTIVATION_PAYMENT_OVERDUE
+            and link.next_payment_due is not None
+            and link.next_payment_due > date.today()
+        ):
+            link.active = True
+            link.deactivation_reason = None
+            update_fields += ['active', 'deactivation_reason']
+            reactivated = True
+
+        link.save(update_fields=update_fields)
+        return JsonResponse({'ok': True, 'reactivated': reactivated})
     except CoachStudent.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
     except (ValueError, json.JSONDecodeError) as e:
@@ -1302,7 +1318,9 @@ def panel_ogrenciler_view(request):
 def panel_student_unlink(request, coach_id, student_id):
     coach   = get_object_or_404(User, pk=coach_id, role='coach')
     student = get_object_or_404(User, pk=student_id, role='student')
-    CoachStudent.objects.filter(coach=coach, student=student).update(active=False)
+    CoachStudent.objects.filter(coach=coach, student=student).update(
+        active=False, deactivation_reason=CoachStudent.DEACTIVATION_MANUAL
+    )
     if student.coach_id == coach.id:
         student.coach = None
         student.save(update_fields=['coach'])

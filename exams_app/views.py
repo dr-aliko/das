@@ -2585,14 +2585,22 @@ def unlink_student(request, student_id):
     if student.coach_id == request.user.id:
         student.coach = None
         student.save(update_fields=['coach'])
-    CoachStudent.objects.filter(coach=request.user, student=student).update(active=False)
+    from users_app.models import CoachStudent as _CS
+    CoachStudent.objects.filter(coach=request.user, student=student).update(
+        active=False, deactivation_reason=_CS.DEACTIVATION_MANUAL
+    )
     return JsonResponse({'ok': True})
 
 
 def coach_exam_overview(request):
     """Student directory — each student card links to their full exam list."""
-    from users_app.models import User
-    students = list(User.objects.filter(coach=request.user, role='student'))
+    from users_app.models import User, CoachStudent
+    active_ids = (
+        CoachStudent.objects
+        .filter(coach=request.user, active=True)
+        .values_list('student_id', flat=True)
+    )
+    students = list(User.objects.filter(id__in=active_ids, role='student'))
     student_data = []
     for s in students:
         exams = list(

@@ -63,3 +63,17 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'{action} schedule: {schedule.name}'
         ))
+
+        schedule, created = Schedule.objects.update_or_create(
+            func='users_app.tasks.auto_deactivate_overdue_vagus_students',
+            defaults={
+                'name': 'Auto-deactivate overdue Vagus students (daily 01:00 Istanbul)',
+                'schedule_type': Schedule.CRON,
+                'cron': '0 1 * * *',
+                'repeats': -1,
+            },
+        )
+        action = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(
+            f'{action} schedule: {schedule.name}'
+        ))

@@ -86,6 +86,13 @@ class CoachStudent(models.Model):
     SOURCE_COACH = 'coach'
     SOURCE_CHOICES = [('vagus', 'Vagus'), ('coach', 'Koç')]
 
+    DEACTIVATION_MANUAL = 'manual'
+    DEACTIVATION_PAYMENT_OVERDUE = 'payment_overdue'
+    DEACTIVATION_REASON_CHOICES = [
+        ('manual', 'Koç tarafından kaldırıldı'),
+        ('payment_overdue', 'Ödeme gecikmesi'),
+    ]
+
     coach = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -101,6 +108,12 @@ class CoachStudent(models.Model):
     active = models.BooleanField(default=True)
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, null=True, blank=True)
     next_payment_due = models.DateField(null=True, blank=True)
+    deactivation_reason = models.CharField(
+        max_length=20,
+        choices=DEACTIVATION_REASON_CHOICES,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

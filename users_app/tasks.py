@@ -152,6 +152,40 @@ def send_konu_review_reminders():
     return total_sent
 
 
+def auto_deactivate_overdue_vagus_students():
+    """Scheduled daily at 01:00 Istanbul. Deactivates Vagus-sourced students whose payment is overdue."""
+    from django.utils.timezone import localdate
+    from users_app.models import CoachStudent
+    from users_app.services.notifications import send_push_notification
+
+    today = localdate()
+    overdue = (
+        CoachStudent.objects
+        .filter(
+            source=CoachStudent.SOURCE_VAGUS,
+            active=True,
+            next_payment_due__isnull=False,
+            next_payment_due__lt=today,
+        )
+        .select_related('coach', 'student')
+    )
+
+    count = 0
+    for link in overdue:
+        link.active = False
+        link.deactivation_reason = CoachStudent.DEACTIVATION_PAYMENT_OVERDUE
+        link.save(update_fields=['active', 'deactivation_reason'])
+        send_push_notification(
+            user=link.coach,
+            title='Öğrenci Panelinizden Kaldırıldı',
+            body=f'{link.student.full_name} ödeme gecikmesi nedeniyle panelinizden kaldırıldı.',
+            url='/odeme/',
+        )
+        count += 1
+
+    return count
+
+
 def send_motivational_notifications():
     """Scheduled daily at 19:00 Istanbul (cron='0 19 * * *' in local time)."""
     import random

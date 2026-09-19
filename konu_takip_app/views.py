@@ -79,8 +79,14 @@ def _progress_response(progress):
 @method_decorator(coach_required, name='dispatch')
 class CoachKonuTakipView(View):
     def get(self, request):
+        from users_app.models import CoachStudent
+        active_ids = (
+            CoachStudent.objects
+            .filter(coach=request.user, active=True)
+            .values_list('student_id', flat=True)
+        )
         coached_students = list(
-            User.objects.filter(role='student', coach=request.user).order_by('full_name')
+            User.objects.filter(role='student', id__in=active_ids).order_by('full_name')
         )
 
         selected_student = None
