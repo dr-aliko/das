@@ -745,44 +745,106 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 {% if user.is_coach and user.wordpress_post_id %}
-var _wpAvailBusy = false;
-var _wpAvailCurrent = {{ wp_is_available|yesno:"true,false,false" }};
+// Confirmed state last synced to WP (server source of truth)
+var _wpAvailConfirmed = {{ wp_is_available|yesno:"true,false,false" }};
+// Optimistic state shown to the user (may differ during debounce window)
+var _wpAvailShown = _wpAvailConfirmed;
+// Debounce timer handle
+var _wpAvailTimer = null;
+// True while a fetch is in-flight; blocks new clicks until response lands
+var _wpAvailInFlight = false;
+
+function _wpAvailSetUI(isAvail, isPending) {
+  var icon  = document.getElementById('wp-avail-icon');
+  var label = document.getElementById('wp-avail-label');
+  var btn   = document.getElementById('wp-avail-btn');
+  if (!icon || !label) return;
+
+  // Colour swap using classList to avoid fragile string.replace
+  if (isAvail) {
+    icon.classList.remove('bg-ink-800', 'text-ink-400');
+    icon.classList.add('bg-emerald-500/15', 'text-emerald-400');
+    label.classList.remove('text-ink-400');
+    label.classList.add('text-emerald-400');
+    label.textContent = 'Müsait';
+  } else {
+    icon.classList.remove('bg-emerald-500/15', 'text-emerald-400');
+    icon.classList.add('bg-ink-800', 'text-ink-400');
+    label.classList.remove('text-emerald-400');
+    label.classList.add('text-ink-400');
+    label.textContent = 'Meşgul';
+  }
+
+  // Pending indicator: dim + wait cursor while debouncing or in-flight
+  if (btn) {
+    btn.style.opacity = isPending ? '0.55' : '';
+    btn.style.cursor  = isPending ? 'wait'  : '';
+  }
+}
 
 function toggleWpAvailability() {
-  if (_wpAvailBusy) return;
-  _wpAvailBusy = true;
-  var next = !_wpAvailCurrent;
+  // During in-flight, ignore all clicks — no stacking allowed
+  if (_wpAvailInFlight) return;
+
+  // Optimistically flip the visual state immediately
+  _wpAvailShown = !_wpAvailShown;
+  _wpAvailSetUI(_wpAvailShown, true /* pending */);
+
+  // Debounce: cancel any pending timer and restart — only the LAST click fires
+  clearTimeout(_wpAvailTimer);
+  _wpAvailTimer = setTimeout(function () {
+    _wpAvailTimer = null;
+    _wpAvailFire(_wpAvailShown);
+  }, 600);
+}
+
+var _WP_AVAIL_MAX_RETRIES = 3;
+
+function _wpAvailFire(desired, retries) {
+  retries = retries || 0;
+  _wpAvailInFlight = true;
+  _wpAvailSetUI(desired, true /* pending */);
+
   fetch('/profil/wp-availability/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '',
     },
-    body: JSON.stringify({ is_available: next }),
+    body: JSON.stringify({ is_available: desired }),
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    _wpAvailBusy = false;
-    if (data.ok) {
-      _wpAvailCurrent = data.is_available;
-      var icon = document.getElementById('wp-avail-icon');
-      var label = document.getElementById('wp-avail-label');
-      if (_wpAvailCurrent) {
-        icon.className = icon.className.replace('bg-ink-800 text-ink-400', 'bg-emerald-500/15 text-emerald-400');
-        label.textContent = 'Müsait';
-        label.className = label.className.replace('text-ink-400', 'text-emerald-400');
-      } else {
-        icon.className = icon.className.replace('bg-emerald-500/15 text-emerald-400', 'bg-ink-800 text-ink-400');
-        label.textContent = 'Meşgul';
-        label.className = label.className.replace('text-emerald-400', 'text-ink-400');
-      }
-      window.dasToast && window.dasToast(_wpAvailCurrent ? 'Müsait olarak işaretlendi.' : 'Meşgul olarak işaretlendi.', _wpAvailCurrent ? 'emerald' : 'steel');
+  .then(function (r) {
+    return r.json().then(function (d) { return { status: r.status, data: d }; });
+  })
+  .then(function (res) {
+    if (res.data.ok) {
+      _wpAvailInFlight = false;
+      _wpAvailConfirmed = res.data.is_available;
+      _wpAvailShown     = _wpAvailConfirmed;
+      _wpAvailSetUI(_wpAvailConfirmed, false);
+      window.dasToast && window.dasToast(
+        _wpAvailConfirmed ? 'Müsait olarak işaretlendi.' : 'Meşgul olarak işaretlendi.',
+        _wpAvailConfirmed ? 'emerald' : 'steel'
+      );
+    } else if (res.status === 429 && retries < _WP_AVAIL_MAX_RETRIES) {
+      // Rate-limited — keep inFlight=true and optimistic UI, auto-retry after cooldown.
+      // The coach sees the desired state the whole time; no toast until it actually lands.
+      var waitMs = ((res.data.retry_after || 2) + 0.1) * 1000;
+      setTimeout(function () { _wpAvailFire(desired, retries + 1); }, waitMs);
     } else {
-      window.dasToast && window.dasToast(data.error || 'Web sitesi güncellenemedi, tekrar deneyin.', 'ruby');
+      // Hard failure (WP error, network, or retries exhausted) — revert UI.
+      _wpAvailInFlight = false;
+      _wpAvailShown = _wpAvailConfirmed;
+      _wpAvailSetUI(_wpAvailConfirmed, false);
+      window.dasToast && window.dasToast(
+        res.data.error || 'Web sitesi güncellenemedi, tekrar deneyin.', 'ruby'
+      );
     }
   })
-  .catch(function() {
-    _wpAvailBusy = false;
+  .catch(function () {
+    _wpAvailInFlight = false;
+    _wpAvailShown = _wpAvailConfirmed;
+    _wpAvailSetUI(_wpAvailConfirmed, false);
     window.dasToast && window.dasToast('Web sitesine ulaşılamadı, tekrar deneyin.', 'ruby');
   });
 }

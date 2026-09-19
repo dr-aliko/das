@@ -1424,6 +1424,13 @@ def panel_wp_koclar_unlink(request, coach_id):
 
 # ── Coach profil — WordPress availability toggle ──────────────────────────────
 
+_WP_AVAIL_COOLDOWN = 2  # seconds between allowed WP syncs per coach
+
+
+def _wp_avail_cooldown_key(user_pk):
+    return f'wp_avail_cd_{user_pk}'
+
+
 @login_required
 @require_http_methods(['POST'])
 def profil_wp_availability(request):
@@ -1436,6 +1443,19 @@ def profil_wp_availability(request):
         is_available = bool(data['is_available'])
     except (KeyError, ValueError, TypeError):
         return JsonResponse({'ok': False, 'error': 'Geçersiz istek'}, status=400)
+
+    cooldown_key = _wp_avail_cooldown_key(user.pk)
+    if cache.get(cooldown_key):
+        return JsonResponse(
+            {
+                'ok': False,
+                'error': 'Çok hızlı deneme, birkaç saniye bekleyin.',
+                'retry_after': _WP_AVAIL_COOLDOWN,
+            },
+            status=429,
+        )
+    # Claim the cooldown slot before the WP call to block concurrent requests.
+    cache.set(cooldown_key, 1, _WP_AVAIL_COOLDOWN)
 
     ok, err = update_wp_coach_availability(user.wordpress_post_id, is_available)
     if not ok:
