@@ -13,6 +13,7 @@ from django.contrib.auth.views import (
     PasswordResetView as DjangoPRView,
     PasswordResetConfirmView as DjangoPRConfirmView,
 )
+from django.views.generic import TemplateView
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
@@ -55,8 +56,13 @@ class CustomPasswordResetView(DjangoPRView):
     def form_valid(self, form):
         email = form.cleaned_data['email'].lower().strip()
         cache_key = 'pwd_reset_' + hashlib.md5(email.encode()).hexdigest()
-        if not cache.get(cache_key):
-            cache.set(cache_key, 1, 1800)  # throttle: 1 email per 30 min per address
+        if cache.get(cache_key):
+            # Already sent recently — skip the email, flag session for UX message.
+            # Cache key is set identically for real AND non-existent emails on the
+            # first request, so this branch never leaks whether the address exists.
+            self.request.session['pwd_reset_throttled'] = True
+        else:
+            cache.set(cache_key, 1, 1800)  # 30-minute window
             form.save(
                 use_https=self.request.is_secure(),
                 token_generator=self.token_generator,
@@ -67,7 +73,17 @@ class CustomPasswordResetView(DjangoPRView):
                 html_email_template_name=self.html_email_template_name,
                 extra_email_context=self.extra_email_context,
             )
+            self.request.session.pop('pwd_reset_throttled', None)
         return HttpResponseRedirect(self.success_url)
+
+
+class CustomPasswordResetDoneView(TemplateView):
+    template_name = 'auth/password_reset_done.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['throttled'] = self.request.session.pop('pwd_reset_throttled', False)
+        return ctx
 
 
 class CustomPasswordResetConfirmView(DjangoPRConfirmView):
