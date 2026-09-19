@@ -115,6 +115,7 @@ AUTH_USER_MODEL = 'users_app.User'
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/auth/login/'
+PASSWORD_RESET_TIMEOUT = 3600  # reset links expire after 1 hour
 
 LANGUAGE_CODE = 'tr-tr'
 

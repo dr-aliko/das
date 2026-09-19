@@ -1,13 +1,19 @@
+import hashlib
 import json
 from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+from django.core.cache import cache
 from django.db import models
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
-from django.http import JsonResponse
+from django.contrib.auth.views import (
+    LoginView,
+    PasswordResetView as DjangoPRView,
+    PasswordResetConfirmView as DjangoPRConfirmView,
+)
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -37,6 +43,36 @@ class CustomLoginView(LoginView):
         if user.is_coach:
             return '/coach/'
         return '/student/'
+
+
+class CustomPasswordResetView(DjangoPRView):
+    template_name = 'auth/password_reset.html'
+    email_template_name = 'emails/password_reset.txt'
+    html_email_template_name = 'emails/password_reset.html'
+    subject_template_name = 'emails/password_reset_subject.txt'
+    success_url = '/auth/password-reset/done/'
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email'].lower().strip()
+        cache_key = 'pwd_reset_' + hashlib.md5(email.encode()).hexdigest()
+        if not cache.get(cache_key):
+            cache.set(cache_key, 1, 1800)  # throttle: 1 email per 30 min per address
+            form.save(
+                use_https=self.request.is_secure(),
+                token_generator=self.token_generator,
+                from_email=self.from_email,
+                email_template_name=self.email_template_name,
+                subject_template_name=self.subject_template_name,
+                request=self.request,
+                html_email_template_name=self.html_email_template_name,
+                extra_email_context=self.extra_email_context,
+            )
+        return HttpResponseRedirect(self.success_url)
+
+
+class CustomPasswordResetConfirmView(DjangoPRConfirmView):
+    template_name = 'auth/password_reset_confirm.html'
+    success_url = '/auth/password-reset/complete/'
 
 
 def register_view(request):
