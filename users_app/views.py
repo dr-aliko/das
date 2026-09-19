@@ -3,6 +3,7 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import models
@@ -25,6 +26,14 @@ from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, CoachStudent, FeeTier, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
+
+
+def _reset_timeout_display():
+    """Converts PASSWORD_RESET_TIMEOUT to a Turkish human-readable string."""
+    secs = getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600)
+    if secs >= 3600 and secs % 3600 == 0:
+        return f'{secs // 3600} saat'
+    return f'{secs // 60} dakika'
 
 
 class CustomLoginView(LoginView):
@@ -53,9 +62,15 @@ class CustomPasswordResetView(DjangoPRView):
     subject_template_name = 'emails/password_reset_subject.txt'
     success_url = '/auth/password-reset/done/'
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['reset_timeout_display'] = _reset_timeout_display()
+        return ctx
+
     def form_valid(self, form):
         email = form.cleaned_data['email'].lower().strip()
         cache_key = 'pwd_reset_' + hashlib.md5(email.encode()).hexdigest()
+        timeout_display = _reset_timeout_display()
         if cache.get(cache_key):
             # Already sent recently — skip the email, flag session for UX message.
             # Cache key is set identically for real AND non-existent emails on the
@@ -71,7 +86,7 @@ class CustomPasswordResetView(DjangoPRView):
                 subject_template_name=self.subject_template_name,
                 request=self.request,
                 html_email_template_name=self.html_email_template_name,
-                extra_email_context=self.extra_email_context,
+                extra_email_context={'reset_timeout_display': timeout_display},
             )
             self.request.session.pop('pwd_reset_throttled', None)
         return HttpResponseRedirect(self.success_url)
@@ -83,12 +98,18 @@ class CustomPasswordResetDoneView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['throttled'] = self.request.session.pop('pwd_reset_throttled', False)
+        ctx['reset_timeout_display'] = _reset_timeout_display()
         return ctx
 
 
 class CustomPasswordResetConfirmView(DjangoPRConfirmView):
     template_name = 'auth/password_reset_confirm.html'
     success_url = '/auth/password-reset/complete/'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['reset_timeout_display'] = _reset_timeout_display()
+        return ctx
 
 
 def register_view(request):
