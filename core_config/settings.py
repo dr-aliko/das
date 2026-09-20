@@ -146,6 +146,19 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# User-uploaded media — local disk storage (single-VPS deployment).
+# Dev default: BASE_DIR/media/  (created automatically on first upload).
+# Production: set MEDIA_ROOT=/srv/das/media in .env, then add the nginx block below.
+#
+# Nginx config needed on the VPS (add inside the server {} block):
+#   location /media/ {
+#       alias /srv/das/media/;
+#       expires 7d;
+#       add_header Cache-Control "public";
+#   }
+MEDIA_URL  = config('MEDIA_URL',  default='/media/')
+MEDIA_ROOT = Path(config('MEDIA_ROOT', default=str(BASE_DIR / 'media')))
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
