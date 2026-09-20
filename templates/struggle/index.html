@@ -6,7 +6,8 @@
   const __STRUGGLE__ = {
     dueQuestions:  {{ due_json|safe }},
     allQuestions:  {{ all_json|safe }},
-    subjects:      {{ subjects_json|safe }},
+    tytSubjects:   {{ tyt_subjects_json|safe }},
+    aytSubjects:   {{ ayt_subjects_json|safe }},
     addUrl:        '{% url "struggle:add" %}',
     reviewUrl:     '{% url "struggle:review" %}',
     topicsApiUrl:  '{% url "struggle:topics_api" %}',
@@ -31,7 +32,7 @@
           x-text="allQuestions.length + ' soru kayıtlı'"></span>
   </div>
 
-  {# ── Tab navigation — links back to Konu Takip ────────────────────── #}
+  {# ── Tab navigation ────────────────────────────────────────────────── #}
   <div class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
     <a href="{% url 'student_konu_takip:index' %}"
        class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors
@@ -104,11 +105,17 @@
                 x-text="(reviewIdx + 1) + ' / ' + (reviewIdx + dueQueue.length)"></span>
         </div>
 
-        {# Question image #}
+        {# Question — image or text #}
         <div class="px-4 pt-4 pb-2">
-          <img :src="currentQuestion?.question_image_url" alt="Soru görseli"
-               class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white"
-               style="min-height: 120px;">
+          <template x-if="currentQuestion?.question_image_url">
+            <img :src="currentQuestion.question_image_url" alt="Soru görseli"
+                 class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white"
+                 style="min-height: 120px;">
+          </template>
+          <template x-if="!currentQuestion?.question_image_url">
+            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                 x-text="currentQuestion?.question_text"></div>
+          </template>
         </div>
 
         {# Show solution toggle #}
@@ -126,7 +133,11 @@
               <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
                    class="w-full rounded-xl object-contain max-h-96 border border-[var(--border)] bg-white">
             </template>
-            <template x-if="!currentQuestion?.solution_image_url">
+            <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
+              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                   x-text="currentQuestion.solution_text"></div>
+            </template>
+            <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
               <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">
                 Bu soru için çözüm eklenmemiş.
               </p>
@@ -190,18 +201,44 @@
     {# Add form #}
     <div x-show="addOpen" x-cloak class="border-t border-[var(--border)] px-4 py-4 space-y-4">
 
-      {# Subject select #}
+      {# TYT / AYT segmented toggle #}
+      <div>
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Sınav Türü</label>
+        <div class="inline-flex bg-[var(--surface-3)] rounded-xl p-[3px] gap-[2px]">
+          <button type="button"
+                  @click="addExamType = 'TYT'; addSubjectId = ''; addTopicId = ''; addTopics = []"
+                  :class="addExamType === 'TYT'
+                    ? 'bg-steel-500 text-white shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">
+            TYT
+          </button>
+          <button type="button"
+                  @click="addExamType = 'AYT'; addSubjectId = ''; addTopicId = ''; addTopics = []"
+                  :class="addExamType === 'AYT'
+                    ? 'bg-steel-500 text-white shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">
+            AYT
+          </button>
+        </div>
+      </div>
+
+      {# Subject pills — filtered by exam type #}
       <div>
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Ders *</label>
-        <select x-model="addSubjectId" @change="loadTopics()"
-                class="w-full h-10 px-3 rounded-xl text-sm border bg-[var(--surface-2)]
-                       border-[var(--border)] text-[var(--body)] focus:outline-none
-                       focus:ring-2 focus:ring-steel-400">
-          <option value="">— Ders seçin —</option>
-          <template x-for="s in subjects" :key="s.id">
-            <option :value="s.id" x-text="s.name"></option>
+        <div class="flex flex-wrap gap-2">
+          <template x-for="s in addSubjectOptions" :key="s.id">
+            <button type="button"
+                    @click="addSubjectId = String(s.id); loadTopics()"
+                    :class="addSubjectId === String(s.id)
+                      ? 'bg-steel-500 text-white'
+                      : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+                    class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+                    x-text="s.name">
+            </button>
           </template>
-        </select>
+        </div>
       </div>
 
       {# Topic select (lazy-loaded) #}
@@ -219,34 +256,140 @@
         </select>
       </div>
 
-      {# Question image #}
+      {# Input method selector #}
       <div>
-        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">
-          Soru görseli * <span class="font-normal">(çözüm olmadan)</span>
-        </label>
-        <input type="file" accept="image/*" id="q-img-input"
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Soru Giriş Yöntemi *</label>
+        <div class="grid grid-cols-3 gap-2">
+          {# Camera #}
+          <button type="button"
+                  @click="addInputMode = 'camera'; addQText = ''; addQImgName = ''"
+                  :class="addInputMode === 'camera'
+                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Fotoğraf Çek
+          </button>
+          {# Gallery #}
+          <button type="button"
+                  @click="addInputMode = 'gallery'; addQText = ''; addQImgName = ''"
+                  :class="addInputMode === 'gallery'
+                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Galeriden Seç
+          </button>
+          {# Text #}
+          <button type="button"
+                  @click="addInputMode = 'text'; addQImgName = ''; $nextTick(() => { ['q-camera-input','q-gallery-input'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); })"
+                  :class="addInputMode === 'text'
+                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/>
+              <line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/>
+              <line x1="17" y1="18" x2="3" y2="18"/>
+            </svg>
+            Metin Yaz
+          </button>
+        </div>
+      </div>
+
+      {# Camera input #}
+      <div x-show="addInputMode === 'camera'" x-cloak>
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Fotoğraf çek</label>
+        <input type="file" accept="image/*" capture="environment" id="q-camera-input"
                @change="addQImgName = $event.target.files[0]?.name || ''"
                class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
                       file:rounded-lg file:border-0 file:text-xs file:font-semibold
                       file:bg-steel-500/15 file:text-steel-400
                       hover:file:bg-steel-500/25 cursor-pointer">
-        <p x-show="addQImgName" x-cloak
-           class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName"></p>
+        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName"></p>
       </div>
 
-      {# Solution image #}
-      <div>
-        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">
-          Çözüm görseli <span class="font-normal">(isteğe bağlı)</span>
-        </label>
-        <input type="file" accept="image/*" id="s-img-input"
-               @change="addSImgName = $event.target.files[0]?.name || ''"
+      {# Gallery input #}
+      <div x-show="addInputMode === 'gallery'" x-cloak>
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Galeriden görsel seç</label>
+        <input type="file" accept="image/*" id="q-gallery-input"
+               @change="addQImgName = $event.target.files[0]?.name || ''"
                class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
                       file:rounded-lg file:border-0 file:text-xs file:font-semibold
-                      file:bg-[var(--surface-3)] file:text-[var(--muted)]
-                      hover:file:bg-[var(--surface-2)] cursor-pointer">
-        <p x-show="addSImgName" x-cloak
-           class="text-xs text-[var(--muted-2)] mt-1" x-text="addSImgName"></p>
+                      file:bg-steel-500/15 file:text-steel-400
+                      hover:file:bg-steel-500/25 cursor-pointer">
+        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName"></p>
+      </div>
+
+      {# Text input #}
+      <div x-show="addInputMode === 'text'" x-cloak>
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Soru metni *</label>
+        <textarea x-model="addQText" rows="4" placeholder="Soru içeriğini buraya yazın…"
+                  class="w-full px-3 py-2 rounded-xl text-sm border bg-[var(--surface-2)]
+                         border-[var(--border)] text-[var(--body)] focus:outline-none
+                         focus:ring-2 focus:ring-steel-400 resize-none"></textarea>
+      </div>
+
+      {# Solution (optional) — image or text #}
+      <div x-show="addInputMode" x-cloak class="space-y-2">
+        <label class="block text-xs font-semibold text-[var(--muted)]">Çözüm <span class="font-normal">(isteğe bağlı)</span></label>
+        <div class="flex gap-2">
+          <button type="button"
+                  @click="addSolutionMode = addSolutionMode === 'image' ? '' : 'image'; addSText = ''; $nextTick(() => { const el = document.getElementById('s-img-input'); if (el) el.value = ''; addSImgName = ''; })"
+                  :class="addSolutionMode === 'image'
+                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Görsel
+          </button>
+          <button type="button"
+                  @click="addSolutionMode = addSolutionMode === 'text' ? '' : 'text'; addSImgName = ''; $nextTick(() => { const el = document.getElementById('s-img-input'); if (el) el.value = ''; })"
+                  :class="addSolutionMode === 'text'
+                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/>
+              <line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/>
+              <line x1="17" y1="18" x2="3" y2="18"/>
+            </svg>
+            Metin
+          </button>
+        </div>
+        <div x-show="addSolutionMode === 'image'" x-cloak>
+          <input type="file" accept="image/*" id="s-img-input"
+                 @change="addSImgName = $event.target.files[0]?.name || ''"
+                 class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
+                        file:rounded-lg file:border-0 file:text-xs file:font-semibold
+                        file:bg-[var(--surface-3)] file:text-[var(--muted)]
+                        hover:file:bg-[var(--surface-2)] cursor-pointer">
+          <p x-show="addSImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addSImgName"></p>
+        </div>
+        <div x-show="addSolutionMode === 'text'" x-cloak>
+          <textarea x-model="addSText" rows="3" placeholder="Çözüm açıklaması…"
+                    class="w-full px-3 py-2 rounded-xl text-sm border bg-[var(--surface-2)]
+                           border-[var(--border)] text-[var(--body)] focus:outline-none
+                           focus:ring-2 focus:ring-steel-400 resize-none"></textarea>
+        </div>
       </div>
 
       {# Notes #}
@@ -303,6 +446,37 @@
       </template>
     </div>
 
+    {# Sort controls — #9, #10, #11 #}
+    <div x-show="allQuestions.length > 1" x-cloak class="flex gap-2 flex-wrap">
+      <button @click="sortMode = 'next_review'"
+              :class="sortMode === 'next_review' ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Yaklaşan Tekrar
+      </button>
+      <button @click="sortMode = 'hardest'"
+              :class="sortMode === 'hardest' ? 'bg-ruby-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+        En Zorladıklarım
+      </button>
+      <button @click="sortMode = 'easiest'"
+              :class="sortMode === 'easiest' ? 'bg-emerald-600 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+        En Kolaylarım
+      </button>
+    </div>
+
     {# Empty state #}
     <div x-show="allQuestions.length === 0"
          class="flex flex-col items-center gap-3 py-16 text-center text-[var(--muted)]">
@@ -324,9 +498,23 @@
                 divide-y divide-[var(--border)]">
       <template x-for="q in filteredQuestions" :key="q.id">
         <div class="flex items-center gap-3 px-4 py-3">
-          {# Thumbnail #}
-          <img :src="q.question_image_url" alt=""
-               class="w-14 h-14 rounded-xl object-cover shrink-0 border border-[var(--border)] bg-white">
+          {# Thumbnail — image or text icon #}
+          <template x-if="q.question_image_url">
+            <img :src="q.question_image_url" alt=""
+                 class="w-14 h-14 rounded-xl object-cover shrink-0 border border-[var(--border)] bg-white">
+          </template>
+          <template x-if="!q.question_image_url">
+            <div class="w-14 h-14 rounded-xl shrink-0 border border-[var(--border)] bg-[var(--surface-3)]
+                        flex items-center justify-center">
+              <svg class="w-5 h-5 text-[var(--muted-2)]" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="17" y1="10" x2="3" y2="10"/>
+                <line x1="21" y1="6" x2="3" y2="6"/>
+                <line x1="21" y1="14" x2="3" y2="14"/>
+                <line x1="17" y1="18" x2="3" y2="18"/>
+              </svg>
+            </div>
+          </template>
           {# Info #}
           <div class="flex-1 min-w-0">
             <div class="text-sm font-semibold text-[var(--heading)] leading-tight" x-text="q.subject_name"></div>
@@ -362,7 +550,8 @@ function struggleApp(cfg) {
     // ── Data ────────────────────────────────────────────────────────────
     dueQueue:       [...cfg.dueQuestions],
     allQuestions:   [...cfg.allQuestions],
-    subjects:       cfg.subjects,
+    tytSubjects:    cfg.tytSubjects,
+    aytSubjects:    cfg.aytSubjects,
     addUrl:         cfg.addUrl,
     reviewUrl:      cfg.reviewUrl,
     topicsApiUrl:   cfg.topicsApiUrl,
@@ -375,21 +564,30 @@ function struggleApp(cfg) {
 
     // ── Add form state ───────────────────────────────────────────────────
     addOpen:        false,
+    addExamType:    'TYT',
     addSubjectId:   '',
     addTopicId:     '',
     addTopics:      [],
+    addInputMode:   '',
+    addQText:       '',
+    addSolutionMode: '',
+    addSText:       '',
     addNotes:       '',
     addQImgName:    '',
     addSImgName:    '',
     addLoading:     false,
     addError:       '',
 
-    // ── List filter ──────────────────────────────────────────────────────
+    // ── List state ───────────────────────────────────────────────────────
     subjectFilter:  null,
+    sortMode:       'next_review',
 
     // ── Computed ────────────────────────────────────────────────────────
     get currentQuestion() {
       return this.dueQueue[this.reviewIdx] || null;
+    },
+    get addSubjectOptions() {
+      return this.addExamType === 'TYT' ? this.tytSubjects : this.aytSubjects;
     },
     get subjectFilterOptions() {
       const seen = new Set();
@@ -400,8 +598,16 @@ function struggleApp(cfg) {
       return names.sort();
     },
     get filteredQuestions() {
-      if (!this.subjectFilter) return this.allQuestions;
-      return this.allQuestions.filter(q => q.subject_name === this.subjectFilter);
+      let qs = this.subjectFilter
+        ? this.allQuestions.filter(q => q.subject_name === this.subjectFilter)
+        : [...this.allQuestions];
+      if (this.sortMode === 'hardest') {
+        qs.sort((a, b) => a.ease_factor - b.ease_factor);
+      } else if (this.sortMode === 'easiest') {
+        qs.sort((a, b) => b.ease_factor - a.ease_factor);
+      }
+      // sortMode === 'next_review': server already sorted by next_review_at ASC
+      return qs;
     },
 
     // ── Review flow ──────────────────────────────────────────────────────
@@ -415,11 +621,19 @@ function struggleApp(cfg) {
           body: JSON.stringify({ question_id: this.currentQuestion.id, quality }),
         });
         if (resp.ok) {
-          this.dueQueue.splice(this.reviewIdx, 1);
-          this.showSolution = false;
-          if (this.reviewIdx >= this.dueQueue.length) {
-            this.reviewIdx = 0;
-            if (this.dueQueue.length === 0) this.reviewDone = true;
+          const data = await resp.json();
+          if (data.ok) {
+            // Update allQuestions in place so next_review_at reflects new schedule
+            const idx = this.allQuestions.findIndex(q => q.id === this.currentQuestion.id);
+            if (idx !== -1) {
+              this.allQuestions[idx].next_review_at = data.next_review_at;
+            }
+            this.dueQueue.splice(this.reviewIdx, 1);
+            this.showSolution = false;
+            if (this.reviewIdx >= this.dueQueue.length) {
+              this.reviewIdx = 0;
+              if (this.dueQueue.length === 0) this.reviewDone = true;
+            }
           }
         }
       } catch (e) { console.error('[struggle.submitReview]', e); }
@@ -443,8 +657,16 @@ function struggleApp(cfg) {
     async submitAdd() {
       this.addError = '';
       if (!this.addSubjectId) { this.addError = 'Lütfen bir ders seçin.'; return; }
-      const qImg = document.getElementById('q-img-input')?.files?.[0];
-      if (!qImg) { this.addError = 'Soru görseli gerekli.'; return; }
+      if (!this.addInputMode) { this.addError = 'Lütfen soru giriş yöntemi seçin.'; return; }
+
+      const isImgMode = this.addInputMode === 'camera' || this.addInputMode === 'gallery';
+      const imgInputId = this.addInputMode === 'camera' ? 'q-camera-input' : 'q-gallery-input';
+      const qImg = isImgMode ? document.getElementById(imgInputId)?.files?.[0] : null;
+
+      if (isImgMode && !qImg) { this.addError = 'Soru görseli seçilmedi.'; return; }
+      if (this.addInputMode === 'text' && !this.addQText.trim()) {
+        this.addError = 'Soru metni boş olamaz.'; return;
+      }
 
       this.addLoading = true;
       try {
@@ -452,27 +674,23 @@ function struggleApp(cfg) {
         fd.append('subject_id', this.addSubjectId);
         if (this.addTopicId) fd.append('topic_id', this.addTopicId);
         fd.append('notes', this.addNotes);
-        fd.append('question_image', qImg);
+        if (qImg) fd.append('question_image', qImg);
+
+        if (this.addInputMode === 'text') fd.append('question_text', this.addQText.trim());
+
         const sImg = document.getElementById('s-img-input')?.files?.[0];
         if (sImg) fd.append('solution_image', sImg);
+        if (this.addSText.trim()) fd.append('solution_text', this.addSText.trim());
+
         fd.append('csrfmiddlewaretoken', this._csrf());
 
         const resp = await fetch(this.addUrl, { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.ok) {
-          // Prepend to allQuestions (newest first) and add to due queue
           this.allQuestions.unshift(data.question);
           this.dueQueue.unshift(data.question);
           this.reviewDone = false;
-          // Reset form
-          this.addSubjectId = '';
-          this.addTopicId   = '';
-          this.addTopics    = [];
-          this.addNotes     = '';
-          this.addQImgName  = '';
-          this.addSImgName  = '';
-          document.getElementById('q-img-input').value = '';
-          document.getElementById('s-img-input').value = '';
+          this._resetAddForm();
           this.addOpen = false;
         } else {
           this.addError = data.error || 'Bir hata oluştu.';
@@ -483,6 +701,25 @@ function struggleApp(cfg) {
       } finally {
         this.addLoading = false;
       }
+    },
+
+    _resetAddForm() {
+      this.addSubjectId    = '';
+      this.addTopicId      = '';
+      this.addTopics       = [];
+      this.addNotes        = '';
+      this.addInputMode    = '';
+      this.addQText        = '';
+      this.addSolutionMode = '';
+      this.addSText        = '';
+      this.addQImgName     = '';
+      this.addSImgName     = '';
+      const qc = document.getElementById('q-camera-input');
+      if (qc) qc.value = '';
+      const qg = document.getElementById('q-gallery-input');
+      if (qg) qg.value = '';
+      const si = document.getElementById('s-img-input');
+      if (si) si.value = '';
     },
 
     // ── Delete ────────────────────────────────────────────────────────────

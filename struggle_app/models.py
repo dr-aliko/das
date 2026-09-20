@@ -19,11 +19,14 @@ class StudentStruggleQuestion(models.Model):
         on_delete=models.SET_NULL,
         related_name='struggle_questions',
     )
-    question_image = models.ImageField(upload_to='struggle/questions/%Y/%m/')
-    solution_image = models.ImageField(
-        upload_to='struggle/solutions/%Y/%m/',
-        blank=True, null=True,
+    question_image = models.ImageField(
+        upload_to='struggle/questions/%Y/%m/', blank=True, null=True,
     )
+    question_text = models.TextField(blank=True)
+    solution_image = models.ImageField(
+        upload_to='struggle/solutions/%Y/%m/', blank=True, null=True,
+    )
+    solution_text = models.TextField(blank=True)
     notes     = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

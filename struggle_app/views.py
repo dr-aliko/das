@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from exams_app.models import Subject
-from konu_takip_app.alan_utils import subject_groups
+from konu_takip_app.alan_utils import struggle_subject_groups
 from konu_takip_app.models import KonuTakipTopic
 from users_app.decorators import coach_can_view_student, coach_required, student_required
 
@@ -39,11 +39,14 @@ def _question_json(q):
         'id': q.id,
         'subject_name': q.subject.display_name,
         'topic_name': q.topic.name if q.topic else None,
-        'question_image_url': q.question_image.url,
+        'question_image_url': q.question_image.url if q.question_image else None,
+        'question_text': q.question_text,
         'solution_image_url': q.solution_image.url if q.solution_image else None,
+        'solution_text': q.solution_text,
         'notes': q.notes,
         'next_review_at': q.next_review_at.isoformat() if q.next_review_at else None,
         'review_count': q.review_count,
+        'ease_factor': q.ease_factor,
         'created_at': q.created_at.isoformat(),
         'subject_id': q.subject_id,
     }
@@ -54,8 +57,7 @@ def _question_json(q):
 @method_decorator(student_required, name='dispatch')
 class StudentStruggleIndexView(View):
     def get(self, request):
-        tyt_subjects, ayt_subjects = subject_groups(request.user)
-        all_subjects = tyt_subjects + ayt_subjects
+        tyt_subjects, ayt_subjects = struggle_subject_groups(request.user)
 
         now = timezone.now()
         due_qs = list(
@@ -68,23 +70,20 @@ class StudentStruggleIndexView(View):
             StudentStruggleQuestion.objects
             .filter(student=request.user)
             .select_related('subject', 'topic')
-            .order_by('subject__name', '-created_at')
+            .order_by('next_review_at', '-created_at')
         )
 
         due_json = [_question_json(q) for q in due_qs]
         all_json = [_question_json(q) for q in all_qs]
 
-        subjects_json = [
-            {'id': s.id, 'name': s.display_name}
-            for s in all_subjects
-        ]
+        tyt_subjects_json = [{'id': s.id, 'name': s.display_name} for s in tyt_subjects]
+        ayt_subjects_json = [{'id': s.id, 'name': s.display_name} for s in ayt_subjects]
 
         return render(request, 'struggle/index.html', {
             'due_json': json.dumps(due_json),
             'all_json': json.dumps(all_json),
-            'subjects_json': json.dumps(subjects_json),
-            'tyt_subjects': tyt_subjects,
-            'ayt_subjects': ayt_subjects,
+            'tyt_subjects_json': json.dumps(tyt_subjects_json),
+            'ayt_subjects_json': json.dumps(ayt_subjects_json),
             'due_count': len(due_qs),
             'total_count': len(all_qs),
         })
@@ -98,15 +97,27 @@ class StudentStruggleAddView(View):
         notes      = request.POST.get('notes', '').strip()
         q_img      = request.FILES.get('question_image')
         s_img      = request.FILES.get('solution_image') or None
+        q_text     = request.POST.get('question_text', '').strip()
+        s_text     = request.POST.get('solution_text', '').strip()
 
         if not subject_id:
             return JsonResponse({'ok': False, 'error': 'Ders seçilmedi.'}, status=400)
-        if not q_img:
-            return JsonResponse({'ok': False, 'error': 'Soru görseli gerekli.'}, status=400)
 
-        err = _validate_image(q_img)
-        if err:
-            return JsonResponse({'ok': False, 'error': err}, status=400)
+        if q_img and q_text:
+            return JsonResponse(
+                {'ok': False, 'error': 'Görsel veya metin yöntemlerinden yalnızca birini kullanın.'},
+                status=400,
+            )
+        if not q_img and not q_text:
+            return JsonResponse(
+                {'ok': False, 'error': 'Soru görseli veya soru metni gerekli.'},
+                status=400,
+            )
+
+        if q_img:
+            err = _validate_image(q_img)
+            if err:
+                return JsonResponse({'ok': False, 'error': err}, status=400)
         if s_img:
             err = _validate_image(s_img)
             if err:
@@ -130,8 +141,10 @@ class StudentStruggleAddView(View):
             student=request.user,
             subject=subject,
             topic=topic,
-            question_image=q_img,
+            question_image=q_img or None,
+            question_text=q_text,
             solution_image=s_img,
+            solution_text=s_text,
             notes=notes,
             next_review_at=timezone.now(),
             current_interval_days=1,

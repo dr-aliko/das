@@ -473,3 +473,313 @@ class DeleteTests(TestCase):
         self.assertTrue(resp.json()['ok'])
         self.assertFalse(StudentStruggleQuestion.objects.filter(pk=qid).exists())
         print(f'  question {qid} deleted successfully  PASS')
+
+
+# ── New tests for improvements #1-11 ─────────────────────────────────────────
+
+class TytAytToggleTests(TestCase):
+    """TYT/AYT segmented toggle + alan-filtered subjects including Geometri (#1-5)."""
+
+    def setUp(self):
+        self.student_say = _make_student('toggle_say', alan='SAY')
+        self.student_ea  = _make_student('toggle_ea',  alan='EA')
+        self.student_soz = _make_student('toggle_soz', alan='SOZ')
+        # AYT subjects — no konu_takip_topics needed for struggle_subject_groups
+        _make_subject('AYT Matematik',  'AYT')
+        _make_subject('AYT Fizik',      'AYT')
+        _make_subject('AYT Kimya',      'AYT')
+        _make_subject('AYT Biyoloji',   'AYT')
+        _make_subject('AYT Geometri',   'AYT')
+        _make_subject('AYT Türk Dili ve Edebiyatı', 'AYT')
+        _make_subject('AYT Tarih 2',    'AYT')
+        _make_subject('AYT Coğrafya 2', 'AYT')
+        _make_subject('AYT Felsefe Grubu', 'AYT')
+        _make_subject('AYT Yabancı Dil', 'AYT')
+
+    def test_21_say_sees_geometri_in_ayt(self):
+        print('\n' + '='*60)
+        print('TEST 21: SAY student sees AYT Geometri in struggle subjects')
+        print('='*60)
+        from konu_takip_app.alan_utils import struggle_subject_groups
+        _, ayt = struggle_subject_groups(self.student_say)
+        names = [s.name for s in ayt]
+        print(f'  SAY AYT subjects: {sorted(names)}')
+        self.assertIn('AYT Geometri', names)
+        self.assertIn('AYT Fizik', names)
+        print('  PASS')
+
+    def test_22_ea_sees_geometri_in_ayt(self):
+        print('\n' + '='*60)
+        print('TEST 22: EA student sees AYT Geometri in struggle subjects')
+        print('='*60)
+        from konu_takip_app.alan_utils import struggle_subject_groups
+        _, ayt = struggle_subject_groups(self.student_ea)
+        names = [s.name for s in ayt]
+        print(f'  EA AYT subjects: {sorted(names)}')
+        self.assertIn('AYT Geometri', names)
+        self.assertNotIn('AYT Fizik', names)
+        print('  PASS')
+
+    def test_23_soz_does_not_see_geometri(self):
+        print('\n' + '='*60)
+        print('TEST 23: SOZ student does NOT see AYT Geometri')
+        print('='*60)
+        from konu_takip_app.alan_utils import struggle_subject_groups
+        _, ayt = struggle_subject_groups(self.student_soz)
+        names = [s.name for s in ayt]
+        print(f'  SOZ AYT subjects: {sorted(names)}')
+        self.assertNotIn('AYT Geometri', names)
+        print('  PASS')
+
+    def test_24_konu_takip_say_does_not_see_geometri(self):
+        """AYT_ALAN_MAP (Konu Takip) must be unaffected — SAY should not see Geometri there."""
+        print('\n' + '='*60)
+        print('TEST 24: Konu Takip subject_groups (SAY) does NOT include AYT Geometri')
+        print('='*60)
+        # Add a KonuTakipTopic so Fizik is visible in Konu Takip
+        fizik = _make_subject('AYT Fizik', 'AYT')
+        KonuTakipTopic.objects.create(subject=fizik, name='Hareket', order=1, checkable=True)
+        from konu_takip_app.alan_utils import subject_groups
+        _, ayt = subject_groups(self.student_say)
+        names = [s.name for s in ayt]
+        print(f'  KT SAY AYT subjects: {sorted(names)}')
+        self.assertNotIn('AYT Geometri', names)
+        self.assertIn('AYT Fizik', names)
+        print('  PASS')
+
+
+class TopicScopingTests(TestCase):
+    """Topics stay scoped to the selected subject (#4)."""
+
+    def setUp(self):
+        self.student = _make_student('scoping')
+        self.tyt_mat = _make_subject('TYT Matematik', 'TYT')
+        self.ayt_mat = _make_subject('AYT Matematik', 'AYT')
+        self.tyt_topic = KonuTakipTopic.objects.create(
+            subject=self.tyt_mat, name='TYT Konu', order=1, checkable=True
+        )
+        self.ayt_topic = KonuTakipTopic.objects.create(
+            subject=self.ayt_mat, name='AYT Konu', order=1, checkable=True
+        )
+        self.client = Client()
+        self.client.login(username='student_scoping@test.com', password='testpass123')
+
+    def test_25_topics_api_scoped_to_subject(self):
+        """Topics API for TYT Matematik must not return AYT Matematik topics."""
+        print('\n' + '='*60)
+        print('TEST 25: Topics API only returns topics for the requested subject')
+        print('='*60)
+        resp = self.client.get(
+            f'/student/konu-takip/sorularim/topics/?subject_id={self.tyt_mat.id}'
+        )
+        data = resp.json()
+        names = [t['name'] for t in data['topics']]
+        print(f'  topics for TYT Matematik: {names}')
+        self.assertIn('TYT Konu', names)
+        self.assertNotIn('AYT Konu', names)
+        print('  PASS')
+
+
+class TextInputMethodTests(TestCase):
+    """Three input methods: camera/gallery (image) and text (#6-7)."""
+
+    def setUp(self):
+        self.student = _make_student('textinput')
+        self.subject = _make_subject('TYT Matematik')
+        self.client  = Client()
+        self.client.login(username='student_textinput@test.com', password='testpass123')
+
+    def tearDown(self):
+        for q in StudentStruggleQuestion.objects.filter(student=self.student):
+            if q.question_image:
+                try:
+                    q.question_image.delete(save=False)
+                except Exception:
+                    pass
+
+    def test_26_text_only_question_saves(self):
+        print('\n' + '='*60)
+        print('TEST 26: question_text-only submission saves and returns correct JSON')
+        print('='*60)
+        resp = self.client.post('/student/konu-takip/sorularim/add/', {
+            'subject_id': self.subject.id,
+            'question_text': 'Bu soru neden zor?',
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'], data)
+        q_json = data['question']
+        self.assertEqual(q_json['question_text'], 'Bu soru neden zor?')
+        self.assertIsNone(q_json['question_image_url'])
+        print(f'  question_text: {q_json["question_text"]}  image_url: {q_json["question_image_url"]}  PASS')
+
+    def test_27_neither_image_nor_text_rejected(self):
+        print('\n' + '='*60)
+        print('TEST 27: Submission with neither image nor text is rejected')
+        print('='*60)
+        resp = self.client.post('/student/konu-takip/sorularim/add/', {
+            'subject_id': self.subject.id,
+        })
+        data = resp.json()
+        self.assertFalse(data['ok'])
+        print(f'  error: {data["error"]}  PASS')
+
+    def test_28_both_image_and_text_rejected(self):
+        print('\n' + '='*60)
+        print('TEST 28: Submission with both image and text is rejected')
+        print('='*60)
+        resp = self.client.post('/student/konu-takip/sorularim/add/', {
+            'subject_id': self.subject.id,
+            'question_image': _png_upload('q.png'),
+            'question_text': 'aynı anda her ikisi',
+        })
+        data = resp.json()
+        self.assertFalse(data['ok'])
+        print(f'  error: {data["error"]}  PASS')
+
+    def test_29_solution_text_saved(self):
+        print('\n' + '='*60)
+        print('TEST 29: solution_text saved correctly alongside question_text')
+        print('='*60)
+        resp = self.client.post('/student/konu-takip/sorularim/add/', {
+            'subject_id': self.subject.id,
+            'question_text': 'Soru metni',
+            'solution_text': 'Çözüm açıklaması',
+        })
+        data = resp.json()
+        self.assertTrue(data['ok'], data)
+        q_json = data['question']
+        self.assertEqual(q_json['solution_text'], 'Çözüm açıklaması')
+        self.assertIsNone(q_json['solution_image_url'])
+        print(f'  solution_text: {q_json["solution_text"]}  PASS')
+
+
+class EaseFactorSortTests(TestCase):
+    """ease_factor sort modes: En Zorladıklarım / En Kolaylarım (#10-11).
+
+    SR ceiling for kolay is 2.2, which is BELOW the default 2.5.
+    So the provable relationship is: repeated-zor (ef=2.3) < never-reviewed (ef=2.5).
+    """
+
+    def setUp(self):
+        self.student = _make_student('easesort')
+        self.subject = _make_subject('TYT Biyoloji')
+        from struggle_app.services import submit_struggle_review
+        # q_hard: 3 zor reviews → ef decreases; after rc>=2 zor: ef=max(1.3,2.5-0.20)=2.3
+        self.q_hard    = _create_question(self.student, self.subject)
+        # q_default: no reviews → ef stays at 2.5
+        self.q_default = _create_question(self.student, self.subject,
+                                          next_review_at=None)  # not yet due
+        for _ in range(3):
+            submit_struggle_review(self.student, self.q_hard.id, 'zor')
+        self.q_hard.refresh_from_db()
+        self.q_default.refresh_from_db()
+
+    def test_30_ease_factor_ordering(self):
+        """Hard (zor-reviewed) question has lower ease_factor than fresh question."""
+        print('\n' + '='*60)
+        print('TEST 30: ease_factor ordering — zor-reviewed < default')
+        print('='*60)
+        print(f'  hard.ease_factor:    {self.q_hard.ease_factor:.4f}')
+        print(f'  default.ease_factor: {self.q_default.ease_factor:.4f}')
+        self.assertLess(self.q_hard.ease_factor, self.q_default.ease_factor)
+        print('  PASS')
+
+    def test_31_ease_factor_sort_order(self):
+        """
+        Creates 4 questions with explicitly varied ease_factors, fetches all_json,
+        then applies the same sort Alpine.js uses and confirms the actual ID order.
+
+        ease_factors set directly:
+          q_a: 1.3  (worst — hit the floor)
+          q_b: 1.8
+          q_c: 2.3
+          q_d: 2.5  (best / freshest)
+
+        En Zorladıklarım = ease_factor ASC  → expected: q_a, q_b, q_c, q_d
+        En Kolaylarım    = ease_factor DESC → expected: q_d, q_c, q_b, q_a
+        """
+        import json as _json
+        print('\n' + '='*60)
+        print('TEST 31: En Zorladiklarim / En Kolaylarim sort order')
+        print('='*60)
+
+        subject = _make_subject('TYT Kimya')
+        # Build student with 4 questions at specific ease_factors
+        student = _make_student('ef_sort')
+        qa = _create_question(student, subject, ease_factor=1.3)
+        qb = _create_question(student, subject, ease_factor=1.8)
+        qc = _create_question(student, subject, ease_factor=2.3)
+        qd = _create_question(student, subject, ease_factor=2.5)
+
+        client = Client()
+        client.login(username='student_ef_sort@test.com', password='testpass123')
+        resp = client.get('/student/konu-takip/sorularim/')
+        self.assertEqual(resp.status_code, 200)
+        all_q = _json.loads(resp.context['all_json'])
+
+        # Keep only our 4 questions (setUp may have added others)
+        our_ids = {qa.id, qb.id, qc.id, qd.id}
+        our_q = [q for q in all_q if q['id'] in our_ids]
+
+        print('  Raw ease_factors from JSON:')
+        for q in our_q:
+            print(f'    id={q["id"]}  ease_factor={q["ease_factor"]}')
+
+        # Verify all ease_factor values are present and correct
+        ef_map = {q['id']: q['ease_factor'] for q in our_q}
+        self.assertAlmostEqual(ef_map[qa.id], 1.3, places=5)
+        self.assertAlmostEqual(ef_map[qb.id], 1.8, places=5)
+        self.assertAlmostEqual(ef_map[qc.id], 2.3, places=5)
+        self.assertAlmostEqual(ef_map[qd.id], 2.5, places=5)
+
+        # Apply same sort as Alpine: En Zorladıklarım = ease_factor ASC
+        hardest_ids = [q['id'] for q in sorted(our_q, key=lambda q: q['ease_factor'])]
+        expected_hardest = [qa.id, qb.id, qc.id, qd.id]
+        print(f'\n  En Zorladiklarim (ef ASC):')
+        for qid in hardest_ids:
+            print(f'    id={qid}  ef={ef_map[qid]}')
+        print(f'  Expected order: {expected_hardest}')
+        self.assertEqual(hardest_ids, expected_hardest)
+        print('  PASS')
+
+        # Apply same sort as Alpine: En Kolaylarım = ease_factor DESC
+        easiest_ids = [q['id'] for q in sorted(our_q, key=lambda q: q['ease_factor'], reverse=True)]
+        expected_easiest = [qd.id, qc.id, qb.id, qa.id]
+        print(f'\n  En Kolaylarim (ef DESC):')
+        for qid in easiest_ids:
+            print(f'    id={qid}  ef={ef_map[qid]}')
+        print(f'  Expected order: {expected_easiest}')
+        self.assertEqual(easiest_ids, expected_easiest)
+        print('  PASS')
+
+
+class SortByNextReviewTests(TestCase):
+    """Default sort by next_review_at ASC (#9)."""
+
+    def setUp(self):
+        self.student = _make_student('sortnr')
+        self.subject = _make_subject('TYT Fizik')
+        from datetime import timedelta
+        now = timezone.now()
+        # q1 due furthest in future, q3 due soonest
+        self.q1 = _create_question(self.student, self.subject,
+                                   next_review_at=now + timedelta(days=10))
+        self.q2 = _create_question(self.student, self.subject,
+                                   next_review_at=now + timedelta(days=5))
+        self.q3 = _create_question(self.student, self.subject,
+                                   next_review_at=now + timedelta(days=1))
+
+    def test_32_default_sort_next_review_ascending(self):
+        print('\n' + '='*60)
+        print('TEST 32: Default sort is next_review_at ascending (soonest first)')
+        print('='*60)
+        client = Client()
+        client.login(username='student_sortnr@test.com', password='testpass123')
+        resp = client.get('/student/konu-takip/sorularim/')
+        import json as _json
+        all_q = _json.loads(resp.context['all_json'])
+        ids = [q['id'] for q in all_q]
+        print(f'  order: {ids}  (expected: [{self.q3.id}, {self.q2.id}, {self.q1.id}])')
+        self.assertEqual(ids, [self.q3.id, self.q2.id, self.q1.id])
+        print('  PASS')
