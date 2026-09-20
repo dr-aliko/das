@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'tasks_app',
     'django_q',
     'konu_takip_app',
+    'struggle_app',
     'marketing_app',
 ]
 

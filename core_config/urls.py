@@ -31,6 +31,7 @@ urlpatterns = [
     path('student/tasks/', include('tasks_app.student_urls', namespace='student_tasks')),
     path('coach/konu-takip/', include('konu_takip_app.urls', namespace='konu_takip')),
     path('student/konu-takip/', include('konu_takip_app.student_urls', namespace='student_konu_takip')),
+    path('student/konu-takip/sorularim/', include('struggle_app.urls', namespace='struggle')),
     path('brans/', brans_hub_student, name='brans_hub'),
     path('brans/api/', brans_hub_api, name='brans_hub_api'),
     path('brans/report/', brans_hub_export, name='brans_hub_export'),

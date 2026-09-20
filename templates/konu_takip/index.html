@@ -80,6 +80,13 @@
                    text-[10px] font-bold px-1 leading-none"
             x-text="dueCount"></span>
     </button>
+    {% if not is_coach_view %}
+    <a href="{% url 'struggle:index' %}"
+       class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors
+              text-[var(--muted)] hover:text-[var(--body)]">
+      Sorularım
+    </a>
+    {% endif %}
   </div>
 
   {# ══════════════════════════════════════════════════════════════════════ #}
@@ -374,6 +381,38 @@
   </div>{# end schedule tab #}
 
   {% endif %}{# end is_coach_view and not selected_student #}
+
+  {# ── Coach: struggle stats (read-only aggregates, no images) ─────── #}
+  {% if is_coach_view and selected_student and struggle_stats %}
+  <div class="mt-6 pt-5 border-t border-[var(--border)]">
+    <h2 class="text-sm font-bold text-[var(--heading)] mb-3 flex items-center gap-2">
+      <svg class="w-4 h-4 text-ruby-400" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Zorlandığım Sorular (özet)
+    </h2>
+    <div class="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] divide-y divide-[var(--border)]">
+      <div class="grid grid-cols-3 px-4 py-2 bg-[var(--surface-2)]">
+        <span class="text-xs font-semibold text-[var(--muted)]">Ders</span>
+        <span class="text-xs font-semibold text-[var(--muted)] text-right">Toplam soru</span>
+        <span class="text-xs font-semibold text-[var(--muted)] text-right">Tekrar bekleyen</span>
+      </div>
+      {% for row in struggle_stats %}
+      <div class="grid grid-cols-3 px-4 py-2.5">
+        <span class="text-sm text-[var(--body)]">{{ row.subject__name }}</span>
+        <span class="text-sm tabular-nums text-right text-[var(--muted)]">{{ row.total }}</span>
+        <span class="text-sm tabular-nums text-right font-semibold
+                     {% if row.due > 0 %}text-ruby-400{% else %}text-[var(--muted)]{% endif %}">
+          {{ row.due }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Bitti rating modal ───────────────────────────────────────────── #}
   <div x-show="ratingModal.show" x-cloak

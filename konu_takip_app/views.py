@@ -7,10 +7,10 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from exams_app.models import Subject
 from users_app.decorators import coach_can_view_student, coach_required, student_required
 from users_app.models import User
 
+from .alan_utils import subject_groups as _subject_groups
 from .models import KonuTakipTopic
 from .services import (
     build_flat_topics, build_topic_list,
@@ -28,28 +28,6 @@ def _serialize_topics(subject, student):
         return [], {}, None
     topics_data, progress_json = build_topic_list(subject, student)
     return build_flat_topics(topics_data), progress_json, subject.id
-
-
-_AYT_ALAN_MAP = {
-    'SAY': {'AYT Matematik', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji'},
-    'EA':  {'AYT Matematik', 'AYT Türk Dili ve Edebiyatı'},
-    'SOZ': {'AYT Türk Dili ve Edebiyatı', 'AYT Tarih 2', 'AYT Coğrafya 2', 'AYT Felsefe Grubu'},
-    'DIL': {'AYT Yabancı Dil'},
-}
-_DEFAULT_AYT = _AYT_ALAN_MAP['SAY']  # blank alan → SAY subjects
-
-
-def _subject_groups(student):
-    """Return (tyt_subjects, ayt_subjects) for this student, AYT filtered by alan."""
-    all_subjects = list(
-        Subject.objects.filter(konu_takip_topics__isnull=False)
-        .distinct()
-        .order_by('name')
-    )
-    ayt_allowed = _AYT_ALAN_MAP.get(student.alan, _DEFAULT_AYT)
-    tyt = [s for s in all_subjects if s.name.startswith('TYT ')]
-    ayt = [s for s in all_subjects if s.name.startswith('AYT ') and s.name in ayt_allowed]
-    return tyt, ayt
 
 
 def _resolve_subject(subjects, subject_id_str):
@@ -113,11 +91,18 @@ class CoachKonuTakipView(View):
         all_reviews = get_all_reviews_json(selected_student) if selected_student else []
         sr_settings = get_subject_sr_settings(selected_student) if selected_student else {}
         qs_student = f'student={selected_student.id}&' if selected_student else ''
+
+        struggle_stats = []
+        if selected_student:
+            from struggle_app.views import coach_struggle_stats
+            struggle_stats = coach_struggle_stats(request.user, selected_student)
+
         return render(request, 'konu_takip/index.html', {
             'students': coached_students,
             'selected_student': selected_student,
             'is_coach_view': True,
             'qs_student': qs_student,
+            'struggle_stats': struggle_stats,
             'kt_cfg': safe_json({
                 'examType': exam_type,
                 'tytSubjects': _serialize_subjects(tyt_subjects),

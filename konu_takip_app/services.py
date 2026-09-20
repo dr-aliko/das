@@ -3,31 +3,21 @@ from datetime import timedelta
 from django.utils import timezone
 
 from .models import KonuTakipTopic, StudentSubjectSrSetting, StudentTopicProgress
-
-VALID_QUALITIES = ('kolay', 'orta', 'zor')
+from .sr_utils import VALID_QUALITIES, apply_sm2
 
 
 def _compute_review(progress, quality):
     """Apply SM2-inspired interval. Mutates progress but does NOT save."""
-    rc = progress.review_count  # before incrementing
-
-    if rc == 0:
-        interval = {'kolay': 10, 'orta': 6, 'zor': 3}[quality]
-    elif rc == 1:
-        interval = {'kolay': 21, 'orta': 14, 'zor': 4}[quality]
-    else:
-        if quality == 'kolay':
-            interval = round(progress.current_interval_days * progress.ease_factor)
-            progress.ease_factor = min(2.2, progress.ease_factor + 0.15)
-        elif quality == 'orta':
-            interval = round(progress.current_interval_days * progress.ease_factor * 0.85)
-        else:  # 'zor'
-            interval = max(3, round(progress.current_interval_days * 0.4))
-            progress.ease_factor = max(1.3, progress.ease_factor - 0.20)
-
+    new_interval, new_ease = apply_sm2(
+        progress.review_count,
+        progress.current_interval_days,
+        progress.ease_factor,
+        quality,
+    )
     now = timezone.now()
-    progress.current_interval_days = interval
-    progress.next_review_at = now + timedelta(days=interval)
+    progress.current_interval_days = new_interval
+    progress.ease_factor = new_ease
+    progress.next_review_at = now + timedelta(days=new_interval)
     progress.last_reviewed_at = now
     progress.review_count += 1
 
