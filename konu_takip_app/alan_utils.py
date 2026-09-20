@@ -49,12 +49,18 @@ def struggle_subject_groups(student):
     Unlike subject_groups(), this queries ALL TYT/AYT subjects regardless of whether
     they have konu_takip_topics (so Geometri appears), and uses STRUGGLE_AYT_ALAN_MAP
     which adds AYT Geometri for SAY/EA.
+
+    Applies the same exclusion filter as the YouTube-playlist import:
+      - excluded_from_planning=True  (e.g. "TYT Problemler")
+      - explicit umbrella names      (e.g. "TYT Fen Bilimleri", "TYT Sosyal Bilimler")
     """
     from django.db.models import Q
     from exams_app.models import Subject
     all_subjects = list(
         Subject.objects
         .filter(Q(name__startswith='TYT ') | Q(name__startswith='AYT '))
+        .exclude(excluded_from_planning=True)
+        .exclude(name__in=['TYT Fen Bilimleri', 'TYT Sosyal Bilimler'])
         .order_by('name')
     )
     ayt_allowed = STRUGGLE_AYT_ALAN_MAP.get(

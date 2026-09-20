@@ -30,7 +30,11 @@
 
         <a href="/student/konu-takip/"
            class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/student/konu-takip' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Konu Takip</a>
+                  {% if '/student/konu-takip' in request.path and '/sorularim' not in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Konu Takip</a>
+
+        <a href="/student/konu-takip/sorularim/"
+           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                  {% if '/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Sorularım</a>
 
         <a href="/profil/"
            class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400

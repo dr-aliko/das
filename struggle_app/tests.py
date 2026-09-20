@@ -783,3 +783,167 @@ class SortByNextReviewTests(TestCase):
         print(f'  order: {ids}  (expected: [{self.q3.id}, {self.q2.id}, {self.q1.id}])')
         self.assertEqual(ids, [self.q3.id, self.q2.id, self.q1.id])
         print('  PASS')
+
+
+# ── New tests for refinements: early review (#7) and subject leak (#1) ─────────
+
+class EarlyReviewTests(TestCase):
+    """
+    Voluntary early review (#7):
+      - POST /sorularim/review/ on a NOT-YET-DUE question → schedule updates
+      - Closing without rating (no POST) → schedule completely unchanged
+    """
+
+    def setUp(self):
+        import json as _json
+        self._json = _json
+        from datetime import timedelta
+        self.student = _make_student('earlyrev')
+        self.subject = _make_subject('TYT Matematik')
+        self.client  = Client()
+        self.client.login(username='student_earlyrev@test.com', password='testpass123')
+        # Create a question that is NOT yet due (next_review_at = 30 days from now)
+        self.future_date = timezone.now() + timedelta(days=30)
+        self.q = _create_question(
+            self.student, self.subject,
+            next_review_at=self.future_date,
+            current_interval_days=30,
+            ease_factor=2.5,
+            review_count=2,
+        )
+
+    def tearDown(self):
+        if self.q.question_image:
+            try:
+                self.q.question_image.delete(save=False)
+            except Exception:
+                pass
+
+    def test_33_early_review_updates_schedule(self):
+        """
+        POST review on a not-yet-due question must update next_review_at via apply_sm2.
+        rc=2, interval=30, ef=2.5, quality='kolay' -> interval=round(30*2.5)=75, ef=2.2
+        next_review_at should be ~75 days from now, not the original 30 days.
+        """
+        print('\n' + '='*60)
+        print('TEST 33: Early review on not-yet-due question updates schedule')
+        print('='*60)
+        original_nra = self.q.next_review_at
+
+        resp = self.client.post(
+            '/student/konu-takip/sorularim/review/',
+            data=self._json.dumps({'question_id': self.q.id, 'quality': 'kolay'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'], data)
+
+        self.q.refresh_from_db()
+        print(f'  original next_review_at: {original_nra.date()}')
+        print(f'  updated  next_review_at: {self.q.next_review_at.date()}')
+        print(f'  updated  interval_days:  {self.q.current_interval_days}')
+        print(f'  updated  ease_factor:    {self.q.ease_factor:.4f}')
+
+        # rc=2, interval=30, ef=2.5, kolay -> interval=75, ef=2.2
+        expected_interval, expected_ef = apply_sm2(2, 30, 2.5, 'kolay')
+        self.assertEqual(self.q.current_interval_days, expected_interval,
+            f'interval: got {self.q.current_interval_days}, expected {expected_interval}')
+        self.assertAlmostEqual(self.q.ease_factor, expected_ef, places=10,
+            msg=f'ease_factor: got {self.q.ease_factor}, expected {expected_ef}')
+        self.assertEqual(self.q.review_count, 3)
+
+        # next_review_at must be strictly later than the old future_date
+        self.assertGreater(self.q.next_review_at, original_nra,
+            'next_review_at should advance beyond the old scheduled date')
+        print(f'  next_review_at advanced by {expected_interval} days  PASS')
+
+    def test_34_no_review_leaves_schedule_unchanged(self):
+        """
+        Simply viewing the page (GET) without POSTing a review must NOT mutate
+        the question's schedule in any way.
+        """
+        print('\n' + '='*60)
+        print('TEST 34: Viewing page without rating leaves schedule unchanged')
+        print('='*60)
+        original_nra      = self.q.next_review_at
+        original_interval = self.q.current_interval_days
+        original_ef       = self.q.ease_factor
+        original_rc       = self.q.review_count
+
+        # GET the page (simulates opening and closing without rating)
+        resp = self.client.get('/student/konu-takip/sorularim/')
+        self.assertEqual(resp.status_code, 200)
+
+        self.q.refresh_from_db()
+        print(f'  next_review_at unchanged: {self.q.next_review_at == original_nra}')
+        print(f'  interval unchanged:       {self.q.current_interval_days == original_interval}')
+        print(f'  ease_factor unchanged:    {self.q.ease_factor == original_ef}')
+        print(f'  review_count unchanged:   {self.q.review_count == original_rc}')
+
+        self.assertEqual(self.q.next_review_at, original_nra)
+        self.assertEqual(self.q.current_interval_days, original_interval)
+        self.assertAlmostEqual(self.q.ease_factor, original_ef, places=10)
+        self.assertEqual(self.q.review_count, original_rc)
+        print('  PASS — no state mutation from GET-only visit')
+
+
+class SubjectLeakTests(TestCase):
+    """
+    Subject leak fix (#1):
+      - excluded_from_planning=True subjects must NOT appear in struggle subject list
+      - Umbrella names 'TYT Fen Bilimleri' / 'TYT Sosyal Bilimler' must be absent
+    """
+
+    def setUp(self):
+        self.student = _make_student('subleak', alan='SAY')
+        # Migration 0024 already seeds TYT Problemler with excluded_from_planning=True.
+        # Migration 0015 seeds the umbrella names (excluded_from_planning=False by default).
+        # Use get_or_create to avoid UNIQUE constraint errors.
+        self.excluded_subj, _ = Subject.objects.get_or_create(
+            name='TYT Problemler', exam_type='TYT',
+            defaults={'excluded_from_planning': True},
+        )
+        self.excluded_subj.excluded_from_planning = True
+        self.excluded_subj.save(update_fields=['excluded_from_planning'])
+
+        self.umbrella_fen, _ = Subject.objects.get_or_create(
+            name='TYT Fen Bilimleri', exam_type='TYT',
+            defaults={'excluded_from_planning': False},
+        )
+        self.umbrella_sos, _ = Subject.objects.get_or_create(
+            name='TYT Sosyal Bilimler', exam_type='TYT',
+            defaults={'excluded_from_planning': False},
+        )
+        self.normal_subj, _ = Subject.objects.get_or_create(
+            name='TYT Matematik', exam_type='TYT',
+            defaults={'excluded_from_planning': False},
+        )
+
+    def test_35_excluded_from_planning_not_in_struggle_subjects(self):
+        print('\n' + '='*60)
+        print('TEST 35: excluded_from_planning=True subject absent from struggle list')
+        print('='*60)
+        from konu_takip_app.alan_utils import struggle_subject_groups
+        tyt, _ = struggle_subject_groups(self.student)
+        names = [s.name for s in tyt]
+        print(f'  TYT subjects visible: {sorted(names)}')
+        self.assertNotIn('TYT Problemler', names,
+            'TYT Problemler (excluded_from_planning=True) must not appear')
+        self.assertIn('TYT Matematik', names,
+            'TYT Matematik (normal) must appear')
+        print('  PASS')
+
+    def test_36_umbrella_names_not_in_struggle_subjects(self):
+        print('\n' + '='*60)
+        print('TEST 36: Umbrella subjects TYT Fen/Sosyal Bilimleri absent from list')
+        print('='*60)
+        from konu_takip_app.alan_utils import struggle_subject_groups
+        tyt, _ = struggle_subject_groups(self.student)
+        names = [s.name for s in tyt]
+        print(f'  TYT subjects visible: {sorted(names)}')
+        self.assertNotIn('TYT Fen Bilimleri', names,
+            'TYT Fen Bilimleri (umbrella) must be excluded')
+        self.assertNotIn('TYT Sosyal Bilimler', names,
+            'TYT Sosyal Bilimler (umbrella) must be excluded')
+        print('  PASS')

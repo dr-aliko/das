@@ -32,27 +32,6 @@
           x-text="allQuestions.length + ' soru kayıtlı'"></span>
   </div>
 
-  {# ── Tab navigation ────────────────────────────────────────────────── #}
-  <div class="inline-flex items-center bg-[var(--surface-3)] rounded-full p-[3px] gap-[2px]">
-    <a href="{% url 'student_konu_takip:index' %}"
-       class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors
-              text-[var(--muted)] hover:text-[var(--body)]">
-      Konular
-    </a>
-    <a href="{% url 'student_konu_takip:index' %}?view=schedule"
-       class="px-6 py-1.5 rounded-full text-sm font-bold transition-colors
-              text-[var(--muted)] hover:text-[var(--body)]">
-      Tekrar Takvimi
-    </a>
-    <span class="bg-steel-500 text-white px-6 py-1.5 rounded-full text-sm font-bold flex items-center gap-2">
-      Sorularım
-      <span x-show="dueQueue.length > 0" x-cloak
-            class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full
-                   bg-white/30 text-[10px] font-bold px-1 leading-none"
-            x-text="dueQueue.length"></span>
-    </span>
-  </div>
-
   {# ══════════════════════════════════════════════════════════════════════ #}
   {# SECTION 1: TEKRAR ZAMANI GELENLER                                     #}
   {# ══════════════════════════════════════════════════════════════════════ #}
@@ -91,11 +70,7 @@
 
     {# Flashcard #}
     <div x-show="currentQuestion && !reviewDone" x-cloak class="space-y-3">
-
-      {# Card body #}
       <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-
-        {# Subject + topic badge #}
         <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
           <span class="text-xs font-semibold text-[var(--muted)]" x-text="currentQuestion?.subject_name"></span>
           <span x-show="currentQuestion?.topic_name" x-cloak
@@ -104,8 +79,6 @@
           <span class="ml-auto text-xs text-[var(--muted-2)] tabular-nums"
                 x-text="(reviewIdx + 1) + ' / ' + (reviewIdx + dueQueue.length)"></span>
         </div>
-
-        {# Question — image or text #}
         <div class="px-4 pt-4 pb-2">
           <template x-if="currentQuestion?.question_image_url">
             <img :src="currentQuestion.question_image_url" alt="Soru görseli"
@@ -117,17 +90,13 @@
                  x-text="currentQuestion?.question_text"></div>
           </template>
         </div>
-
-        {# Show solution toggle #}
         <div class="px-4 pb-4">
           <button @click="showSolution = !showSolution"
                   class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                         border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)]
-                         hover:border-[var(--muted)]">
+                         border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
             <span x-show="!showSolution">Çözümü Göster</span>
             <span x-show="showSolution" x-cloak>Çözümü Gizle</span>
           </button>
-
           <div x-show="showSolution" x-cloak class="mt-3">
             <template x-if="currentQuestion?.solution_image_url">
               <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
@@ -138,49 +107,36 @@
                    x-text="currentQuestion.solution_text"></div>
             </template>
             <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
-              <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">
-                Bu soru için çözüm eklenmemiş.
-              </p>
+              <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
             </template>
           </div>
         </div>
       </div>
-
-      {# Rating buttons #}
       <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
       <div class="flex gap-2">
         <button @click="submitReview('zor')" :disabled="reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-red-50 border-red-200 text-red-600 hover:bg-red-100
                        dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                       disabled:opacity-50 disabled:cursor-wait">
-          Zor
-        </button>
+                       disabled:opacity-50 disabled:cursor-wait">Zor</button>
         <button @click="submitReview('orta')" :disabled="reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
                        dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                       disabled:opacity-50 disabled:cursor-wait">
-          Orta
-        </button>
+                       disabled:opacity-50 disabled:cursor-wait">Orta</button>
         <button @click="submitReview('kolay')" :disabled="reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
                        dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                       disabled:opacity-50 disabled:cursor-wait">
-          Kolay
-        </button>
+                       disabled:opacity-50 disabled:cursor-wait">Kolay</button>
       </div>
-
-    </div>{# end flashcard #}
-  </div>{# end section 1 #}
+    </div>
+  </div>
 
   {# ══════════════════════════════════════════════════════════════════════ #}
   {# SECTION 2: SORU EKLE                                                   #}
   {# ══════════════════════════════════════════════════════════════════════ #}
   <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-
-    {# Accordion header #}
     <button @click="addOpen = !addOpen"
             class="w-full flex items-center justify-between px-4 py-3.5 text-sm font-bold
                    text-[var(--heading)] hover:bg-[var(--surface-2)] transition-colors">
@@ -198,42 +154,31 @@
       </svg>
     </button>
 
-    {# Add form #}
     <div x-show="addOpen" x-cloak class="border-t border-[var(--border)] px-4 py-4 space-y-4">
 
-      {# TYT / AYT segmented toggle #}
+      {# TYT / AYT toggle #}
       <div>
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Sınav Türü</label>
         <div class="inline-flex bg-[var(--surface-3)] rounded-xl p-[3px] gap-[2px]">
           <button type="button"
                   @click="addExamType = 'TYT'; addSubjectId = ''; addTopicId = ''; addTopics = []"
-                  :class="addExamType === 'TYT'
-                    ? 'bg-steel-500 text-white shadow-sm'
-                    : 'text-[var(--muted)] hover:text-[var(--body)]'"
-                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">
-            TYT
-          </button>
+                  :class="addExamType === 'TYT' ? 'bg-steel-500 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">TYT</button>
           <button type="button"
                   @click="addExamType = 'AYT'; addSubjectId = ''; addTopicId = ''; addTopics = []"
-                  :class="addExamType === 'AYT'
-                    ? 'bg-steel-500 text-white shadow-sm'
-                    : 'text-[var(--muted)] hover:text-[var(--body)]'"
-                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">
-            AYT
-          </button>
+                  :class="addExamType === 'AYT' ? 'bg-steel-500 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--body)]'"
+                  class="px-5 py-1.5 rounded-lg text-sm font-bold transition-colors">AYT</button>
         </div>
       </div>
 
-      {# Subject pills — filtered by exam type #}
+      {# Subject pills #}
       <div>
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Ders *</label>
         <div class="flex flex-wrap gap-2">
           <template x-for="s in addSubjectOptions" :key="s.id">
             <button type="button"
                     @click="addSubjectId = String(s.id); loadTopics()"
-                    :class="addSubjectId === String(s.id)
-                      ? 'bg-steel-500 text-white'
-                      : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+                    :class="addSubjectId === String(s.id) ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
                     class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
                     x-text="s.name">
             </button>
@@ -241,11 +186,10 @@
         </div>
       </div>
 
-      {# Topic select (lazy-loaded) #}
+      {# Topic select #}
       <div x-show="addSubjectId" x-cloak>
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Konu (isteğe bağlı)</label>
-        <select x-model="addTopicId"
-                :disabled="addTopics.length === 0"
+        <select x-model="addTopicId" :disabled="addTopics.length === 0"
                 class="w-full h-10 px-3 rounded-xl text-sm border bg-[var(--surface-2)]
                        border-[var(--border)] text-[var(--body)] focus:outline-none
                        focus:ring-2 focus:ring-steel-400 disabled:opacity-50">
@@ -256,52 +200,38 @@
         </select>
       </div>
 
-      {# Input method selector #}
+      {# Question input method selector #}
       <div>
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Soru Giriş Yöntemi *</label>
         <div class="grid grid-cols-3 gap-2">
-          {# Camera #}
           <button type="button"
                   @click="addInputMode = 'camera'; addQText = ''; addQImgName = ''"
-                  :class="addInputMode === 'camera'
-                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
-                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  :class="addInputMode === 'camera' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
                   class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
             Fotoğraf Çek
           </button>
-          {# Gallery #}
           <button type="button"
                   @click="addInputMode = 'gallery'; addQText = ''; addQImgName = ''"
-                  :class="addInputMode === 'gallery'
-                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
-                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  :class="addInputMode === 'gallery' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
                   class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </svg>
             Galeriden Seç
           </button>
-          {# Text #}
           <button type="button"
                   @click="addInputMode = 'text'; addQImgName = ''; $nextTick(() => { ['q-camera-input','q-gallery-input'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); })"
-                  :class="addInputMode === 'text'
-                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
-                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  :class="addInputMode === 'text' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
                   class="flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors text-xs font-semibold">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="17" y1="10" x2="3" y2="10"/>
-              <line x1="21" y1="6" x2="3" y2="6"/>
-              <line x1="21" y1="14" x2="3" y2="14"/>
-              <line x1="17" y1="18" x2="3" y2="18"/>
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
             </svg>
             Metin Yaz
           </button>
@@ -313,11 +243,8 @@
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Fotoğraf çek</label>
         <input type="file" accept="image/*" capture="environment" id="q-camera-input"
                @change="addQImgName = $event.target.files[0]?.name || ''"
-               class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
-                      file:rounded-lg file:border-0 file:text-xs file:font-semibold
-                      file:bg-steel-500/15 file:text-steel-400
-                      hover:file:bg-steel-500/25 cursor-pointer">
-        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName"></p>
+               class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-steel-500/15 file:text-steel-400 hover:file:bg-steel-500/25 cursor-pointer">
+        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName + ' (sıkıştırılacak)'"></p>
       </div>
 
       {# Gallery input #}
@@ -325,11 +252,8 @@
         <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Galeriden görsel seç</label>
         <input type="file" accept="image/*" id="q-gallery-input"
                @change="addQImgName = $event.target.files[0]?.name || ''"
-               class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
-                      file:rounded-lg file:border-0 file:text-xs file:font-semibold
-                      file:bg-steel-500/15 file:text-steel-400
-                      hover:file:bg-steel-500/25 cursor-pointer">
-        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName"></p>
+               class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-steel-500/15 file:text-steel-400 hover:file:bg-steel-500/25 cursor-pointer">
+        <p x-show="addQImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addQImgName + ' (sıkıştırılacak)'"></p>
       </div>
 
       {# Text input #}
@@ -341,48 +265,53 @@
                          focus:ring-2 focus:ring-steel-400 resize-none"></textarea>
       </div>
 
-      {# Solution (optional) — image or text #}
+      {# Solution — three input modes #}
       <div x-show="addInputMode" x-cloak class="space-y-2">
         <label class="block text-xs font-semibold text-[var(--muted)]">Çözüm <span class="font-normal">(isteğe bağlı)</span></label>
-        <div class="flex gap-2">
+        <div class="grid grid-cols-3 gap-2">
           <button type="button"
-                  @click="addSolutionMode = addSolutionMode === 'image' ? '' : 'image'; addSText = ''; $nextTick(() => { const el = document.getElementById('s-img-input'); if (el) el.value = ''; addSImgName = ''; })"
-                  :class="addSolutionMode === 'image'
-                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
-                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
-                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors text-xs font-semibold">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  @click="addSolutionMode = addSolutionMode === 'camera' ? '' : 'camera'; addSText = ''; addSImgName = ''"
+                  :class="addSolutionMode === 'camera' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Fotoğraf
+          </button>
+          <button type="button"
+                  @click="addSolutionMode = addSolutionMode === 'gallery' ? '' : 'gallery'; addSText = ''; addSImgName = ''"
+                  :class="addSolutionMode === 'gallery' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </svg>
-            Görsel
+            Galeri
           </button>
           <button type="button"
-                  @click="addSolutionMode = addSolutionMode === 'text' ? '' : 'text'; addSImgName = ''; $nextTick(() => { const el = document.getElementById('s-img-input'); if (el) el.value = ''; })"
-                  :class="addSolutionMode === 'text'
-                    ? 'border-steel-500 bg-steel-500/10 text-steel-400'
-                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
-                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors text-xs font-semibold">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="17" y1="10" x2="3" y2="10"/>
-              <line x1="21" y1="6" x2="3" y2="6"/>
-              <line x1="21" y1="14" x2="3" y2="14"/>
-              <line x1="17" y1="18" x2="3" y2="18"/>
+                  @click="addSolutionMode = addSolutionMode === 'text' ? '' : 'text'; addSImgName = ''; $nextTick(() => { ['s-camera-input','s-gallery-input'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); })"
+                  :class="addSolutionMode === 'text' ? 'border-steel-500 bg-steel-500/10 text-steel-400' : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--muted)]'"
+                  class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-colors text-xs font-semibold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
             </svg>
             Metin
           </button>
         </div>
-        <div x-show="addSolutionMode === 'image'" x-cloak>
-          <input type="file" accept="image/*" id="s-img-input"
+        <div x-show="addSolutionMode === 'camera'" x-cloak>
+          <input type="file" accept="image/*" capture="environment" id="s-camera-input"
                  @change="addSImgName = $event.target.files[0]?.name || ''"
-                 class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4
-                        file:rounded-lg file:border-0 file:text-xs file:font-semibold
-                        file:bg-[var(--surface-3)] file:text-[var(--muted)]
-                        hover:file:bg-[var(--surface-2)] cursor-pointer">
-          <p x-show="addSImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addSImgName"></p>
+                 class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-3)] file:text-[var(--muted)] hover:file:bg-[var(--surface-2)] cursor-pointer">
+          <p x-show="addSImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addSImgName + ' (sıkıştırılacak)'"></p>
+        </div>
+        <div x-show="addSolutionMode === 'gallery'" x-cloak>
+          <input type="file" accept="image/*" id="s-gallery-input"
+                 @change="addSImgName = $event.target.files[0]?.name || ''"
+                 class="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-3)] file:text-[var(--muted)] hover:file:bg-[var(--surface-2)] cursor-pointer">
+          <p x-show="addSImgName" x-cloak class="text-xs text-[var(--muted-2)] mt-1" x-text="addSImgName + ' (sıkıştırılacak)'"></p>
         </div>
         <div x-show="addSolutionMode === 'text'" x-cloak>
           <textarea x-model="addSText" rows="3" placeholder="Çözüm açıklaması…"
@@ -394,9 +323,7 @@
 
       {# Notes #}
       <div>
-        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">
-          Not <span class="font-normal">(isteğe bağlı)</span>
-        </label>
+        <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5">Not <span class="font-normal">(isteğe bağlı)</span></label>
         <textarea x-model="addNotes" rows="2" placeholder="Bu soruya dair notlar..."
                   class="w-full px-3 py-2 rounded-xl text-sm border bg-[var(--surface-2)]
                          border-[var(--border)] text-[var(--body)] focus:outline-none
@@ -408,73 +335,42 @@
          class="text-xs font-semibold text-ruby-400 bg-ruby-500/10 border border-ruby-500/30
                 rounded-xl px-3 py-2" x-text="addError"></p>
 
-      {# Submit #}
       <button @click="submitAdd()" :disabled="addLoading"
               class="w-full py-3 rounded-xl text-sm font-bold transition-colors
-                     bg-steel-500 text-white hover:bg-steel-400
-                     disabled:opacity-50 disabled:cursor-wait">
+                     bg-steel-500 text-white hover:bg-steel-400 disabled:opacity-50 disabled:cursor-wait">
         <span x-show="!addLoading">Soruyu Kaydet</span>
         <span x-show="addLoading" x-cloak>Kaydediliyor…</span>
       </button>
 
     </div>
-  </div>{# end add form card #}
+  </div>
 
   {# ══════════════════════════════════════════════════════════════════════ #}
   {# SECTION 3: TÜM SORULARIM                                               #}
   {# ══════════════════════════════════════════════════════════════════════ #}
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
+
+    {# Header row — title + Filtrele button #}
+    <div class="flex items-center justify-between gap-2">
       <h2 class="text-sm font-bold text-[var(--heading)]">Tüm Sorularım</h2>
-      <span class="text-xs text-[var(--muted-2)] tabular-nums"
-            x-text="filteredQuestions.length + ' soru'"></span>
-    </div>
-
-    {# Subject filter pills #}
-    <div x-show="subjectFilterOptions.length > 1" x-cloak class="flex flex-wrap gap-2">
-      <button @click="subjectFilter = null"
-              :class="subjectFilter === null ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
-              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors">
-        Tümü
-      </button>
-      <template x-for="name in subjectFilterOptions" :key="name">
-        <button @click="subjectFilter = name"
-                :class="subjectFilter === name ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
-                class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
-                x-text="name">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-[var(--muted-2)] tabular-nums"
+              x-text="filteredQuestions.length + ' soru'"></span>
+        <button @click="filterSheetOpen = true"
+                x-show="allQuestions.length > 0 && subjectFilterOptions.length > 1" x-cloak
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                       border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-2)]
+                       transition-colors relative">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/>
+            <line x1="11" y1="18" x2="13" y2="18"/>
+          </svg>
+          Filtrele
+          <span x-show="subjectFilter !== null" x-cloak
+                class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-steel-400 border-2 border-[var(--surface-1)]"></span>
         </button>
-      </template>
-    </div>
-
-    {# Sort controls — #9, #10, #11 #}
-    <div x-show="allQuestions.length > 1" x-cloak class="flex gap-2 flex-wrap">
-      <button @click="sortMode = 'next_review'"
-              :class="sortMode === 'next_review' ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
-              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-        Yaklaşan Tekrar
-      </button>
-      <button @click="sortMode = 'hardest'"
-              :class="sortMode === 'hardest' ? 'bg-ruby-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
-              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="18 15 12 9 6 15"/>
-        </svg>
-        En Zorladıklarım
-      </button>
-      <button @click="sortMode = 'easiest'"
-              :class="sortMode === 'easiest' ? 'bg-emerald-600 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
-              class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-        En Kolaylarım
-      </button>
+      </div>
     </div>
 
     {# Empty state #}
@@ -492,13 +388,19 @@
       </div>
     </div>
 
+    {# No-match state (filter active but empty) #}
+    <div x-show="allQuestions.length > 0 && filteredQuestions.length === 0" x-cloak
+         class="py-8 text-center text-[var(--muted-2)] text-sm">
+      Bu filtre için soru bulunamadı.
+    </div>
+
     {# Questions list #}
     <div x-show="filteredQuestions.length > 0"
          class="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)]
                 divide-y divide-[var(--border)]">
       <template x-for="q in filteredQuestions" :key="q.id">
         <div class="flex items-center gap-3 px-4 py-3">
-          {# Thumbnail — image or text icon #}
+          {# Thumbnail #}
           <template x-if="q.question_image_url">
             <img :src="q.question_image_url" alt=""
                  class="w-14 h-14 rounded-xl object-cover shrink-0 border border-[var(--border)] bg-white">
@@ -508,39 +410,214 @@
                         flex items-center justify-center">
               <svg class="w-5 h-5 text-[var(--muted-2)]" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="17" y1="10" x2="3" y2="10"/>
-                <line x1="21" y1="6" x2="3" y2="6"/>
-                <line x1="21" y1="14" x2="3" y2="14"/>
-                <line x1="17" y1="18" x2="3" y2="18"/>
+                <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+                <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
               </svg>
             </div>
           </template>
           {# Info #}
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold text-[var(--heading)] leading-tight" x-text="q.subject_name"></div>
-            <div class="text-xs text-[var(--muted)] mt-0.5" x-text="q.topic_name || '—'"></div>
+            <div class="text-sm font-semibold text-[var(--heading)] leading-tight truncate" x-text="q.subject_name"></div>
+            <div class="text-xs text-[var(--muted)] mt-0.5 truncate" x-text="q.topic_name || '—'"></div>
             <div class="text-xs tabular-nums mt-1"
                  :class="isQuestionDue(q) ? 'text-ruby-400 font-semibold' : 'text-[var(--muted-2)]'"
                  x-text="formatNextReview(q.next_review_at)"></div>
           </div>
-          {# Delete button #}
-          <button @click="deleteQuestion(q.id)"
-                  class="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl
-                         text-[var(--muted-2)] hover:text-ruby-400 hover:bg-ruby-500/10
-                         transition-colors">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-            </svg>
-          </button>
+          {# Actions #}
+          <div class="flex items-center gap-1 shrink-0">
+            {# Early review / practice button #}
+            <button @click="openEarlyReview(q)"
+                    class="w-8 h-8 flex items-center justify-center rounded-xl
+                           text-[var(--muted-2)] hover:text-steel-400 hover:bg-steel-500/10
+                           transition-colors">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            {# Delete button #}
+            <button @click="deleteQuestion(q.id)"
+                    class="w-8 h-8 flex items-center justify-center rounded-xl
+                           text-[var(--muted-2)] hover:text-ruby-400 hover:bg-ruby-500/10
+                           transition-colors">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </template>
     </div>
 
-  </div>{# end section 3 #}
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# FILTER / SORT BOTTOM SHEET                                             #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="filterSheetOpen" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 flex items-end"
+       @keydown.escape.window="filterSheetOpen = false">
+
+    <div @click="filterSheetOpen = false"
+         class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+
+    <div x-show="filterSheetOpen"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full rounded-t-3xl shadow-2xl"
+         style="background:var(--surface-1);"
+         @click.stop>
+
+      <div class="flex justify-center pt-3 pb-2 cursor-pointer" @click="filterSheetOpen = false">
+        <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
+      </div>
+
+      <p class="px-6 pb-3 text-xs font-bold uppercase tracking-widest"
+         style="color:var(--muted-2);">Ders Filtrele</p>
+
+      <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+        <div class="flex flex-wrap gap-2">
+          <button @click="subjectFilter = null; filterSheetOpen = false"
+                  :class="subjectFilter === null ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+                  class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors">
+            Tümü
+          </button>
+          <template x-for="name in subjectFilterOptions" :key="name">
+            <button @click="subjectFilter = name; filterSheetOpen = false"
+                    :class="subjectFilter === name ? 'bg-steel-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+                    class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+                    x-text="name">
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# EARLY REVIEW OVERLAY                                                   #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="earlyReviewOpen" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 flex items-end"
+       @keydown.escape.window="closeEarlyReview()">
+
+    <div @click="closeEarlyReview()"
+         class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+
+    <div x-show="earlyReviewOpen"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         class="relative w-full max-h-[90vh] overflow-y-auto rounded-t-3xl shadow-2xl"
+         style="background:var(--surface-1);"
+         @click.stop>
+
+      <div class="sticky top-0 flex justify-center pt-3 pb-2 cursor-pointer"
+           style="background:var(--surface-1);"
+           @click="closeEarlyReview()">
+        <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
+      </div>
+
+      <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] space-y-4">
+
+        {# Subject / topic / next review #}
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-[var(--muted)]" x-text="earlyReviewQ?.subject_name"></span>
+          <span x-show="earlyReviewQ?.topic_name" x-cloak
+                class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
+                x-text="earlyReviewQ?.topic_name"></span>
+          <span class="ml-auto text-xs text-[var(--muted-2)]"
+                x-text="formatNextReview(earlyReviewQ?.next_review_at)"></span>
+        </div>
+
+        {# Question #}
+        <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
+          <template x-if="earlyReviewQ?.question_image_url">
+            <img :src="earlyReviewQ.question_image_url" alt="Soru görseli"
+                 class="w-full object-contain max-h-80 bg-white">
+          </template>
+          <template x-if="!earlyReviewQ?.question_image_url">
+            <div class="px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                 x-text="earlyReviewQ?.question_text"></div>
+          </template>
+        </div>
+
+        {# Solution toggle #}
+        <button @click="earlyReviewShowSolution = !earlyReviewShowSolution"
+                class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
+                       border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
+          <span x-show="!earlyReviewShowSolution">Çözümü Göster</span>
+          <span x-show="earlyReviewShowSolution" x-cloak>Çözümü Gizle</span>
+        </button>
+
+        <div x-show="earlyReviewShowSolution" x-cloak class="space-y-2">
+          <template x-if="earlyReviewQ?.solution_image_url">
+            <img :src="earlyReviewQ.solution_image_url" alt="Çözüm"
+                 class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white">
+          </template>
+          <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
+            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                 x-text="earlyReviewQ.solution_text"></div>
+          </template>
+          <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
+            <p class="text-xs text-center text-[var(--muted-2)] italic py-2">Çözüm eklenmemiş.</p>
+          </template>
+        </div>
+
+        {# Optional rating #}
+        <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+          <p class="text-xs font-semibold text-[var(--muted)] text-center">Bugün Tekrar Ettim</p>
+          <div class="flex gap-2">
+            <button @click="submitEarlyReview('zor')" :disabled="earlyReviewLoading"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                           dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                           disabled:opacity-50 disabled:cursor-wait">Zor</button>
+            <button @click="submitEarlyReview('orta')" :disabled="earlyReviewLoading"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                           dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                           disabled:opacity-50 disabled:cursor-wait">Orta</button>
+            <button @click="submitEarlyReview('kolay')" :disabled="earlyReviewLoading"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                           dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                           disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+          </div>
+          <button @click="closeEarlyReview()"
+                  class="w-full py-2.5 rounded-xl text-xs font-medium text-[var(--muted-2)]
+                         hover:text-[var(--muted)] hover:bg-[var(--surface-3)] transition-colors">
+            Şimdilik Kapat — puanlama yok
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -556,78 +633,77 @@ function struggleApp(cfg) {
     reviewUrl:      cfg.reviewUrl,
     topicsApiUrl:   cfg.topicsApiUrl,
 
-    // ── Review state ────────────────────────────────────────────────────
+    // ── Review state ─────────────────────────────────────────────────────
     reviewIdx:      0,
     showSolution:   false,
     reviewDone:     false,
     reviewing:      false,
 
     // ── Add form state ───────────────────────────────────────────────────
-    addOpen:        false,
-    addExamType:    'TYT',
-    addSubjectId:   '',
-    addTopicId:     '',
-    addTopics:      [],
-    addInputMode:   '',
-    addQText:       '',
+    addOpen:         false,
+    addExamType:     'TYT',
+    addSubjectId:    '',
+    addTopicId:      '',
+    addTopics:       [],
+    addInputMode:    '',
+    addQText:        '',
     addSolutionMode: '',
-    addSText:       '',
-    addNotes:       '',
-    addQImgName:    '',
-    addSImgName:    '',
-    addLoading:     false,
-    addError:       '',
+    addSText:        '',
+    addNotes:        '',
+    addQImgName:     '',
+    addSImgName:     '',
+    addLoading:      false,
+    addError:        '',
 
-    // ── List state ───────────────────────────────────────────────────────
-    subjectFilter:  null,
-    sortMode:       'next_review',
+    // ── List + filter state ───────────────────────────────────────────────
+    subjectFilter:   null,
+    filterSheetOpen: false,
 
-    // ── Computed ────────────────────────────────────────────────────────
-    get currentQuestion() {
-      return this.dueQueue[this.reviewIdx] || null;
-    },
+    // ── Early review state ────────────────────────────────────────────────
+    earlyReviewOpen:         false,
+    earlyReviewQ:            null,
+    earlyReviewShowSolution: false,
+    earlyReviewLoading:      false,
+
+    // ── Computed ─────────────────────────────────────────────────────────
+    get currentQuestion() { return this.dueQueue[this.reviewIdx] || null; },
     get addSubjectOptions() {
       return this.addExamType === 'TYT' ? this.tytSubjects : this.aytSubjects;
     },
     get subjectFilterOptions() {
-      const seen = new Set();
-      const names = [];
+      const seen = new Set(); const names = [];
       for (const q of this.allQuestions) {
         if (!seen.has(q.subject_name)) { seen.add(q.subject_name); names.push(q.subject_name); }
       }
       return names.sort();
     },
     get filteredQuestions() {
-      let qs = this.subjectFilter
+      const qs = this.subjectFilter
         ? this.allQuestions.filter(q => q.subject_name === this.subjectFilter)
         : [...this.allQuestions];
-      if (this.sortMode === 'hardest') {
-        qs.sort((a, b) => a.ease_factor - b.ease_factor);
-      } else if (this.sortMode === 'easiest') {
-        qs.sort((a, b) => b.ease_factor - a.ease_factor);
-      }
-      // sortMode === 'next_review': server already sorted by next_review_at ASC
+      qs.sort((a, b) => {
+        if (!a.next_review_at) return 1;
+        if (!b.next_review_at) return -1;
+        return new Date(a.next_review_at) - new Date(b.next_review_at);
+      });
       return qs;
     },
 
-    // ── Review flow ──────────────────────────────────────────────────────
+    // ── Due review flow ──────────────────────────────────────────────────
     async submitReview(quality) {
       if (this.reviewing || !this.currentQuestion) return;
       this.reviewing = true;
       try {
         const resp = await fetch(this.reviewUrl, {
-          method:  'POST',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
           body: JSON.stringify({ question_id: this.currentQuestion.id, quality }),
         });
         if (resp.ok) {
           const data = await resp.json();
           if (data.ok) {
-            // Update allQuestions in place so next_review_at reflects new schedule
             const idx = this.allQuestions.findIndex(q => q.id === this.currentQuestion.id);
-            if (idx !== -1) {
-              this.allQuestions[idx].next_review_at = data.next_review_at;
-            }
+            if (idx !== -1) this.allQuestions[idx].next_review_at = data.next_review_at;
             this.dueQueue.splice(this.reviewIdx, 1);
             this.showSolution = false;
             if (this.reviewIdx >= this.dueQueue.length) {
@@ -640,30 +716,58 @@ function struggleApp(cfg) {
       finally { this.reviewing = false; }
     },
 
+    // ── Early review ─────────────────────────────────────────────────────
+    openEarlyReview(q) {
+      this.earlyReviewQ = q;
+      this.earlyReviewShowSolution = false;
+      this.earlyReviewOpen = true;
+    },
+    closeEarlyReview() {
+      this.earlyReviewOpen = false;
+      this.earlyReviewQ = null;
+      this.earlyReviewShowSolution = false;
+    },
+    async submitEarlyReview(quality) {
+      if (this.earlyReviewLoading || !this.earlyReviewQ) return;
+      this.earlyReviewLoading = true;
+      try {
+        const resp = await fetch(this.reviewUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+          body: JSON.stringify({ question_id: this.earlyReviewQ.id, quality }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.ok) {
+            const idx = this.allQuestions.findIndex(q => q.id === this.earlyReviewQ.id);
+            if (idx !== -1) this.allQuestions[idx].next_review_at = data.next_review_at;
+            this.closeEarlyReview();
+          }
+        }
+      } catch (e) { console.error('[struggle.submitEarlyReview]', e); }
+      finally { this.earlyReviewLoading = false; }
+    },
+
     // ── Add form ─────────────────────────────────────────────────────────
     async loadTopics() {
-      this.addTopicId = '';
-      this.addTopics  = [];
+      this.addTopicId = ''; this.addTopics = [];
       if (!this.addSubjectId) return;
       try {
         const resp = await fetch(`${this.topicsApiUrl}?subject_id=${this.addSubjectId}`);
-        if (resp.ok) {
-          const data = await resp.json();
-          this.addTopics = data.topics;
-        }
+        if (resp.ok) { const data = await resp.json(); this.addTopics = data.topics; }
       } catch (e) { console.error('[struggle.loadTopics]', e); }
     },
 
     async submitAdd() {
       this.addError = '';
       if (!this.addSubjectId) { this.addError = 'Lütfen bir ders seçin.'; return; }
-      if (!this.addInputMode) { this.addError = 'Lütfen soru giriş yöntemi seçin.'; return; }
+      if (!this.addInputMode)  { this.addError = 'Lütfen soru giriş yöntemi seçin.'; return; }
 
       const isImgMode = this.addInputMode === 'camera' || this.addInputMode === 'gallery';
-      const imgInputId = this.addInputMode === 'camera' ? 'q-camera-input' : 'q-gallery-input';
-      const qImg = isImgMode ? document.getElementById(imgInputId)?.files?.[0] : null;
+      const qImgId = this.addInputMode === 'camera' ? 'q-camera-input' : 'q-gallery-input';
+      const qImgRaw = isImgMode ? document.getElementById(qImgId)?.files?.[0] : null;
 
-      if (isImgMode && !qImg) { this.addError = 'Soru görseli seçilmedi.'; return; }
+      if (isImgMode && !qImgRaw) { this.addError = 'Soru görseli seçilmedi.'; return; }
       if (this.addInputMode === 'text' && !this.addQText.trim()) {
         this.addError = 'Soru metni boş olamaz.'; return;
       }
@@ -674,14 +778,25 @@ function struggleApp(cfg) {
         fd.append('subject_id', this.addSubjectId);
         if (this.addTopicId) fd.append('topic_id', this.addTopicId);
         fd.append('notes', this.addNotes);
-        if (qImg) fd.append('question_image', qImg);
 
+        if (qImgRaw) {
+          const compressed = await this.compressImage(qImgRaw);
+          fd.append('question_image', compressed, 'question.jpg');
+        }
         if (this.addInputMode === 'text') fd.append('question_text', this.addQText.trim());
 
-        const sImg = document.getElementById('s-img-input')?.files?.[0];
-        if (sImg) fd.append('solution_image', sImg);
-        if (this.addSText.trim()) fd.append('solution_text', this.addSText.trim());
-
+        const isSImgMode = this.addSolutionMode === 'camera' || this.addSolutionMode === 'gallery';
+        if (isSImgMode) {
+          const sImgId = this.addSolutionMode === 'camera' ? 's-camera-input' : 's-gallery-input';
+          const sImgRaw = document.getElementById(sImgId)?.files?.[0];
+          if (sImgRaw) {
+            const compressed = await this.compressImage(sImgRaw);
+            fd.append('solution_image', compressed, 'solution.jpg');
+          }
+        }
+        if (this.addSolutionMode === 'text' && this.addSText.trim()) {
+          fd.append('solution_text', this.addSText.trim());
+        }
         fd.append('csrfmiddlewaretoken', this._csrf());
 
         const resp = await fetch(this.addUrl, { method: 'POST', body: fd });
@@ -698,28 +813,43 @@ function struggleApp(cfg) {
       } catch (e) {
         this.addError = 'Bağlantı hatası.';
         console.error('[struggle.submitAdd]', e);
-      } finally {
-        this.addLoading = false;
-      }
+      } finally { this.addLoading = false; }
     },
 
     _resetAddForm() {
-      this.addSubjectId    = '';
-      this.addTopicId      = '';
-      this.addTopics       = [];
-      this.addNotes        = '';
-      this.addInputMode    = '';
-      this.addQText        = '';
-      this.addSolutionMode = '';
-      this.addSText        = '';
-      this.addQImgName     = '';
-      this.addSImgName     = '';
-      const qc = document.getElementById('q-camera-input');
-      if (qc) qc.value = '';
-      const qg = document.getElementById('q-gallery-input');
-      if (qg) qg.value = '';
-      const si = document.getElementById('s-img-input');
-      if (si) si.value = '';
+      this.addSubjectId = ''; this.addTopicId = ''; this.addTopics = [];
+      this.addNotes = ''; this.addInputMode = ''; this.addQText = '';
+      this.addSolutionMode = ''; this.addSText = '';
+      this.addQImgName = ''; this.addSImgName = '';
+      ['q-camera-input','q-gallery-input','s-camera-input','s-gallery-input'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+    },
+
+    // ── Client-side image compression (#4) ───────────────────────────────
+    // Draws the image onto an off-screen canvas capped at maxDim px on the
+    // longest side, then re-encodes as JPEG at the given quality.
+    // Dramatically reduces upload size for phone camera images (often 10-15 MB
+    // originals → ~150-400 KB after compression).
+    compressImage(file, maxDim = 1600, quality = 0.8) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else        { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality);
+        };
+        img.onerror = () => resolve(file);
+        img.src = url;
+      });
     },
 
     // ── Delete ────────────────────────────────────────────────────────────
@@ -727,8 +857,7 @@ function struggleApp(cfg) {
       if (!confirm('Bu soruyu silmek istediğinize emin misiniz?')) return;
       try {
         const resp = await fetch(`/student/konu-takip/sorularim/${id}/delete/`, {
-          method:  'POST',
-          headers: { 'X-CSRFToken': this._csrf() },
+          method: 'POST', headers: { 'X-CSRFToken': this._csrf() },
         });
         if (resp.ok) {
           this.allQuestions = this.allQuestions.filter(q => q.id !== id);
@@ -745,8 +874,7 @@ function struggleApp(cfg) {
     },
     formatNextReview(isoStr) {
       if (!isoStr) return '—';
-      const d = new Date(isoStr);
-      const now = new Date();
+      const d = new Date(isoStr); const now = new Date();
       const diffMs = d.getTime() - now.getTime();
       if (diffMs <= 0) {
         const daysLate = Math.floor(-diffMs / 86400000);

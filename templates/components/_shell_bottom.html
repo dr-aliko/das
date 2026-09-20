@@ -11,7 +11,7 @@
     {% include "components/_shell_tab.html" with href="/student/tasks/" label="Görevler" icon="das-icon-task" %}
     {% include "components/_shell_tab.html" with href="/brans/" label="Branş" icon="das-icon-trending-up" %}
     <button type="button" @click="open = true"
-            class="das-nav-tab {% if '/student/konu-takip' in request.path or '/profil' in request.path %}active{% endif %}">
+            class="das-nav-tab {% if '/student/konu-takip' in request.path or '/student/konu-takip/sorularim' in request.path or '/profil' in request.path %}active{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
            aria-hidden="true">
@@ -80,7 +80,7 @@
         {% if user.is_student %}
         <a href="/student/konu-takip/" @click="open = false"
            class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
-                  {% if '/student/konu-takip' in request.path %}
+                  {% if '/student/konu-takip' in request.path and '/sorularim' not in request.path %}
                     text-[var(--primary)] font-semibold
                   {% else %}
                     text-[var(--body)] hover:bg-[var(--surface-2)]
@@ -90,7 +90,28 @@
             <use href="#das-icon-book"/>
           </svg>
           <span class="text-sm font-medium">Konu Takip</span>
-          {% if '/student/konu-takip' in request.path %}
+          {% if '/student/konu-takip' in request.path and '/sorularim' not in request.path %}
+          <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
+               stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13l4 4L19 7"/>
+          </svg>
+          {% endif %}
+        </a>
+        <a href="/student/konu-takip/sorularim/" @click="open = false"
+           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:scale-[0.98]
+                  {% if '/sorularim' in request.path %}
+                    text-[var(--primary)] font-semibold
+                  {% else %}
+                    text-[var(--body)] hover:bg-[var(--surface-2)]
+                  {% endif %}">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="text-sm font-medium">Sorularım</span>
+          {% if '/sorularim' in request.path %}
           <svg class="w-4 h-4 ml-auto shrink-0" fill="none" stroke="currentColor"
                stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 13l4 4L19 7"/>
