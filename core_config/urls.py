@@ -6,6 +6,7 @@ from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
 from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update, panel_odemeler_view, panel_davetler_view, panel_ogrenciler_view, panel_student_unlink, panel_fee_tier_add, panel_fee_tier_update, panel_fee_tier_delete, panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink, profil_wp_availability
+from struggle_app.views import CoachStruggleStatsView
 
 urlpatterns = [
     path('healthz/', healthz_view, name='healthz'),
@@ -32,6 +33,7 @@ urlpatterns = [
     path('coach/konu-takip/', include('konu_takip_app.urls', namespace='konu_takip')),
     path('student/konu-takip/', include('konu_takip_app.student_urls', namespace='student_konu_takip')),
     path('student/konu-takip/sorularim/', include('struggle_app.urls', namespace='struggle')),
+    path('coach/sorularim/', CoachStruggleStatsView.as_view(), name='coach_sorularim'),
     path('brans/', brans_hub_student, name='brans_hub'),
     path('brans/api/', brans_hub_api, name='brans_hub_api'),
     path('brans/report/', brans_hub_export, name='brans_hub_export'),

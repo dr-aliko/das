@@ -209,13 +209,12 @@ class StudentStruggleTopicsApiView(View):
         return JsonResponse({'topics': topics})
 
 
-# ── Coach read-only stats view ────────────────────────────────────────────────
+# ── Coach read-only stats ─────────────────────────────────────────────────────
 
 def coach_struggle_stats(coach, student):
     """
     Return aggregate struggle stats for one student as a list of dicts,
-    sorted by subject name. Used by CoachKonuTakipView template.
-    No image URLs or individual question access — aggregates only.
+    sorted by subject name. Aggregate-only: no images, no individual questions.
     """
     from django.db.models import Count, Q
 
@@ -231,3 +230,82 @@ def coach_struggle_stats(coach, student):
         .order_by('subject__name')
     )
     return list(rows)
+
+
+@method_decorator(coach_required, name='dispatch')
+class CoachStruggleStatsView(View):
+    """Standalone coach page — aggregate struggle-question stats per subject + topic."""
+
+    def get(self, request):
+        from django.db.models import Count, Q
+        from users_app.models import CoachStudent, User
+
+        active_ids = (
+            CoachStudent.objects
+            .filter(coach=request.user, active=True)
+            .values_list('student_id', flat=True)
+        )
+        coached_students = list(
+            User.objects.filter(role='student', id__in=active_ids).order_by('full_name')
+        )
+
+        selected_student = None
+        try:
+            sid = int(request.GET.get('student', 0))
+            if sid and coach_can_view_student(request.user, sid):
+                selected_student = User.objects.get(id=sid, role='student')
+        except (ValueError, User.DoesNotExist):
+            pass
+        if not selected_student and coached_students:
+            selected_student = coached_students[0]
+
+        stats = []
+        total_q = total_due = 0
+
+        if selected_student:
+            now = timezone.now()
+            qs_base = StudentStruggleQuestion.objects.filter(student=selected_student)
+
+            subject_rows = list(
+                qs_base
+                .values('subject__name')
+                .annotate(
+                    total=Count('id'),
+                    due=Count('id', filter=Q(next_review_at__lte=now)),
+                )
+                .order_by('subject__name')
+            )
+
+            # Topic breakdown — one extra query, merged in Python
+            topic_rows = (
+                qs_base
+                .values('subject__name', 'topic__name')
+                .annotate(
+                    total=Count('id'),
+                    due=Count('id', filter=Q(next_review_at__lte=now)),
+                )
+                .order_by('subject__name', 'topic__name')
+            )
+            topic_map = {}
+            for tr in topic_rows:
+                subj = tr['subject__name']
+                topic_map.setdefault(subj, []).append({
+                    'name':  tr['topic__name'] or 'Konu belirtilmemiş',
+                    'total': tr['total'],
+                    'due':   tr['due'],
+                })
+
+            for row in subject_rows:
+                row['topics'] = topic_map.get(row['subject__name'], [])
+
+            stats     = subject_rows
+            total_q   = sum(r['total'] for r in stats)
+            total_due = sum(r['due']   for r in stats)
+
+        return render(request, 'struggle/coach_stats.html', {
+            'students':         coached_students,
+            'selected_student': selected_student,
+            'struggle_stats':   stats,
+            'total_questions':  total_q,
+            'total_due':        total_due,
+        })

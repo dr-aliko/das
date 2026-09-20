@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Sorularım — Vagus{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-3 sm:px-4 pb-28 lg:pb-10 pt-4 space-y-4">
+
+  {# ── Page header ─────────────────────────────────────────────────────── #}
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5 text-ruby-400 shrink-0" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h1 class="text-lg font-bold text-[var(--heading)]">Zorlandığım Sorular</h1>
+  </div>
+
+  {# ── No students yet ──────────────────────────────────────────────────── #}
+  {% if not students %}
+  <div class="text-center py-20 text-[var(--muted)]">
+    <p class="text-sm">Henüz aktif öğrenci eklenmemiş.</p>
+  </div>
+
+  {% else %}
+
+  {# ── Student selector ─────────────────────────────────────────────────── #}
+  <div>
+    <select onchange="
+        const url = new window.URL(window.location.href);
+        url.searchParams.set('student', this.value);
+        window.location.href = url.toString();"
+            class="w-full sm:w-72 bg-[var(--surface-2)] border border-[var(--border)]
+                   text-[var(--heading)] rounded-xl px-4 py-2.5 text-sm font-medium
+                   focus:outline-none focus:ring-2 focus:ring-steel-400 transition-colors">
+      {% for s in students %}
+      <option value="{{ s.id }}"
+              {% if selected_student and selected_student.id == s.id %}selected{% endif %}>
+        {{ s.full_name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# ── No data for this student ─────────────────────────────────────────── #}
+  {% if selected_student and not struggle_stats %}
+  <div class="flex flex-col items-center gap-3 py-16 text-center text-[var(--muted)]">
+    <svg class="w-10 h-10 opacity-30" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <div>
+      <p class="text-sm font-medium mb-1">Kayıtlı soru yok</p>
+      <p class="text-xs text-[var(--muted-2)]">{{ selected_student.full_name }} henüz soru kaydetmemiş.</p>
+    </div>
+  </div>
+
+  {# ── Stats table with expandable topic breakdown ───────────────────────── #}
+  {% elif selected_student and struggle_stats %}
+  <div class="space-y-3">
+
+    {# Summary chips #}
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                   bg-[var(--surface-2)] text-[var(--muted)]">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ total_questions }} soru
+      </span>
+      {% if total_due > 0 %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                   bg-ruby-500/10 text-ruby-400 border border-ruby-500/20">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        {{ total_due }} tekrar bekliyor
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                   bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        Tekrar bekleyen yok
+      </span>
+      {% endif %}
+    </div>
+
+    {# Column headers #}
+    <div class="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)]">
+
+      <div class="grid grid-cols-3 px-4 py-2.5 bg-[var(--surface-2)] border-b border-[var(--border)]">
+        <span class="text-xs font-semibold text-[var(--muted)]">Ders / Konu</span>
+        <span class="text-xs font-semibold text-[var(--muted)] text-right">Toplam</span>
+        <span class="text-xs font-semibold text-[var(--muted)] text-right">Bekleyen</span>
+      </div>
+
+      {# Per-subject rows — each expandable to show topics #}
+      {% for row in struggle_stats %}
+      <div x-data="{ open: false }"
+           class="border-b border-[var(--border)] last:border-b-0">
+
+        {# Subject summary row — click to expand #}
+        <button type="button"
+                @click="open = !open"
+                class="w-full grid grid-cols-3 items-center px-4 py-3 text-left
+                       hover:bg-[var(--surface-2)] transition-colors"
+                :class="open ? 'bg-[var(--surface-2)]' : ''">
+          <span class="flex items-center gap-2 min-w-0">
+            <svg class="w-3 h-3 text-[var(--muted-2)] shrink-0 transition-transform"
+                 :class="open ? 'rotate-90' : ''"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span class="text-sm font-medium text-[var(--body)] truncate">{{ row.subject__name }}</span>
+          </span>
+          <span class="text-sm tabular-nums text-right text-[var(--muted)]">{{ row.total }}</span>
+          <span class="text-sm tabular-nums text-right font-semibold
+                       {% if row.due > 0 %}text-ruby-400{% else %}text-[var(--muted)]{% endif %}">
+            {{ row.due }}
+          </span>
+        </button>
+
+        {# Topic breakdown — visible when expanded #}
+        <div x-show="open" x-cloak
+             class="border-t border-[var(--border)] divide-y divide-[var(--border)]"
+             style="background:var(--surface-2);">
+          {% for t in row.topics %}
+          <div class="grid grid-cols-3 items-center px-4 py-2.5 pl-10">
+            <span class="text-xs text-[var(--muted)] truncate pr-2">{{ t.name }}</span>
+            <span class="text-xs tabular-nums text-right text-[var(--muted-2)]">{{ t.total }}</span>
+            <span class="text-xs tabular-nums text-right font-medium
+                         {% if t.due > 0 %}text-ruby-400{% else %}text-[var(--muted-2)]{% endif %}">
+              {{ t.due }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+      {% endfor %}
+
+      {# Totals footer #}
+      <div class="grid grid-cols-3 items-center px-4 py-2.5 bg-[var(--surface-2)]
+                  border-t border-[var(--border)]">
+        <span class="text-xs font-bold text-[var(--muted)]">Toplam</span>
+        <span class="text-xs font-bold tabular-nums text-right text-[var(--muted)]">{{ total_questions }}</span>
+        <span class="text-xs font-bold tabular-nums text-right
+                     {% if total_due > 0 %}text-ruby-400{% else %}text-[var(--muted)]{% endif %}">
+          {{ total_due }}
+        </span>
+      </div>
+
+    </div>
+
+    <p class="text-xs text-[var(--muted-2)] text-center">
+      Yalnızca özet istatistikler görüntülenmektedir — soru içeriği görünmez.
+    </p>
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+</div>
+{% endblock %}

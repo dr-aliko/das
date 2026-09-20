@@ -343,13 +343,19 @@ class CoachStatsTests(TestCase):
         CoachStudent.objects.create(coach=self.coach, student=self.student,
                                     source='vagus', active=True)
         self.subject = _make_subject('TYT Biyoloji')
-        # Create 3 questions: 2 due, 1 not yet due
-        _create_question(self.student, self.subject)
-        _create_question(self.student, self.subject)
-        future_q = _create_question(self.student, self.subject)
+        self.topic_a = KonuTakipTopic.objects.create(
+            subject=self.subject, name='Hücre', order=1, checkable=True
+        )
+        self.topic_b = KonuTakipTopic.objects.create(
+            subject=self.subject, name='Genetik', order=2, checkable=True
+        )
+        # 2 questions with topic_a (1 due, 1 not due), 1 question with no topic (due)
         from datetime import timedelta
-        future_q.next_review_at = timezone.now() + timedelta(days=7)
-        future_q.save(update_fields=['next_review_at'])
+        q1 = _create_question(self.student, self.subject, topic=self.topic_a)
+        q2 = _create_question(self.student, self.subject, topic=self.topic_a)
+        q2.next_review_at = timezone.now() + timedelta(days=7)
+        q2.save(update_fields=['next_review_at'])
+        _create_question(self.student, self.subject, topic=None)
 
     def test_15_coach_stats_correct_counts(self):
         print('\n' + '='*60)
@@ -366,6 +372,51 @@ class CoachStatsTests(TestCase):
         self.assertNotIn('question_image_url', row)
         self.assertNotIn('id', row)
         print('  PASS')
+
+    def test_37_coach_sorularim_topic_breakdown(self):
+        """
+        /coach/sorularim/ page must:
+        - Return 200 for an authorised coach
+        - Include topic-level breakdown in context (via CoachStruggleStatsView)
+        - Show correct topic names and counts, no question content
+        """
+        print('\n' + '='*60)
+        print('TEST 37: Coach sorularim page — topic breakdown')
+        print('='*60)
+        c = Client()
+        c.login(username='coach_stats@test.com', password='testpass123')
+        resp = c.get(f'/coach/sorularim/?student={self.student.id}')
+        self.assertEqual(resp.status_code, 200)
+
+        stats = resp.context['struggle_stats']
+        self.assertEqual(len(stats), 1)
+        row = stats[0]
+
+        # Subject-level totals correct
+        self.assertEqual(row['total'], 3)
+        self.assertEqual(row['due'], 2)
+
+        # Topic breakdown attached
+        self.assertIn('topics', row, 'topics key must be present on each subject row')
+        topics = {t['name']: t for t in row['topics']}
+        print(f'  topics: {list(topics.keys())}')
+
+        # topic_a: 2 questions (1 due)
+        self.assertIn('Hücre', topics)
+        self.assertEqual(topics['Hücre']['total'], 2)
+        self.assertEqual(topics['Hücre']['due'], 1)
+
+        # no-topic questions grouped as 'Konu belirtilmemiş'
+        self.assertIn('Konu belirtilmemiş', topics)
+        self.assertEqual(topics['Konu belirtilmemiş']['total'], 1)
+        self.assertEqual(topics['Konu belirtilmemiş']['due'], 1)
+
+        # Privacy: no image URLs, no question text, no IDs in any topic entry
+        for t in row['topics']:
+            self.assertNotIn('question_image_url', t)
+            self.assertNotIn('question_text', t)
+            self.assertNotIn('id', t)
+        print('  topic counts correct, no content leaked  PASS')
 
 
 class OwnershipTests(TestCase):
