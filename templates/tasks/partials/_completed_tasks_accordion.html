@@ -44,8 +44,14 @@
               </template>
             </div>
             <template x-if="task.raw.student_note">
-              <div class="text-[9px] text-[var(--muted-2)] italic mt-0.5 truncate"
-                   x-text="task.raw.student_note"></div>
+              <div x-data="{ noteExp: false }" class="mt-0.5">
+                <div class="text-[9px] text-[var(--muted-2)] italic"
+                     :class="noteExp ? '' : 'line-clamp-2'"
+                     x-text="task.raw.student_note"></div>
+                <button x-show="!noteExp && task.raw.student_note && task.raw.student_note.length > 60"
+                        @click.stop="noteExp = true"
+                        class="text-[8px] text-[var(--primary)] hover:underline">devamını gör</button>
+              </div>
             </template>
           </div>
         </div>

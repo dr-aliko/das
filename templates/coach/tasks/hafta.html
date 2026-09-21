@@ -457,8 +457,14 @@
                        class="text-[10px] text-emerald-400 tnum"
                        x-text="'✓ ' + fmtDk(g.time_spent_dk) + ' harcandı'"></div>
                   <div x-show="g.student_note"
-                       class="text-[10px] text-[var(--muted-2)] italic truncate"
-                       x-text="g.student_note"></div>
+                       x-data="{ noteExp: false }"
+                       class="text-[10px] text-[var(--muted-2)] italic">
+                    <span :class="noteExp ? '' : 'line-clamp-2'"
+                          x-text="g.student_note"></span>
+                    <button x-show="!noteExp && g.student_note && g.student_note.length > 60"
+                            @click.stop="noteExp = true"
+                            class="text-[9px] text-[var(--primary)] hover:underline block mt-0.5">devamını gör</button>
+                  </div>
                 </div>
               </div>
 
