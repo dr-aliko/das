@@ -1,119 +1,211 @@
-{# Phase 7.2 — Desktop-only app bar. hidden md:block keeps mobile untouched. #}
-<header class="hidden md:block sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface-1)]/90 backdrop-blur">
-  <div class="mx-auto max-w-page h-14 px-6 flex items-center">
+{# Phase 8.1 — Desktop left sidebar with collapse toggle. hidden md:flex keeps mobile untouched. #}
+<aside class="das-sidebar hidden md:flex flex-col fixed left-0 top-0 h-full z-30
+              bg-[var(--surface-1)] border-r border-[var(--border)]">
 
-    {# ── Brand logo ─────────────────────────────────────────────────────── #}
-    <a href="/" class="flex items-center gap-2 text-[var(--heading)] font-semibold tracking-tight shrink-0">
-      <svg class="w-7 h-7 text-steel-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
-      Vagus
+  {# ── Brand + notification bell + collapse toggle ──────────────────────── #}
+  <div class="das-brand-header h-14 px-3 flex items-center gap-1 shrink-0 border-b border-[var(--border)]">
+    <a href="/"
+       class="flex items-center gap-2 text-[var(--heading)] font-semibold tracking-tight
+              hover:text-[var(--heading)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400 rounded pl-1 min-w-0 flex-1">
+      <svg class="w-7 h-7 text-steel-400 shrink-0" xmlns="http://www.w3.org/2000/svg"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus">
+        <path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/>
+      </svg>
+      <span class="das-brand-text">Vagus</span>
     </a>
 
-    {# ── Primary navigation ─────────────────────────────────────────────── #}
-    <nav class="ml-10 flex items-center gap-1 text-sm bg-[var(--surface-2)] rounded-xl px-1.5 py-1" aria-label="Ana menü">
+    <div class="das-bell-wrap shrink-0">
       {% if user.is_student %}
-
-        <a href="/student/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if request.path == '/student/' %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Panel</a>
-
-        <a href="/student/denemeler/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/student/denemeler' in request.path or '/student/exam' in request.path or '/student/karsilastir' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Denemeler</a>
-
-        <a href="/student/tasks/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/student/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Görevler</a>
-
-        <a href="/brans/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Branş</a>
-
-        <a href="/student/konu-takip/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/student/konu-takip' in request.path and '/sorularim' not in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Konu Takip</a>
-
-        <a href="/student/konu-takip/sorularim/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Sorularım</a>
-
-        <a href="/profil/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Profil</a>
-
-      {% else %}
-
-        <a href="/coach/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if request.path == '/coach/' or '/coach/student' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Öğrenciler</a>
-
-        <a href="/coach/denemeler/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/denemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Denemeler</a>
-
-        <a href="/coach/tasks/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Görevler</a>
-
-        <a href="/coach/brans/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Branş</a>
-
-        <a href="/coach/konu-takip/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/konu-takip' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Konu Takip</a>
-
-        <a href="/coach/sorularim/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Sorularım</a>
-
-        <a href="{% if user.is_staff %}/panel/odeme/{% else %}/coach/odeme/{% endif %}"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Ödeme takibi</a>
-
-        <a href="/profil/"
-           class="px-3 h-9 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                  {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--heading)]{% endif %}">Profil</a>
-
+        {% include "components/_notification_bell.html" with sidebar_bell=True %}
       {% endif %}
-    </nav>
+    </div>
 
-    {# ── Right-side actions ─────────────────────────────────────────────── #}
-    <div class="ml-auto flex items-center gap-2">
+    <button onclick="dasSidebarToggle()"
+            class="das-sidebar-toggle shrink-0 w-7 h-7 rounded-md flex items-center justify-center
+                   text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)] transition-colors
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
+            aria-label="Kenar çubuğunu daralt veya genişlet">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+  </div>
 
-      {% if user.is_student %}
-      {# Student-only: + Yeni Sınav CTA #}
-      <a href="/student/exam/new/"
-         class="h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 active:scale-[0.98] text-white text-sm font-medium inline-flex items-center gap-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-300">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Yeni Sınav
+  {# ── Nav groups (scrollable) ──────────────────────────────────────────── #}
+  <nav class="flex-1 px-2 py-4 space-y-5 overflow-y-auto min-h-0" aria-label="Ana menü">
+
+    {% if user.is_student %}
+
+      {# ÇALIŞMA #}
+      <div>
+        <p class="das-nav-group px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Çalışma</p>
+        <div class="space-y-0.5">
+          <a href="/student/" title="Panel"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if request.path == '/student/' %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="das-nav-label">Panel</span>
+          </a>
+          <a href="/student/tasks/" title="Görevler"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/student/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="das-nav-label">Görevler</span>
+          </a>
+          <a href="/student/konu-takip/" title="Konu Takip"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/student/konu-takip' in request.path and '/sorularim' not in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+            <span class="das-nav-label">Konu Takip</span>
+          </a>
+          <a href="/student/konu-takip/sorularim/" title="Sorularım"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="das-nav-label">Sorularım</span>
+          </a>
+        </div>
+      </div>
+
+      {# SINAVLAR #}
+      <div>
+        <p class="das-nav-group px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Sınavlar</p>
+        <div class="space-y-0.5">
+          <a href="/student/denemeler/" title="Denemeler"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/student/denemeler' in request.path or '/student/exam' in request.path or '/student/karsilastir' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="das-nav-label">Denemeler</span>
+          </a>
+          <a href="/brans/" title="Branş"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span class="das-nav-label">Branş</span>
+          </a>
+          <a href="/student/exam/new/" title="Yeni Sınav"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="das-nav-label">Yeni Sınav</span>
+          </a>
+        </div>
+      </div>
+
+    {% else %}
+
+      {# ÖĞRENCİLER (coach) #}
+      <div>
+        <p class="das-nav-group px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Öğrenciler</p>
+        <div class="space-y-0.5">
+          <a href="/coach/" title="Öğrenciler"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if request.path == '/coach/' or '/coach/student' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="das-nav-label">Öğrenciler</span>
+          </a>
+        </div>
+      </div>
+
+      {# ÇALIŞMA (coach) #}
+      <div>
+        <p class="das-nav-group px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Çalışma</p>
+        <div class="space-y-0.5">
+          <a href="/coach/tasks/" title="Görevler"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/coach/tasks' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="das-nav-label">Görevler</span>
+          </a>
+          <a href="/coach/konu-takip/" title="Konu Takip"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/coach/konu-takip' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+            <span class="das-nav-label">Konu Takip</span>
+          </a>
+          <a href="/coach/sorularim/" title="Sorularım"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/coach/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="das-nav-label">Sorularım</span>
+          </a>
+        </div>
+      </div>
+
+      {# SINAVLAR (coach) #}
+      <div>
+        <p class="das-nav-group px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Sınavlar</p>
+        <div class="space-y-0.5">
+          <a href="/coach/denemeler/" title="Denemeler"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/coach/denemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="das-nav-label">Denemeler</span>
+          </a>
+          <a href="/coach/brans/" title="Branş"
+             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                    {% if '/coach/brans' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span class="das-nav-label">Branş</span>
+          </a>
+        </div>
+      </div>
+
+    {% endif %}
+
+  </nav>
+
+  {# ── HESAP — pinned to bottom ─────────────────────────────────────────── #}
+  <div class="shrink-0 border-t border-[var(--border)] px-2 py-3">
+    <p class="das-hesap-label px-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)]">Hesap</p>
+    <div class="space-y-0.5">
+
+      {% if not user.is_student %}
+      <a href="{% if user.is_staff %}/panel/odeme/{% else %}/coach/odeme/{% endif %}" title="Ödeme takibi"
+         class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span class="das-nav-label">Ödeme takibi</span>
       </a>
-      {% include "components/_notification_bell.html" %}
       {% endif %}
 
-      {# User identity chip — entire chip is a link to profile #}
-      <a href="/profil/"
-         class="flex items-center gap-2 pl-3 border-l border-[var(--border)]
-                ml-1 px-2 py-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">
-        {% if user.is_student %}
-          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-violet-700
-                      text-[11px] font-semibold flex items-center justify-center text-white select-none shrink-0"
-               aria-hidden="true">{{ user.full_name|slice:":1"|upper }}</div>
-        {% else %}
-          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700
-                      text-[11px] font-semibold flex items-center justify-center text-white select-none shrink-0"
-               aria-hidden="true">{{ user.full_name|slice:":1"|upper }}</div>
-        {% endif %}
-        <span class="text-sm text-[var(--body)] font-medium max-w-[9rem] truncate">{{ user.full_name }}</span>
-        {% if user.is_student and user.current_streak > 0 %}
-        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-400 shrink-0">
-          🔥{{ user.current_streak }}
-        </span>
-        {% endif %}
+      <a href="/profil/" title="Profil"
+         class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                {% if '/profil' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="das-nav-label">Profil</span>
       </a>
 
     </div>
+
+    {# User identity chip — hidden in collapsed mode #}
+    <a href="/profil/"
+       class="das-user-chip mt-2 flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+      {% if user.is_student %}
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-violet-700
+                    text-[11px] font-semibold flex items-center justify-center text-white select-none shrink-0"
+             aria-hidden="true">{{ user.full_name|slice:":1"|upper }}</div>
+      {% else %}
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700
+                    text-[11px] font-semibold flex items-center justify-center text-white select-none shrink-0"
+             aria-hidden="true">{{ user.full_name|slice:":1"|upper }}</div>
+      {% endif %}
+      <div class="min-w-0 flex-1 overflow-hidden">
+        <div class="text-sm text-[var(--body)] font-medium truncate">{{ user.full_name }}</div>
+        {% if user.is_student and user.current_streak > 0 %}
+          <div class="text-[10px] text-amber-400 font-bold whitespace-nowrap">🔥{{ user.current_streak }} gün serisi</div>
+        {% endif %}
+      </div>
+    </a>
   </div>
-</header>
+
+</aside>
+
+<script>
+function dasSidebarToggle() {
+  var collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+  localStorage.setItem('das-sidebar-collapsed', collapsed ? '1' : '0');
+}
+</script>

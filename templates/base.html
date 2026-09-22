@@ -188,6 +188,13 @@
         document.documentElement.classList.add('privacy-mode');
     })();
   </script>
+  <!-- Restore sidebar collapsed state before paint (no layout flash) -->
+  <script>
+    (function(){
+      if (localStorage.getItem('das-sidebar-collapsed') === '1')
+        document.documentElement.classList.add('sidebar-collapsed');
+    })();
+  </script>
 </head>
 <body class="font-sans bg-gray-50 min-h-dvh overscroll-none{% if v2_shell %} v2-shell{% endif %}">
 
@@ -230,7 +237,7 @@
   {% if desktop_v2 %}{% include "components/_shell_top_desktop.html" %}{% endif %}
 {% endif %}
 
-<main id="das-main" class="{% if desktop_v2 %}max-w-page md:px-6{% else %}max-w-7xl{% endif %} mx-auto px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+{% if shell_hide_fab %}5rem{% else %}9rem{% endif %})] lg:pb-8{% endif %}">
+<main id="das-main" class="{% if desktop_v2 %}md:px-6{% else %}max-w-7xl mx-auto{% endif %} px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+{% if shell_hide_fab %}5rem{% else %}9rem{% endif %})] lg:pb-8{% endif %}">
   {% if messages %}
     {% for message in messages %}
       <div class="mb-4 px-4 py-3 rounded-lg
@@ -279,7 +286,7 @@
     var el = document.createElement('div');
     el.textContent = message;
     el.setAttribute('role', 'status');
-    var mobile = window.innerWidth < 1024;
+    var mobile = window.innerWidth < 768;
     el.style.cssText = [
       'position:fixed', 'z-index:9999',
       mobile

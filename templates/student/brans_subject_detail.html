@@ -3,7 +3,7 @@
 {% block title %}{% if coach_view %}{{ student.full_name }} — {{ subject }} Analizi{% else %}{{ subject }} Analizi{% endif %} — DAS{% endblock %}
 
 {% block content %}
-<div class="das-subject-drilldown -mx-4 -mt-5 sm:-mt-8 min-h-dvh bg-[var(--bg)] pb-24 flex flex-col"
+<div class="das-subject-drilldown -mx-4 -mt-5 sm:-mt-8 md:mx-0 md:mt-0 min-h-dvh bg-[var(--bg)] pb-24 flex flex-col"
      x-data="subjectDrillDownState()">
 
   <header class="das-appbar sticky top-0 z-30 bg-[var(--surface-1)] border-b border-[var(--border)] px-4 h-14 flex items-center gap-3">
@@ -16,7 +16,7 @@
   </header>
 
   {% if coach_view %}
-  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+  <div class="sticky top-14 md:top-0 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">

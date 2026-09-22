@@ -129,7 +129,25 @@
       "Bash(.venv/Scripts/python -m playwright install chromium)",
       "Bash(.venv/Scripts/python -c \"import playwright; print\\('ok', playwright.__version__\\)\")",
       "Bash(kill 619 612)",
-      "Bash(set PYTHONIOENCODING=utf-8)"
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(python manage.py runserver 8000)",
+      "Bash(echo \"Server PID: $!\")",
+      "Bash(npx tailwindcss *)",
+      "Bash(ls node_modules/.bin/tailwind*)",
+      "Bash(node_modules/.bin/tailwindcss --version)",
+      "Bash(npm install *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('version:', d['version']\\); print\\('bin:', d.get\\('bin',{}\\)\\)\")",
+      "Bash(where tailwindcss *)",
+      "Bash(ls node_modules/@tailwindcss/)",
+      "Bash(ls node_modules/.bin/)",
+      "Bash(set PYTHONUNBUFFERED=1)",
+      "Bash([ -f \"$outfile\" ])",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO CSV)",
+      "Bash(tasklist /FI \"IMAGENAME eq chrome.exe\" /FO CSV)",
+      "Bash(tasklist /FI \"IMAGENAME eq chromium.exe\" /FO CSV)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-CimInstance *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

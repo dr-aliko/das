@@ -148,6 +148,11 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+@media (min-width: 768px) {
+  .das-create-footer { left: 240px; }
+  html.sidebar-collapsed .das-create-footer { left: 64px; }
+}
+
 .das-create-footer__inner {
   max-width: 56rem;
   margin: 0 auto;

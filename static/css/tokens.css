@@ -80,6 +80,10 @@
   --s-6: 32px;
   --s-7: 48px;
 
+  /* Layout */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+
   /* Z-index scale */
   --z-sticky:   20;
   --z-nav:      30;
@@ -134,4 +138,46 @@
 
   --dark-shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4);
   --dark-shadow-card-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Sidebar layout + collapse ─────────────────────────────────────────── */
+.das-sidebar { width: 240px; transition: width 250ms var(--ease-out, ease); }
+#das-main    { transition: margin-left 250ms var(--ease-out, ease); }
+
+@media (min-width: 768px) {
+  #das-main { margin-left: 240px; }
+  .das-fixed-sidebar-offset { left: 240px; }
+}
+
+/* Text elements that shrink and fade on collapse */
+.das-nav-label, .das-brand-text {
+  overflow: hidden; white-space: nowrap; max-width: 160px;
+  transition: opacity 150ms ease, max-width 200ms var(--ease-out, ease);
+}
+.das-nav-group, .das-hesap-label {
+  max-height: 24px; overflow: hidden;
+  transition: opacity 150ms ease, max-height 200ms var(--ease-out, ease), margin-bottom 200ms;
+}
+.das-user-chip {
+  overflow: hidden; max-height: 64px;
+  transition: opacity 150ms ease, max-height 200ms var(--ease-out, ease), margin-top 200ms;
+}
+.das-sidebar-toggle svg { transition: transform 250ms var(--ease-out, ease); }
+
+@media (min-width: 768px) {
+  html.sidebar-collapsed .das-sidebar { width: 64px; }
+  html.sidebar-collapsed #das-main    { margin-left: 64px; }
+
+  html.sidebar-collapsed .das-nav-label   { opacity: 0; max-width: 0; }
+  html.sidebar-collapsed .das-brand-text  { opacity: 0; max-width: 0; }
+  html.sidebar-collapsed .das-nav-group   { opacity: 0; max-height: 0; margin-bottom: 0; }
+  html.sidebar-collapsed .das-hesap-label { opacity: 0; max-height: 0; margin-bottom: 0; }
+  html.sidebar-collapsed .das-user-chip   { opacity: 0; max-height: 0; margin-top: 0; }
+  html.sidebar-collapsed .das-bell-wrap   { display: none; }
+
+  html.sidebar-collapsed .das-nav-link { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
+  html.sidebar-collapsed .das-sidebar-toggle svg { transform: rotate(180deg); }
+
+  /* Fixed-position elements that must shift with the sidebar */
+  html.sidebar-collapsed .das-fixed-sidebar-offset { left: 64px; }
 }

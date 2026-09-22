@@ -75,7 +75,7 @@
   </header>
 
   {# Coach context bar — sticky sub-header with student picker #}
-  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+  <div class="sticky top-14 md:top-0 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
     <button @click="showStudentSheet = true"
             class="w-full px-4 py-3 flex items-center justify-between active:bg-[var(--surface-2)] transition-colors">
       <div class="flex items-center gap-3">
@@ -392,7 +392,7 @@
   {% endif %}
 
   <div class="overflow-x-auto pb-2">
-  <div id="weekly-grid" class="grid grid-cols-7 gap-3 min-h-[60vh] min-w-[1100px]">
+  <div id="weekly-grid" class="grid grid-cols-7 gap-3 min-h-[60vh] min-w-[900px]">
     <template x-for="(gun, idx) in days" :key="idx">
       <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden flex flex-col min-h-[420px] transition-all"
            :class="gun.tarih === window.DAS_TODAY ? 'ring-2 ring-steel-500/40' : ''"
