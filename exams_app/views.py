@@ -2592,6 +2592,7 @@ def unlink_student(request, student_id):
     return JsonResponse({'ok': True})
 
 
+@coach_required
 def coach_exam_overview(request):
     """Student directory — each student card links to their full exam list."""
     from users_app.models import User, CoachStudent
