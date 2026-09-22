@@ -176,7 +176,16 @@
   html.sidebar-collapsed .das-bell-wrap   { display: none; }
 
   html.sidebar-collapsed .das-nav-link { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
-  html.sidebar-collapsed .das-sidebar-toggle svg { transform: rotate(180deg); }
+
+  /* Collapsed: chevron hidden — logo becomes the expand trigger */
+  html.sidebar-collapsed .das-sidebar-toggle { display: none; }
+  html.sidebar-collapsed .das-brand-header { justify-content: center; }
+  html.sidebar-collapsed .das-brand-logo-link {
+    flex: none;
+    padding: 0.375rem;
+    border-radius: 8px;
+  }
+  html.sidebar-collapsed .das-brand-logo-link:hover { background: var(--primary-tint); }
 
   /* Fixed-position elements that must shift with the sidebar */
   html.sidebar-collapsed .das-fixed-sidebar-offset { left: 64px; }

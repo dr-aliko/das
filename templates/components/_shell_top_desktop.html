@@ -3,13 +3,16 @@
               bg-[var(--surface-1)] border-r border-[var(--border)]">
 
   {# ── Brand + notification bell + collapse toggle ──────────────────────── #}
+  {# Expanded: logo-text left, chevron far-right. Collapsed: only logo (acts as expand trigger). #}
   <div class="das-brand-header h-14 px-3 flex items-center gap-1 shrink-0 border-b border-[var(--border)]">
     <a href="/"
-       class="flex items-center gap-2 text-[var(--heading)] font-semibold tracking-tight
-              hover:text-[var(--heading)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400 rounded pl-1 min-w-0 flex-1">
+       onclick="dasSidebarLogoClick(event)"
+       class="das-brand-logo-link flex items-center gap-2 text-[var(--heading)] font-semibold tracking-tight
+              hover:text-[var(--heading)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400 rounded pl-1 min-w-0 flex-1"
+       aria-label="Ana sayfa / kenar çubuğunu genişlet">
       <svg class="w-7 h-7 text-steel-400 shrink-0" xmlns="http://www.w3.org/2000/svg"
            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round" aria-label="Vagus">
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/>
       </svg>
       <span class="das-brand-text">Vagus</span>
@@ -21,11 +24,12 @@
       {% endif %}
     </div>
 
+    {# Chevron visible only when expanded — hidden in collapsed (logo takes over) #}
     <button onclick="dasSidebarToggle()"
             class="das-sidebar-toggle shrink-0 w-7 h-7 rounded-md flex items-center justify-center
                    text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)] transition-colors
                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
-            aria-label="Kenar çubuğunu daralt veya genişlet">
+            aria-label="Kenar çubuğunu daralt">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"
            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
         <polyline points="15 18 9 12 15 6"></polyline>
@@ -207,5 +211,11 @@
 function dasSidebarToggle() {
   var collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
   localStorage.setItem('das-sidebar-collapsed', collapsed ? '1' : '0');
+}
+function dasSidebarLogoClick(e) {
+  if (document.documentElement.classList.contains('sidebar-collapsed')) {
+    e.preventDefault();
+    dasSidebarToggle();
+  }
 }
 </script>
