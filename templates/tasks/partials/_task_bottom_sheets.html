@@ -48,7 +48,7 @@
 
         <!-- Scrollable body -->
         <div class="p-6 overflow-y-auto flex-1 space-y-5"
-             @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveMobileTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveMobileTask()}}"
+             @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveMobileTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveMobileTask()}}">
 
             <!-- ── Activity type toggle ── -->
             <div>

@@ -554,7 +554,7 @@
     <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-[var(--surface-1)] border border-[var(--border)]"
          @click.stop>
       <div class="overflow-y-auto flex-1 p-6 pb-2"
-           @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveTask()}}"
+           @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveTask()}}">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-base font-semibold text-[var(--heading)]"
               x-text="editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h2>
@@ -733,6 +733,7 @@
   </div>
 
   <div x-show="showSettingsModal"
+       x-cloak
        class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
        @keydown.escape.window="showSettingsModal = false">
     <div class="rounded-2xl shadow-card-lg w-full max-w-xs p-6 bg-[var(--surface-1)] border border-[var(--border)]"
@@ -828,7 +829,7 @@ function coachMobilePanel() {
     canToggleCompleted:false,
 
     /* ── Student context ── */
-    students:[], selectedStudent:null,
+    students:[], selectedStudent:null, pngExporting:false,
 
     /* ── API-driven data for konu_anlatimi cascade ── */
     dersler:[], listeler:[], videolar:[], ytListeler:[],
@@ -1103,6 +1104,29 @@ function coachMobilePanel() {
     exportHTML(){
       if(!this.selectedStudent)return;
       _downloadWeeklyHTML(this._exportDays(), DEFAULT_COLORS, this.selectedStudent.full_name, this.weekLabel, `hafta_${this.weekStart}.html`);
+    },
+    async exportPNG(){
+      if(this.pngExporting||!this.selectedStudent)return;
+      this.pngExporting=true;
+      let iframe=null;
+      try{
+        const html=_buildWeeklyHTML(this._exportDays(),DEFAULT_COLORS,this.selectedStudent.full_name,this.weekLabel);
+        iframe=document.createElement('iframe');
+        iframe.style.cssText='position:fixed;left:-9999px;top:0;width:1400px;height:900px;border:none;visibility:hidden';
+        document.body.appendChild(iframe);
+        await new Promise(resolve=>{iframe.onload=resolve;iframe.srcdoc=html;});
+        await new Promise(r=>setTimeout(r,150));
+        const body=iframe.contentDocument.body;
+        const W=body.scrollWidth,H=body.scrollHeight;
+        const canvas=await html2canvas(body,{scale:2,useCORS:true,backgroundColor:'#f3f4f6',logging:false,width:W,height:H,windowWidth:W,windowHeight:H});
+        canvas.toBlob(blob=>{
+          const url=URL.createObjectURL(blob);
+          const a=Object.assign(document.createElement('a'),{href:url,download:`hafta_${this.weekStart}.png`});
+          document.body.appendChild(a);a.click();document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        },'image/png');
+      }catch(e){console.error('[exportPNG]',e);}
+      finally{if(iframe)iframe.remove();this.pngExporting=false;}
     },
 
     /* ── Save — matches desktop payload contract exactly ── */

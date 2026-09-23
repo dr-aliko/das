@@ -156,7 +156,12 @@
       "Bash(echo \"DONE_OK\")",
       "Bash(echo \"DONE_FAIL\")",
       "PowerShell(Get-WmiObject *)",
-      "Bash(python -u pw_form_enter_test.py)"
+      "Bash(python -u pw_form_enter_test.py)",
+      "PowerShell(Get-Item *)",
+      "Bash([ -s \"$OUTPUT\" ])",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\")",
+      "Bash([ -s \"$f\" ])",
+      "PowerShell(Get-Content *)"
     ]
   }
 }

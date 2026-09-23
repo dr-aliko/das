@@ -191,7 +191,7 @@
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100"
          @click.stop
-         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),submitComplete(false))}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();submitComplete(false)}}"
+         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),submitComplete(false))}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();submitComplete(false)}}">
         <h2 class="text-base font-bold mb-1" style="color:var(--heading)">Görevi Tamamla</h2>
         <p class="text-sm mb-4 truncate" style="color:var(--muted)" x-text="completeForm.taskTitle"></p>
 
