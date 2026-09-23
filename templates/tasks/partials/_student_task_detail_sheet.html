@@ -212,6 +212,7 @@
                 <span class="font-normal normal-case" style="color:var(--muted-2)">— isteğe bağlı</span>
             </label>
             <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
+                      @keydown.enter="$event.shiftKey || ($event.preventDefault(), submitComplete(false))"
                       class="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none transition-colors placeholder:text-[var(--muted-2)]"
                       style="background:var(--surface-2); border:1px solid var(--border); color:var(--heading);"></textarea>
         </div>

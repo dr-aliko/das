@@ -151,7 +151,11 @@
       "Bash(python -u pw_sw_update_test.py)",
       "Bash(echo \"EXIT_OK\")",
       "Bash(echo \"EXIT_FAIL\")",
-      "Bash(timeout 30 bash -c 'until grep -q \"SUMMARY\" C:/tmp/sw_test.txt 2>/dev/null; do sleep 1; done')"
+      "Bash(timeout 30 bash -c 'until grep -q \"SUMMARY\" C:/tmp/sw_test.txt 2>/dev/null; do sleep 1; done')",
+      "Bash(python -u pw_textarea_enter_test.py)",
+      "Bash(echo \"DONE_OK\")",
+      "Bash(echo \"DONE_FAIL\")",
+      "PowerShell(Get-WmiObject *)"
     ]
   }
 }

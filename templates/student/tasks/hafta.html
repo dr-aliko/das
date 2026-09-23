@@ -573,6 +573,7 @@
       <div class="mb-4">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Açıklama / Not</label>
         <textarea x-model="editForm.aciklama" rows="2"
+                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), saveEdit())"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
       </div>
       <p x-show="editForm.error" class="text-red-500 text-xs mb-3" x-text="editForm.error"></p>
@@ -615,6 +616,7 @@
           Not <span class="font-normal normal-case text-gray-400">— isteğe bağlı</span>
         </label>
         <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
+                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), submitComplete(false))"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-300"></textarea>
       </div>
       <div class="flex justify-end gap-2">
@@ -658,6 +660,7 @@
       <div class="mb-4">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Açıklama</label>
         <textarea x-model="addForm.aciklama" rows="2" placeholder="Konu / not…"
+                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), saveNewTask())"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
       </div>
       <p x-show="addForm.error" class="text-red-500 text-xs mb-3" x-text="addForm.error"></p>
