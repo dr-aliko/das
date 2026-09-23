@@ -563,7 +563,8 @@
   <div x-show="showEditModal"
        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
        @keydown.escape.window="showEditModal = false">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" @click.stop>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" @click.stop
+         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveEdit())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveEdit()}}">
       <h2 class="text-base font-bold text-gray-800 mb-4">Görevi Düzenle</h2>
       <div class="mb-3">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Süre (dk)</label>
@@ -573,7 +574,6 @@
       <div class="mb-4">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Açıklama / Not</label>
         <textarea x-model="editForm.aciklama" rows="2"
-                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), saveEdit())"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
       </div>
       <p x-show="editForm.error" class="text-red-500 text-xs mb-3" x-text="editForm.error"></p>
@@ -600,7 +600,8 @@
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100"
-         @click.stop>
+         @click.stop
+         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),submitComplete(false))}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();submitComplete(false)}}">
       <h2 class="text-base font-bold text-gray-800 mb-1">Görevi Tamamla</h2>
       <p class="text-sm text-gray-400 mb-4 truncate" x-text="completeForm.taskTitle"></p>
       <div class="mb-3">
@@ -616,7 +617,6 @@
           Not <span class="font-normal normal-case text-gray-400">— isteğe bağlı</span>
         </label>
         <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
-                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), submitComplete(false))"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-300"></textarea>
       </div>
       <div class="flex justify-end gap-2">
@@ -636,7 +636,8 @@
   <div x-show="showAddModal"
        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
        @keydown.escape.window="showAddModal = false">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" @click.stop>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" @click.stop
+         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveNewTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveNewTask()}}">
       <h2 class="text-base font-bold text-gray-800 mb-4">Yeni Görev Ekle</h2>
       <div class="mb-3">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Aktivite Tipi</label>
@@ -660,7 +661,6 @@
       <div class="mb-4">
         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Açıklama</label>
         <textarea x-model="addForm.aciklama" rows="2" placeholder="Konu / not…"
-                  @keydown.enter="$event.shiftKey || ($event.preventDefault(), saveNewTask())"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
       </div>
       <p x-show="addForm.error" class="text-red-500 text-xs mb-3" x-text="addForm.error"></p>

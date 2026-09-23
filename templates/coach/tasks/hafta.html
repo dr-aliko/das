@@ -553,7 +553,8 @@
        @keydown.escape.window="showTaskModal = false">
     <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-[var(--surface-1)] border border-[var(--border)]"
          @click.stop>
-      <div class="overflow-y-auto flex-1 p-6 pb-2">
+      <div class="overflow-y-auto flex-1 p-6 pb-2"
+           @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveTask()}}"
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-base font-semibold text-[var(--heading)]"
               x-text="editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h2>
@@ -707,7 +708,6 @@
         <div class="mb-4" x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'">
           <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Açıklama</label>
           <textarea x-model="taskForm.aciklama" rows="2" placeholder="Kaynak / konu / not…"
-                    @keydown.enter="$event.shiftKey || ($event.preventDefault(), saveTask())"
                     class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)] text-[var(--heading)]
                            placeholder:text-[var(--muted-2)] resize-none focus:outline-none focus:border-steel-500 transition"></textarea>
         </div>

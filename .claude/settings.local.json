@@ -155,7 +155,8 @@
       "Bash(python -u pw_textarea_enter_test.py)",
       "Bash(echo \"DONE_OK\")",
       "Bash(echo \"DONE_FAIL\")",
-      "PowerShell(Get-WmiObject *)"
+      "PowerShell(Get-WmiObject *)",
+      "Bash(python -u pw_form_enter_test.py)"
     ]
   }
 }

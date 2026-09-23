@@ -190,7 +190,8 @@
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100"
-         @click.stop>
+         @click.stop
+         @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),submitComplete(false))}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();submitComplete(false)}}"
         <h2 class="text-base font-bold mb-1" style="color:var(--heading)">Görevi Tamamla</h2>
         <p class="text-sm mb-4 truncate" style="color:var(--muted)" x-text="completeForm.taskTitle"></p>
 
@@ -212,7 +213,6 @@
                 <span class="font-normal normal-case" style="color:var(--muted-2)">— isteğe bağlı</span>
             </label>
             <textarea x-model="completeForm.note" rows="2" placeholder="Bugün nasıldı?"
-                      @keydown.enter="$event.shiftKey || ($event.preventDefault(), submitComplete(false))"
                       class="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none transition-colors placeholder:text-[var(--muted-2)]"
                       style="background:var(--surface-2); border:1px solid var(--border); color:var(--heading);"></textarea>
         </div>
