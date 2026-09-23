@@ -1,7 +1,7 @@
 {% load static %}
 // Vagus — Service Worker
 // Bump CACHE_NAME on every deploy that changes precached assets.
-const CACHE_NAME = 'vagus-shell-v3';
+const CACHE_NAME = 'vagus-shell-{{ cache_name }}';
 
 // Assets fetched and stored on install.
 // Only same-origin, version-stable resources belong here.

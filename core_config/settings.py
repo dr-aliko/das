@@ -1,8 +1,17 @@
 from pathlib import Path
+import subprocess
 import dj_database_url
 from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+try:
+    GIT_COMMIT = subprocess.check_output(
+        ['git', 'rev-parse', '--short', 'HEAD'],
+        cwd=BASE_DIR, stderr=subprocess.DEVNULL
+    ).decode().strip() or 'dev'
+except Exception:
+    GIT_COMMIT = 'dev'
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = config('DEBUG', default=False, cast=bool)

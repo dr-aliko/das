@@ -147,7 +147,11 @@
       "Bash(tasklist /FI \"IMAGENAME eq chromium.exe\" /FO CSV)",
       "PowerShell(Get-Process *)",
       "PowerShell(Get-CimInstance *)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(python -u pw_sw_update_test.py)",
+      "Bash(echo \"EXIT_OK\")",
+      "Bash(echo \"EXIT_FAIL\")",
+      "Bash(timeout 30 bash -c 'until grep -q \"SUMMARY\" C:/tmp/sw_test.txt 2>/dev/null; do sleep 1; done')"
     ]
   }
 }

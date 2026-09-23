@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.decorators.cache import never_cache
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
@@ -15,8 +16,11 @@ urlpatterns = [
                               content_type='application/manifest+json'),
          name='manifest'),
     path('service-worker.js',
-         TemplateView.as_view(template_name='pwa/service-worker.js',
-                              content_type='application/javascript'),
+         never_cache(TemplateView.as_view(
+             template_name='pwa/service-worker.js',
+             content_type='application/javascript',
+             extra_context={'cache_name': settings.GIT_COMMIT},
+         )),
          name='service_worker'),
     path('offline/',
          TemplateView.as_view(template_name='pwa/offline.html'),

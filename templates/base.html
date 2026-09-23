@@ -350,6 +350,12 @@
           console.warn('SW registration failed:', err);
         });
     });
+    // When a new SW activates (skipWaiting + clients.claim), reload so the
+    // user gets fresh HTML/CSS immediately instead of waiting for a manual refresh.
+    var _swReloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!_swReloading) { _swReloading = true; window.location.reload(); }
+    });
   }
 </script>
 {% include "components/_a2hs_banner.html" %}
