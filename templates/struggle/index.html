@@ -100,11 +100,13 @@
         <div class="px-4 pt-4 pb-2">
           <template x-if="currentQuestion?.question_image_url">
             <img :src="currentQuestion.question_image_url" alt="Soru görseli"
-                 class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white"
-                 style="min-height: 120px;">
+                 @click="openLightbox(currentQuestion.question_image_url)"
+                 class="w-full rounded-xl object-contain max-h-[40dvh] border border-[var(--border)] bg-white
+                        cursor-pointer hover:opacity-90 transition-opacity">
           </template>
           <template x-if="!currentQuestion?.question_image_url">
-            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
+                        text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[40dvh]"
                  x-text="currentQuestion?.question_text"></div>
           </template>
         </div>
@@ -118,10 +120,13 @@
           <div x-show="showSolution" x-cloak class="mt-3">
             <template x-if="currentQuestion?.solution_image_url">
               <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
-                   class="w-full rounded-xl object-contain max-h-96 border border-[var(--border)] bg-white">
+                   @click="openLightbox(currentQuestion.solution_image_url)"
+                   class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white
+                          cursor-pointer hover:opacity-90 transition-opacity">
             </template>
             <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
-              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[30dvh]"
                    x-text="currentQuestion.solution_text"></div>
             </template>
             <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
@@ -550,17 +555,18 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="translate-y-0"
          x-transition:leave-end="translate-y-full"
-         class="relative w-full max-h-[90vh] overflow-y-auto rounded-t-3xl shadow-2xl"
+         class="relative w-full max-h-[90dvh] flex flex-col rounded-t-3xl shadow-2xl"
          style="background:var(--surface-1);"
          @click.stop>
 
-      <div class="sticky top-0 flex justify-center pt-3 pb-2 cursor-pointer"
-           style="background:var(--surface-1);"
+      {# Drag handle #}
+      <div class="flex justify-center pt-3 pb-2 cursor-pointer shrink-0"
            @click="closeEarlyReview()">
         <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
       </div>
 
-      <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] space-y-4">
+      {# Scrollable: subject badge + question + solution #}
+      <div class="flex-1 overflow-y-auto min-h-0 px-4 space-y-4 pb-3">
 
         {# Subject / topic / next review #}
         <div class="flex items-center gap-2 flex-wrap">
@@ -576,29 +582,27 @@
         <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
           <template x-if="earlyReviewQ?.question_image_url">
             <img :src="earlyReviewQ.question_image_url" alt="Soru görseli"
-                 class="w-full object-contain max-h-80 bg-white">
+                 @click="openLightbox(earlyReviewQ.question_image_url)"
+                 class="w-full object-contain max-h-[38dvh] bg-white cursor-pointer hover:opacity-90 transition-opacity">
           </template>
           <template x-if="!earlyReviewQ?.question_image_url">
-            <div class="px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+            <div class="px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed
+                        overflow-y-auto max-h-[38dvh]"
                  x-text="earlyReviewQ?.question_text"></div>
           </template>
         </div>
 
-        {# Solution toggle #}
-        <button @click="earlyReviewShowSolution = !earlyReviewShowSolution"
-                class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                       border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
-          <span x-show="!earlyReviewShowSolution">Çözümü Göster</span>
-          <span x-show="earlyReviewShowSolution" x-cloak>Çözümü Gizle</span>
-        </button>
-
+        {# Solution content (when revealed) #}
         <div x-show="earlyReviewShowSolution" x-cloak class="space-y-2">
           <template x-if="earlyReviewQ?.solution_image_url">
             <img :src="earlyReviewQ.solution_image_url" alt="Çözüm"
-                 class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white">
+                 @click="openLightbox(earlyReviewQ.solution_image_url)"
+                 class="w-full rounded-xl object-contain max-h-[30dvh] border border-[var(--border)] bg-white
+                        cursor-pointer hover:opacity-90 transition-opacity">
           </template>
           <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
-            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                        text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
                  x-text="earlyReviewQ.solution_text"></div>
           </template>
           <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
@@ -606,7 +610,17 @@
           </template>
         </div>
 
-        {# Optional rating #}
+      </div>
+
+      {# Pinned actions: Çözümü Göster + rating #}
+      <div class="shrink-0 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] space-y-3
+                  border-t border-[var(--border)]" style="background:var(--surface-1);">
+        <button @click="earlyReviewShowSolution = !earlyReviewShowSolution"
+                class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
+                       border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
+          <span x-show="!earlyReviewShowSolution">Çözümü Göster</span>
+          <span x-show="earlyReviewShowSolution" x-cloak>Çözümü Gizle</span>
+        </button>
         <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
           <p class="text-xs font-semibold text-[var(--muted)] text-center">Bugün Tekrar Ettim</p>
           <div class="flex gap-2">
@@ -632,7 +646,6 @@
             Şimdilik Kapat — puanlama yok
           </button>
         </div>
-
       </div>
     </div>
   </div>
@@ -769,11 +782,11 @@
     </div>
 
     {# ── Session step ────────────────────────────────────────────────────── #}
-    <div x-show="dailyStep === 'session'" x-cloak class="flex-1 overflow-y-auto">
+    <div x-show="dailyStep === 'session'" x-cloak class="flex-1 flex flex-col overflow-hidden">
 
       {# Completion state #}
       <div x-show="dailyDone" x-cloak
-           class="flex flex-col items-center gap-4 py-20 px-4 text-center">
+           class="flex-1 flex flex-col items-center justify-center gap-4 px-4 text-center">
         <svg class="w-14 h-14 text-emerald-400" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -791,54 +804,56 @@
         </button>
       </div>
 
-      {# Flashcard #}
-      <div x-show="!dailyDone" x-cloak class="max-w-3xl mx-auto px-4 py-4 space-y-3 pb-10">
+      {# Flashcard — fills remaining height, no outer scroll #}
+      <div x-show="!dailyDone" x-cloak
+           class="flex-1 flex flex-col overflow-hidden max-w-3xl mx-auto w-full px-4">
 
         {# Progress bar #}
-        <div class="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
-          <div class="h-full bg-steel-400 rounded-full transition-all duration-300"
-               :style="'width:' + (dailyIdx / dailyQueue.length * 100) + '%'"></div>
+        <div class="shrink-0 pt-3 pb-2">
+          <div class="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
+            <div class="h-full bg-steel-400 rounded-full transition-all duration-300"
+                 :style="'width:' + (dailyIdx / dailyQueue.length * 100) + '%'"></div>
+          </div>
         </div>
 
-        {# Card #}
-        <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-          <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
-            <span class="text-xs font-semibold text-[var(--muted)]"
-                  x-text="dailyQueue[dailyIdx]?.subject_name"></span>
-            <span x-show="dailyQueue[dailyIdx]?.topic_name" x-cloak
-                  class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
-                  x-text="dailyQueue[dailyIdx]?.topic_name"></span>
-            <span class="ml-auto text-xs tabular-nums font-medium"
-                  :class="dailyIsDue(dailyQueue[dailyIdx]) ? 'text-ruby-400' : 'text-[var(--muted-2)]'"
-                  x-text="dailyIsDue(dailyQueue[dailyIdx]) ? 'Tekrar zamanı' : 'Erken tekrar'"></span>
-          </div>
-          <div class="px-4 pt-4 pb-2">
-            <template x-if="dailyQueue[dailyIdx]?.question_image_url">
-              <img :src="dailyQueue[dailyIdx].question_image_url" alt="Soru görseli"
-                   class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white"
-                   style="min-height:120px;">
-            </template>
-            <template x-if="!dailyQueue[dailyIdx]?.question_image_url">
-              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
-                          text-[var(--body)] whitespace-pre-wrap leading-relaxed"
-                   x-text="dailyQueue[dailyIdx]?.question_text"></div>
-            </template>
-          </div>
-          <div class="px-4 pb-4">
-            <button @click="dailyShowSolution = !dailyShowSolution"
-                    class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                           border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
-              <span x-show="!dailyShowSolution">Çözümü Göster</span>
-              <span x-show="dailyShowSolution" x-cloak>Çözümü Gizle</span>
-            </button>
-            <div x-show="dailyShowSolution" x-cloak class="mt-3">
+        {# Scrollable card area: question + solution #}
+        <div class="flex-1 overflow-y-auto min-h-0">
+          <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+            <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
+              <span class="text-xs font-semibold text-[var(--muted)]"
+                    x-text="dailyQueue[dailyIdx]?.subject_name"></span>
+              <span x-show="dailyQueue[dailyIdx]?.topic_name" x-cloak
+                    class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
+                    x-text="dailyQueue[dailyIdx]?.topic_name"></span>
+              <span class="ml-auto text-xs tabular-nums font-medium"
+                    :class="dailyIsDue(dailyQueue[dailyIdx]) ? 'text-ruby-400' : 'text-[var(--muted-2)]'"
+                    x-text="dailyIsDue(dailyQueue[dailyIdx]) ? 'Tekrar zamanı' : 'Erken tekrar'"></span>
+            </div>
+            <div class="px-4 pt-4 pb-4">
+              <template x-if="dailyQueue[dailyIdx]?.question_image_url">
+                <img :src="dailyQueue[dailyIdx].question_image_url" alt="Soru görseli"
+                     @click="openLightbox(dailyQueue[dailyIdx].question_image_url)"
+                     class="w-full rounded-xl object-contain max-h-[40dvh] border border-[var(--border)] bg-white
+                            cursor-pointer hover:opacity-90 transition-opacity">
+              </template>
+              <template x-if="!dailyQueue[dailyIdx]?.question_image_url">
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
+                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[40dvh]"
+                     x-text="dailyQueue[dailyIdx]?.question_text"></div>
+              </template>
+            </div>
+            {# Solution — revealed within the scrollable card area #}
+            <div x-show="dailyShowSolution" x-cloak
+                 class="px-4 pb-4 pt-3 space-y-2 border-t border-[var(--border)]">
               <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
                 <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
-                     class="w-full rounded-xl object-contain max-h-96 border border-[var(--border)] bg-white">
+                     @click="openLightbox(dailyQueue[dailyIdx].solution_image_url)"
+                     class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white
+                            cursor-pointer hover:opacity-90 transition-opacity">
               </template>
               <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
                 <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                            text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
                      x-text="dailyQueue[dailyIdx].solution_text"></div>
               </template>
               <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
@@ -848,30 +863,65 @@
           </div>
         </div>
 
-        <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
-
-        {# Rating buttons #}
-        <div class="flex gap-2">
-          <button @click="dailySubmitReview('zor')" :disabled="dailyReviewing"
-                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                         bg-red-50 border-red-200 text-red-600 hover:bg-red-100
-                         dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                         disabled:opacity-50 disabled:cursor-wait">Zor</button>
-          <button @click="dailySubmitReview('orta')" :disabled="dailyReviewing"
-                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                         bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
-                         dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                         disabled:opacity-50 disabled:cursor-wait">Orta</button>
-          <button @click="dailySubmitReview('kolay')" :disabled="dailyReviewing"
-                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                         bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
-                         dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                         disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+        {# Pinned action area — always visible #}
+        <div class="shrink-0 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] space-y-2.5"
+             style="background:var(--surface-0);">
+          <button @click="dailyShowSolution = !dailyShowSolution"
+                  class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
+                         border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
+            <span x-show="!dailyShowSolution">Çözümü Göster</span>
+            <span x-show="dailyShowSolution" x-cloak>Çözümü Gizle</span>
+          </button>
+          <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
+          <div class="flex gap-2">
+            <button @click="dailySubmitReview('zor')" :disabled="dailyReviewing"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                           dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                           disabled:opacity-50 disabled:cursor-wait">Zor</button>
+            <button @click="dailySubmitReview('orta')" :disabled="dailyReviewing"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                           dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                           disabled:opacity-50 disabled:cursor-wait">Orta</button>
+            <button @click="dailySubmitReview('kolay')" :disabled="dailyReviewing"
+                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                           bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                           dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                           disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+          </div>
         </div>
 
       </div>
     </div>
 
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# IMAGE LIGHTBOX                                                         #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="lightboxOpen" x-cloak
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="closeLightbox()"
+       @keydown.escape.window="closeLightbox()"
+       class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center">
+    <button @click.stop="closeLightbox()"
+            class="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center
+                   rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <div class="w-full h-full overflow-auto p-4 flex items-start justify-center" @click.stop>
+      <img :src="lightboxUrl" alt="Tam boyut görsel"
+           class="max-w-full rounded-lg" style="height:auto;">
+    </div>
   </div>
 
 </div>
@@ -919,6 +969,10 @@ function struggleApp(cfg) {
     earlyReviewQ:            null,
     earlyReviewShowSolution: false,
     earlyReviewLoading:      false,
+
+    // ── Lightbox ──────────────────────────────────────────────────────────
+    lightboxOpen: false,
+    lightboxUrl:  null,
 
     // ── Daily review session ──────────────────────────────────────────────
     dailyOpen:               false,
@@ -1163,6 +1217,16 @@ function struggleApp(cfg) {
           if (this.dueQueue.length === 0) { this.reviewDone = false; this.reviewIdx = 0; }
         }
       } catch (e) { console.error('[struggle.deleteQuestion]', e); }
+    },
+
+    // ── Lightbox ──────────────────────────────────────────────────────────
+    openLightbox(url) {
+      this.lightboxUrl = url;
+      this.lightboxOpen = true;
+    },
+    closeLightbox() {
+      this.lightboxOpen = false;
+      this.lightboxUrl = null;
     },
 
     // ── Daily review session ──────────────────────────────────────────────
