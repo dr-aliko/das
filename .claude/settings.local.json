@@ -161,7 +161,11 @@
       "Bash([ -s \"$OUTPUT\" ])",
       "Bash(tasklist /FI \"IMAGENAME eq python.exe\")",
       "Bash([ -s \"$f\" ])",
-      "PowerShell(Get-Content *)"
+      "PowerShell(Get-Content *)",
+      "PowerShell(netstat *)",
+      "Bash(ping -n 20 127.0.0.1)",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO TABLE)",
+      "Bash(tasklist /FI \"IMAGENAME eq chrome.exe\" /FO TABLE)"
     ]
   }
 }

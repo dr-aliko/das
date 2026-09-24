@@ -554,7 +554,9 @@
     <div class="rounded-2xl shadow-card-lg w-full max-w-lg max-h-[90vh] flex flex-col bg-[var(--surface-1)] border border-[var(--border)]"
          @click.stop>
       <div class="overflow-y-auto flex-1 p-6 pb-2"
-           @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveTask())}else if((t.tagName==='INPUT'&&t.type!=='checkbox'&&t.type!=='radio')||t.tagName==='SELECT'){$event.preventDefault();saveTask()}}">
+           @mousedown="if($event.target.tagName==='SELECT') $event.target.__open=true"
+           @change="if($event.target.tagName==='SELECT') $event.target.__open=false"
+           @keydown="if($event.key==='Enter'){const t=$event.target;if(t.tagName==='TEXTAREA'){$event.shiftKey||($event.preventDefault(),saveTask())}else if(t.tagName==='SELECT'){if(t.__open){t.__open=false}else{$event.preventDefault();saveTask()}}else if(t.tagName==='INPUT'&&t.type!=='radio'){$event.preventDefault();saveTask()}}">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-base font-semibold text-[var(--heading)]"
               x-text="editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'"></h2>
