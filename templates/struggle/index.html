@@ -32,6 +32,24 @@
           x-text="allQuestions.length + ' soru kayıtlı'"></span>
   </div>
 
+  {# ── Günlük Tekrar CTA ────────────────────────────────────────────────── #}
+  <button x-show="allQuestions.length > 0"
+          @click="openDailySetup()"
+          class="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl
+                 border border-steel-400/30 bg-steel-500/10 text-steel-400
+                 hover:bg-steel-500/15 transition-colors font-bold text-sm">
+    <span class="flex items-center gap-2">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-.08-7.5"/>
+      </svg>
+      Günlük Tekrar Et
+    </span>
+    <span class="text-xs font-normal opacity-70"
+          x-text="dueQueue.length + ' soru bekliyor'"></span>
+  </button>
+
   {# ══════════════════════════════════════════════════════════════════════ #}
   {# SECTION 1: TEKRAR ZAMANI GELENLER                                     #}
   {# ══════════════════════════════════════════════════════════════════════ #}
@@ -619,6 +637,243 @@
     </div>
   </div>
 
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# DAILY REVIEW OVERLAY                                                   #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <div x-show="dailyOpen" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 flex flex-col"
+       style="background:var(--surface-0);"
+       @keydown.escape.window="closeDailySession()">
+
+    {# Top bar #}
+    <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0"
+         style="background:var(--surface-1);">
+      <span class="text-sm font-bold text-[var(--heading)]">
+        <span x-show="dailyStep === 'setup'">Günlük Tekrar — Ders Seç</span>
+        <span x-show="dailyStep === 'session' && !dailyDone" x-cloak>
+          Günlük Tekrar
+          <span class="font-normal text-[var(--muted)] ml-1"
+                x-text="(dailyIdx + 1) + ' / ' + dailyQueue.length"></span>
+        </span>
+        <span x-show="dailyDone" x-cloak>Oturum Tamamlandı</span>
+      </span>
+      <button @click="closeDailySession()"
+              class="w-8 h-8 flex items-center justify-center rounded-xl
+                     text-[var(--muted)] hover:text-[var(--body)] hover:bg-[var(--surface-2)]
+                     transition-colors">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    {# ── Setup step ──────────────────────────────────────────────────────── #}
+    <div x-show="dailyStep === 'setup'" class="flex-1 overflow-y-auto">
+      <div class="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-10">
+
+        <p class="text-xs text-[var(--muted)]">Hangi derslerden tekrar etmek istersiniz?</p>
+
+        {# Tümünü Seç #}
+        <button @click="dailyToggleAll()"
+                class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold
+                       border transition-colors"
+                :class="dailyAllSelected
+                  ? 'border-steel-500 bg-steel-500/10 text-steel-400'
+                  : 'border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-2)]'">
+          <div class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+               :class="dailyAllSelected ? 'bg-steel-500 border-steel-500' : 'border-[var(--border-strong)]'">
+            <svg x-show="dailyAllSelected" class="w-3 h-3 text-white" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          Tümünü Seç
+        </button>
+
+        {# Subject checkboxes #}
+        <div class="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)]
+                    divide-y divide-[var(--border)]">
+          <template x-for="s in dailySubjectOptions" :key="s.id">
+            <label class="flex items-center gap-3 px-4 py-3.5 cursor-pointer
+                          hover:bg-[var(--surface-2)] transition-colors">
+              <div class="w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors"
+                   :class="dailySelectedSubjectIds.includes(s.id)
+                     ? 'bg-steel-500 border-steel-500'
+                     : 'border-[var(--border-strong)]'">
+                <svg x-show="dailySelectedSubjectIds.includes(s.id)"
+                     class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <input type="checkbox" class="sr-only"
+                     :checked="dailySelectedSubjectIds.includes(s.id)"
+                     @change="dailyToggleSubject(s.id)">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-[var(--heading)]" x-text="s.name"></div>
+                <div class="text-xs mt-0.5">
+                  <span :class="s.due > 0 ? 'text-ruby-400 font-semibold' : 'text-[var(--muted-2)]'"
+                        x-text="s.due + ' bekliyor'"></span>
+                  <span class="mx-1 text-[var(--muted-2)] opacity-40">·</span>
+                  <span class="text-[var(--muted-2)]" x-text="s.total + ' toplam'"></span>
+                </div>
+              </div>
+            </label>
+          </template>
+        </div>
+
+        {# Include not-due toggle #}
+        <label class="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-[var(--border)]
+                      bg-[var(--surface-1)] cursor-pointer hover:bg-[var(--surface-2)] transition-colors">
+          <div class="relative w-10 h-6 shrink-0" @click.stop="dailyIncludeNotDue = !dailyIncludeNotDue">
+            <div class="w-10 h-6 rounded-full transition-colors duration-200"
+                 :class="dailyIncludeNotDue ? 'bg-steel-500' : 'bg-[var(--surface-3)]'"></div>
+            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"
+                 :class="dailyIncludeNotDue ? 'translate-x-4' : 'translate-x-0'"></div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-[var(--heading)]">
+              Tekrar zamanı gelmemiş soruları da dahil et
+            </div>
+            <div class="text-xs text-[var(--muted-2)] mt-0.5">
+              <span x-show="!dailyIncludeNotDue">Kapalı: yalnızca bekleyen sorular</span>
+              <span x-show="dailyIncludeNotDue" x-cloak>Açık: tüm sorular dahil edilir</span>
+            </div>
+          </div>
+        </label>
+
+        {# Preview count #}
+        <p class="text-xs text-center text-[var(--muted-2)]"
+           x-show="dailySelectedSubjectIds.length > 0" x-cloak
+           x-text="dailySessionCount + ' soru bu oturuma dahil edilecek'"></p>
+
+        {# Start button #}
+        <button @click="dailyStartSession()"
+                :disabled="dailySessionCount === 0"
+                class="w-full py-3.5 rounded-2xl text-sm font-bold transition-colors
+                       bg-steel-500 text-white hover:bg-steel-400
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+          <span x-show="dailySessionCount === 0">Ders ve soru seçin</span>
+          <span x-show="dailySessionCount > 0" x-cloak
+                x-text="'Tekrara Başla (' + dailySessionCount + ' soru)'"></span>
+        </button>
+
+      </div>
+    </div>
+
+    {# ── Session step ────────────────────────────────────────────────────── #}
+    <div x-show="dailyStep === 'session'" x-cloak class="flex-1 overflow-y-auto">
+
+      {# Completion state #}
+      <div x-show="dailyDone" x-cloak
+           class="flex flex-col items-center gap-4 py-20 px-4 text-center">
+        <svg class="w-14 h-14 text-emerald-400" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <div>
+          <p class="text-lg font-bold text-[var(--heading)] mb-1">Oturum Tamamlandı!</p>
+          <p class="text-sm text-[var(--muted)]"
+             x-text="dailyQueue.length + ' soru tekrar edildi.'"></p>
+        </div>
+        <button @click="closeDailySession()"
+                class="mt-2 px-8 py-3 rounded-2xl text-sm font-bold bg-steel-500 text-white
+                       hover:bg-steel-400 transition-colors">
+          Kapat
+        </button>
+      </div>
+
+      {# Flashcard #}
+      <div x-show="!dailyDone" x-cloak class="max-w-3xl mx-auto px-4 py-4 space-y-3 pb-10">
+
+        {# Progress bar #}
+        <div class="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
+          <div class="h-full bg-steel-400 rounded-full transition-all duration-300"
+               :style="'width:' + (dailyIdx / dailyQueue.length * 100) + '%'"></div>
+        </div>
+
+        {# Card #}
+        <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+          <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
+            <span class="text-xs font-semibold text-[var(--muted)]"
+                  x-text="dailyQueue[dailyIdx]?.subject_name"></span>
+            <span x-show="dailyQueue[dailyIdx]?.topic_name" x-cloak
+                  class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
+                  x-text="dailyQueue[dailyIdx]?.topic_name"></span>
+            <span class="ml-auto text-xs tabular-nums font-medium"
+                  :class="dailyIsDue(dailyQueue[dailyIdx]) ? 'text-ruby-400' : 'text-[var(--muted-2)]'"
+                  x-text="dailyIsDue(dailyQueue[dailyIdx]) ? 'Tekrar zamanı' : 'Erken tekrar'"></span>
+          </div>
+          <div class="px-4 pt-4 pb-2">
+            <template x-if="dailyQueue[dailyIdx]?.question_image_url">
+              <img :src="dailyQueue[dailyIdx].question_image_url" alt="Soru görseli"
+                   class="w-full rounded-xl object-contain max-h-80 border border-[var(--border)] bg-white"
+                   style="min-height:120px;">
+            </template>
+            <template x-if="!dailyQueue[dailyIdx]?.question_image_url">
+              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
+                          text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                   x-text="dailyQueue[dailyIdx]?.question_text"></div>
+            </template>
+          </div>
+          <div class="px-4 pb-4">
+            <button @click="dailyShowSolution = !dailyShowSolution"
+                    class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
+                           border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
+              <span x-show="!dailyShowSolution">Çözümü Göster</span>
+              <span x-show="dailyShowSolution" x-cloak>Çözümü Gizle</span>
+            </button>
+            <div x-show="dailyShowSolution" x-cloak class="mt-3">
+              <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
+                <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
+                     class="w-full rounded-xl object-contain max-h-96 border border-[var(--border)] bg-white">
+              </template>
+              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                            text-[var(--body)] whitespace-pre-wrap leading-relaxed"
+                     x-text="dailyQueue[dailyIdx].solution_text"></div>
+              </template>
+              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
+                <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
+
+        {# Rating buttons #}
+        <div class="flex gap-2">
+          <button @click="dailySubmitReview('zor')" :disabled="dailyReviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                         dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                         disabled:opacity-50 disabled:cursor-wait">Zor</button>
+          <button @click="dailySubmitReview('orta')" :disabled="dailyReviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                         dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                         disabled:opacity-50 disabled:cursor-wait">Orta</button>
+          <button @click="dailySubmitReview('kolay')" :disabled="dailyReviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                         dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                         disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
@@ -665,6 +920,17 @@ function struggleApp(cfg) {
     earlyReviewShowSolution: false,
     earlyReviewLoading:      false,
 
+    // ── Daily review session ──────────────────────────────────────────────
+    dailyOpen:               false,
+    dailyStep:               'setup',
+    dailySelectedSubjectIds: [],
+    dailyIncludeNotDue:      false,
+    dailyQueue:              [],
+    dailyIdx:                0,
+    dailyShowSolution:       false,
+    dailyReviewing:          false,
+    dailyDone:               false,
+
     // ── Computed ─────────────────────────────────────────────────────────
     get currentQuestion() { return this.dueQueue[this.reviewIdx] || null; },
     get addSubjectOptions() {
@@ -687,6 +953,34 @@ function struggleApp(cfg) {
         return new Date(a.next_review_at) - new Date(b.next_review_at);
       });
       return qs;
+    },
+    get dailySubjectOptions() {
+      const map = new Map();
+      const now = new Date();
+      for (const q of this.allQuestions) {
+        const id = String(q.subject_id);
+        if (!map.has(id)) map.set(id, { id, name: q.subject_name, due: 0, total: 0 });
+        const s = map.get(id);
+        s.total++;
+        if (q.next_review_at && new Date(q.next_review_at) <= now) s.due++;
+      }
+      return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    },
+    get dailyAllSelected() {
+      return this.dailySubjectOptions.length > 0 &&
+        this.dailySubjectOptions.every(s => this.dailySelectedSubjectIds.includes(s.id));
+    },
+    get dailySessionCount() {
+      if (this.dailySelectedSubjectIds.length === 0) return 0;
+      const now = new Date();
+      const selectedIds = new Set(this.dailySelectedSubjectIds);
+      return this.allQuestions.filter(q => {
+        if (!selectedIds.has(String(q.subject_id))) return false;
+        if (!this.dailyIncludeNotDue) {
+          return q.next_review_at && new Date(q.next_review_at) <= now;
+        }
+        return true;
+      }).length;
     },
 
     // ── Due review flow ──────────────────────────────────────────────────
@@ -869,6 +1163,91 @@ function struggleApp(cfg) {
           if (this.dueQueue.length === 0) { this.reviewDone = false; this.reviewIdx = 0; }
         }
       } catch (e) { console.error('[struggle.deleteQuestion]', e); }
+    },
+
+    // ── Daily review session ──────────────────────────────────────────────
+    openDailySetup() {
+      this.dailySelectedSubjectIds = [];
+      this.dailyIncludeNotDue = false;
+      this.dailyStep = 'setup';
+      this.dailyDone = false;
+      this.dailyOpen = true;
+    },
+    closeDailySession() {
+      this.dailyOpen = false;
+    },
+    dailyToggleSubject(id) {
+      const idx = this.dailySelectedSubjectIds.indexOf(id);
+      if (idx === -1) this.dailySelectedSubjectIds.push(id);
+      else this.dailySelectedSubjectIds.splice(idx, 1);
+    },
+    dailyToggleAll() {
+      if (this.dailyAllSelected) {
+        this.dailySelectedSubjectIds = [];
+      } else {
+        this.dailySelectedSubjectIds = this.dailySubjectOptions.map(s => s.id);
+      }
+    },
+    dailyStartSession() {
+      const now = new Date();
+      const selectedIds = new Set(this.dailySelectedSubjectIds);
+      let queue = this.allQuestions.filter(q => {
+        if (!selectedIds.has(String(q.subject_id))) return false;
+        if (!this.dailyIncludeNotDue) {
+          return q.next_review_at && new Date(q.next_review_at) <= now;
+        }
+        return true;
+      });
+      // Due questions first, then by soonest next_review_at
+      queue.sort((a, b) => {
+        const aDue = a.next_review_at && new Date(a.next_review_at) <= now;
+        const bDue = b.next_review_at && new Date(b.next_review_at) <= now;
+        if (aDue && !bDue) return -1;
+        if (!aDue && bDue) return 1;
+        if (!a.next_review_at) return 1;
+        if (!b.next_review_at) return -1;
+        return new Date(a.next_review_at) - new Date(b.next_review_at);
+      });
+      this.dailyQueue = queue;
+      this.dailyIdx = 0;
+      this.dailyShowSolution = false;
+      this.dailyDone = false;
+      this.dailyStep = 'session';
+    },
+    dailyIsDue(q) {
+      if (!q?.next_review_at) return false;
+      return new Date(q.next_review_at) <= new Date();
+    },
+    async dailySubmitReview(quality) {
+      if (this.dailyReviewing) return;
+      const q = this.dailyQueue[this.dailyIdx];
+      if (!q) return;
+      this.dailyReviewing = true;
+      try {
+        const resp = await fetch(this.reviewUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+          body: JSON.stringify({ question_id: q.id, quality }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.ok) {
+            const aIdx = this.allQuestions.findIndex(aq => aq.id === q.id);
+            if (aIdx !== -1) this.allQuestions[aIdx].next_review_at = data.next_review_at;
+            // Keep the main due-review section in sync
+            const dIdx = this.dueQueue.findIndex(dq => dq.id === q.id);
+            if (dIdx !== -1) {
+              this.dueQueue.splice(dIdx, 1);
+              if (this.reviewIdx >= this.dueQueue.length && this.dueQueue.length > 0) this.reviewIdx = 0;
+              if (this.dueQueue.length === 0) this.reviewDone = true;
+            }
+            this.dailyShowSolution = false;
+            this.dailyIdx++;
+            if (this.dailyIdx >= this.dailyQueue.length) this.dailyDone = true;
+          }
+        }
+      } catch (e) { console.error('[struggle.dailySubmitReview]', e); }
+      finally { this.dailyReviewing = false; }
     },
 
     // ── Helpers ───────────────────────────────────────────────────────────
