@@ -113,7 +113,7 @@
         </div>
       </div>
       <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
-      <div class="flex gap-2">
+      <div id="struggle-rating-buttons" class="flex gap-2">
         <button @click="submitReview('zor')" :disabled="reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-red-50 border-red-200 text-red-600 hover:bg-red-100
@@ -808,7 +808,7 @@ function struggleApp(cfg) {
           this._resetAddForm();
           this.addOpen = false;
           setTimeout(() => {
-            document.getElementById('struggle-flashcard')
+            document.getElementById('struggle-rating-buttons')
               ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, 50);
         } else {
