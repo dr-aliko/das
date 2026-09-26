@@ -111,47 +111,52 @@
           </template>
         </div>
         <div class="px-4 pb-4">
-          <button @click="showSolution = !showSolution"
-                  class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                         border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
-            <span x-show="!showSolution">Çözümü Göster</span>
-            <span x-show="showSolution" x-cloak>Çözümü Gizle</span>
-          </button>
-          <div x-show="showSolution" x-cloak class="mt-3">
-            <template x-if="currentQuestion?.solution_image_url">
-              <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
-                   @click="openLightbox(currentQuestion.solution_image_url)"
-                   class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white
-                          cursor-pointer hover:opacity-90 transition-opacity">
-            </template>
-            <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
-              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[30dvh]"
-                   x-text="currentQuestion.solution_text"></div>
-            </template>
-            <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
-              <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
-            </template>
+          {# Solution — always rendered, blurred until revealed #}
+          <div class="relative mt-0 rounded-xl overflow-hidden">
+            {# Blurred content layer #}
+            <div :style="showSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+              <template x-if="currentQuestion?.solution_image_url">
+                <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
+                     @click="showSolution && openLightbox(currentQuestion.solution_image_url)"
+                     :class="showSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
+                     class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
+              </template>
+              <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[30dvh]"
+                     x-text="currentQuestion.solution_text"></div>
+              </template>
+              <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
+                <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
+              </template>
+            </div>
+            {# Tap-to-reveal overlay — visible only while blurred #}
+            <div x-show="!showSolution"
+                 @click="showSolution = true"
+                 class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
+              <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
+                    style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
+            </div>
           </div>
         </div>
       </div>
       <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
       <div id="struggle-rating-buttons" class="flex gap-2">
-        <button @click="submitReview('zor')" :disabled="reviewing"
+        <button @click="submitReview('zor')" :disabled="!showSolution || reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-red-50 border-red-200 text-red-600 hover:bg-red-100
                        dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                       disabled:opacity-50 disabled:cursor-wait">Zor</button>
-        <button @click="submitReview('orta')" :disabled="reviewing"
+                       disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+        <button @click="submitReview('orta')" :disabled="!showSolution || reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
                        dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                       disabled:opacity-50 disabled:cursor-wait">Orta</button>
-        <button @click="submitReview('kolay')" :disabled="reviewing"
+                       disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+        <button @click="submitReview('kolay')" :disabled="!showSolution || reviewing"
                 class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                        bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
                        dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                       disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+                       disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
       </div>
     </div>
   </div>
@@ -594,53 +599,55 @@
           </template>
         </div>
 
-        {# Solution content (when revealed) #}
-        <div x-show="earlyReviewShowSolution" x-cloak class="space-y-2">
-          <template x-if="earlyReviewQ?.solution_image_url">
-            <img :src="earlyReviewQ.solution_image_url" alt="Çözüm"
-                 @click="openLightbox(earlyReviewQ.solution_image_url)"
-                 class="w-full rounded-xl object-contain max-h-[30dvh] border border-[var(--border)] bg-white
-                        cursor-pointer hover:opacity-90 transition-opacity">
-          </template>
-          <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
-            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                        text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
-                 x-text="earlyReviewQ.solution_text"></div>
-          </template>
-          <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
-            <p class="text-xs text-center text-[var(--muted-2)] italic py-2">Çözüm eklenmemiş.</p>
-          </template>
+        {# Solution — always rendered, blurred until revealed #}
+        <div class="relative rounded-xl overflow-hidden">
+          <div :style="earlyReviewShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+            <template x-if="earlyReviewQ?.solution_image_url">
+              <img :src="earlyReviewQ.solution_image_url" alt="Çözüm"
+                   @click="earlyReviewShowSolution && openLightbox(earlyReviewQ.solution_image_url)"
+                   :class="earlyReviewShowSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
+                   class="w-full rounded-xl object-contain max-h-[30dvh] border border-[var(--border)] bg-white transition-opacity">
+            </template>
+            <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
+              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
+                   x-text="earlyReviewQ.solution_text"></div>
+            </template>
+            <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
+              <p class="text-xs text-center text-[var(--muted-2)] italic py-2">Çözüm eklenmemiş.</p>
+            </template>
+          </div>
+          <div x-show="!earlyReviewShowSolution"
+               @click="earlyReviewShowSolution = true"
+               class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
+            <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
+                  style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
+          </div>
         </div>
 
       </div>
 
-      {# Pinned actions: Çözümü Göster + rating #}
+      {# Pinned actions: rating (active only after solution revealed) #}
       <div class="shrink-0 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] space-y-3
                   border-t border-[var(--border)]" style="background:var(--surface-1);">
-        <button @click="earlyReviewShowSolution = !earlyReviewShowSolution"
-                class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                       border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
-          <span x-show="!earlyReviewShowSolution">Çözümü Göster</span>
-          <span x-show="earlyReviewShowSolution" x-cloak>Çözümü Gizle</span>
-        </button>
         <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
           <p class="text-xs font-semibold text-[var(--muted)] text-center">Bugün Tekrar Ettim</p>
           <div class="flex gap-2">
-            <button @click="submitEarlyReview('zor')" :disabled="earlyReviewLoading"
+            <button @click="submitEarlyReview('zor')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-red-50 border-red-200 text-red-600 hover:bg-red-100
                            dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                           disabled:opacity-50 disabled:cursor-wait">Zor</button>
-            <button @click="submitEarlyReview('orta')" :disabled="earlyReviewLoading"
+                           disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+            <button @click="submitEarlyReview('orta')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
                            dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                           disabled:opacity-50 disabled:cursor-wait">Orta</button>
-            <button @click="submitEarlyReview('kolay')" :disabled="earlyReviewLoading"
+                           disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+            <button @click="submitEarlyReview('kolay')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
                            dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                           disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+                           disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
           </div>
           <button @click="closeEarlyReview()"
                   class="w-full py-2.5 rounded-xl text-xs font-medium text-[var(--muted-2)]
@@ -752,7 +759,7 @@
           <div class="relative w-10 h-6 shrink-0" @click.stop="dailyIncludeNotDue = !dailyIncludeNotDue">
             <div class="w-10 h-6 rounded-full transition-colors duration-200"
                  :class="dailyIncludeNotDue ? 'bg-steel-500' : 'bg-[var(--surface-3)]'"></div>
-            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"
+            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"
                  :class="dailyIncludeNotDue ? 'translate-x-4' : 'translate-x-0'"></div>
           </div>
           <div>
@@ -846,53 +853,56 @@
                      x-text="dailyQueue[dailyIdx]?.question_text"></div>
               </template>
             </div>
-            {# Solution — revealed within the scrollable card area #}
-            <div x-show="dailyShowSolution" x-cloak
-                 class="px-4 pb-4 pt-3 space-y-2 border-t border-[var(--border)]">
-              <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
-                <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
-                     @click="openLightbox(dailyQueue[dailyIdx].solution_image_url)"
-                     class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white
-                            cursor-pointer hover:opacity-90 transition-opacity">
-              </template>
-              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
-                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
-                     x-text="dailyQueue[dailyIdx].solution_text"></div>
-              </template>
-              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
-                <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
-              </template>
+            {# Solution — always rendered, blurred until revealed #}
+            <div class="px-4 pb-4 pt-3 border-t border-[var(--border)]">
+              <div class="relative rounded-xl overflow-hidden">
+                <div :style="dailyShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+                  <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
+                    <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
+                         @click="dailyShowSolution && openLightbox(dailyQueue[dailyIdx].solution_image_url)"
+                         :class="dailyShowSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
+                         class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
+                  </template>
+                  <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
+                    <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                                text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
+                         x-text="dailyQueue[dailyIdx].solution_text"></div>
+                  </template>
+                  <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
+                    <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
+                  </template>
+                </div>
+                <div x-show="!dailyShowSolution"
+                     @click="dailyShowSolution = true"
+                     class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
+                  <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
+                        style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {# Pinned action area — always visible #}
+        {# Pinned action area — rating active only after solution revealed #}
         <div class="shrink-0 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] space-y-2.5"
              style="background:var(--surface-0);">
-          <button @click="dailyShowSolution = !dailyShowSolution"
-                  class="w-full py-2.5 rounded-xl text-sm font-bold border transition-colors
-                         border-[var(--border)] text-[var(--muted)] hover:text-[var(--body)] hover:border-[var(--muted)]">
-            <span x-show="!dailyShowSolution">Çözümü Göster</span>
-            <span x-show="dailyShowSolution" x-cloak>Çözümü Gizle</span>
-          </button>
           <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
           <div class="flex gap-2">
-            <button @click="dailySubmitReview('zor')" :disabled="dailyReviewing"
+            <button @click="dailySubmitReview('zor')" :disabled="!dailyShowSolution || dailyReviewing"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-red-50 border-red-200 text-red-600 hover:bg-red-100
                            dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                           disabled:opacity-50 disabled:cursor-wait">Zor</button>
-            <button @click="dailySubmitReview('orta')" :disabled="dailyReviewing"
+                           disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+            <button @click="dailySubmitReview('orta')" :disabled="!dailyShowSolution || dailyReviewing"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
                            dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                           disabled:opacity-50 disabled:cursor-wait">Orta</button>
-            <button @click="dailySubmitReview('kolay')" :disabled="dailyReviewing"
+                           disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+            <button @click="dailySubmitReview('kolay')" :disabled="!dailyShowSolution || dailyReviewing"
                     class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
                            bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
                            dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                           disabled:opacity-50 disabled:cursor-wait">Kolay</button>
+                           disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
           </div>
         </div>
 
