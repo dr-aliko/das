@@ -88,85 +88,95 @@
 
     {# Flashcard #}
     <div id="struggle-flashcard" x-show="currentQuestion && !reviewDone" x-cloak class="space-y-3">
-      <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-        <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
-          <span class="text-xs font-semibold text-[var(--muted)]" x-text="currentQuestion?.subject_name"></span>
-          <span x-show="currentQuestion?.topic_name" x-cloak
-                class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
-                x-text="currentQuestion?.topic_name"></span>
-          <span class="ml-auto text-xs text-[var(--muted-2)] tabular-nums"
-                x-text="(reviewIdx + 1) + ' / ' + (reviewIdx + dueQueue.length)"></span>
-        </div>
-        <div class="px-4 pt-4 pb-2">
-          <template x-if="currentQuestion?.question_image_url">
-            <img :src="currentQuestion.question_image_url" alt="Soru görseli"
-                 @click="openLightbox(currentQuestion.question_image_url)"
-                 class="w-full rounded-xl object-contain max-h-[40dvh] border border-[var(--border)] bg-white
-                        cursor-pointer hover:opacity-90 transition-opacity">
-          </template>
-          <template x-if="!currentQuestion?.question_image_url">
-            <div class="relative cursor-pointer"
-                 @click="openTextModal(currentQuestion.question_text, 'Soru Metni')">
-              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-36"
-                   x-text="currentQuestion?.question_text"></div>
-              <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
-                   style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
-            </div>
-          </template>
-        </div>
-        <div class="px-4 pb-4">
-          {# Solution — always rendered, blurred until revealed #}
-          <div class="relative mt-0 rounded-xl overflow-hidden">
-            {# Blurred content layer #}
-            <div :style="showSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
-              <template x-if="currentQuestion?.solution_image_url">
-                <img :src="currentQuestion.solution_image_url" alt="Çözüm görseli"
-                     @click="showSolution && openLightbox(currentQuestion.solution_image_url)"
-                     :class="showSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
-                     class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
-              </template>
-              <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
-                <div class="relative cursor-pointer"
-                     @click="openTextModal(currentQuestion.solution_text, 'Çözüm')">
-                  <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                              text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
-                       x-text="currentQuestion.solution_text"></div>
-                  <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
-                       style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
-                </div>
-              </template>
-              <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
-                <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
-              </template>
-            </div>
-            {# Tap-to-reveal overlay — visible only while blurred #}
-            <div x-show="!showSolution"
-                 @click="showSolution = true"
-                 class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
-              <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
-                    style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
-            </div>
+      {# Two-box split — question (top) + solution (bottom), fills available viewport height #}
+      <div class="flex flex-col gap-2" style="height:calc(100dvh - 25rem)">
+
+        {# TOP BOX — question #}
+        <div class="flex-1 min-h-0 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden flex flex-col">
+          <div class="shrink-0 px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
+            <span class="text-xs font-semibold text-[var(--muted)]" x-text="currentQuestion?.subject_name"></span>
+            <span x-show="currentQuestion?.topic_name" x-cloak
+                  class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
+                  x-text="currentQuestion?.topic_name"></span>
+            <span class="ml-auto text-xs text-[var(--muted-2)] tabular-nums"
+                  x-text="(reviewIdx + 1) + ' / ' + (reviewIdx + dueQueue.length)"></span>
+          </div>
+          <div class="flex-1 min-h-0 relative">
+            <template x-if="currentQuestion?.question_image_url">
+              <img :src="currentQuestion.question_image_url" alt="Soru görseli"
+                   @click="openLightbox(currentQuestion.question_image_url)"
+                   class="absolute inset-0 w-full h-full bg-white cursor-pointer hover:opacity-90 transition-opacity" style="object-fit:cover">
+            </template>
+            <template x-if="!currentQuestion?.question_image_url">
+              <div class="absolute inset-0 cursor-pointer overflow-hidden"
+                   @click="openTextModal(currentQuestion.question_text, 'Soru Metni')">
+                <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                     x-text="currentQuestion?.question_text"></div>
+                <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
+                     style="background:linear-gradient(to bottom,transparent,var(--surface-1))"></div>
+              </div>
+            </template>
           </div>
         </div>
+
+        {# BOTTOM BOX — solution (blurred until revealed) #}
+        <div class="flex-1 min-h-0 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden relative">
+          <div class="absolute inset-0"
+               :style="showSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+            <template x-if="currentQuestion?.solution_image_url">
+              <img :src="currentQuestion.solution_image_url" alt="Çözüm"
+                   @click="showSolution && openLightbox(currentQuestion.solution_image_url)"
+                   :class="showSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
+                   class="absolute inset-0 w-full h-full bg-white transition-opacity" style="object-fit:cover">
+            </template>
+            <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
+              <div class="absolute inset-0 cursor-pointer overflow-hidden"
+                   @click="openTextModal(currentQuestion.solution_text, 'Çözüm')">
+                <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                     x-text="currentQuestion.solution_text"></div>
+                <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
+                     style="background:linear-gradient(to bottom,transparent,var(--surface-1))"></div>
+              </div>
+            </template>
+            <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-xs text-[var(--muted-2)] text-center italic">Bu soru için çözüm eklenmemiş.</p>
+              </div>
+            </template>
+          </div>
+          {# Reveal overlay #}
+          <div x-show="!showSolution"
+               @click="showSolution = true"
+               class="absolute inset-0 flex items-center justify-center cursor-pointer z-10">
+            <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
+                  style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
+          </div>
+        </div>
+
       </div>
-      <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
-      <div id="struggle-rating-buttons" class="flex gap-2">
-        <button @click="submitReview('zor')" :disabled="!showSolution || reviewing"
-                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                       bg-red-50 border-red-200 text-red-600 hover:bg-red-100
-                       dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                       disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
-        <button @click="submitReview('orta')" :disabled="!showSolution || reviewing"
-                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                       bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
-                       dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                       disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
-        <button @click="submitReview('kolay')" :disabled="!showSolution || reviewing"
-                class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                       bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
-                       dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                       disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+      <div x-show="showSolution" x-cloak
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0"
+           x-transition:enter-end="opacity-100"
+           class="space-y-2">
+        <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
+        <div id="struggle-rating-buttons" class="flex gap-2">
+          <button @click="submitReview('zor')" :disabled="reviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                         dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                         disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+          <button @click="submitReview('orta')" :disabled="reviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                         dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                         disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+          <button @click="submitReview('kolay')" :disabled="reviewing"
+                  class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                         bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                         dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                         disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+        </div>
       </div>
     </div>
   </div>
@@ -582,31 +592,30 @@
         <div class="w-12 h-1.5 rounded-full" style="background:var(--border-strong);"></div>
       </div>
 
-      {# Scrollable: subject badge + question + solution #}
-      <div class="flex-1 overflow-y-auto min-h-0 px-4 space-y-4 pb-3">
+      {# Subject badge — compact, always visible #}
+      <div class="shrink-0 px-4 pb-2 pt-1 flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-semibold text-[var(--muted)]" x-text="earlyReviewQ?.subject_name"></span>
+        <span x-show="earlyReviewQ?.topic_name" x-cloak
+              class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
+              x-text="earlyReviewQ?.topic_name"></span>
+        <span class="ml-auto text-xs text-[var(--muted-2)]"
+              x-text="formatNextReview(earlyReviewQ?.next_review_at)"></span>
+      </div>
 
-        {# Subject / topic / next review #}
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-semibold text-[var(--muted)]" x-text="earlyReviewQ?.subject_name"></span>
-          <span x-show="earlyReviewQ?.topic_name" x-cloak
-                class="text-xs bg-[var(--surface-3)] text-[var(--muted-2)] px-2 py-0.5 rounded-full"
-                x-text="earlyReviewQ?.topic_name"></span>
-          <span class="ml-auto text-xs text-[var(--muted-2)]"
-                x-text="formatNextReview(earlyReviewQ?.next_review_at)"></span>
-        </div>
+      {# Two-box split — question (top) + solution (bottom) #}
+      <div class="flex-1 min-h-0 flex flex-col gap-2 px-4 pb-2">
 
-        {# Question #}
-        <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
+        {# TOP BOX — question #}
+        <div class="flex-1 min-h-0 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden relative">
           <template x-if="earlyReviewQ?.question_image_url">
             <img :src="earlyReviewQ.question_image_url" alt="Soru görseli"
                  @click="openLightbox(earlyReviewQ.question_image_url)"
-                 class="w-full object-contain max-h-[38dvh] bg-white cursor-pointer hover:opacity-90 transition-opacity">
+                 class="absolute inset-0 w-full h-full bg-white cursor-pointer hover:opacity-90 transition-opacity" style="object-fit:cover">
           </template>
           <template x-if="!earlyReviewQ?.question_image_url">
-            <div class="relative cursor-pointer"
+            <div class="absolute inset-0 cursor-pointer overflow-hidden"
                  @click="openTextModal(earlyReviewQ.question_text, 'Soru Metni')">
-              <div class="px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed
-                          overflow-hidden max-h-36"
+              <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
                    x-text="earlyReviewQ?.question_text"></div>
               <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
                    style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
@@ -614,32 +623,34 @@
           </template>
         </div>
 
-        {# Solution — always rendered, blurred until revealed #}
-        <div class="relative rounded-xl overflow-hidden">
-          <div :style="earlyReviewShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+        {# BOTTOM BOX — solution (blurred until revealed) #}
+        <div class="flex-1 min-h-0 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden relative">
+          <div class="absolute inset-0"
+               :style="earlyReviewShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
             <template x-if="earlyReviewQ?.solution_image_url">
               <img :src="earlyReviewQ.solution_image_url" alt="Çözüm"
                    @click="earlyReviewShowSolution && openLightbox(earlyReviewQ.solution_image_url)"
                    :class="earlyReviewShowSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
-                   class="w-full rounded-xl object-contain max-h-[30dvh] border border-[var(--border)] bg-white transition-opacity">
+                   class="absolute inset-0 w-full h-full bg-white transition-opacity" style="object-fit:cover">
             </template>
             <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
-              <div class="relative cursor-pointer"
+              <div class="absolute inset-0 cursor-pointer overflow-hidden"
                    @click="openTextModal(earlyReviewQ.solution_text, 'Çözüm')">
-                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
+                <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
                      x-text="earlyReviewQ.solution_text"></div>
-                <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
                      style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
               </div>
             </template>
             <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
-              <p class="text-xs text-center text-[var(--muted-2)] italic py-2">Çözüm eklenmemiş.</p>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-xs text-[var(--muted-2)] text-center italic">Çözüm eklenmemiş.</p>
+              </div>
             </template>
           </div>
           <div x-show="!earlyReviewShowSolution"
                @click="earlyReviewShowSolution = true"
-               class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
+               class="absolute inset-0 flex items-center justify-center cursor-pointer z-10">
             <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
                   style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
           </div>
@@ -651,23 +662,29 @@
       <div class="shrink-0 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] space-y-3
                   border-t border-[var(--border)]" style="background:var(--surface-1);">
         <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
-          <p class="text-xs font-semibold text-[var(--muted)] text-center">Bugün Tekrar Ettim</p>
-          <div class="flex gap-2">
-            <button @click="submitEarlyReview('zor')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-red-50 border-red-200 text-red-600 hover:bg-red-100
-                           dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
-            <button @click="submitEarlyReview('orta')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
-                           dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
-            <button @click="submitEarlyReview('kolay')" :disabled="!earlyReviewShowSolution || earlyReviewLoading"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
-                           dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+          <div x-show="earlyReviewShowSolution" x-cloak
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="space-y-3">
+            <p class="text-xs font-semibold text-[var(--muted)] text-center">Bugün Tekrar Ettim</p>
+            <div class="flex gap-2">
+              <button @click="submitEarlyReview('zor')" :disabled="earlyReviewLoading"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                             dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+              <button @click="submitEarlyReview('orta')" :disabled="earlyReviewLoading"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                             dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+              <button @click="submitEarlyReview('kolay')" :disabled="earlyReviewLoading"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                             dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+            </div>
           </div>
           <button @click="closeEarlyReview()"
                   class="w-full py-2.5 rounded-xl text-xs font-medium text-[var(--muted-2)]
@@ -847,10 +864,12 @@
           </div>
         </div>
 
-        {# Scrollable card area: question + solution #}
-        <div class="flex-1 overflow-y-auto min-h-0">
-          <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-            <div class="px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
+        {# Two-box split — question (top) + solution (bottom), fills remaining height #}
+        <div class="flex-1 min-h-0 flex flex-col gap-2">
+
+          {# TOP BOX — badge + question #}
+          <div class="flex-1 min-h-0 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden flex flex-col">
+            <div class="shrink-0 px-4 pt-3 pb-2 flex items-center gap-2 flex-wrap border-b border-[var(--border)]">
               <span class="text-xs font-semibold text-[var(--muted)]"
                     x-text="dailyQueue[dailyIdx]?.subject_name"></span>
               <span x-show="dailyQueue[dailyIdx]?.topic_name" x-cloak
@@ -860,79 +879,85 @@
                     :class="dailyIsDue(dailyQueue[dailyIdx]) ? 'text-ruby-400' : 'text-[var(--muted-2)]'"
                     x-text="dailyIsDue(dailyQueue[dailyIdx]) ? 'Tekrar zamanı' : 'Erken tekrar'"></span>
             </div>
-            <div class="px-4 pt-4 pb-4">
+            <div class="flex-1 min-h-0 relative">
               <template x-if="dailyQueue[dailyIdx]?.question_image_url">
                 <img :src="dailyQueue[dailyIdx].question_image_url" alt="Soru görseli"
                      @click="openLightbox(dailyQueue[dailyIdx].question_image_url)"
-                     class="w-full rounded-xl object-contain max-h-[40dvh] border border-[var(--border)] bg-white
-                            cursor-pointer hover:opacity-90 transition-opacity">
+                     class="absolute inset-0 w-full h-full bg-white cursor-pointer hover:opacity-90 transition-opacity" style="object-fit:cover">
               </template>
               <template x-if="!dailyQueue[dailyIdx]?.question_image_url">
-                <div class="relative cursor-pointer"
+                <div class="absolute inset-0 cursor-pointer overflow-hidden"
                      @click="openTextModal(dailyQueue[dailyIdx].question_text, 'Soru Metni')">
-                  <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                              text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-36"
+                  <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
                        x-text="dailyQueue[dailyIdx]?.question_text"></div>
-                  <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
-                       style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+                  <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
+                       style="background:linear-gradient(to bottom,transparent,var(--surface-1))"></div>
                 </div>
               </template>
             </div>
-            {# Solution — always rendered, blurred until revealed #}
-            <div class="px-4 pb-4 pt-3 border-t border-[var(--border)]">
-              <div class="relative rounded-xl overflow-hidden">
-                <div :style="dailyShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
-                  <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
-                    <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
-                         @click="dailyShowSolution && openLightbox(dailyQueue[dailyIdx].solution_image_url)"
-                         :class="dailyShowSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
-                         class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
-                  </template>
-                  <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
-                    <div class="relative cursor-pointer"
-                         @click="openTextModal(dailyQueue[dailyIdx].solution_text, 'Çözüm')">
-                      <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                                  text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
-                           x-text="dailyQueue[dailyIdx].solution_text"></div>
-                      <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
-                           style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
-                    </div>
-                  </template>
-                  <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
-                    <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
-                  </template>
+          </div>
+
+          {# BOTTOM BOX — solution (blurred until revealed) #}
+          <div class="flex-1 min-h-0 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden relative">
+            <div class="absolute inset-0"
+                 :style="dailyShowSolution ? 'filter:blur(0);transition:filter 0.25s ease' : 'filter:blur(10px);transition:filter 0.25s ease;user-select:none;pointer-events:none'">
+              <template x-if="dailyQueue[dailyIdx]?.solution_image_url">
+                <img :src="dailyQueue[dailyIdx].solution_image_url" alt="Çözüm görseli"
+                     @click="dailyShowSolution && openLightbox(dailyQueue[dailyIdx].solution_image_url)"
+                     :class="dailyShowSolution ? 'cursor-pointer hover:opacity-90' : 'cursor-default'"
+                     class="absolute inset-0 w-full h-full bg-white transition-opacity" style="object-fit:cover">
+              </template>
+              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
+                <div class="absolute inset-0 cursor-pointer overflow-hidden"
+                     @click="openTextModal(dailyQueue[dailyIdx].solution_text, 'Çözüm')">
+                  <div class="absolute inset-0 px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                       x-text="dailyQueue[dailyIdx].solution_text"></div>
+                  <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
+                       style="background:linear-gradient(to bottom,transparent,var(--surface-1))"></div>
                 </div>
-                <div x-show="!dailyShowSolution"
-                     @click="dailyShowSolution = true"
-                     class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl">
-                  <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
-                        style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
+              </template>
+              <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <p class="text-xs text-[var(--muted-2)] text-center italic">Bu soru için çözüm eklenmemiş.</p>
                 </div>
-              </div>
+              </template>
+            </div>
+            <div x-show="!dailyShowSolution"
+                 @click="dailyShowSolution = true"
+                 class="absolute inset-0 flex items-center justify-center cursor-pointer z-10">
+              <span class="px-4 py-2 rounded-full text-xs font-bold text-white"
+                    style="background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">Çözümü Göster</span>
             </div>
           </div>
+
         </div>
 
         {# Pinned action area — rating active only after solution revealed #}
-        <div class="shrink-0 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] space-y-2.5"
+        <div class="shrink-0 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
              style="background:var(--surface-0);">
-          <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
-          <div class="flex gap-2">
-            <button @click="dailySubmitReview('zor')" :disabled="!dailyShowSolution || dailyReviewing"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-red-50 border-red-200 text-red-600 hover:bg-red-100
-                           dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
-            <button @click="dailySubmitReview('orta')" :disabled="!dailyShowSolution || dailyReviewing"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
-                           dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
-            <button @click="dailySubmitReview('kolay')" :disabled="!dailyShowSolution || dailyReviewing"
-                    class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
-                           bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
-                           dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
-                           disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+          <div x-show="dailyShowSolution" x-cloak
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="space-y-2.5">
+            <p class="text-xs text-center text-[var(--muted-2)]">Bu soruyu nasıl buldun?</p>
+            <div class="flex gap-2">
+              <button @click="dailySubmitReview('zor')" :disabled="dailyReviewing"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-red-50 border-red-200 text-red-600 hover:bg-red-100
+                             dark:bg-red-900/20 dark:border-red-700 dark:text-red-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Zor</button>
+              <button @click="dailySubmitReview('orta')" :disabled="dailyReviewing"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100
+                             dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Orta</button>
+              <button @click="dailySubmitReview('kolay')" :disabled="dailyReviewing"
+                      class="flex-1 py-3 rounded-xl text-sm font-bold border transition active:scale-95
+                             bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100
+                             dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400
+                             disabled:opacity-40 disabled:cursor-not-allowed">Kolay</button>
+            </div>
           </div>
         </div>
 
@@ -956,7 +981,8 @@
        x-transition:leave-end="opacity-0"
        @click="closeLightbox()"
        @keydown.escape.window="closeLightbox()"
-       class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center">
+       class="fixed inset-0 z-[60] flex items-center justify-center"
+       style="background:rgba(0,0,0,0.9)">
     <button @click.stop="closeLightbox()"
             class="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center
                    rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
@@ -965,8 +991,9 @@
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
     </button>
-    <div class="w-full h-full overflow-auto p-4 flex items-start justify-center" @click.stop>
+    <div class="w-full h-full overflow-auto p-4 flex items-start justify-center">
       <img :src="lightboxUrl" alt="Tam boyut görsel"
+           @click.stop
            class="max-w-full rounded-lg" style="height:auto;">
     </div>
   </div>
@@ -985,7 +1012,8 @@
        x-transition:leave-end="opacity-0"
        @click="closeTextModal()"
        @keydown.escape.window="closeTextModal()"
-       class="fixed inset-0 z-[60] bg-black/92 flex flex-col">
+       class="fixed inset-0 z-[60] flex flex-col"
+       style="background:rgba(0,0,0,0.92)">
     {# Header bar #}
     <div class="shrink-0 flex items-center justify-between px-5 pb-4 border-b border-white/10"
          style="padding-top:calc(env(safe-area-inset-top) + 1rem)">
