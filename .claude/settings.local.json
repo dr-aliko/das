@@ -176,7 +176,9 @@
       "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; users = User.objects.filter\\(is_student=True\\).values\\('username', 'email'\\)[:3]; [print\\(u\\) for u in users]\")",
       "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; users = User.objects.filter\\(role='student'\\).values\\('username', 'email'\\)[:3]; [print\\(u\\) for u in users]\")",
       "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; u = User.objects.filter\\(is_superuser=True\\).first\\(\\); print\\(u.email if u else 'none'\\)\")",
-      "Bash(sort -t: -k2 -n)"
+      "Bash(sort -t: -k2 -n)",
+      "Bash(.venv/Scripts/python.exe manage.py shell -c \"from struggle_app.models import StruggleQuestion; from django.contrib.auth import get_user_model; User = get_user_model\\(\\); u = User.objects.filter\\(email='akak@gmail.com'\\).first\\(\\); qs = StruggleQuestion.objects.filter\\(student__user=u\\); print\\('count:', qs.count\\(\\)\\); [print\\(q.id, repr\\(\\(q.question_text or ''\\)[:60]\\)\\) for q in qs[:5]]\")",
+      "Bash(.venv/Scripts/python.exe manage.py shell -c \"from struggle_app.models import StudentStruggleQuestion; from django.contrib.auth import get_user_model; User = get_user_model\\(\\); u = User.objects.filter\\(email='akak@gmail.com'\\).first\\(\\); qs = StudentStruggleQuestion.objects.filter\\(student__user=u\\); print\\('count:', qs.count\\(\\)\\); [\\(print\\(q.id, repr\\(\\(q.question_text or ''\\)[:60]\\), repr\\(\\(q.solution_text or ''\\)[:40]\\)\\)\\) for q in qs[:5]]\")"
     ]
   }
 }

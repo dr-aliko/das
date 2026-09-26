@@ -105,9 +105,14 @@
                         cursor-pointer hover:opacity-90 transition-opacity">
           </template>
           <template x-if="!currentQuestion?.question_image_url">
-            <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
-                        text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[40dvh]"
-                 x-text="currentQuestion?.question_text"></div>
+            <div class="relative cursor-pointer"
+                 @click="openTextModal(currentQuestion.question_text, 'Soru Metni')">
+              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-36"
+                   x-text="currentQuestion?.question_text"></div>
+              <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                   style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+            </div>
           </template>
         </div>
         <div class="px-4 pb-4">
@@ -122,9 +127,14 @@
                      class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
               </template>
               <template x-if="!currentQuestion?.solution_image_url && currentQuestion?.solution_text">
-                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[30dvh]"
-                     x-text="currentQuestion.solution_text"></div>
+                <div class="relative cursor-pointer"
+                     @click="openTextModal(currentQuestion.solution_text, 'Çözüm')">
+                  <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                              text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
+                       x-text="currentQuestion.solution_text"></div>
+                  <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                       style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+                </div>
               </template>
               <template x-if="!currentQuestion?.solution_image_url && !currentQuestion?.solution_text">
                 <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
@@ -593,9 +603,14 @@
                  class="w-full object-contain max-h-[38dvh] bg-white cursor-pointer hover:opacity-90 transition-opacity">
           </template>
           <template x-if="!earlyReviewQ?.question_image_url">
-            <div class="px-4 py-5 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed
-                        overflow-y-auto max-h-[38dvh]"
-                 x-text="earlyReviewQ?.question_text"></div>
+            <div class="relative cursor-pointer"
+                 @click="openTextModal(earlyReviewQ.question_text, 'Soru Metni')">
+              <div class="px-4 py-4 text-sm text-[var(--body)] whitespace-pre-wrap leading-relaxed
+                          overflow-hidden max-h-36"
+                   x-text="earlyReviewQ?.question_text"></div>
+              <div class="absolute bottom-0 inset-x-0 h-8 pointer-events-none"
+                   style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+            </div>
           </template>
         </div>
 
@@ -609,9 +624,14 @@
                    class="w-full rounded-xl object-contain max-h-[30dvh] border border-[var(--border)] bg-white transition-opacity">
             </template>
             <template x-if="!earlyReviewQ?.solution_image_url && earlyReviewQ?.solution_text">
-              <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                          text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
-                   x-text="earlyReviewQ.solution_text"></div>
+              <div class="relative cursor-pointer"
+                   @click="openTextModal(earlyReviewQ.solution_text, 'Çözüm')">
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
+                     x-text="earlyReviewQ.solution_text"></div>
+                <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                     style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+              </div>
             </template>
             <template x-if="!earlyReviewQ?.solution_image_url && !earlyReviewQ?.solution_text">
               <p class="text-xs text-center text-[var(--muted-2)] italic py-2">Çözüm eklenmemiş.</p>
@@ -848,9 +868,14 @@
                             cursor-pointer hover:opacity-90 transition-opacity">
               </template>
               <template x-if="!dailyQueue[dailyIdx]?.question_image_url">
-                <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-5 text-sm
-                            text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[40dvh]"
-                     x-text="dailyQueue[dailyIdx]?.question_text"></div>
+                <div class="relative cursor-pointer"
+                     @click="openTextModal(dailyQueue[dailyIdx].question_text, 'Soru Metni')">
+                  <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                              text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-36"
+                       x-text="dailyQueue[dailyIdx]?.question_text"></div>
+                  <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                       style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+                </div>
               </template>
             </div>
             {# Solution — always rendered, blurred until revealed #}
@@ -864,9 +889,14 @@
                          class="w-full rounded-xl object-contain max-h-[32dvh] border border-[var(--border)] bg-white transition-opacity">
                   </template>
                   <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && dailyQueue[dailyIdx]?.solution_text">
-                    <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
-                                text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[28dvh]"
-                         x-text="dailyQueue[dailyIdx].solution_text"></div>
+                    <div class="relative cursor-pointer"
+                         @click="openTextModal(dailyQueue[dailyIdx].solution_text, 'Çözüm')">
+                      <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm
+                                  text-[var(--body)] whitespace-pre-wrap leading-relaxed overflow-hidden max-h-32"
+                           x-text="dailyQueue[dailyIdx].solution_text"></div>
+                      <div class="absolute bottom-0 inset-x-0 h-8 rounded-b-xl pointer-events-none"
+                           style="background:linear-gradient(to bottom,transparent,var(--surface-2))"></div>
+                    </div>
                   </template>
                   <template x-if="!dailyQueue[dailyIdx]?.solution_image_url && !dailyQueue[dailyIdx]?.solution_text">
                     <p class="text-xs text-[var(--muted-2)] text-center py-3 italic">Bu soru için çözüm eklenmemiş.</p>
@@ -942,6 +972,43 @@
   </div>
   </template>
 
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  {# TEXT MODAL — teleported to <body>, full-screen readable text view     #}
+  {# ══════════════════════════════════════════════════════════════════════ #}
+  <template x-teleport="body">
+  <div x-show="textModalOpen" x-cloak
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="closeTextModal()"
+       @keydown.escape.window="closeTextModal()"
+       class="fixed inset-0 z-[60] bg-black/92 flex flex-col">
+    {# Header bar #}
+    <div class="shrink-0 flex items-center justify-between px-5 pb-4 border-b border-white/10"
+         style="padding-top:calc(env(safe-area-inset-top) + 1rem)">
+      <p class="text-xs font-semibold tracking-widest uppercase text-white/40"
+         x-text="textModalLabel"></p>
+      <button @click.stop="closeTextModal()"
+              class="w-9 h-9 flex items-center justify-center rounded-full
+                     bg-white/10 text-white hover:bg-white/20 transition-colors">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    {# Scrollable full text #}
+    <div class="flex-1 overflow-y-auto px-5 py-5" @click.stop
+         style="padding-bottom:calc(env(safe-area-inset-bottom) + 1.25rem)">
+      <p class="text-base text-white leading-loose whitespace-pre-wrap"
+         x-text="textModalContent"></p>
+    </div>
+  </div>
+  </template>
+
 </div>
 
 <script>
@@ -991,6 +1058,11 @@ function struggleApp(cfg) {
     // ── Lightbox ──────────────────────────────────────────────────────────
     lightboxOpen: false,
     lightboxUrl:  null,
+
+    // ── Text modal ────────────────────────────────────────────────────────
+    textModalOpen:    false,
+    textModalContent: '',
+    textModalLabel:   '',
 
     // ── Daily review session ──────────────────────────────────────────────
     dailyOpen:               false,
@@ -1245,6 +1317,16 @@ function struggleApp(cfg) {
     closeLightbox() {
       this.lightboxOpen = false;
       this.lightboxUrl = null;
+    },
+
+    // ── Text modal ────────────────────────────────────────────────────────
+    openTextModal(text, label = '') {
+      this.textModalContent = text || '';
+      this.textModalLabel = label;
+      this.textModalOpen = true;
+    },
+    closeTextModal() {
+      this.textModalOpen = false;
     },
 
     // ── Daily review session ──────────────────────────────────────────────
