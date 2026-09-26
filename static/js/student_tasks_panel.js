@@ -109,6 +109,7 @@ function studentPanel(studentId, studentName) {
     refDate: isoMonday(localISO(new Date())),
     days: [],
     overdueGorevler: [],
+    overdueOpen: false,
     toplamlar: {},
     colorSettings: { ...DEFAULT_COLORS },
     isDark: document.documentElement.classList.contains('dark'),
