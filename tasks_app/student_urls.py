@@ -14,5 +14,7 @@ urlpatterns = [
     path('api/gorev/<int:pk>/reorder', views.StudentGorevReorderView.as_view(), name='api-gorev-reorder'),
     path('api/gorev/<int:pk>/copy', views.StudentGorevCopyView.as_view(), name='api-gorev-copy'),
     path('api/reset/', views.StudentResetView.as_view(), name='api-reset'),
+    path('api/geciken', views.StudentGecikenGorevListView.as_view(), name='api-geciken'),
+    path('api/gorev/<int:pk>/bugune-al', views.StudentGorevBuguneAlView.as_view(), name='api-gorev-bugune-al'),
     path('export/hafta.xlsx', views.StudentExportXlsxView.as_view(), name='export-xlsx'),
 ]

@@ -661,6 +661,22 @@ class StudentResetView(View):
         return JsonResponse({"ok": True, "deleted": deleted})
 
 
+@method_decorator(student_required, name='dispatch')
+class StudentGecikenGorevListView(View):
+    def get(self, request):
+        gorevler = tasks.geciken_gorevler(request.user)
+        return JsonResponse({"gorevler": gorevler})
+
+
+@method_decorator(student_required, name='dispatch')
+class StudentGorevBuguneAlView(View):
+    def post(self, request, pk: int):
+        data = tasks.move_to_today(request.user, pk)
+        if not data:
+            return JsonResponse({"errors": "Bulunamadı veya zaten tamamlandı"}, status=404)
+        return JsonResponse({"ok": True, "gorev": data})
+
+
 # ── Student Excel export ──────────────────────────────────────────────────────
 
 @method_decorator(student_required, name='dispatch')

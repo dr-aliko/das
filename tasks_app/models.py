@@ -26,6 +26,8 @@ class GorevGrubu(models.Model):
     meta         = models.JSONField(null=True, blank=True)
     is_completed  = models.BooleanField(default=False)
     completed_at  = models.DateTimeField(null=True, blank=True)
+    original_tarih = models.DateField(null=True, blank=True)
+    last_moved_at  = models.DateTimeField(null=True, blank=True)
     # Optional student note and actual time logged when marking complete
     student_note  = models.TextField(null=True, blank=True)
     time_spent_dk = models.PositiveIntegerField(null=True, blank=True)

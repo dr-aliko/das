@@ -108,6 +108,7 @@ function studentPanel(studentId, studentName) {
     studentId,
     refDate: isoMonday(localISO(new Date())),
     days: [],
+    overdueGorevler: [],
     toplamlar: {},
     colorSettings: { ...DEFAULT_COLORS },
     isDark: document.documentElement.classList.contains('dark'),
@@ -127,7 +128,7 @@ function studentPanel(studentId, studentName) {
     async init() {
       this.loadColorSettings();
       this.buildDays();
-      await this.loadWeek();
+      await Promise.all([this.loadWeek(), this.loadOverdue()]);
       window.addEventListener('darkmode-change', (e) => { this.isDark = e.detail.isDark; });
     },
 
@@ -366,6 +367,32 @@ function studentPanel(studentId, studentName) {
         await fetch(`/student/tasks/api/gorev/${id}/delete`, { method: 'DELETE', headers: { 'X-CSRFToken': CSRF } });
         await this.loadWeek();
       } catch (e) { console.error('[deleteTask]', e); }
+    },
+
+    // ── Overdue tray ──────────────────────────────────────────────────────────
+    async loadOverdue() {
+      try {
+        const r = await fetch('/student/tasks/api/geciken');
+        if (r.ok) this.overdueGorevler = (await r.json()).gorevler ?? [];
+      } catch (e) { console.error('[loadOverdue]', e); }
+    },
+
+    async moveToToday(id) {
+      try {
+        const r = await fetch(`/student/tasks/api/gorev/${id}/bugune-al`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        if (r.ok) await Promise.all([this.loadWeek(), this.loadOverdue()]);
+      } catch (e) { console.error('[moveToToday]', e); }
+    },
+
+    fmtDate(iso) {
+      if (!iso) return '';
+      const MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const d = new Date(iso + 'T00:00:00');
+      return d.getDate() + ' ' + MONTHS[d.getMonth()];
     },
 
     // ── Reset to coach plan ───────────────────────────────────────────────────

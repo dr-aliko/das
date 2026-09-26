@@ -64,6 +64,44 @@
     </div>
   </header>
 
+  {# Geciken Görevler tray — independent of week view, always visible when non-empty #}
+  <div x-show="overdueGorevler.length > 0"
+       class="border-b border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700/30">
+    <button @click="overdueOpen = !overdueOpen"
+            class="w-full flex items-center justify-between px-4 py-3 active:bg-amber-100 dark:active:bg-amber-800/30 transition-colors">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-bold text-amber-700 dark:text-amber-400">Geciken Görevler</span>
+        <span class="text-[10px] font-bold bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+              x-text="overdueGorevler.length"></span>
+      </div>
+      <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 transition-transform duration-200"
+           :class="overdueOpen ? '' : '-rotate-90'"
+           fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
+    <div x-show="overdueOpen"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 -translate-y-1"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         class="pb-3 px-4 space-y-2">
+      <template x-for="g in overdueGorevler" :key="g.id">
+        <div class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 shadow-sm border border-amber-200 dark:border-amber-700/30">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-[var(--heading)] truncate"
+                 x-text="g.ders_title || '—'"></div>
+            <div class="text-xs text-amber-600 dark:text-amber-400 mt-0.5"
+                 x-text="'Planlandı: ' + fmtDate(g.original_tarih || g.tarih)"></div>
+          </div>
+          <button @click="moveToToday(g.id)"
+                  class="shrink-0 text-xs font-bold px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition active:scale-95">
+            Bugüne Al
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+
   {# Week strip #}
   <div class="bg-[var(--surface-1)] pt-4 pb-2 border-b border-[var(--border)]">
     {# Row 1: week navigation #}
@@ -349,7 +387,42 @@
 
   {# ── Weekly grid ────────────────────────────────────────────────────────── #}
   <div class="overflow-x-auto pb-2 sm:overflow-visible">
-  <div id="student-weekly-grid" class="grid grid-cols-7 gap-2 min-h-[60vh] min-w-[700px] sm:min-w-0">
+  <div class="flex gap-2 min-h-[60vh] min-w-[700px] sm:min-w-0">
+
+  {# Overdue column — leftmost, amber-bordered, only when there are overdue tasks #}
+  <div x-show="overdueGorevler.length > 0"
+       class="w-44 shrink-0 rounded-2xl shadow-sm flex flex-col border-2 border-amber-300 bg-amber-50 overflow-hidden">
+    <div class="px-3 py-2.5 bg-amber-100 border-b border-amber-200 shrink-0">
+      <div class="flex items-center gap-1.5">
+        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-700">Geciken Görevler</div>
+        <span class="text-[9px] font-bold bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center shrink-0"
+              x-text="overdueGorevler.length"></span>
+      </div>
+    </div>
+    <div class="flex-1 flex flex-col gap-2 p-2 overflow-y-auto">
+      <template x-for="g in overdueGorevler" :key="g.id">
+        <div class="rounded-xl border-2 p-2.5 shadow-sm"
+             :style="{background: colorFor(g.aktivite_tipi), borderColor: borderFor(g.aktivite_tipi)}">
+          <div class="text-xs font-semibold leading-snug mb-1 truncate"
+               :style="{color: titleColorFor(g.aktivite_tipi)}"
+               x-text="g.ders_title || '—'"></div>
+          <div class="flex items-center gap-1 mb-2">
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  :style="{background: borderFor(g.aktivite_tipi), color: titleColorFor(g.aktivite_tipi)}"
+                  x-text="aktiviteLabel(g.aktivite_tipi)"></span>
+          </div>
+          <div class="text-[10px] text-amber-700 font-medium mb-2"
+               x-text="'📅 ' + fmtDate(g.original_tarih || g.tarih)"></div>
+          <button @click="moveToToday(g.id)"
+                  class="w-full text-[10px] font-bold py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition">
+            Bugüne Al
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div id="student-weekly-grid" class="grid grid-cols-7 gap-2 flex-1">
     <template x-for="(gun, idx) in days" :key="idx">
       <div class="rounded-2xl shadow-sm flex flex-col min-h-[200px] sm:min-h-[420px] border"
            :class="gun.isWeekend ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-100'"
@@ -556,8 +629,9 @@
         </div>
       </div>
     </template>
-  </div>
-  </div>
+  </div>{# /student-weekly-grid #}
+  </div>{# /flex wrapper #}
+  </div>{# /overflow-x-auto #}
 
   {# ── Edit modal ─────────────────────────────────────────────────────────── #}
   <div x-show="showEditModal"
@@ -698,6 +772,7 @@ function studentMobilePanel(studentId) {
   const TYPE_LABELS = { konu_anlatimi:'Konu Anlatımı', soru_cozumu:'Soru Çözümü', tekrar:'Tekrar' };
   return {
     weekStart:'', days:[], activeDay:1, weekLabel:'', loading:false,
+    overdueGorevler:[], overdueOpen:true,
     showAddSheet:false, showEditSheet:false, showStudentSheet:false,
     showDetailSheet:false, detailTask:null,
     canToggleCompleted:true,
@@ -716,7 +791,8 @@ function studentMobilePanel(studentId) {
       this.activeDay=dow;
       const mon=new Date(today); mon.setDate(today.getDate()-dow+1);
       this.weekStart=ISO(mon); this.taskForm.tarih=ISO(today);
-      this._build(); this.loadWeek();
+      this._build();
+      Promise.all([this.loadWeek(), this.loadOverdue()]);
     },
     _build(){
       const start=new Date(this.weekStart+'T00:00:00');
@@ -848,6 +924,27 @@ function studentMobilePanel(studentId) {
     },
     openCompletedTask(task){ this.openDetail(task); },
     toggleCompletedTask(task){ this.toggleComplete(task.id); },
+    async loadOverdue(){
+      try{
+        const r=await fetch('/student/tasks/api/geciken');
+        if(r.ok) this.overdueGorevler=(await r.json()).gorevler??[];
+      }catch{}
+    },
+    async moveToToday(id){
+      const csrf=CSRF();
+      try{
+        const r=await fetch(`/student/tasks/api/gorev/${id}/bugune-al`,{
+          method:'POST',headers:{'X-CSRFToken':csrf,'Content-Type':'application/json'},body:'{}',
+        });
+        if(r.ok){ await this.loadWeek(); await this.loadOverdue(); }
+      }catch{}
+    },
+    fmtDate(iso){
+      if(!iso)return'';
+      const MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const d=new Date(iso+'T00:00:00');
+      return d.getDate()+' '+MONTHS[d.getMonth()];
+    },
     exportUrl(ext){ return `/student/tasks/export/${ext}?hafta=${encodeURIComponent(this.weekStart)}`; },
     _exportDays(){ return this.days.map(d=>({label:d.label,tarih:d.iso,gorevler:d.tasks.map(t=>t.raw),isWeekend:d.isWeekend})); },
     exportHTML(){ _downloadWeeklyHTML_s(this._exportDays(), DEFAULT_COLORS, '', this.weekLabel, `hafta_${this.weekStart}.html`); },

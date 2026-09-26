@@ -49,6 +49,8 @@ def _serialize(grup: GorevGrubu) -> dict:
         "student_note": grup.student_note,
         "time_spent_dk": grup.time_spent_dk,
         "student_can_edit": grup.student_can_edit,
+        "original_tarih": grup.original_tarih.isoformat() if grup.original_tarih else None,
+        "last_moved_at": grup.last_moved_at.isoformat() if grup.last_moved_at else None,
         "detaylar": [
             {
                 "id": d.id,
@@ -425,5 +427,39 @@ def reset_student_week(student: User, hafta_basi: date, hafta_sonu: date) -> int
         tarih__range=(hafta_basi, hafta_sonu),
     ).update(is_hidden_by_student=False)
     return deleted
+
+
+# ── Overdue tasks ─────────────────────────────────────────────────────────────
+
+def geciken_gorevler(student: User) -> list[dict]:
+    """All incomplete tasks whose scheduled date has passed, applying the same
+    master/copy visibility logic as the weekly view."""
+    all_tasks = list(
+        GorevGrubu.objects.filter(
+            student=student,
+            tarih__lt=date.today(),
+            is_completed=False,
+            is_hidden_by_student=False,
+        )
+        .order_by("tarih", "sira_no")
+        .prefetch_related(Prefetch("detaylar", queryset=GrupDetay.objects.all()))
+    )
+    copy_parent_ids = {t.parent_id for t in all_tasks if not t.is_master and t.parent_id}
+    visible = [t for t in all_tasks if not t.is_master or t.id not in copy_parent_ids]
+    return [_serialize_with_version(g) for g in visible]
+
+
+def move_to_today(student: User, grup_id: int) -> dict | None:
+    """Move an overdue task to today. Sets original_tarih on first move only."""
+    from django.utils import timezone
+    grup = GorevGrubu.objects.filter(student=student, pk=grup_id, is_completed=False).first()
+    if not grup:
+        return None
+    if grup.original_tarih is None:
+        grup.original_tarih = grup.tarih
+    grup.tarih = date.today()
+    grup.last_moved_at = timezone.now()
+    grup.save(update_fields=["tarih", "original_tarih", "last_moved_at"])
+    return _serialize_with_version(grup)
 
 
