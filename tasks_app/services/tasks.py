@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -432,12 +432,13 @@ def reset_student_week(student: User, hafta_basi: date, hafta_sonu: date) -> int
 # ── Overdue tasks ─────────────────────────────────────────────────────────────
 
 def geciken_gorevler(student: User) -> list[dict]:
-    """All incomplete tasks whose scheduled date has passed, applying the same
-    master/copy visibility logic as the weekly view."""
+    """Incomplete tasks scheduled for exactly yesterday. Older tasks remain in
+    the normal weekly calendar; the tray only surfaces the most recent missed day."""
+    yesterday = date.today() - timedelta(days=1)
     all_tasks = list(
         GorevGrubu.objects.filter(
             student=student,
-            tarih__lt=date.today(),
+            tarih=yesterday,
             is_completed=False,
             is_hidden_by_student=False,
         )

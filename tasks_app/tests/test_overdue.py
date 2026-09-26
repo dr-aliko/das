@@ -56,6 +56,35 @@ def test_completed_task_not_in_geciken(student):
 
 
 @pytest.mark.django_db
+def test_older_task_not_in_geciken(student):
+    three_days_ago = date.today() - timedelta(days=3)
+    _make_task(student, tarih=three_days_ago)
+
+    result = tasks_svc.geciken_gorevler(student)
+    assert result == []
+
+
+@pytest.mark.django_db
+def test_two_days_ago_task_not_in_geciken(student):
+    two_days_ago = date.today() - timedelta(days=2)
+    _make_task(student, tarih=two_days_ago)
+
+    result = tasks_svc.geciken_gorevler(student)
+    assert result == []
+
+
+@pytest.mark.django_db
+def test_older_task_still_in_weekly_view(student):
+    three_days_ago = date.today() - timedelta(days=3)
+    task = _make_task(student, tarih=three_days_ago)
+
+    from tasks_app.services import week as week_svc
+    basi, sonu = week_svc.week_bounds(three_days_ago)
+    gorevler = tasks_svc.week_for_own_student(student, basi, sonu)
+    assert any(g['id'] == task.id for g in gorevler)
+
+
+@pytest.mark.django_db
 def test_future_task_not_in_geciken(student):
     tomorrow = date.today() + timedelta(days=1)
     _make_task(student, tarih=tomorrow)
@@ -128,28 +157,28 @@ def test_moved_task_appears_in_todays_week(student):
 
 @pytest.mark.django_db
 def test_original_tarih_pinned_on_second_move(student):
-    two_days_ago = date.today() - timedelta(days=2)
-    task = _make_task(student, tarih=two_days_ago)
+    yesterday = date.today() - timedelta(days=1)
+    task = _make_task(student, tarih=yesterday)
 
-    # First move: tarih → today, original_tarih set to two_days_ago
+    # Day 1: task appears in tray (tarih=yesterday). Student moves it to today.
     tasks_svc.move_to_today(student, task.id)
     task.refresh_from_db()
     first_moved_at = task.last_moved_at
-    assert task.original_tarih == two_days_ago
+    assert task.original_tarih == yesterday
+    assert task.tarih == date.today()
 
-    # Simulate next day: push tarih back to yesterday so it's overdue again
+    # Simulate next day passing without completion: push tarih back to yesterday
+    # (equivalent to tarih now being "yesterday" from tomorrow's perspective).
     task.tarih = date.today() - timedelta(days=1)
     task.save(update_fields=['tarih'])
 
-    # Second move
+    # Day 2: task reappears in tray. Student moves it to today again.
     tasks_svc.move_to_today(student, task.id)
     task.refresh_from_db()
 
-    # original_tarih must still point to two_days_ago (first original)
-    assert task.original_tarih == two_days_ago
-    # last_moved_at was updated
+    # original_tarih must still point to the FIRST original date, not the intermediate one
+    assert task.original_tarih == yesterday
     assert task.last_moved_at > first_moved_at
-    # tarih is today again
     assert task.tarih == date.today()
 
 
