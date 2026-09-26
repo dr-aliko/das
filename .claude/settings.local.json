@@ -166,7 +166,17 @@
       "Bash(ping -n 20 127.0.0.1)",
       "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO TABLE)",
       "Bash(tasklist /FI \"IMAGENAME eq chrome.exe\" /FO TABLE)",
-      "Bash(jobs -l)"
+      "Bash(jobs -l)",
+      "Bash('button:has-text\\(\\\\\"Günlük Tekrar Et\\\\\"\\)')",
+      "Bash(mkdir -p /c/tmp/pwtest)",
+      "Bash(cp C:/tmp/pw_daily.js /c/tmp/pwtest/)",
+      "Bash(npm init *)",
+      "Read(//c/Users/kayaa/.claude/**)",
+      "Read(//c/Users/kayaa/AppData/Roaming/Claude/**)",
+      "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; users = User.objects.filter\\(is_student=True\\).values\\('username', 'email'\\)[:3]; [print\\(u\\) for u in users]\")",
+      "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; users = User.objects.filter\\(role='student'\\).values\\('username', 'email'\\)[:3]; [print\\(u\\) for u in users]\")",
+      "Bash(.venv/Scripts/python manage.py shell -c \"from users_app.models import User; u = User.objects.filter\\(is_superuser=True\\).first\\(\\); print\\(u.email if u else 'none'\\)\")",
+      "Bash(sort -t: -k2 -n)"
     ]
   }
 }
