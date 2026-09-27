@@ -63,9 +63,10 @@
     </div>
   </header>
 
-  {# ── Coach banner ── #}
+  {# ── Coach banner — position:fixed so no CSS ancestor can break it ── #}
   {% if coach_view %}
-  <div class="sticky top-14 md:top-0 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+  <div id="das-coach-banner"
+       class="fixed top-14 left-0 right-0 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
     <div class="px-4 md:px-6 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
@@ -80,6 +81,8 @@
          class="text-[10px] font-bold text-steel-400 hover:text-steel-300 uppercase tracking-wider transition-colors">Profil</a>
     </div>
   </div>
+  {# Spacer so card content is not hidden under the fixed banner #}
+  <div id="das-coach-banner-spacer" aria-hidden="true"></div>
   {% endif %}
 
   {# ── Main card container ── #}
@@ -532,5 +535,44 @@ function buildBransChart(raw) {
 }
 
 buildBransChart({{ brans_chart_json|safe }});
+
+{% if coach_view %}
+// ── Coach banner: fixed positioning corrected at runtime ──────────────────
+(function () {
+  var b = document.getElementById('das-coach-banner');
+  var s = document.getElementById('das-coach-banner-spacer');
+  if (!b || !s) return;
+
+  function applyLayout() {
+    // App bar: h-14 strip at top, hidden on desktop when sidebar mode is active
+    var appBar = document.querySelector('.v2-app-bar');
+    var appH = (appBar && window.getComputedStyle(appBar).display !== 'none')
+               ? appBar.offsetHeight : 0;
+
+    // Sidebar: fixed left panel; present only on desktop (md+)
+    var sidebar = document.querySelector('.das-sidebar');
+    var sideW = (sidebar && window.innerWidth >= 768) ? sidebar.offsetWidth : 0;
+
+    b.style.top  = appH  + 'px';
+    b.style.left = sideW + 'px';
+    s.style.height = b.offsetHeight + 'px';
+
+    console.log('[CoachBanner] pos=' + window.getComputedStyle(b).position
+                + ' top=' + appH + 'px left=' + sideW + 'px h=' + b.offsetHeight + 'px');
+  }
+
+  applyLayout();
+  window.addEventListener('resize', applyLayout, { passive: true });
+
+  // One-shot scroll verification: confirms rect stays constant after scrolling
+  window.addEventListener('scroll', function verify() {
+    window.removeEventListener('scroll', verify);
+    var r = b.getBoundingClientRect();
+    console.log('[CoachBanner] after scroll — rect.top=' + Math.round(r.top)
+                + ' rect.left=' + Math.round(r.left)
+                + ' scrollY=' + Math.round(window.scrollY));
+  }, { passive: true });
+})();
+{% endif %}
 </script>
 {% endblock %}
