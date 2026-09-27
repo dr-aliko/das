@@ -1,0 +1,52 @@
+{% load i18n %}
+{# Unified subject breakdown cards — student (interactive) and coach (read-only).
+   Expects: subject_breakdown, coach_view. Student context also needs examDetailState Alpine scope. #}
+<div class="space-y-3">
+  <h3 class="text-xs font-bold uppercase tracking-widest px-1" style="color:var(--muted)">
+    {% trans "Ders Analizi" %}
+  </h3>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+    {% for s in subject_breakdown %}
+    <div {% if not coach_view %}@click="openEditSheet({{ s.id }})"{% endif %}
+         class="das-card p-4 border-l-4{% if not coach_view %} cursor-pointer active:scale-95 transition-transform{% endif %}"
+         style="border-left-color:{{ s.color }}">
+
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--muted)">{{ s.name }}</p>
+        <p class="text-xl font-bold tnum" style="color:var(--heading)">
+          {% if not coach_view %}
+          <span x-text="subjectIndex['{{ s.id }}'] ? fmtNet(subjectIndex['{{ s.id }}'].net, 2) : '{{ s.net|floatformat:2 }}'">{{ s.net|floatformat:2 }}</span>
+          {% else %}
+          {{ s.net|floatformat:2 }}
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 text-center text-[10px] py-2.5 border-y" style="border-color:var(--border)">
+        <div>
+          <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Doğru" %}</p>
+          <p class="text-sm font-bold tnum mt-0.5 text-up">{{ s.correct }}</p>
+        </div>
+        <div>
+          <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Yanlış" %}</p>
+          <p class="text-sm font-bold tnum mt-0.5 text-down">{{ s.wrong }}</p>
+        </div>
+        <div>
+          <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Boş" %}</p>
+          <p class="text-sm font-bold tnum mt-0.5" style="color:var(--muted-2)">{{ s.blank }}</p>
+        </div>
+      </div>
+
+      <div class="mt-2.5 flex items-center justify-between text-[10px]">
+        <span class="font-semibold uppercase" style="color:var(--muted)">{% trans "Doğruluk" %}</span>
+        <span class="font-bold tnum" style="color:var(--body)">{{ s.accuracy_percent }}%</span>
+      </div>
+      <div class="mt-1.5 h-1.5 w-full rounded-full overflow-hidden" style="background:var(--surface-3)">
+        <div class="h-full rounded-full transition-all"
+             style="width:{{ s.accuracy_percent }}%; background:{{ s.color }}"></div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+</div>

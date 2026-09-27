@@ -30,6 +30,7 @@
       <div class="relative rounded-xl border bg-ink-850 hover:bg-ink-800 hover:border-ink-600
                   transition-colors p-4 border-l-4 cursor-pointer select-none"
            style="border-left-color:{% if exam.type == 'TYT' %}#3B82F6{% elif exam.type == 'AYT' %}#A78BFA{% else %}#F59E0B{% endif %}"
+           data-exam-id="{{ exam.id }}" data-exam-type="{{ exam.type }}"
            role="button" tabindex="0"
            @click="compareMode ? toggleSelection({{ exam.id }}, '{{ exam.type }}') : (window.location.href = '{% url 'student:exam_detail_v2' exam.id %}')"
            @keydown.enter.prevent="$el.click()"
@@ -104,6 +105,7 @@
           <div class="relative rounded-xl border bg-ink-800 hover:bg-ink-750 hover:border-ink-600
                       transition-colors p-3.5 border-l-4 cursor-pointer select-none"
                style="border-left-color:{% if exam.type == 'TYT' %}#3B82F6{% elif exam.type == 'AYT' %}#A78BFA{% else %}#F59E0B{% endif %};border-color:#2a3142"
+               data-exam-id="{{ exam.id }}" data-exam-type="{{ exam.type }}"
                role="button" tabindex="0"
                @click="compareMode ? toggleSelection({{ exam.id }}, '{{ exam.type }}') : (window.location.href = '{% url 'student:exam_detail_v2' exam.id %}')"
                @keydown.enter.prevent="$el.click()">

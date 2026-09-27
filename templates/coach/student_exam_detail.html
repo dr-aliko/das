@@ -55,42 +55,7 @@
 
     {# ── Subject breakdown ── #}
     {% if subject_breakdown %}
-    <div>
-      <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">Ders Bazlı Sonuçlar</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {% for s in subject_breakdown %}
-        <div class="rounded-xl border border-ink-700 bg-ink-850 p-4 border-l-4"
-             style="border-left-color:{{ s.color }}">
-          <div class="flex items-center justify-between mb-3">
-            <p class="text-[10px] uppercase tracking-wider text-ink-400 font-semibold">{{ s.name }}</p>
-            <p class="text-xl font-bold text-ink-50 tnum">{{ s.net|floatformat:2 }}</p>
-          </div>
-          <div class="grid grid-cols-3 gap-2 text-center text-[10px] py-2.5 border-y border-ink-700">
-            <div>
-              <p class="text-ink-500 font-semibold uppercase">Doğru</p>
-              <p class="text-emerald-500 font-bold tnum mt-0.5 text-sm">{{ s.correct }}</p>
-            </div>
-            <div>
-              <p class="text-ink-500 font-semibold uppercase">Yanlış</p>
-              <p class="text-ruby-500 font-bold tnum mt-0.5 text-sm">{{ s.wrong }}</p>
-            </div>
-            <div>
-              <p class="text-ink-500 font-semibold uppercase">Boş</p>
-              <p class="text-ink-400 font-bold tnum mt-0.5 text-sm">{{ s.blank }}</p>
-            </div>
-          </div>
-          <div class="mt-2.5 flex items-center justify-between text-[10px]">
-            <span class="text-ink-500 font-semibold uppercase">Doğruluk</span>
-            <span class="text-ink-200 font-bold tnum">{{ s.accuracy_percent }}%</span>
-          </div>
-          <div class="mt-1.5 h-1.5 w-full bg-ink-800 rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all"
-                 style="width:{{ s.accuracy_percent }}%; background:{{ s.color }}"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
+    {% include "dashboard/partials/_detail_subject_cards.html" %}
     {% endif %}
 
     {# ── Topic errors — shared partial with student view (collapsible accordions) ── #}
@@ -111,16 +76,11 @@
     {% endif %}
 
     {# ── Navigation actions ── #}
-    <div class="flex gap-3 pt-2">
+    <div class="pt-2">
       <a href="{% url 'coach:student_exams' student.id %}"
-         class="flex-1 text-center py-2.5 rounded-xl border border-ink-700 text-ink-200
+         class="block text-center py-2.5 rounded-xl border border-ink-700 text-ink-200
                 hover:bg-ink-800 font-medium text-sm transition-colors">
         ← Tüm Denemeler
-      </a>
-      <a href="{% url 'coach:student_brans_hub' student.id %}"
-         class="flex-1 text-center py-2.5 rounded-xl border border-steel-500/30 bg-steel-tint
-                text-steel-400 hover:bg-steel-500/20 font-medium text-sm transition-colors">
-        Branş Raporu →
       </a>
     </div>
 

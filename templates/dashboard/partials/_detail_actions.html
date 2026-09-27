@@ -2,8 +2,8 @@
 {# DAS-322: Quick Actions Row — 3 buttons (Konu Çalış removed) #}
 <div class="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-3">
 
-  {# Compare — routes to v2 compare page pre-seeded with this exam #}
-  <a href="{% url 'student:compare_v2' %}?exam1={{ exam.id }}&denemeler_v2=1"
+  {# Compare — routes to exam list in compare-mode with this exam pre-selected #}
+  <a href="{% url 'student:denemeler_list' %}?compare={{ exam.id }}&denemeler_v2=1"
      class="flex flex-col items-center justify-center p-3 das-card text-center
             lg:flex-row lg:justify-start lg:gap-3 lg:py-4 lg:px-5
             active:scale-95 transition-transform group">

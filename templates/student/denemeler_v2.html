@@ -307,7 +307,22 @@ function compareModeState() {
     topicsLoading: false,
     topicSubject:  '',
 
-    init()    { document.body.classList.remove('compare-active'); },
+    init() {
+      document.body.classList.remove('compare-active');
+      const p = new URLSearchParams(window.location.search);
+      const compareId = parseInt(p.get('compare') || '0', 10);
+      if (compareId) {
+        const card = document.querySelector(`[data-exam-id="${compareId}"]`);
+        if (card) {
+          const details = card.closest('details');
+          if (details) details.open = true;
+        }
+        const compareType = card ? card.dataset.examType : '';
+        this.compareMode = true;
+        document.body.classList.add('compare-active');
+        this.selected.push({ id: compareId, type: compareType });
+      }
+    },
     destroy() { document.body.classList.remove('compare-active'); },
 
     toggleCompareMode() {
