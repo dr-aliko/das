@@ -49,7 +49,7 @@
   </header>
 
   {% if coach_view %}
-  <div class="sticky top-14 md:top-0 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
+  <div class="sticky top-14 z-20 bg-[var(--surface-1)] border-b border-[var(--border)] shadow-sm">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-steel-500 to-steel-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
@@ -118,12 +118,12 @@
       </div>
 
       <div class="flex bg-[var(--surface-2)] p-1 rounded-xl mb-6">
-        <button type="button" @click="dataSource = 'genel'; selected = []" 
+        <button type="button" @click="dataSource = 'genel'"
                 class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
                 :class="dataSource === 'genel' ? 'bg-[var(--surface-1)] shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
             Genel Denemeler
         </button>
-        <button type="button" @click="dataSource = 'brans'; selected = []" 
+        <button type="button" @click="dataSource = 'brans'"
                 class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
                 :class="dataSource === 'brans' ? 'bg-white shadow-sm text-[var(--primary)]' : 'text-[var(--muted)]'">
             Branş Denemeleri
@@ -133,16 +133,13 @@
       <div class="das-section-head px-0">
         <h2>Net Değişimi</h2>
       </div>
-      <div class="das-card h-[220px] mb-8 flex flex-col items-center justify-center border-dashed relative overflow-hidden">
-        <div x-show="filteredChartPoints().length < 2" class="z-10 text-[var(--muted)] text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-1)] px-3 py-1 rounded-full border border-[var(--border)] shadow-sm">
-            Seçili kaynak için grafik verisi yok
+      <div class="das-card h-[220px] mb-8 relative overflow-hidden" style="padding:10px 10px 6px;">
+        <canvas id="subjectChart"></canvas>
+        <div x-show="filteredChartPoints().length < 2" x-cloak
+             class="absolute inset-0 flex items-center justify-center z-10"
+             style="background:var(--surface-1); border-radius:var(--r-card);">
+          <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--muted)">Seçili kaynak için grafik verisi yok</p>
         </div>
-        <svg class="absolute inset-0 w-full h-full opacity-80" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path :d="chartPath()" fill="none" stroke="{{ subjectColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            <template x-for="point in normalizedChartPoints()" :key="point.key">
-              <circle :cx="point.x" :cy="point.y" r="2" fill="{{ subjectColor }}"></circle>
-            </template>
-        </svg>
       </div>
 
       <div class="grid grid-cols-2 gap-3 mb-8">
@@ -560,10 +557,6 @@
 
       <div class="das-section-head px-0">
         <h2>Sınav Geçmişi</h2>
-        <button type="button"
-                @click="compareMode = !compareMode; selected = []; compareOpen = false"
-                class="text-[11px] font-bold text-[var(--primary)] uppercase"
-                x-text="compareMode ? 'Bitti' : 'Düzenle / Karşılaştır'">Düzenle / Karşılaştır</button>
       </div>
       <div class="space-y-4">
         {% for month in exams.archive %}
@@ -574,13 +567,6 @@
                   {% for exam in month.exams %}
                   <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
                     <div class="flex items-center gap-3 min-w-0">
-                       <input type="checkbox"
-                              x-show="compareMode"
-                              x-model="selected"
-                              value="{{ exam.compare_key }}"
-                              @click.stop
-                              :disabled="selected.length >= 2 && !selected.includes('{{ exam.compare_key }}')"
-                              class="w-4 h-4 rounded border-[var(--border)] text-[var(--primary)] accent-indigo-600 disabled:opacity-30 shrink-0">
                        <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
                        <div class="min-w-0">
                          <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
@@ -603,13 +589,6 @@
                   {% for exam in exams.recent %}
                   <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
                     <div class="flex items-center gap-3 min-w-0">
-                       <input type="checkbox"
-                              x-show="compareMode"
-                              x-model="selected"
-                              value="{{ exam.compare_key }}"
-                              @click.stop
-                              :disabled="selected.length >= 2 && !selected.includes('{{ exam.compare_key }}')"
-                              class="w-4 h-4 rounded border-[var(--border)] text-[var(--primary)] accent-indigo-600 disabled:opacity-30 shrink-0">
                        <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
                        <div class="min-w-0">
                          <div class="text-sm font-bold text-[var(--heading)] leading-tight truncate">{{ exam.date_label }} {{ exam.type }}</div>
@@ -626,63 +605,6 @@
         
         <div x-show="!hasAnySourceGlobally()" x-cloak class="p-8 text-center text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
           Seçili kaynak için sınav bulunamadı.
-        </div>
-      </div>
-
-      <div x-show="compareMode && selected.length === 2" x-cloak
-           class="fixed bottom-24 left-4 right-4 z-40 das-card px-4 py-3 flex items-center justify-between shadow-xl"
-           x-transition.opacity>
-        <span class="text-xs font-bold text-[var(--heading)]">2 kayıt seçildi</span>
-        <button type="button" @click="compareOpen = true" class="px-4 py-2 bg-[var(--primary)] text-white rounded-xl text-xs font-bold">Karşılaştır →</button>
-      </div>
-
-      <div x-show="compareOpen && compareMode" x-cloak class="fixed inset-0 z-50" aria-modal="true">
-        <div class="absolute inset-0 bg-black/40" @click="compareOpen = false"></div>
-        <div class="absolute inset-x-0 bottom-0 bg-[var(--surface-1)] rounded-t-3xl border-t border-[var(--border)] shadow-2xl max-h-[88vh] overflow-y-auto"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="translate-y-full"
-             x-transition:enter-end="translate-y-0">
-          <div class="p-4 border-b border-[var(--border)] flex items-center justify-between sticky top-0 bg-[var(--surface-1)] z-10">
-            <div>
-              <h3 class="text-sm font-black text-[var(--heading)] uppercase tracking-wider">{{ subject }} Karşılaştırma</h3>
-              <p class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">İki sınav seç</p>
-            </div>
-            <button type="button" @click="compareOpen = false" class="w-10 h-10 rounded-xl bg-[var(--surface-2)] text-[var(--muted)]">×</button>
-          </div>
-
-          <div class="p-4 space-y-4">
-            <template x-if="selected.length !== 2">
-              <div class="das-card p-4 text-center">
-                <p class="text-sm font-bold text-[var(--heading)] mb-1" x-text="selected.length + '/2 kayıt seçildi'"></p>
-                <p class="text-xs text-[var(--muted)]">Sınav geçmişinden iki kayıt seçerek karşılaştır.</p>
-              </div>
-            </template>
-
-            <template x-if="selected.length === 2">
-              <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                  <template x-for="(entry, idx) in selectedEntries()" :key="entry.key">
-                    <div class="das-card p-4">
-                      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider" x-text="idx === 0 ? 'Eski' : 'Yeni'"></div>
-                      <div class="text-sm font-black text-[var(--heading)] mt-1" x-text="entry.type"></div>
-                      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5" x-text="entry.date + ' • ' + entry.duration"></div>
-                      <div class="text-2xl font-black text-[var(--primary)] tabular-nums mt-3" x-text="entry.net.toFixed(2)"></div>
-                    </div>
-                  </template>
-                </div>
-
-                <div class="das-card p-4">
-                  <h4 class="text-xs font-black text-[var(--muted)] uppercase tracking-wider mb-3">Değişim (Yeni - Eski)</h4>
-                  <div class="grid grid-cols-2 gap-3 text-center">
-                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('net') >= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('net'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Net</div></div>
-                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('correct') >= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('correct'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Doğru</div></div>
-                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('wrong') <= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('wrong'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Yanlış</div></div>
-                    <div class="rounded-xl bg-[var(--surface-2)] p-3"><div class="text-lg font-black" :class="compareDelta('blank') <= 0 ? 'text-[var(--up)]' : 'text-[var(--down)]'" x-text="signed(compareDelta('blank'))"></div><div class="text-[10px] font-bold text-[var(--muted)] uppercase">Boş</div></div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
         </div>
       </div>
 
@@ -881,9 +803,6 @@ function branchTasks() {
 function subjectDrillDownState() {
   return {
     dataSource: 'brans',
-    compareMode: false,
-    compareOpen: false,
-    selected: [],
     exportPeriod: '{{ export_period|escapejs }}',
     studentId: '{% if coach_view %}{{ student.id }}{% endif %}',
     subjectSlug: '{{ subjectSlug|escapejs }}',
@@ -894,6 +813,88 @@ function subjectDrillDownState() {
     statsBySource: {{ stats_by_source_json|safe }},
     chartPoints: {{ chart_points_json|safe }},
     topics: {{ topics_json|safe }},
+
+    init() {
+      this.buildChart();
+      this.$watch('dataSource', () => this.buildChart());
+    },
+
+    buildChart() {
+      const canvas = document.getElementById('subjectChart');
+      if (!canvas) return;
+      if (window._subjectChartInstance) {
+        window._subjectChartInstance.destroy();
+        window._subjectChartInstance = null;
+      }
+      const points = this.filteredChartPoints();
+      if (points.length < 2) return;
+
+      const getVar = name => {
+        const el = document.querySelector('.das-subject-drilldown');
+        return el ? getComputedStyle(el).getPropertyValue(name).trim() : '';
+      };
+
+      const nets = points.map(p => p.net);
+      const labels = points.map(p => p.date);
+      const min = Math.min(...nets);
+      const max = Math.max(...nets);
+      const pad = Math.max(1, Math.ceil((max - min) * 0.25));
+      const color = '{{ subjectColor }}';
+      const isMobile = window.innerWidth < 640;
+
+      window._subjectChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: nets,
+            borderColor: color,
+            pointBackgroundColor: color,
+            backgroundColor: color + '18',
+            borderWidth: 2.5,
+            pointRadius: isMobile ? 3 : 4,
+            pointHoverRadius: 6,
+            tension: 0.35,
+            fill: true,
+            spanGaps: true,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          animation: { duration: 200 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15,20,28,0.92)',
+              titleColor: '#e8ecf3',
+              bodyColor: '#94a3b8',
+              borderColor: '#2a3142',
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                title: ctx => ctx[0].label,
+                label: ctx => `  Net: ${Number(ctx.raw).toFixed(2)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: getVar('--muted'), font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : 8 },
+            },
+            y: {
+              min: Math.max(0, Math.floor(min - pad)),
+              max: Math.ceil(max + pad),
+              grid: { color: getVar('--border') || 'rgba(200,200,220,0.2)', drawBorder: false },
+              ticks: { color: getVar('--muted'), font: { size: 9 }, padding: 4 },
+              beginAtZero: false,
+            },
+          },
+        },
+      });
+    },
 
     async setPeriod(period) {
       if (this.activePeriod === period || this.periodLoading) return;
@@ -909,6 +910,7 @@ function subjectDrillDownState() {
         this.topics = d.topics;
         this.activePeriod = period;
         this.exportPeriod = period;
+        this.$nextTick(() => this.buildChart());
       } finally {
         this.periodLoading = false;
       }
@@ -920,20 +922,6 @@ function subjectDrillDownState() {
         ? `/coach/student/${this.studentId}/brans/${this.subjectSlug}/report/`
         : `/brans/${this.subjectSlug}/report/`;
       return `${base}?${params.toString()}`;
-    },
-
-    selectedEntries() {
-      return this.selected.map(key => this.allExams.find(e => e.key === key)).filter(Boolean);
-    },
-
-    compareDelta(field) {
-      const entries = this.selectedEntries();
-      if (entries.length !== 2) return 0;
-      return Number((Number(entries[1][field] || 0) - Number(entries[0][field] || 0)).toFixed(2));
-    },
-
-    signed(value) {
-      return `${value > 0 ? '+' : ''}${value}`;
     },
 
     activeStats() {
@@ -958,27 +946,6 @@ function subjectDrillDownState() {
       return this.chartPoints.filter(point => point.source === this.dataSource);
     },
 
-    normalizedChartPoints() {
-      const points = this.filteredChartPoints();
-      if (!points.length) return [];
-      const nets = points.map(point => Number(point.net));
-      const min = Math.min(...nets);
-      const max = Math.max(...nets);
-      const span = max - min || 1;
-      return points.map((point, index) => ({
-        key: `${point.source}-${point.isoDate}-${index}`,
-        x: points.length === 1 ? 50 : (index / (points.length - 1)) * 100,
-        y: 88 - ((Number(point.net) - min) / span) * 76,
-      }));
-    },
-
-    chartPath() {
-      const points = this.normalizedChartPoints();
-      if (!points.length) return '';
-      if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-      return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-    },
-    
     hasAnySource(monthLabel) {
       return this.allExams.some(e => e.source === this.dataSource && e.monthLabel === monthLabel);
     },

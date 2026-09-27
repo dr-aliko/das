@@ -230,6 +230,7 @@ function bransCreateV2() {
   const initialDersSoru = parseInt('{{ form.soru_sayisi.value|default:"0" }}', 10) || 0;
 
   return {
+    limits,
     examType: initialExamType,
     ders:        initialDers,
     soru_sayisi: initialDersSoru || (limits[initialDers] || 0),

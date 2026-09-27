@@ -2,7 +2,7 @@
 {% block title %}{{ student.full_name }} — Branş Analizi — DAS{% endblock %}
 
 {% block content %}
-<div class="space-y-6" x-data="{sel:[], toggle(id){const i=this.sel.indexOf(id); i>-1?this.sel.splice(i,1):(this.sel.length<2&&this.sel.push(id));}, go(){window.location='{% url 'coach:brans_compare' student.pk %}?a='+this.sel[0]+'&b='+this.sel[1];}}">
+<div class="space-y-6">
 
   <div class="flex items-center justify-between">
     <div>
@@ -75,7 +75,6 @@
       <table class="das-table">
         <thead>
           <tr>
-            <th class="w-8"></th>
             <th>Tarih</th>
             <th class="center">Doğru</th>
             <th class="center">Yanlış</th>
@@ -87,12 +86,6 @@
         <tbody>
           {% for entry in entries %}
             <tr class="transition">
-              <td class="center w-8">
-                <input type="checkbox" :value="{{ entry.pk }}"
-                       @change="toggle({{ entry.pk }})"
-                       :disabled="sel.length >= 2 && !sel.includes({{ entry.pk }})"
-                       class="rounded text-indigo-500 focus:ring-indigo-300 disabled:opacity-30 cursor-pointer">
-              </td>
               <td class="tnum">{{ entry.tarih|date:"d.m.Y" }}</td>
               <td class="center tnum text-[var(--up)] font-medium">{{ entry.dogru }}</td>
               <td class="center tnum text-[var(--down)] font-medium">{{ entry.yanlis }}</td>
@@ -155,19 +148,6 @@
   </div>
   {% endif %}
 
-  {# ── Compare floating bar ── #}
-  <div x-show="sel.length === 2" x-cloak
-       class="shell-floating-bar fixed bottom-6 left-1/2 -translate-x-1/2 z-40
-              bg-indigo-700 text-white rounded-2xl shadow-xl px-4 sm:px-6 py-3
-              flex items-center gap-2 sm:gap-4 text-sm font-medium
-              max-w-[calc(100vw-2rem)]">
-    <span>2 kayıt seçildi</span>
-    <button @click="go()"
-            class="bg-white text-indigo-700 font-semibold px-4 py-1.5 rounded-lg hover:bg-indigo-50 transition">
-      Karşılaştır →
-    </button>
-    <button @click="sel = []" class="opacity-70 hover:opacity-100 transition text-lg leading-none">&times;</button>
-  </div>
 
 </div>
 {% endblock %}
