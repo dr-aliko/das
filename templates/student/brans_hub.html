@@ -93,7 +93,7 @@
                class="text-steel-400" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
           </svg>
-          {% if coach_view %}{{ student.full_name }} Branş Performansı{% else %}Branş Performansın{% endif %}
+          Branş {% if coach_view %}Performansı{% else %}Performansın{% endif %}
         </h1>
         <p class="text-sm text-ink-400 mt-1">{{ active_period }} · {{ subjects|length }} branş</p>
       </div>
