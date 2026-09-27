@@ -1633,6 +1633,21 @@ def _subject_group_color(subject_name: str) -> str:
     return 'var(--primary)'
 
 
+def _subject_group_priority(subject_name: str) -> int:
+    n = subject_name.lower()
+    if any(x in n for x in ('türkçe', 'türk dili', 'dil ve anlatım')):
+        return 0
+    if any(x in n for x in ('matematik', 'geometri')):
+        return 1
+    if any(x in n for x in ('fizik', 'kimya', 'biyoloji', 'fen bil')):
+        return 2
+    if any(x in n for x in ('tarih', 'coğrafya', 'din kültürü', 'felsefe', 'sosyal bil')):
+        return 3
+    if any(x in n for x in ('yabancı', 'ingilizce', 'almanca', 'fransızca')):
+        return 4
+    return 5
+
+
 def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
     """DAS-321–325: rich context for the V2 exam detail page."""
     from itertools import groupby as _groupby
@@ -1657,6 +1672,8 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
             blank=r.blank_answers,
             question_count=r.subject.question_count,
         ))
+
+    subject_breakdown.sort(key=lambda s: (_subject_group_priority(s.full_name), s.name))
 
     net_total = round(sum(r.net_score for r in results), 2)
 
