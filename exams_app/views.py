@@ -1618,12 +1618,19 @@ def student_dashboard(request):
 # STUDENT — EXAM CRUD
 # ──────────────────────────────────────────────
 
-_SUBJECT_COLORS_V2 = {
-    'TYT Türkçe':          '#3B82F6',
-    'TYT Matematik':       '#A78BFA',
-    'TYT Sosyal Bilimler': '#F59E0B',
-    'TYT Fen Bilimleri':   '#10B981',
-}
+def _subject_group_color(subject_name: str) -> str:
+    n = subject_name.lower()
+    if any(x in n for x in ('fizik', 'kimya', 'biyoloji', 'fen bil')):
+        return 'var(--fen)'
+    if any(x in n for x in ('tarih', 'coğrafya', 'din kültürü', 'felsefe', 'sosyal bil')):
+        return 'var(--sosyal)'
+    if any(x in n for x in ('matematik', 'geometri')):
+        return 'var(--mat)'
+    if any(x in n for x in ('türkçe', 'türk dili', 'dil ve anlatım')):
+        return 'var(--turkce)'
+    if any(x in n for x in ('yabancı', 'ingilizce', 'almanca', 'fransızca')):
+        return 'var(--yabanci)'
+    return 'var(--primary)'
 
 
 def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
@@ -1642,7 +1649,7 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
             id=r.id,
             name=r.subject.display_name,
             full_name=r.subject.name,
-            color=_SUBJECT_COLORS_V2.get(r.subject.name, '#6D5BFF'),
+            color=_subject_group_color(r.subject.name),
             net=round(r.net_score, 2),
             accuracy_percent=accuracy,
             correct=r.correct_answers,
@@ -1722,7 +1729,7 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
         if topics:
             topic_error_groups.append(SimpleNamespace(
                 name=group_list[0].topic.subject.display_name,
-                color=_SUBJECT_COLORS_V2.get(subj_name, '#6D5BFF'),
+                color=_subject_group_color(subj_name),
                 topics=topics,
             ))
 

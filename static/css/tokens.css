@@ -39,10 +39,11 @@
   --primary-tint:  rgba(109, 91, 255, 0.10);
 
   /* Subject palette */
-  --turkce:  #3B82F6;
-  --mat:     #A78BFA;
-  --sosyal:  #D97706;
-  --fen:     #059669;
+  --turkce:   #3B82F6;
+  --mat:      #A78BFA;
+  --sosyal:   #D97706;
+  --fen:      #059669;
+  --yabanci:  #0891B2;
 
   /* Semantic status — text-safe on their tints (≥4.5:1) */
   --up:           #15803D;
@@ -121,10 +122,11 @@
   --dark-primary-glow: #A99DFF;
   --dark-primary-tint: rgba(139, 124, 255, 0.14);
 
-  --dark-turkce:  #60A5FA;
-  --dark-mat:     #C4B5FD;
-  --dark-sosyal:  #FBBF24;
-  --dark-fen:     #34D399;
+  --dark-turkce:   #60A5FA;
+  --dark-mat:      #C4B5FD;
+  --dark-sosyal:   #FBBF24;
+  --dark-fen:      #34D399;
+  --dark-yabanci:  #22D3EE;
 
   --dark-up:        #4ADE80;
   --dark-down:      #F87171;

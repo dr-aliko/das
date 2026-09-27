@@ -28,10 +28,11 @@ html.dark {
   --primary-glow: var(--dark-primary-glow);
   --primary-tint: var(--dark-primary-tint);
 
-  --turkce: var(--dark-turkce);
-  --mat:    var(--dark-mat);
-  --sosyal: var(--dark-sosyal);
-  --fen:    var(--dark-fen);
+  --turkce:  var(--dark-turkce);
+  --mat:     var(--dark-mat);
+  --sosyal:  var(--dark-sosyal);
+  --fen:     var(--dark-fen);
+  --yabanci: var(--dark-yabanci);
 
   --up:    var(--dark-up);
   --down:  var(--dark-down);
@@ -69,10 +70,11 @@ html.dark {
     --primary-glow: var(--dark-primary-glow);
     --primary-tint: var(--dark-primary-tint);
 
-    --turkce: var(--dark-turkce);
-    --mat:    var(--dark-mat);
-    --sosyal: var(--dark-sosyal);
-    --fen:    var(--dark-fen);
+    --turkce:  var(--dark-turkce);
+    --mat:     var(--dark-mat);
+    --sosyal:  var(--dark-sosyal);
+    --fen:     var(--dark-fen);
+    --yabanci: var(--dark-yabanci);
 
     --up:    var(--dark-up);
     --down:  var(--dark-down);
