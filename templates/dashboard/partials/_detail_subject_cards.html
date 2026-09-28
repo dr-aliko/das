@@ -6,8 +6,8 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
     {% for s in subject_breakdown %}
     <div {% if not coach_view %}@click="openEditSheet({{ s.id }})"{% endif %}
-         class="das-card p-4 border-l-4{% if not coach_view %} cursor-pointer active:scale-95 transition-transform{% endif %}"
-         style="border-left-color:{{ s.color }}">
+         class="das-card p-4{% if not coach_view %} cursor-pointer active:scale-95 transition-transform{% endif %}"
+         style="border-left: 4px solid {{ s.color }}">
 
       <div class="flex items-center justify-between mb-3">
         <p class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--muted)">{{ s.name }}</p>
