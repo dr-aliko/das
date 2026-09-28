@@ -184,7 +184,8 @@
       "Bash(xargs -r kill -9)",
       "Bash(ps -p 20058 -o pid,ppid,cmd)",
       "Bash(ps -p 20073 -o pid,ppid,cmd)",
-      "Bash(.venv/Scripts/python.exe *)"
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(npx --yes playwright@1.63.0 --version)"
     ]
   }
 }
