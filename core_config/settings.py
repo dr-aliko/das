@@ -296,6 +296,7 @@ Q_CLUSTER = {
     'recycle': 500,
     'timeout': 60,
     'retry': 120,
+    'max_attempts': 3,
     'queue_limit': 50,
     'bulk': 10,
     'orm': 'default',
@@ -307,6 +308,22 @@ Q_CLUSTER = {
 # Activates whenever SENTRY_DSN is non-empty — set it in .env for both production
 # and local testing. Leave it unset (or empty) to disable entirely.
 # The `environment` tag lets you filter production vs. local events in the dashboard.
+
+def _sentry_before_send(event, hint):
+    # Drop DisallowedHost noise from the logging integration path.
+    if event.get('logger') == 'django.security.DisallowedHost':
+        return None
+    # Drop DisallowedHost noise from the exception path (e.g. via DjangoIntegration).
+    exc_info = hint.get('exc_info')
+    if exc_info is not None:
+        exc_type = exc_info[0]
+        if exc_type is not None:
+            from django.core.exceptions import DisallowedHost
+            if issubclass(exc_type, DisallowedHost):
+                return None
+    return event
+
+
 SENTRY_DSN = config('SENTRY_DSN', default='')
 if SENTRY_DSN:
     import sentry_sdk
@@ -317,4 +334,5 @@ if SENTRY_DSN:
         environment='development' if DEBUG else 'production',
         traces_sample_rate=0.1,   # capture 10% of requests for performance tracing
         send_default_pii=False,   # never attach user PII (name/email) to Sentry events
+        before_send=_sentry_before_send,
     )

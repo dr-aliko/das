@@ -1,12 +1,20 @@
+import logging
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
 
+_log = logging.getLogger(__name__)
+
 
 def send_invite_email_task(invite_id):
     from users_app.models import StudentInvite
-    invite = StudentInvite.objects.get(id=invite_id)
+    try:
+        invite = StudentInvite.objects.get(id=invite_id)
+    except StudentInvite.DoesNotExist:
+        _log.warning('send_invite_email_task: invite %s not found (deleted/revoked), skipping', invite_id)
+        return
 
     path = reverse('users_app:invite_register', args=[invite.token])
     invite_link = f'{settings.APP_BASE_URL}{path}'
