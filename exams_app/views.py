@@ -3255,6 +3255,8 @@ def _build_student_chart_data(student_id, since=None):
         exam_names.append(exam.custom_name)
         result_map = {r.subject.name: r.net_score for r in exam.results.all()}
         result_map['TYT Fen Bilimleri'] = sum(result_map.get(s, 0) for s in _FEN_NAMES)
+        # Aggregate split Sosyal subjects (post-migration-0015); also covers old umbrella row
+        result_map['TYT Sosyal Bilimler'] = sum(result_map.get(s, 0) for s in (_SOSYAL_NAMES | {'TYT Sosyal Bilimler'}))
         for name in _TYT_DISPLAY_SUBJECTS:
             by_name[name] = result_map.get(name, 0)
 
