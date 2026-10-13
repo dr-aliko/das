@@ -1,6 +1,6 @@
 <nav class="v2-bottom-nav lg:hidden fixed inset-x-0 bottom-0 z-40
-            bg-surface-1 border-t border-border-soft
-            pb-[env(safe-area-inset-bottom)]"
+            bg-surface-1 border-t border-border-soft"
+     style="padding-bottom:env(safe-area-inset-bottom);"
      role="navigation" aria-label="Ana menü"
      x-data="{ open: false }">
 
@@ -51,7 +51,7 @@
 
     {# Backdrop #}
     <div @click="open = false"
-         class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+         class="absolute inset-0 backdrop-blur-sm" style="background:rgba(15,23,42,0.5);"></div>
 
     {# Sheet panel #}
     <div x-show="open"
@@ -75,7 +75,7 @@
          style="color:var(--muted-2);">Diğer</p>
 
       {# Menu items #}
-      <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] space-y-1">
+      <div class="px-4 space-y-1" style="padding-bottom:calc(env(safe-area-inset-bottom) + 1.25rem)">
 
         {% if user.is_student %}
         <a href="/student/konu-takip/" @click="open = false"

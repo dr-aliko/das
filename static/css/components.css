@@ -740,3 +740,22 @@ input.das-input--invalid, select.das-input--invalid, textarea.das-input--invalid
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Mobile bottom-nav clearance for #das-main ─────────────────────────────
+   The pb-[calc(...)] Tailwind arbitrary class is not in the compiled bundle.
+   This rule replaces it with real CSS. Applies only while the bottom nav is
+   visible (< 1024px = lg breakpoint). Desktop layout is unaffected.
+
+   Measurements:
+     Nav  : h-16 = 4rem  (visible below lg)
+     FAB  : h-14 = 3.5rem, positioned bottom = env(safe-area-inset-bottom) + 5rem
+            → FAB top at env(safe-area-inset-bottom) + 8.5rem, ~8px gap → 9rem total
+     hide-fab variant (no FAB): nav (4rem) + 1rem gap → 5rem total              */
+@media (max-width: 1023px) {
+  body.v2-shell #das-main {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 9rem);
+  }
+  body.v2-shell.v2-shell-hide-fab #das-main {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+  }
+}

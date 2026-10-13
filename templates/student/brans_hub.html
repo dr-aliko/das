@@ -3,7 +3,7 @@
 {% block title %}{% if coach_view %}{{ student.full_name }} — Branş Hub{% else %}Branş Hub{% endif %} — DAS{% endblock %}
 
 {% block content %}
-<div class="pb-28" x-data="bransHubState()"
+<div x-data="bransHubState()"
      x-init="initBransHub('{{ active_period|escapejs }}', '{{ exam_type|escapejs }}', {% if coach_view %}true, {{ student.id }}{% else %}false, null{% endif %})">
 
   {# ── Mobile sticky header ── #}

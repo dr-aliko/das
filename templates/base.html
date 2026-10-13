@@ -196,7 +196,7 @@
     })();
   </script>
 </head>
-<body class="font-sans bg-gray-50 min-h-dvh overscroll-none{% if v2_shell %} v2-shell{% endif %}">
+<body class="font-sans bg-gray-50 min-h-dvh overscroll-none{% if v2_shell %} v2-shell{% endif %}{% if shell_hide_fab %} v2-shell-hide-fab{% endif %}">
 
 <a href="#das-main" class="das-skip-link">İçeriğe geç</a>
 
@@ -222,7 +222,7 @@
         <a href="/coach/brans/" class="hover:text-indigo-200">Branş</a>
         <a href="/auth/invite-students/" class="hover:text-indigo-200">Davetler</a>
       {% endif %}
-      <span class="text-indigo-300 max-w-[8rem] truncate sm:max-w-none">{{ user.full_name }}</span>
+      <span class="text-indigo-300 truncate sm:max-w-none" style="max-width:8rem;">{{ user.full_name }}</span>
       <button id="dm-btn" onclick="toggleDM()" title="Tema değiştir" aria-label="Tema değiştir"
               class="hidden md:inline opacity-70 hover:opacity-100 transition text-base leading-none px-1">🌙</button>
       <a href="/auth/logout/" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-md">Çıkış</a>
@@ -237,7 +237,7 @@
   {% if desktop_v2 %}{% include "components/_shell_top_desktop.html" %}{% endif %}
 {% endif %}
 
-<main id="das-main" class="{% if desktop_v2 %}md:px-6{% else %}max-w-7xl mx-auto{% endif %} px-4 py-5 sm:py-8{% if v2_shell %} pb-[calc(env(safe-area-inset-bottom)+{% if shell_hide_fab %}5rem{% else %}9rem{% endif %})] lg:pb-8{% endif %}">
+<main id="das-main" class="{% if desktop_v2 %}md:px-6{% else %}max-w-7xl mx-auto{% endif %} px-4 py-5 sm:py-8{% if v2_shell %} lg:pb-8{% endif %}">
   {% if messages %}
     {% for message in messages %}
       <div class="mb-4 px-4 py-3 rounded-lg

@@ -3,8 +3,7 @@
 {% block title %}{{ student.full_name }} — Denemeler — DAS{% endblock %}
 
 {% block content %}
-<div class="pb-28"
-     x-data="coachCompareModeState({{ student.id }})"
+<div x-data="coachCompareModeState({{ student.id }})"
      @keydown.escape.window="if(compareMode) toggleCompareMode()">
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">

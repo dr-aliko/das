@@ -3,8 +3,7 @@
 {% block title %}{% trans "Denemeler" %} — DAS{% endblock %}
 
 {% block content %}
-<div class="pb-28"
-     x-data="compareModeState()"
+<div x-data="compareModeState()"
      @keydown.escape.window="if(compareMode) toggleCompareMode()">
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
@@ -223,7 +222,7 @@
 
   {# ── Topic error accordion ── #}
   {% if all_exam_count > 0 %}
-  <div class="mt-6 mb-28">
+  <div class="mt-6">
     <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden max-w-prose-wide transition-opacity"
          :class="topicsLoading ? 'opacity-50 pointer-events-none' : ''"
          id="das-topic-errors">
