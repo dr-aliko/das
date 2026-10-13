@@ -1596,6 +1596,8 @@ def student_dashboard(request):
 
     ctx = {
         'exams': exams,
+        'chart_data': chart_data,
+        'scatter_data': scatter_data,
         'chart_data_json': safe_json(chart_data),
         'scatter_data_json': safe_json(scatter_data),
         'has_chart_data': bool(chart_data.get('labels')),

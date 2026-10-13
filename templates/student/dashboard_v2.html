@@ -166,11 +166,21 @@ function studentTasks() {
           </div>
 
           {% if has_chart_data %}
+            {{ chart_data|json_script:"das-chart-data" }}
+            {{ scatter_data|json_script:"das-scatter-data" }}
             {% include "dashboard/partials/_trend_chart_refined.html" %}
             <div class="space-y-3 mb-5" id="das-chart-cards">
-              <div class="rounded-xl border border-ink-700 bg-ink-850 p-4" style="height:200px;">
+              <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
                 <p class="das-kpi-label mb-2">{% trans "Toplam Net (Sınav Bazlı)" %}</p>
-                <canvas id="barChart"></canvas>
+                <div style="position:relative; height:180px;">
+                  <canvas id="barChart" style="display:block;"></canvas>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  <span class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold" style="border-color:#3b82f6; color:#3b82f6;"><span class="inline-block rounded-full" style="width:6px;height:6px;background:#3b82f6;"></span>{% trans "Türkçe" %}</span>
+                  <span class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold" style="border-color:#8b5cf6; color:#8b5cf6;"><span class="inline-block rounded-full" style="width:6px;height:6px;background:#8b5cf6;"></span>{% trans "Mat" %}</span>
+                  <span class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold" style="border-color:#f59e0b; color:#f59e0b;"><span class="inline-block rounded-full" style="width:6px;height:6px;background:#f59e0b;"></span>{% trans "Sosyal" %}</span>
+                  <span class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold" style="border-color:#10b981; color:#10b981;"><span class="inline-block rounded-full" style="width:6px;height:6px;background:#10b981;"></span>{% trans "Fen" %}</span>
+                </div>
               </div>
               <div class="rounded-xl border border-ink-700 bg-ink-850 p-4" style="height:200px;">
                 <p class="das-kpi-label mb-2">{% trans "Çözüm Süresi vs. Net" %}</p>
@@ -384,11 +394,22 @@ function trendChart() {
     period: '{{ chart_period|default:"30" }}',
     periodLabel: '{{ chart_period_label|default:"Son 30 gün"|escapejs }}',
     loading: false,
-    viewMode: 'subject',
+    viewMode: window.innerWidth < 640 ? 'total' : 'subject',
+    seriesVisible: [true, true, true, true],
+    subjectChips: [
+      {label: 'Türkçe', color: '#3b82f6'},
+      {label: 'Mat',    color: '#8b5cf6'},
+      {label: 'Sosyal', color: '#f59e0b'},
+      {label: 'Fen',    color: '#10b981'},
+    ],
     avg: '—', max: '—', delta: '—', deltaUp: true,
     toggleView() {
       this.viewMode = this.viewMode === 'subject' ? 'total' : 'subject';
       if (window.DASTrend) window.DASTrend.setView(this.viewMode, this);
+    },
+    toggleSeries(idx) {
+      this.seriesVisible[idx] = !this.seriesVisible[idx];
+      if (window.DASTrend) window.DASTrend.toggleSeries(idx, this.seriesVisible[idx]);
     },
     periodText(key) {
       if (key === '7') return 'Son 7 gün';
@@ -436,12 +457,21 @@ function trendChart() {
 window.DASInitCharts = function(d, sd, hasExams) {
   window._DAS_LAST_CHART_ARGS = [d, sd, hasExams];
   const _tok = window.DAS ? DAS.DAS_COLORS() : {};
-  const tickColor = _tok.muted || '#8A8AA3';
-  const gridColor = (_tok.muted && _tok.muted[0] === '#') ? DAS.withAlpha(_tok.muted, 0.12) : 'rgba(255,255,255,0.05)';
+  const tickColor   = _tok.muted || '#8A8AA3';
+  const gridColor   = (_tok.muted && _tok.muted[0] === '#') ? DAS.withAlpha(_tok.muted, 0.12) : 'rgba(255,255,255,0.05)';
   const primaryColor = _tok.primary || '#6D5BFF';
   const emptyEl = document.getElementById('das-charts-empty');
   const cardsEl = document.getElementById('das-chart-cards');
   const trendEl = document.querySelector('[x-data*="trendChart"]');
+
+  const _TR_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  function fmtNet(n)  { return n.toFixed(2).replace('.', ','); }
+  function fmtNet1(n) { return n.toFixed(1).replace('.', ','); }
+  function fmtDate(iso) {
+    var p = String(iso).split('-');
+    if (p.length < 3) return iso;
+    return parseInt(p[2], 10) + ' ' + _TR_SHORT[parseInt(p[1], 10) - 1];
+  }
 
   if (!hasExams) {
     ['lineChart', 'barChart', 'scatterChart'].forEach(id => Chart.getChart(id)?.destroy());
@@ -467,7 +497,7 @@ window.DASInitCharts = function(d, sd, hasExams) {
 
   ['lineChart', 'barChart', 'scatterChart'].forEach(id => Chart.getChart(id)?.destroy());
 
-  const isMobile = window.innerWidth < 640;
+  const isMobile   = window.innerWidth < 640;
   const _labels    = d.labels.slice();
   const _examIds   = (d.exam_ids   || []).slice();
   const _examNames = (d.exam_names || []).slice();
@@ -489,21 +519,36 @@ window.DASInitCharts = function(d, sd, hasExams) {
     const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
     const max = Math.max(...totals);
     const raw = totals.length > 1 ? totals[totals.length - 1] - totals[0] : 0;
-    return { avg: avg.toFixed(1), max: max.toFixed(1), delta: Math.abs(raw).toFixed(1), deltaUp: raw >= 0 };
+    return { avg: fmtNet1(avg), max: fmtNet1(max), delta: fmtNet1(Math.abs(raw)), deltaUp: raw >= 0 };
   }
 
   function nav(i) { if (_examIds[i]) window.location.href = '/student/exam/' + _examIds[i] + '/'; }
 
-  /* Task 1: separate subject and total-net dataset arrays for view toggling */
   const _subjectDatasets = d.subjects.map((s, i) => ({
     label: s.name, data: _s.data[i].slice(), borderColor: s.border, backgroundColor: s.bg,
-    borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: false,
+    borderWidth: isMobile ? 2 : 2.5,
+    pointBackgroundColor: s.border,
+    pointRadius: isMobile ? 3 : 5,
+    pointHoverRadius: 7,
+    tension: 0.35, fill: false,
   }));
   const _totalDataset = {
     label: 'Genel Net',
     data: _s.totals.slice(),
     borderColor: primaryColor, backgroundColor: DAS.withAlpha(primaryColor, 0.14),
-    borderWidth: 3, pointBackgroundColor: primaryColor, pointRadius: 5, pointHoverRadius: 7, tension: 0.35, fill: true,
+    borderWidth: isMobile ? 2 : 3,
+    pointBackgroundColor: primaryColor,
+    pointRadius: isMobile ? 3 : 5,
+    pointHoverRadius: 7,
+    tension: 0.35, fill: true,
+  };
+
+  const _xTicks = {
+    color: tickColor,
+    font: { size: isMobile ? 9 : 10 },
+    maxTicksLimit: isMobile ? 4 : undefined,
+    maxRotation: 0,
+    callback: function(val, idx) { return fmtDate(_s.labels[idx]); },
   };
 
   const lineChart = new Chart(document.getElementById('lineChart'), {
@@ -514,15 +559,16 @@ window.DASInitCharts = function(d, sd, hasExams) {
       interaction: { mode: 'index', intersect: false },
       onClick(_, el) { if (el.length) nav(el[0].index); },
       plugins: {
-        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
+        legend: { display: false },
         tooltip: { callbacks: {
-          title: i => _s.examNames[i[0].dataIndex] + ' (' + _s.labels[i[0].dataIndex] + ')',
-          footer: i => 'Toplam: ' + i.reduce((s, x) => s + x.parsed.y, 0).toFixed(2),
+          title: function(i) { return [_s.examNames[i[0].dataIndex], fmtDate(_s.labels[i[0].dataIndex])]; },
+          label: function(i) { return ' ' + i.dataset.label.replace('TYT ', '') + ': ' + fmtNet(i.parsed.y); },
+          footer: function(i) { return 'Toplam: ' + fmtNet(i.reduce((s, x) => s + x.parsed.y, 0)); },
         }},
       },
       scales: {
-        y: { grid: { color: gridColor }, ticks: { color: tickColor } },
-        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+        x: { grid: { display: false }, ticks: _xTicks },
       },
     },
   });
@@ -550,18 +596,46 @@ window.DASInitCharts = function(d, sd, hasExams) {
         lineChart.data.datasets = _subjectDatasets.map((ds, i) => ({ ...ds, data: _s.data[i].slice() }));
       }
       lineChart.update();
+      if (comp) {
+        const sum = _summary(_s.totals);
+        comp.avg = sum.avg; comp.max = sum.max; comp.delta = sum.delta; comp.deltaUp = sum.deltaUp;
+      }
     },
+    toggleSeries(idx, visible) {
+      if (this._mode !== 'subject') return;
+      var meta = lineChart.getDatasetMeta(idx);
+      if (meta) { meta.hidden = !visible; lineChart.update(); }
+    },
+  };
+
+  const _barXTicks = {
+    color: tickColor,
+    font: { size: isMobile ? 9 : 10 },
+    maxTicksLimit: isMobile ? 4 : undefined,
+    maxRotation: 0,
+    callback: function(val, idx) { return fmtDate(d.labels[idx]); },
   };
 
   const barChart = new Chart(document.getElementById('barChart'), {
     type: 'bar',
     data: { labels: d.labels, datasets: d.subjects.map(s => ({ label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false })) },
-    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      onClick(_, el) { if(el.length) nav(el[0].index); },
-      plugins: { legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
-        tooltip: { callbacks: { title: i => _examNames[i[0].dataIndex] + ' (' + d.labels[i[0].dataIndex] + ')', footer: i => 'Toplam: ' + i.reduce((s,x)=>s+x.parsed.y,0).toFixed(2) } } },
-      scales: { x: { stacked: true, grid: { display: false }, ticks: { color: tickColor, font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
-                y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } } } }
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      onClick(_, el) { if (el.length) nav(el[0].index); },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: function(i) { return [_examNames[i[0].dataIndex], fmtDate(d.labels[i[0].dataIndex])]; },
+          label: function(i) { return ' ' + i.dataset.label.replace('TYT ', '') + ': ' + fmtNet(i.parsed.y); },
+          footer: function(i) { return 'Toplam: ' + fmtNet(i.reduce((s, x) => s + x.parsed.y, 0)); },
+        }},
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: _barXTicks },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+      },
+    },
   });
 
   [lineChart, barChart].forEach(chart => {
@@ -582,22 +656,25 @@ window.DASInitCharts = function(d, sd, hasExams) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 }, color: tickColor } },
-          tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 }, color: tickColor } },
+          tooltip: { callbacks: { label: function(ctx) { const p = ctx.raw; return p.publisher + ' · ' + p.exam + ' — ' + ctx.dataset.label + ': ' + p.x + ' dk, ' + fmtNet(p.y) + ' net'; } } },
         },
         scales: {
           x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor }, beginAtZero: true },
-          y: { title: { display: !isMobile, text: 'Net Skor', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor } }
-        }
-      }
+          y: { title: { display: !isMobile, text: 'Net Skor',      color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+        },
+      },
     });
   }
 
   if (window._trendChartComp && window.DASTrend) {
     window.DASTrend.update(window._trendChartComp.period || '30', window._trendChartComp);
-    /* Restore view mode if chart was recreated while toggle was active */
     if (window._trendChartComp.viewMode === 'total') {
       window.DASTrend.setView('total', window._trendChartComp);
+    } else if (window._trendChartComp.seriesVisible) {
+      window._trendChartComp.seriesVisible.forEach(function(vis, idx) {
+        if (!vis) window.DASTrend.toggleSeries(idx, false);
+      });
     }
   }
 };
@@ -610,7 +687,11 @@ window.addEventListener('darkmode-change', function () {
 });
 
 {% if has_chart_data %}
-window.DASInitCharts({{ chart_data_json|safe }}, {{ scatter_data_json|safe }}, true);
+(function() {
+  var _d  = JSON.parse(document.getElementById('das-chart-data').textContent);
+  var _sd = JSON.parse(document.getElementById('das-scatter-data').textContent);
+  window.DASInitCharts(_d, _sd, true);
+})();
 {% endif %}
 </script>
 {% endblock %}

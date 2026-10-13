@@ -5,52 +5,55 @@
 
 <div class="px-4 mb-5" x-data="trendChart()">
 
-  <div class="das-section-head" style="padding-left:0; padding-right:0; padding-top:0;">
+  {# Row 1: title + period label #}
+  <div class="flex items-start justify-between mb-2" style="padding-top:0;">
     <div>
-      <h2>{% trans "Genel Deneme Net Trendi" %}</h2>
-      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide" x-text="periodLabel">{{ chart_period_label }}</div>
+      <h2 class="text-sm font-bold text-[var(--heading)] leading-tight">{% trans "Genel Deneme Net Trendi" %}</h2>
+      <div class="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wide mt-0.5" x-text="periodLabel">{{ chart_period_label }}</div>
     </div>
-    <div class="flex items-center gap-2">
+  </div>
 
-      {# Task 1: View mode toggle — Ders Bazlı ↔ Genel Net #}
-      <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
-        <button @click="viewMode !== 'subject' && toggleView()"
-                :disabled="loading"
-                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-                :class="viewMode === 'subject'
-                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                  : 'text-[var(--muted)]'">{% trans "Ders" %}</button>
-        <button @click="viewMode !== 'total' && toggleView()"
-                :disabled="loading"
-                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-                :class="viewMode === 'total'
-                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                  : 'text-[var(--muted)]'">{% trans "Genel" %}</button>
-      </div>
+  {# Row 2: both toggles on same line #}
+  <div class="flex items-center justify-between gap-2 mb-3">
 
-      {# Period switcher #}
-      <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
-        <button @click="setPeriod('7')"
-                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-                :disabled="loading"
-                :class="period === '7'
-                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                  : 'text-[var(--muted)]'">{% trans "7G" %}</button>
-        <button @click="setPeriod('30')"
-                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-                :disabled="loading"
-                :class="period === '30'
-                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                  : 'text-[var(--muted)]'">{% trans "30G" %}</button>
-        <button @click="setPeriod('all')"
-                class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
-                :disabled="loading"
-                :class="period === 'all'
-                  ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
-                  : 'text-[var(--muted)]'">{% trans "Tümü" %}</button>
-      </div>
-
+    {# View mode toggle — Ders Bazlı ↔ Genel Net #}
+    <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
+      <button @click="viewMode !== 'subject' && toggleView()"
+              :disabled="loading"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :class="viewMode === 'subject'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "Ders" %}</button>
+      <button @click="viewMode !== 'total' && toggleView()"
+              :disabled="loading"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :class="viewMode === 'total'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "Genel" %}</button>
     </div>
+
+    {# Period switcher #}
+    <div class="flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg">
+      <button @click="setPeriod('7')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === '7'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "7G" %}</button>
+      <button @click="setPeriod('30')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === '30'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "30G" %}</button>
+      <button @click="setPeriod('all')"
+              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all"
+              :disabled="loading"
+              :class="period === 'all'
+                ? 'bg-[var(--surface-1)] text-[var(--primary)] shadow-sm'
+                : 'text-[var(--muted)]'">{% trans "Tümü" %}</button>
+    </div>
+
   </div>
 
   <div class="das-card p-0 overflow-hidden">
@@ -74,6 +77,28 @@
       </div>
     </div>
 
+    {# Custom chip legend — replaces built-in Chart.js legend #}
+    <div class="flex flex-wrap gap-1.5 px-4 pb-3 pt-1" x-show="viewMode === 'subject'">
+      <template x-for="(chip, idx) in subjectChips" :key="idx">
+        <button @click="toggleSeries(idx)"
+                class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold transition-all"
+                :style="seriesVisible[idx]
+                  ? 'border-color:' + chip.color + '; color:' + chip.color + ';'
+                  : 'border-color:var(--border); color:var(--muted);'">
+          <span class="inline-block rounded-full" style="width:6px; height:6px;"
+                :style="'background:' + (seriesVisible[idx] ? chip.color : 'var(--muted)')"></span>
+          <span x-text="chip.label"></span>
+        </button>
+      </template>
+    </div>
+    <div class="flex flex-wrap gap-1.5 px-4 pb-3 pt-1" x-show="viewMode === 'total'" x-cloak>
+      <span class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold"
+            style="border-color:var(--primary); color:var(--primary);">
+        <span class="inline-block rounded-full" style="width:6px; height:6px; background:var(--primary);"></span>
+        {% trans "Genel Net" %}
+      </span>
+    </div>
+
     <div class="bg-[var(--surface-2)] border-t border-[var(--border)] px-4 py-3
                 flex justify-between items-center">
       <div class="flex gap-5">
@@ -90,7 +115,6 @@
           </div>
         </div>
       </div>
-      {# Task 2: Link to denemeler detail page #}
       <a href="/student/denemeler/"
          class="text-[11px] font-bold text-[var(--primary)] flex items-center gap-1">
         {% trans "Detay" %}
