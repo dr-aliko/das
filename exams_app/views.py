@@ -2537,6 +2537,7 @@ def coach_student_detail(request, student_id):
         'trial_active_json':    trial_active_json,
         'trial_completed_json': trial_completed_json,
         'student_badges':       recent_badges,
+        'chart_data':           chart_data,
         'chart_data_json':      safe_json(chart_data),
         'has_chart_data':       bool(chart_data.get('labels')),
         'chart_period':         chart_period_str,

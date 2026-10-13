@@ -61,17 +61,60 @@ function coachExamSelect() {
     <div class="lg:col-span-2 space-y-6">
 
       {% if exams %}
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
+      {% if chart_data_json %}{{ chart_data_json|json_script:"das-chart-data" }}{% endif %}
+      {% if scatter_data_json %}{{ scatter_data_json|json_script:"das-scatter-data" }}{% endif %}
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-1">
           <h2 class="font-semibold text-gray-700">Net Gelişim (Ders Bazlı)</h2>
           <span class="text-xs text-gray-400">{{ period|default:"Tüm zamanlar" }}</span>
         </div>
-        <canvas id="lineChart" height="140"></canvas>
+        <div style="position:relative; height:140px;">
+          <canvas id="lineChart" style="display:block;"></canvas>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#3b82f6; color:#3b82f6;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#3b82f6;"></span>Türkçe
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#8b5cf6; color:#8b5cf6;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#8b5cf6;"></span>Mat
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#f59e0b; color:#f59e0b;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#f59e0b;"></span>Sosyal
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#10b981; color:#10b981;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#10b981;"></span>Fen
+          </span>
+        </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 class="font-semibold text-gray-700 mb-1">Toplam Net (Sınav Bazlı)</h2>
-        <canvas id="barChart" height="120"></canvas>
+        <div style="position:relative; height:120px;">
+          <canvas id="barChart" style="display:block;"></canvas>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#3b82f6; color:#3b82f6;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#3b82f6;"></span>Türkçe
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#8b5cf6; color:#8b5cf6;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#8b5cf6;"></span>Mat
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#f59e0b; color:#f59e0b;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#f59e0b;"></span>Sosyal
+          </span>
+          <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#10b981; color:#10b981;">
+            <span class="inline-block rounded-full" style="width:6px; height:6px; background:#10b981;"></span>Fen
+          </span>
+        </div>
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-[180px] sm:h-[220px]">
@@ -444,79 +487,122 @@ function coachExamSelect() {
 {% if exams %}
 <script>
 (function() {
-  const d = {{ chart_data_json|safe }};
+  var _dEl  = document.getElementById('das-chart-data');
+  var _sdEl = document.getElementById('das-scatter-data');
+  if (!_dEl) return;
+  var d  = JSON.parse(_dEl.textContent);
+  var sd = _sdEl ? JSON.parse(_sdEl.textContent) : {datasets: []};
   if (!d.labels || d.labels.length === 0) return;
 
-  const examNames = d.exam_names;
+  var examNames = d.exam_names;
+  var isMobile  = window.innerWidth < 640;
 
-  const isMobile = window.innerWidth < 640;
-  const lineChart = new Chart(document.getElementById('lineChart'), {
+  var _TR_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  function fmtNet(n)  { return n.toFixed(2).replace('.', ','); }
+  function fmtNet1(n) { return n.toFixed(1).replace('.', ','); }
+  function fmtDate(iso) {
+    var p = String(iso).split('-');
+    if (p.length < 3) return iso;
+    return parseInt(p[2], 10) + ' ' + _TR_SHORT[parseInt(p[1], 10) - 1];
+  }
+
+  var gridColor = 'rgba(148,163,184,0.15)';
+  var tickColor = '#94a3b8';
+
+  var xTicks = {
+    font: { size: isMobile ? 9 : 10 },
+    color: tickColor,
+    maxTicksLimit: isMobile ? 4 : undefined,
+    maxRotation: 0,
+    callback: function(val, idx) { return fmtDate(d.labels[idx]); },
+  };
+
+  new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: {
       labels: d.labels,
-      datasets: d.subjects.map(s => ({
-        label: s.name, data: s.data, borderColor: s.border, backgroundColor: s.bg,
-        borderWidth: 2.5, pointBackgroundColor: s.border, pointRadius: 5, pointHoverRadius: 7,
-        tension: 0.35, fill: false,
-      }))
+      datasets: d.subjects.map(function(s) {
+        return {
+          label: s.name.replace('TYT ', ''),
+          data: s.data, borderColor: s.border, backgroundColor: s.bg,
+          borderWidth: isMobile ? 2 : 2.5,
+          pointBackgroundColor: s.border,
+          pointRadius: isMobile ? 3 : 5,
+          pointHoverRadius: 7,
+          tension: 0.35, fill: false,
+        };
+      }),
     },
     options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
+        legend: { display: false },
         tooltip: { callbacks: {
-          title: items => examNames[items[0].dataIndex] + ' (' + d.labels[items[0].dataIndex] + ')',
-          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
-        }}
+          title: function(i) { return [examNames[i[0].dataIndex], fmtDate(d.labels[i[0].dataIndex])]; },
+          label: function(i) { return ' ' + i.dataset.label + ': ' + fmtNet(i.parsed.y); },
+          footer: function(i) { return 'Toplam: ' + fmtNet(i.reduce(function(s, x) { return s + x.parsed.y; }, 0)); },
+        }},
       },
-      scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false }, ticks: { font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } } }
-    }
+      scales: {
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+        x: { grid: { display: false }, ticks: xTicks },
+      },
+    },
   });
 
-  const barChart = new Chart(document.getElementById('barChart'), {
+  var barXTicks = {
+    font: { size: isMobile ? 9 : 10 },
+    color: tickColor,
+    maxTicksLimit: isMobile ? 4 : undefined,
+    maxRotation: 0,
+    callback: function(val, idx) { return fmtDate(d.labels[idx]); },
+  };
+
+  new Chart(document.getElementById('barChart'), {
     type: 'bar',
     data: {
       labels: d.labels,
-      datasets: d.subjects.map(s => ({
-        label: s.name, data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false,
-      }))
+      datasets: d.subjects.map(function(s) {
+        return { label: s.name.replace('TYT ', ''), data: s.data, backgroundColor: s.border, borderRadius: 4, borderSkipped: false };
+      }),
     },
     options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
+        legend: { display: false },
         tooltip: { callbacks: {
-          title: items => examNames[items[0].dataIndex] + ' (' + d.labels[items[0].dataIndex] + ')',
-          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
-        }}
+          title: function(i) { return [examNames[i[0].dataIndex], fmtDate(d.labels[i[0].dataIndex])]; },
+          label: function(i) { return ' ' + i.dataset.label + ': ' + fmtNet(i.parsed.y); },
+          footer: function(i) { return 'Toplam: ' + fmtNet(i.reduce(function(s, x) { return s + x.parsed.y; }, 0)); },
+        }},
       },
       scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { font: { size: isMobile ? 9 : 10 }, maxTicksLimit: isMobile ? 4 : undefined } },
-        y: { stacked: true, grid: { color: '#f1f5f9' } }
-      }
-    }
+        x: { stacked: true, grid: { display: false }, ticks: barXTicks },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+      },
+    },
   });
 
-  const sd = {{ scatter_data_json|safe }};
   if (!sd.datasets || sd.datasets.length === 0) {
     document.getElementById('scatterEmpty').classList.remove('hidden');
     document.getElementById('scatterChart').classList.add('hidden');
   } else {
     new Chart(document.getElementById('scatterChart'), {
       type: 'scatter',
-      data: { datasets: sd.datasets.map(s => ({ label: s.label, data: s.data, backgroundColor: s.border, borderColor: s.border, pointRadius: 6, pointHoverRadius: 8 })) },
+      data: { datasets: sd.datasets.map(function(s) { return { label: s.label.replace('TYT ', ''), data: s.data, backgroundColor: s.border, borderColor: s.border, pointRadius: 6, pointHoverRadius: 8 }; }) },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: isMobile ? 'right' : 'bottom', labels: { boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10, font: { size: isMobile ? 10 : 11 } } },
-          tooltip: { callbacks: { label: ctx => { const p=ctx.raw; return `${p.publisher} · ${p.exam} — ${ctx.dataset.label}: ${p.x} dk, ${p.y.toFixed(2)} net`; } } }
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 }, color: tickColor } },
+          tooltip: { callbacks: { label: function(ctx) { var p = ctx.raw; return p.publisher + ' · ' + p.exam + ' — ' + ctx.dataset.label + ': ' + p.x + ' dk, ' + fmtNet(p.y) + ' net'; } } },
         },
         scales: {
-          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' }, beginAtZero: true },
-          y: { title: { display: !isMobile, text: 'Net Skor', color: '#94a3b8', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
-        }
-      }
+          x: { title: { display: !isMobile, text: 'Süre (Dakika)', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor }, beginAtZero: true },
+          y: { title: { display: !isMobile, text: 'Net Skor', color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, ticks: { color: tickColor, callback: function(v) { return fmtNet1(v); } } },
+        },
+      },
     });
   }
 })();

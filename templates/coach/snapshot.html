@@ -69,15 +69,20 @@
       <div class="lg:col-span-8 space-y-4">
 
         {% if has_chart_data %}
+        {{ chart_data|json_script:"das-coach-chart-data" }}
         <div class="rounded-xl border border-ink-700 bg-ink-850 p-4"
              x-data="coachTrendChart('{{ student.id }}', '{{ chart_period }}')">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Net Gelişim</h3>
-              <span x-show="loading" x-cloak
-                    class="w-3 h-3 rounded-full border-2 border-steel-500 border-t-transparent animate-spin"></span>
-            </div>
-            <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-[10px] font-medium">
+
+          {# Row 1: title + period label #}
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider">Net Gelişim</h3>
+            <span x-show="loading" x-cloak
+                  class="w-3 h-3 rounded-full border-2 border-steel-500 border-t-transparent animate-spin"></span>
+          </div>
+
+          {# Row 2: period toggle #}
+          <div class="flex items-center justify-end mb-3">
+            <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5" style="font-size:10px; font-weight:500;">
               <button @click="setPeriod('all')"
                       class="px-2 py-1 rounded-md transition-colors"
                       :class="period === 'all' ? 'bg-ink-700 text-ink-100' : 'text-ink-500 hover:text-ink-300'">
@@ -95,9 +100,31 @@
               </button>
             </div>
           </div>
-          <div class="h-[150px]">
-            <canvas id="coachTrendChart"></canvas>
+
+          <div style="position:relative; height:150px;">
+            <canvas id="coachTrendChart" style="display:block;"></canvas>
           </div>
+
+          {# Chip legend — replaces built-in Chart.js legend #}
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                  style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#3b82f6; color:#3b82f6;">
+              <span class="inline-block rounded-full" style="width:6px; height:6px; background:#3b82f6;"></span>Türkçe
+            </span>
+            <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                  style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#8b5cf6; color:#8b5cf6;">
+              <span class="inline-block rounded-full" style="width:6px; height:6px; background:#8b5cf6;"></span>Mat
+            </span>
+            <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                  style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#f59e0b; color:#f59e0b;">
+              <span class="inline-block rounded-full" style="width:6px; height:6px; background:#f59e0b;"></span>Sosyal
+            </span>
+            <span class="flex items-center gap-1 px-2 rounded-full border font-bold"
+                  style="padding-top:2px; padding-bottom:2px; font-size:10px; border-color:#10b981; color:#10b981;">
+              <span class="inline-block rounded-full" style="width:6px; height:6px; background:#10b981;"></span>Fen
+            </span>
+          </div>
+
         </div>
         {% endif %}
 
@@ -427,39 +454,72 @@
 {% if has_chart_data %}
 <script>
 function coachTrendChart(studentId, initialPeriod) {
-  const isMobile = window.innerWidth < 640;
-  const CHART_OPTIONS = {
+  var _TR_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  function fmtNet(n)  { return n.toFixed(2).replace('.', ','); }
+  function fmtNet1(n) { return n.toFixed(1).replace('.', ','); }
+  function fmtDate(iso) {
+    var p = String(iso).split('-');
+    if (p.length < 3) return iso;
+    return parseInt(p[2], 10) + ' ' + _TR_SHORT[parseInt(p[1], 10) - 1];
+  }
+
+  var isMobile = window.innerWidth < 640;
+  var CHART_OPTIONS = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: { boxWidth: 10, padding: 8, font: { size: 10 }, color: DAS.getCssVar('--muted') },
-      },
+      legend: { display: false },
       tooltip: {
         callbacks: {
-          title: (items, d) => {
+          title: function(items) {
             if (!window._coachChartData) return '';
-            const examNames = window._coachChartData.exam_names;
-            const labels = window._coachChartData.labels;
-            return (examNames ? examNames[items[0].dataIndex] : '') + ' (' + (labels ? labels[items[0].dataIndex] : '') + ')';
+            var examNames = window._coachChartData.exam_names;
+            var labels    = window._coachChartData.labels;
+            return [
+              examNames ? examNames[items[0].dataIndex] : '',
+              labels    ? fmtDate(labels[items[0].dataIndex]) : '',
+            ];
           },
-          footer: items => 'Toplam: ' + items.reduce((s, i) => s + i.parsed.y, 0).toFixed(2),
+          label: function(item) {
+            return ' ' + item.dataset.label + ': ' + fmtNet(item.parsed.y);
+          },
+          footer: function(items) {
+            return 'Toplam: ' + fmtNet(items.reduce(function(s, i) { return s + i.parsed.y; }, 0));
+          },
         },
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 9 }, color: DAS.getCssVar('--muted'), maxTicksLimit: isMobile ? 3 : 6 } },
-      y: { grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) }, ticks: { font: { size: 9 }, color: DAS.getCssVar('--muted') } },
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { size: 9 },
+          color: DAS.getCssVar('--muted'),
+          maxTicksLimit: isMobile ? 3 : 6,
+          maxRotation: 0,
+          callback: function(val, idx) {
+            if (!window._coachChartData || !window._coachChartData.labels) return val;
+            return fmtDate(window._coachChartData.labels[idx]);
+          },
+        },
+      },
+      y: {
+        grid: { color: DAS.withAlpha(DAS.getCssVar('--muted'), 0.12) },
+        ticks: {
+          font: { size: 9 },
+          color: DAS.getCssVar('--muted'),
+          callback: function(v) { return fmtNet1(v); },
+        },
+      },
     },
   };
 
-  let chartInstance = null;
+  var chartInstance = null;
 
   function buildChart(d) {
     window._coachChartData = d;
-    const canvas = document.getElementById('coachTrendChart');
+    var canvas = document.getElementById('coachTrendChart');
     if (!canvas) return;
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     if (!d.labels || !d.labels.length) return;
@@ -467,23 +527,26 @@ function coachTrendChart(studentId, initialPeriod) {
       type: 'line',
       data: {
         labels: d.labels,
-        datasets: (d.subjects || []).map(s => ({
-          label: s.name.startsWith('TYT ') ? s.name.slice(4) : s.name,
-          data: s.data,
-          borderColor: s.border,
-          backgroundColor: s.bg,
-          borderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          tension: 0.35,
-          fill: false,
-        })),
+        datasets: (d.subjects || []).map(function(s) {
+          return {
+            label: s.name.startsWith('TYT ') ? s.name.slice(4) : s.name,
+            data: s.data,
+            borderColor: s.border,
+            backgroundColor: s.bg,
+            borderWidth: isMobile ? 2 : 2.5,
+            pointRadius: isMobile ? 3 : 4,
+            pointHoverRadius: 6,
+            tension: 0.35,
+            fill: false,
+          };
+        }),
       },
       options: CHART_OPTIONS,
     });
   }
 
-  buildChart({{ chart_data_json|safe }});
+  var _el = document.getElementById('das-coach-chart-data');
+  buildChart(_el ? JSON.parse(_el.textContent) : {});
 
   return {
     period: initialPeriod || '30',
