@@ -221,11 +221,17 @@ def _build_denemeler_v2_context(user, filters=None):
 
     # Total before period filter — drives sparse/empty-state banner logic
     all_exam_count = len(exam_objs)
-    # Build chart points from unfiltered set (chronological, newest 20)
-    chart_data = safe_json([
-        {'d': e.date.strftime('%d %b').lstrip('0'), 'n': float(e.net)}
-        for e in reversed(exam_objs[:20])
-    ])
+    # Full chronological dataset; JS handles period slicing and display.
+    # Passed as a plain list so the template can use json_script safely.
+    chart_data = [
+        {
+            'iso':   e.date.isoformat(),
+            'label': f"{e.date.day} {_TR_MONTHS_SHORT[e.date.month - 1]}",
+            'n':     float(e.net),
+            'name':  e.custom_name,
+        }
+        for e in reversed(exam_objs)
+    ]
 
     # Period filter: trim to last N days (DAS-305)
     period_str = filters.get('period', '')

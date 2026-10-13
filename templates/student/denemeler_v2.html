@@ -207,21 +207,7 @@
 
       {% else %}
 
-        {# ── Mini progress chart (2+ exams) ── #}
-        {% if all_exam_count >= 2 %}
-        <div class="mb-6 rounded-xl border border-ink-700 bg-ink-900 overflow-hidden"
-             x-data="denemeProgressChart()">
-          <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
-            <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">
-              {% trans "Net Gelişimi" %}
-            </p>
-            <p class="text-[10px] text-ink-500 tnum" x-text="chartSummary"></p>
-          </div>
-          <div class="relative" style="height:110px;">
-            <canvas id="denemeProgressCanvas"></canvas>
-          </div>
-        </div>
-        {% endif %}
+        {% include "dashboard/partials/_net_gelisimi_chart.html" with chart_period=filters.period %}
 
         <div id="das-exam-cards" :class="cardsLoading ? 'opacity-50 pointer-events-none' : ''">
           {% include "dashboard/partials/_denemeler_cards.html" %}
@@ -251,53 +237,6 @@
 
 {% block extra_js %}
 <script>
-/* ── Exam progress mini chart ── */
-function denemeProgressChart() {
-  return {
-    chartSummary: '',
-    init() {
-      const raw = {{ chart_data|safe }};
-      if (!raw.length) return;
-      const labels = raw.map(p => p.d);
-      const data   = raw.map(p => p.n);
-      const first  = data[0], last = data[data.length - 1];
-      const delta  = last - first;
-      this.chartSummary = (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' son ' + data.length + ' denemede';
-
-      const ctx = document.getElementById('denemeProgressCanvas');
-      if (!ctx) return;
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            data,
-            borderColor: DAS.getCssVar('--primary'),
-            backgroundColor: DAS.withAlpha(DAS.getCssVar('--primary'), 0.1),
-            borderWidth: 2,
-            tension: 0.35,
-            fill: true,
-            pointRadius: data.length <= 8 ? 3 : 0,
-            pointHoverRadius: 5,
-            pointBackgroundColor: '#6D5BFF',
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: {
-            callbacks: { label: ctx => ' ' + ctx.parsed.y.toFixed(2) },
-          }},
-          scales: {
-            x: { display: false },
-            y: { display: false, min: Math.max(0, Math.min(...data) - 5) },
-          },
-        },
-      });
-    },
-  };
-}
-
 /* ── Main compareModeState ── */
 function compareModeState() {
   return {
@@ -385,9 +324,10 @@ function compareModeState() {
       }
     },
 
-    // Period change drives both sections in parallel
+    // Period change: update chart immediately, then fetch cards + topics in parallel
     setPeriod(val) {
       this.activePeriod = val;
+      window.dispatchEvent(new CustomEvent('das-period-change', { detail: { period: val } }));
       Promise.all([this.fetchCards(), this.fetchTopics()]);
     },
 

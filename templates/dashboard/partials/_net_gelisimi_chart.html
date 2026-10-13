@@ -1,0 +1,189 @@
+{% load i18n %}
+{# ── Net Gelişimi — shared Chart.js partial (student + coach) ─────────────── #}
+{# Required context: chart_data (list of {iso,label,n,name}), all_exam_count   #}
+{# Optional:         chart_period (str) — initial period key ('','7','30',…)   #}
+{# Notes:                                                                       #}
+{#   • All Exam records here are TYT; AYT data lives in BransDeneme elsewhere. #}
+{#   • Period filtering is done client-side so one payload serves both the     #}
+{#     student AJAX period-change and the coach full-page-reload pattern.       #}
+{#   • Data is injected via json_script to avoid Turkish-locale float mangling  #}
+{#     that broke the previous {{ chart_data|safe }} approach.                 #}
+
+<script>
+(function (global) {
+  'use strict';
+
+  function fmtNet(n) { return n.toFixed(2).replace('.', ','); }
+
+  function netGelisimiChart(initialPeriod) {
+    return {
+      summary:  '',
+      isEmpty:  false,
+      _chart:   null,
+      _allData: [],
+
+      init() {
+        var el = document.getElementById('net-gelisimi-data');
+        this._allData = el ? JSON.parse(el.textContent) : [];
+        this._build(initialPeriod || '');
+      },
+
+      destroy() {
+        if (this._chart) { this._chart.destroy(); this._chart = null; }
+      },
+
+      onPeriodChange(period) {
+        this._build(period);
+      },
+
+      _filter(period) {
+        var all = this._allData;
+        if (!period) return all;
+        var days = { '7': 7, '30': 30, '90': 90, '365': 365 }[String(period)];
+        if (!days) return all;
+        var cutoff = new Date();
+        cutoff.setHours(0, 0, 0, 0);
+        cutoff.setDate(cutoff.getDate() - days);
+        return all.filter(function (p) { return new Date(p.iso) >= cutoff; });
+      },
+
+      _build(period) {
+        if (this._chart) { this._chart.destroy(); this._chart = null; }
+
+        var data = this._filter(period);
+
+        if (!data.length) {
+          this.isEmpty = true;
+          this.summary = '';
+          return;
+        }
+        this.isEmpty = false;
+
+        if (data.length >= 2) {
+          var diff = data[data.length - 1].n - data[0].n;
+          this.summary = 'İlk denemeye göre ' + (diff >= 0 ? '+' : '') + fmtNet(diff);
+        } else {
+          this.summary = '';
+        }
+
+        var labels = data.map(function (p) { return p.label; });
+        var nets   = data.map(function (p) { return p.n; });
+
+        var lo  = Math.min.apply(null, nets);
+        var hi  = Math.max.apply(null, nets);
+        var pad = Math.max((hi - lo) * 0.2, 5);
+        var yMin = Math.floor(lo - pad);
+        var yMax = Math.ceil(hi + pad);
+
+        var canvas = document.getElementById('net-gelisimi-canvas');
+        if (!canvas) return;
+
+        var c       = DAS.DAS_COLORS();
+        var primary = c.primary;
+        var gridCol = DAS.withAlpha(DAS.getCssVar('--muted') || '#62627a', 0.12);
+
+        this._chart = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              data:                 nets,
+              borderColor:          primary,
+              backgroundColor:      DAS.withAlpha(primary, 0.08),
+              borderWidth:          2,
+              tension:              0.3,
+              fill:                 true,
+              pointRadius:          data.length <= 12 ? 4 : 2,
+              pointHoverRadius:     7,
+              pointBackgroundColor: primary,
+              spanGaps:             true,
+            }],
+          },
+          options: {
+            responsive:          true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            layout:      { padding: { left: 8, right: 8, top: 10, bottom: 2 } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: function (items) {
+                    var idx = items[0].dataIndex;
+                    return [data[idx].name, data[idx].label];
+                  },
+                  label: function (item) {
+                    var idx = item.dataIndex;
+                    var s = ' Net: ' + fmtNet(item.parsed.y);
+                    if (idx > 0) {
+                      var d = item.parsed.y - data[idx - 1].n;
+                      s += '  (' + (d >= 0 ? '+' : '') + fmtNet(d) + ' öncekine göre)';
+                    }
+                    return s;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                display: true,
+                grid:    { display: false, drawBorder: false },
+                border:  { display: false },
+                ticks: {
+                  maxTicksLimit: 5,
+                  maxRotation:   0,
+                  autoSkip:      true,
+                  font:          { size: 10 },
+                },
+              },
+              y: {
+                display: true,
+                min:     yMin,
+                max:     yMax,
+                grid:    { color: gridCol, drawBorder: false },
+                border:  { display: false },
+                ticks: {
+                  maxTicksLimit: 4,
+                  font:          { size: 10 },
+                  callback:      function (v) { return fmtNet(v); },
+                },
+              },
+            },
+          },
+        });
+      },
+    };
+  }
+
+  global.netGelisimiChart = netGelisimiChart;
+}(window));
+</script>
+
+{% if all_exam_count >= 1 %}
+{{ chart_data|json_script:"net-gelisimi-data" }}
+
+<div class="mb-6 rounded-xl border border-ink-700 bg-ink-900 overflow-hidden"
+     x-data="netGelisimiChart('{{ chart_period|default:'' }}')"
+     @das-period-change.window="onPeriodChange($event.detail.period)">
+
+  <div class="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+    <p class="text-[10px] uppercase tracking-wider text-ink-500 font-bold">
+      {% trans "Net Gelişimi" %}
+    </p>
+    <p class="text-[10px] text-ink-500 tnum"
+       x-show="summary.length > 0"
+       x-text="summary"
+       x-cloak></p>
+  </div>
+
+  <div style="position:relative; height:220px;">
+    <canvas id="net-gelisimi-canvas" style="display:block;"></canvas>
+    <div x-show="isEmpty" x-cloak style="position:absolute; inset:0;">
+      <div style="height:100%; display:flex; align-items:center; justify-content:center;">
+        <p style="font-size:12px; color:var(--muted);">{% trans "Bu dönemde deneme yok." %}</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}

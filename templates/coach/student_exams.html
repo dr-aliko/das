@@ -168,6 +168,8 @@
 
     <div class="p-4 md:p-6 space-y-8">
 
+      {% include "dashboard/partials/_net_gelisimi_chart.html" with chart_period=filters.period %}
+
       {% if exams.total_count == 0 %}
       <div class="rounded-xl border border-dashed border-ink-700 p-10 text-center">
         <p class="text-sm text-ink-300">{{ student.full_name }} henüz deneme girmemiş.</p>
