@@ -225,6 +225,14 @@
                 <template x-if="task.duration">
                   <span>• <span x-text="task.duration"></span></span>
                 </template>
+                <template x-if="task.raw?.original_tarih">
+                  <span class="ertelendi-chip">
+                    <svg class="ertelendi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Ertelendi
+                  </span>
+                </template>
               </div>
             </div>
             <svg class="w-5 h-5 text-[var(--muted-2)] shrink-0" viewBox="0 0 24 24">
@@ -423,12 +431,13 @@
           </button>
         </div>
 
-        <div class="flex-1 flex flex-col gap-2 p-2 overflow-y-auto">
+        <div class="flex-1 flex flex-col gap-2 p-2 overflow-y-auto" style="overflow-x:hidden;">
           <template x-for="g in visibleGorevler(gun)" :key="g.id">
             <div x-data="{ sheetOpen: false }"
                  class="task-card break-inside-avoid rounded-lg border-2 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-card"
                  :class="g.is_completed ? 'opacity-60' : ''"
                  :style="{background: colorFor(g.aktivite_tipi), borderColor: borderFor(g.aktivite_tipi)}"
+                 style="min-width:0;"
                  draggable="true"
                  @dragstart="onDragStart($event, g.id, gun.tarih)">
 
@@ -436,6 +445,7 @@
                 <div class="text-xs font-semibold leading-snug mb-1 sm:whitespace-normal truncate"
                      :class="g.is_completed ? 'line-through' : ''"
                      :style="{color: titleColorFor(g.aktivite_tipi)}"
+                     style="overflow-wrap:anywhere;min-width:0;"
                      x-text="g.ders_title"></div>
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span class="task-type-badge text-[9px] font-bold leading-none px-1.5 py-0.5 rounded-full"
@@ -444,21 +454,14 @@
                   <span x-show="g.ozel_sure_dk"
                         class="text-[10px] font-medium text-[var(--muted)] tnum"
                         x-text="durStr(g.ozel_sure_dk)"></span>
-                </div>
-                {# Overdue trail badge — desktop hover tooltip shows full date trail #}
-                <div x-show="g.original_tarih" class="mt-1 group relative inline-block">
-                  <span class="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 cursor-default select-none">
-                    &#9200; Ertelendi
-                  </span>
-                  <div class="hidden sm:block absolute bottom-full left-0 mb-1.5 bg-gray-900 text-white text-[10px] rounded-lg px-2.5 py-1.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-xl whitespace-nowrap">
-                    <span x-text="'📅 ' + g.original_tarih"></span>
-                    <template x-if="g.last_moved_at">
-                      <span x-text="' → 🔄 ' + g.last_moved_at.slice(0,10)"></span>
-                    </template>
-                    <template x-if="g.completed_at">
-                      <span x-text="' → ✓ ' + g.completed_at.slice(0,10)"></span>
-                    </template>
-                  </div>
+                  <template x-if="g.original_tarih">
+                    <span class="ertelendi-chip"
+                          :title="fmtDate(g.original_tarih) + (g.last_moved_at ? ' → ' + fmtDate(g.last_moved_at.slice(0,10)) : '') + (g.completed_at ? ' → ✓ ' + fmtDate(g.completed_at.slice(0,10)) : '')">
+                      <svg class="ertelendi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                    </span>
+                  </template>
                 </div>
               </div>
 

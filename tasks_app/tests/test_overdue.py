@@ -272,3 +272,114 @@ def test_geciken_api_requires_login():
     client = Client()
     resp = client.get('/student/tasks/api/geciken')
     assert resp.status_code in (302, 403)
+
+
+# ── Test 7: indicator data reaches weekly view serialization ──────────────────
+# NOTE: Alpine x-if is evaluated client-side only. Django's test client returns
+# the static template markup (which always contains the x-if binding). The tests
+# below verify the DATA CONTRACT (API JSON contains original_tarih) and that the
+# BINDING TEXT exists in the template source. Whether the chip actually appears
+# in the DOM is unverified without a browser.
+
+@pytest.mark.django_db
+def test_moved_task_serialized_has_original_tarih(student):
+    """Service layer: a moved task includes original_tarih in its serialized output."""
+    from tasks_app.services import week as week_svc
+    yesterday = date.today() - timedelta(days=1)
+    task = _make_task(student, tarih=yesterday)
+    tasks_svc.move_to_today(student, task.id)
+
+    today = date.today()
+    basi, sonu = week_svc.week_bounds(today)
+    gorevler = tasks_svc.week_for_own_student(student, basi, sonu)
+    moved = next(g for g in gorevler if g['id'] == task.id)
+    assert moved['original_tarih'] == yesterday.isoformat()
+
+
+@pytest.mark.django_db
+def test_never_moved_task_serialized_no_original_tarih(student):
+    """Service layer: a never-moved task has original_tarih=None in its serialized output."""
+    from tasks_app.services import week as week_svc
+    task = _make_task(student, tarih=date.today())
+
+    today = date.today()
+    basi, sonu = week_svc.week_bounds(today)
+    gorevler = tasks_svc.week_for_own_student(student, basi, sonu)
+    g = next(g for g in gorevler if g['id'] == task.id)
+    assert g['original_tarih'] is None
+
+
+# ── Test 8: student API endpoint returns original_tarih field ─────────────────
+
+@pytest.mark.django_db
+def test_student_api_moved_task_has_original_tarih(student):
+    """Student week API: moved task has original_tarih in JSON response."""
+    client = Client()
+    client.force_login(student)
+    yesterday = date.today() - timedelta(days=1)
+    task = _make_task(student, tarih=yesterday)
+    tasks_svc.move_to_today(student, task.id)
+
+    resp = client.get(f'/student/tasks/api/gorevler?hafta={date.today().isoformat()}')
+    assert resp.status_code == 200
+    gorevler = resp.json()['gorevler']
+    moved = next(g for g in gorevler if g['id'] == task.id)
+    assert moved['original_tarih'] == yesterday.isoformat()
+
+
+@pytest.mark.django_db
+def test_student_api_unmoved_task_no_original_tarih(student):
+    """Student week API: never-moved task has original_tarih=null in JSON response."""
+    client = Client()
+    client.force_login(student)
+    _make_task(student, tarih=date.today())
+
+    resp = client.get(f'/student/tasks/api/gorevler?hafta={date.today().isoformat()}')
+    assert resp.status_code == 200
+    gorevler = resp.json()['gorevler']
+    assert all(g['original_tarih'] is None for g in gorevler)
+
+
+# ── Test 9: coach API endpoint returns original_tarih field ───────────────────
+
+@pytest.fixture
+def coach(db):
+    return baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+
+
+@pytest.fixture
+def coached_student(db, coach):
+    return baker.make('users_app.User', role='student', is_active=True, coach=coach)
+
+
+@pytest.mark.django_db
+def test_coach_api_moved_task_has_original_tarih(coach, coached_student):
+    """Coach week API: moved task has original_tarih in JSON response."""
+    client = Client()
+    client.force_login(coach)
+    yesterday = date.today() - timedelta(days=1)
+    task = _make_task(coached_student, tarih=yesterday)
+    tasks_svc.move_to_today(coached_student, task.id)
+
+    resp = client.get(
+        f'/coach/tasks/api/gorevler?student_id={coached_student.id}&hafta={date.today().isoformat()}'
+    )
+    assert resp.status_code == 200
+    gorevler = resp.json()['gorevler']
+    moved = next(g for g in gorevler if g['id'] == task.id)
+    assert moved['original_tarih'] == yesterday.isoformat()
+
+
+@pytest.mark.django_db
+def test_coach_api_unmoved_task_no_original_tarih(coach, coached_student):
+    """Coach week API: never-moved task has original_tarih=null in JSON response."""
+    client = Client()
+    client.force_login(coach)
+    _make_task(coached_student, tarih=date.today())
+
+    resp = client.get(
+        f'/coach/tasks/api/gorevler?student_id={coached_student.id}&hafta={date.today().isoformat()}'
+    )
+    assert resp.status_code == 200
+    gorevler = resp.json()['gorevler']
+    assert all(g['original_tarih'] is None for g in gorevler)

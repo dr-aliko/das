@@ -395,6 +395,13 @@ function panel() {
       return s ? `${s}s ${m}dk` : `${m}dk`;
     },
 
+    fmtDate(iso) {
+      if (!iso) return '';
+      const M = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const d = new Date(iso + 'T00:00:00');
+      return d.getDate() + ' ' + M[d.getMonth()];
+    },
+
     dailyActualLabel(idx) {
       const dk = this.dailyActualDk(idx);
       return dk ? '✓ ' + this.fmtDk(dk) : '';

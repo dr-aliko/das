@@ -759,3 +759,23 @@ input.das-input--invalid, select.das-input--invalid, textarea.das-input--invalid
     padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
   }
 }
+
+/* ── Postponed-task indicator ─────────────────────────────────────────────── */
+/* Shown when original_tarih is set (task was moved from overdue tray).
+   Color matches the toned-down amber of the Geciken Görevler tray. */
+.ertelendi-chip {
+  display:     inline-flex;
+  align-items: center;
+  gap:         2px;
+  font-size:   9px;
+  font-weight: 700;
+  color:       #fbbf24; /* amber-400 — matches Geciken tray */
+  min-width:   0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ertelendi-icon {
+  width:       9px;
+  height:      9px;
+  flex-shrink: 0;
+}
