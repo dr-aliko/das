@@ -154,7 +154,21 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Django 5.1+ requires STORAGES instead of the deprecated STATICFILES_STORAGE.
+# CompressedManifestStaticFilesStorage hashes file names so nginx's
+# "expires 30d; Cache-Control: public, immutable" is safe: each deploy gets
+# new filenames and browsers never serve a stale copy.
+# manifest_strict=False prevents 500s if a third-party template references
+# a file that was not collected (e.g. admin overrides, missing fonts).
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "core_config.storage.ManifestStorage",
+    },
+}
 
 # User-uploaded media — local disk storage (single-VPS deployment).
 # Dev default: BASE_DIR/media/  (created automatically on first upload).
