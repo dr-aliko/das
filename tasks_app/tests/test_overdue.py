@@ -1,5 +1,7 @@
 import json
+import re
 from datetime import date, timedelta
+from pathlib import Path
 
 import pytest
 from django.test import Client
@@ -383,3 +385,71 @@ def test_coach_api_unmoved_task_no_original_tarih(coach, coached_student):
     assert resp.status_code == 200
     gorevler = resp.json()['gorevler']
     assert all(g['original_tarih'] is None for g in gorevler)
+
+
+# ── Test 10: source-level template chip audit ─────────────────────────────────
+# Static analysis: verify chip condition fields and absence of nested guards.
+
+BASE = Path(__file__).resolve().parent.parent.parent  # repo root
+
+
+def _src(rel):
+    return (BASE / rel).read_text(encoding='utf-8')
+
+
+def test_student_desktop_chip_uses_g_original_tarih():
+    """Desktop grid card chip condition: g.original_tarih, text Ertelendi present."""
+    src = _src('templates/student/tasks/hafta.html')
+    assert 'x-if="g.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="g\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'desktop chip with text Ertelendi not found'
+
+
+def test_student_mobile_chip_uses_raw_original_tarih():
+    """Mobile active card chip condition: task.raw?.original_tarih."""
+    src = _src('templates/student/tasks/hafta.html')
+    assert 'x-if="task.raw?.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="task\.raw\?\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'mobile active-card chip with text Ertelendi not found'
+
+
+def test_completed_accordion_chip_uses_raw_original_tarih():
+    """Accordion chip condition: task.raw.original_tarih — field exists in serialized task."""
+    src = _src('templates/tasks/partials/_completed_tasks_accordion.html')
+    assert 'x-if="task.raw.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="task\.raw\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'accordion chip with text Ertelendi not found'
+
+
+def test_accordion_chip_not_nested_under_other_condition():
+    """Accordion chip must not be inside any x-if/x-show other than original_tarih."""
+    src = _src('templates/tasks/partials/_completed_tasks_accordion.html')
+    match = re.search(r'x-if="task\.raw\.original_tarih"([\s\S]{0,1500}?)Ertelendi', src)
+    assert match, 'chip block not found in accordion'
+    interior = match.group(1)
+    assert 'x-if=' not in interior
+    assert 'x-show=' not in interior
+
+
+def test_student_detail_sheet_chip_uses_raw_original_tarih():
+    """Detail sheet chip condition: detailTask?.raw?.original_tarih."""
+    src = _src('templates/tasks/partials/_student_task_detail_sheet.html')
+    assert 'x-if="detailTask?.raw?.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="detailTask\?\.raw\?\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'detail sheet chip with text Ertelendi not found'
+
+
+def test_coach_desktop_chip_uses_g_original_tarih():
+    """Coach desktop grid card chip: g.original_tarih, text Ertelendi present."""
+    src = _src('templates/coach/tasks/hafta.html')
+    assert 'x-if="g.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="g\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'coach desktop chip with text Ertelendi not found'
+
+
+def test_coach_mobile_chip_uses_raw_original_tarih():
+    """Coach mobile active card chip: task.raw?.original_tarih."""
+    src = _src('templates/coach/tasks/hafta.html')
+    assert 'x-if="task.raw?.original_tarih"' in src
+    chip_blocks = re.findall(r'x-if="task\.raw\?\.original_tarih"[\s\S]{0,1500}?Ertelendi', src)
+    assert len(chip_blocks) >= 1, 'coach mobile active-card chip with text Ertelendi not found'
