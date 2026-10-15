@@ -73,6 +73,16 @@ def generate_all_coach_alerts():
     return total_created, total_updated
 
 
+def _notified_today(student, title):
+    """Return True if a Notification with this exact title was already created today for this student.
+    Guards against duplicate rows if a task is accidentally re-run on the same day."""
+    from django.utils.timezone import localdate
+    from users_app.models import Notification
+    return Notification.objects.filter(
+        user=student, title=title, created_at__date=localdate(),
+    ).exists()
+
+
 def send_task_deadline_reminders():
     """Scheduled daily at 09:00 Istanbul (cron='0 9 * * *' in local time)."""
     from django.contrib.auth import get_user_model
@@ -82,12 +92,9 @@ def send_task_deadline_reminders():
 
     User = get_user_model()
     today = localdate()
+    TITLE = 'Görev Hatırlatıcı 📋'
 
-    students = User.objects.filter(
-        role='student',
-        is_active=True,
-        push_subscriptions__is_active=True,
-    ).distinct()
+    students = User.objects.filter(role='student', is_active=True)
 
     total_sent = 0
     for student in students:
@@ -101,9 +108,12 @@ def send_task_deadline_reminders():
         if pending_count == 0:
             continue
 
+        if _notified_today(student, TITLE):
+            continue
+
         sent, _ = send_push_notification(
             student,
-            title='Görev Hatırlatıcı 📋',
+            title=TITLE,
             body=f'Bugün {pending_count} görevin var, unutma!',
             url='/student/tasks/',
         )
@@ -121,12 +131,9 @@ def send_konu_review_reminders():
 
     User = get_user_model()
     now = timezone.now()
+    TITLE = 'Konu Tekrar Zamanı 📚'
 
-    students = User.objects.filter(
-        role='student',
-        is_active=True,
-        push_subscriptions__is_active=True,
-    ).distinct()
+    students = User.objects.filter(role='student', is_active=True)
 
     total_sent = 0
     for student in students:
@@ -148,10 +155,13 @@ def send_konu_review_reminders():
         if due_count == 0:
             continue
 
+        if _notified_today(student, TITLE):
+            continue
+
         body = f'{due_count} konunun tekrar zamanı geldi! Konu Takip\'te hazır bekliyorlar.'
         sent, _ = send_push_notification(
             student,
-            title='Konu Tekrar Zamanı 📚',
+            title=TITLE,
             body=body,
             url='/student/konu-takip/',
         )
@@ -199,17 +209,16 @@ def send_motivational_notifications():
     import random
     from django.contrib.auth import get_user_model
     from django.utils.timezone import localdate
+    from django.utils import timezone
     from tasks_app.models import GorevGrubu
+    from users_app.models import Notification
     from users_app.services.notifications import send_push_notification
 
     User = get_user_model()
     today = localdate()
+    motivational_titles = frozenset(t for t, _ in MOTIVATIONAL_MESSAGES)
 
-    students = User.objects.filter(
-        role='student',
-        is_active=True,
-        push_subscriptions__is_active=True,
-    ).distinct()
+    students = User.objects.filter(role='student', is_active=True)
 
     total_sent = 0
     for student in students:
@@ -220,6 +229,14 @@ def send_motivational_notifications():
         )
         if today_tasks.exists() and not today_tasks.filter(is_completed=False).exists():
             # All of today's tasks are done — skip the "get to work" nudge
+            continue
+
+        # Dedup: skip if any motivational notification was already sent today
+        if Notification.objects.filter(
+            user=student,
+            title__in=motivational_titles,
+            created_at__date=today,
+        ).exists():
             continue
 
         title, body = random.choice(MOTIVATIONAL_MESSAGES)
