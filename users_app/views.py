@@ -1082,35 +1082,8 @@ def student_notification_mark_all_read(request):
 # ── Shared notifications page + delete endpoints (both roles) ─────────────────
 
 @login_required
-def notification_page_view(request):
-    from .models import Notification
-    PAGE_SIZE = 50
-    qs = Notification.objects.filter(user=request.user, hidden_by_user=False).order_by('-created_at')
-    total = qs.count()
-    items = list(qs[:PAGE_SIZE])
-    has_next = total > PAGE_SIZE
-    unread_count = qs.filter(is_read=False).count()
-    notif_data = {
-        'items': [
-            {
-                'id': n.id,
-                'title': n.title,
-                'body': n.body,
-                'url': n.url,
-                'is_read': n.is_read,
-                'time': _rel_time_tr(n.created_at),
-            }
-            for n in items
-        ],
-        'unread_count': unread_count,
-        'has_next': has_next,
-    }
-    return render(request, 'notifications/page.html', {
-        'notif_data': notif_data,
-        'unread_count': unread_count,
-        'v2_shell': True,
-        'desktop_v2': True,
-    })
+def notifications_redirect(request):
+    return redirect('/')
 
 
 @login_required
@@ -1118,7 +1091,6 @@ def notification_page_view(request):
 def notification_delete(request, pk):
     from .models import Notification
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
-    was_unread = not notif.is_read
     notif.hidden_by_user = True
     notif.save(update_fields=['hidden_by_user'])
     unread_count = Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).count()

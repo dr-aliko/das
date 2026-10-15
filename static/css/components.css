@@ -759,3 +759,11 @@ input.das-input--invalid, select.das-input--invalid, textarea.das-input--invalid
     padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
   }
 }
+
+/* ── Shared notification item list ──────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (hover: hover) {
+  .notif-item-row:hover { background: var(--surface-2) !important; }
+  .notif-del-btn:hover,
+  .notif-del-btn:active  { color: #dc2626; }
+}
