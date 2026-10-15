@@ -2441,8 +2441,6 @@ def coach_dashboard(request):
     )
     inbox_unread = sum(1 for a in inbox_alerts if not a.is_read)
     inbox_students = list({a.student_id: a.student for a in inbox_alerts}.values())
-    from users_app.models import Notification as _Notif
-    notif_unread = _Notif.objects.filter(user=request.user, is_read=False, hidden_by_user=False).count()
 
     return render(request, 'coach/roster.html', {
         'student_data':   student_data,
@@ -2451,7 +2449,6 @@ def coach_dashboard(request):
         'inbox_alerts':   inbox_alerts,
         'inbox_unread':   inbox_unread,
         'inbox_students': inbox_students,
-        'notif_unread':   notif_unread,
         'first_run':      request.session.pop('first_run', False),
     })
 
