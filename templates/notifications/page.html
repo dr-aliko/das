@@ -4,11 +4,25 @@
 {% block content %}
 {{ notif_data|json_script:"notif-data" }}
 
-<div x-data="notifPage()" style="max-width:680px; margin:0 auto; padding-bottom:2rem;">
+<style>
+.notif-page-wrap { padding: 0 20px 2rem; }
+.notif-row-del:hover,
+.notif-row-del:active { color: #dc2626; }
+@media (hover: hover) {
+  .notif-row:hover { background: var(--surface-2) !important; }
+}
+@media (max-width: 639px) {
+  .notif-page-wrap { padding: 0; }
+  .notif-card { border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
+}
+</style>
+
+<div x-data="notifPage()" class="notif-page-wrap" style="max-width:760px; margin:0 auto;">
 
   {# ── Header ───────────────────────────────────────────────────────────── #}
-  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
-    <div style="display:flex; align-items:center; gap:10px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:20px; padding-top:8px; padding-left:4px; padding-right:4px;">
+
+    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
       <h1 style="font-size:20px; font-weight:800; color:var(--heading); margin:0;">Bildirimler</h1>
       <span x-show="unread > 0" x-cloak
             x-text="unread"
@@ -16,30 +30,30 @@
       </span>
     </div>
 
-    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
       <button @click="markAllRead()"
               x-show="unread > 0"
               x-cloak
-              style="padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
-        Tümünü okundu yap
+              style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
+        Okundu yap
       </button>
 
       <template x-if="!confirmDeleteAll">
         <button @click="confirmDeleteAll = true"
                 x-show="visibleCount > 0"
-                style="padding:6px 12px; border-radius:8px; border:1px solid rgba(239,68,68,.4); background:rgba(239,68,68,.07); color:#dc2626; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
+                style="padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,.4); background:rgba(239,68,68,.07); color:#dc2626; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
           Tümünü sil
         </button>
       </template>
       <template x-if="confirmDeleteAll">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:12px; color:var(--muted);">Emin misiniz?</span>
+        <div style="display:flex; align-items:center; gap:5px; flex-wrap:nowrap;">
+          <span style="font-size:12px; color:var(--muted); white-space:nowrap;">Emin misin?</span>
           <button @click="confirmDeleteAll = false"
-                  style="padding:5px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer;">
+                  style="padding:5px 9px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
             İptal
           </button>
           <button @click="deleteAll()"
-                  style="padding:5px 10px; border-radius:8px; border:none; background:#dc2626; color:#fff; font-size:12px; font-weight:600; cursor:pointer;">
+                  style="padding:5px 9px; border-radius:8px; border:none; background:#dc2626; color:#fff; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
             Evet, sil
           </button>
         </div>
@@ -48,7 +62,7 @@
   </div>
 
   {# ── Notification list ─────────────────────────────────────────────────── #}
-  <div style="border-radius:16px; overflow:hidden; border:1px solid var(--border); background:var(--surface-1);">
+  <div class="notif-card" style="border-radius:16px; overflow:hidden; border:1px solid var(--border); background:var(--surface-1);">
 
     {# Empty state #}
     <template x-if="visibleCount === 0">
@@ -64,35 +78,37 @@
 
     <template x-for="(item, idx) in items" :key="item.id">
       <div x-show="!item._hidden"
-           :style="idx > 0 && !items[idx-1]._hidden ? 'border-top:1px solid var(--border)' : ''"
-           style="display:flex; align-items:stretch;">
+           class="notif-row"
+           :style="(idx > 0 && !items[idx-1]._hidden ? 'border-top:1px solid var(--border);' : '') + (!item.is_read ? 'background:var(--primary-tint);' : '')"
+           style="display:flex; align-items:stretch; transition:background 0.15s;">
 
-        {# Unread left bar #}
-        <div style="width:4px; flex-shrink:0; border-radius:0;"
+        {# Unread accent bar — stretches full row height #}
+        <div style="width:4px; flex-shrink:0; align-self:stretch;"
              :style="!item.is_read ? 'background:var(--primary)' : 'background:transparent'">
         </div>
 
-        {# Clickable content area #}
+        {# Clickable content — text wraps, never truncates #}
         <button @click="tap(item)"
-                :style="!item.is_read ? 'background:var(--primary-tint)' : 'background:transparent'"
-                style="flex:1; min-width:0; text-align:left; padding:14px 12px 14px 14px; border:none; cursor:pointer; display:flex; flex-direction:column; gap:3px; transition:background 0.15s;">
-          <p style="font-size:14px; font-weight:700; color:var(--heading); margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                style="flex:1; min-width:0; text-align:left; padding:14px 8px 14px 14px; border:none; cursor:pointer; background:transparent; display:flex; flex-direction:column; gap:3px;">
+          <p style="font-size:14px; font-weight:700; color:var(--heading); margin:0; overflow-wrap:anywhere; word-break:break-word; line-height:1.35;"
              x-text="item.title"></p>
-          <p style="font-size:13px; color:var(--muted); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.4;"
+          <p style="font-size:13px; color:var(--muted); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.4; overflow-wrap:anywhere;"
              x-text="item.body"></p>
-          <p style="font-size:11px; color:var(--muted-2); margin:0;" x-text="item.time"></p>
+          <p style="font-size:11px; color:var(--muted-2); margin:2px 0 0;" x-text="item.time"></p>
         </button>
 
-        {# Delete button — 44×44 touch target #}
+        {# Delete — vertically centered, 44×44 tap target, muted → red on hover #}
         <button @click.stop="deleteOne(item)"
-                title="Sil"
-                style="flex-shrink:0; width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:color 0.15s;"
-                onmouseenter="this.style.color='#dc2626'" onmouseleave="this.style.color='var(--muted)'">
+                aria-label="Sil"
+                class="notif-row-del"
+                style="flex-shrink:0; align-self:center; width:44px; height:44px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--muted-2); cursor:pointer; transition:color 0.15s;">
           <svg style="width:16px; height:16px; pointer-events:none;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-            <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6"/>
+            <path d="M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
           </svg>
-          <span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);">Sil</span>
         </button>
       </div>
     </template>
