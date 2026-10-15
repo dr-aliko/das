@@ -1,0 +1,144 @@
+{#
+  Shared notification list rows.
+  Must be inside an Alpine scope that provides: notifications, notifLoading, notifTap(n), notifDelete(n).
+  Also defines notifPanel() JS function (guarded — safe to include multiple times).
+#}
+
+<template x-if="notifLoading">
+  <div style="padding:32px 20px;display:flex;justify-content:center;">
+    <svg style="width:20px;height:20px;color:var(--muted-2);animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:.25;"/>
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style="opacity:.75;"/>
+    </svg>
+  </div>
+</template>
+
+<template x-if="!notifLoading && notifications.filter(function(n){return !n._hidden;}).length === 0">
+  <div style="padding:40px 20px;text-align:center;">
+    <svg style="width:32px;height:32px;color:var(--muted-2);margin:0 auto 10px;" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    <p style="font-size:14px;font-weight:600;color:var(--muted);margin:0 0 4px;">Bildirim yok</p>
+    <p style="font-size:12px;color:var(--muted-2);margin:0;">Yeni bildirimler burada görünecek.</p>
+  </div>
+</template>
+
+<template x-for="n in notifications" :key="n.id">
+  <div x-show="!n._hidden"
+       class="notif-item-row"
+       :style="!n.is_read ? 'background:var(--primary-tint);' : ''"
+       style="display:flex;align-items:stretch;border-top:1px solid var(--border);transition:background .15s;">
+    <div style="width:3px;flex-shrink:0;align-self:stretch;"
+         :style="!n.is_read ? 'background:var(--primary);' : 'background:transparent;'"></div>
+    <button @click="notifTap(n)"
+            style="flex:1;min-width:0;text-align:left;padding:12px 8px 12px 12px;border:none;cursor:pointer;background:transparent;display:flex;flex-direction:column;gap:2px;">
+      <p style="font-size:13px;font-weight:700;color:var(--heading);margin:0;overflow-wrap:anywhere;word-break:break-word;line-height:1.35;" x-text="n.title"></p>
+      <p style="font-size:12px;color:var(--muted);margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;overflow-wrap:anywhere;" x-text="n.body"></p>
+      <p style="font-size:11px;color:var(--muted-2);margin:2px 0 0;" x-text="n.time"></p>
+    </button>
+    <button @click.stop="notifDelete(n)"
+            aria-label="Sil"
+            class="notif-del-btn"
+            style="flex-shrink:0;align-self:center;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--muted-2);cursor:pointer;transition:color .15s;">
+      <svg style="width:14px;height:14px;pointer-events:none;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </button>
+  </div>
+</template>
+
+<script>
+if (typeof notifPanel === 'undefined') {
+  window._notifPanelPromise = null;
+
+  function notifPanel() {
+    return {
+      open: false,
+      notifications: [],
+      notifUnread: 0,
+      notifLoading: true,
+      notifHasMore: false,
+      notifConfirmDeleteAll: false,
+
+      init: function() {
+        var self = this;
+        if (!window._notifPanelPromise) {
+          window._notifPanelPromise = fetch('/student/notifications/')
+            .then(function(r) { return r.json(); });
+        }
+        window._notifPanelPromise.then(function(d) {
+          self.notifications = (d.notifications || []).map(function(n) { return Object.assign({_hidden: false}, n); });
+          self.notifUnread = d.unread_count || 0;
+          self.notifHasMore = d.has_next || false;
+          self.notifLoading = false;
+        }).catch(function() { self.notifLoading = false; });
+      },
+
+      _csrf: function() {
+        return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+      },
+
+      notifTap: function(n) {
+        var url = n.url;
+        if (!n.is_read) {
+          n.is_read = true;
+          this.notifUnread = Math.max(0, this.notifUnread - 1);
+          fetch('/student/notifications/' + n.id + '/read/', {
+            method: 'POST', headers: { 'X-CSRFToken': this._csrf() },
+          });
+        }
+        if (url) window.location.href = url;
+      },
+
+      notifDelete: async function(n) {
+        var r = await fetch('/notifications/' + n.id + '/delete/', {
+          method: 'POST', headers: { 'X-CSRFToken': this._csrf() }, credentials: 'same-origin',
+        });
+        if (r.ok) {
+          if (!n.is_read) this.notifUnread = Math.max(0, this.notifUnread - 1);
+          n._hidden = true;
+        }
+      },
+
+      notifMarkAllRead: async function() {
+        var self = this;
+        var r = await fetch('/notifications/mark-all-read/', {
+          method: 'POST', headers: { 'X-CSRFToken': self._csrf() }, credentials: 'same-origin',
+        });
+        if (r.ok) {
+          self.notifications.forEach(function(n) { n.is_read = true; });
+          self.notifUnread = 0;
+        }
+      },
+
+      notifDeleteAll: async function() {
+        this.notifConfirmDeleteAll = false;
+        var self = this;
+        var r = await fetch('/notifications/delete-all/', {
+          method: 'POST', headers: { 'X-CSRFToken': self._csrf() }, credentials: 'same-origin',
+        });
+        if (r.ok) {
+          self.notifications.forEach(function(n) { n._hidden = true; });
+          self.notifUnread = 0;
+        }
+      },
+
+      notifLoadMore: async function() {
+        if (!this.notifHasMore) return;
+        var self = this;
+        var offset = self.notifications.filter(function(n) { return !n._hidden; }).length;
+        var r = await fetch('/student/notifications/?offset=' + offset, { credentials: 'same-origin' });
+        var d = await r.json();
+        if (d.ok) {
+          var newItems = (d.notifications || []).map(function(n) { return Object.assign({_hidden: false}, n); });
+          self.notifications = self.notifications.concat(newItems);
+          self.notifHasMore = d.has_next || false;
+        }
+      },
+    };
+  }
+}
+</script>
