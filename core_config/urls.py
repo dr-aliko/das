@@ -6,7 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
-from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update, panel_odemeler_view, panel_davetler_view, panel_ogrenciler_view, panel_student_unlink, panel_fee_tier_add, panel_fee_tier_update, panel_fee_tier_delete, panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink, profil_wp_availability
+from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, notification_page_view, notification_delete, notification_delete_all, notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update, panel_odemeler_view, panel_davetler_view, panel_ogrenciler_view, panel_student_unlink, panel_fee_tier_add, panel_fee_tier_update, panel_fee_tier_delete, panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink, profil_wp_availability
 from struggle_app.views import CoachStruggleStatsView
 
 urlpatterns = [
@@ -54,9 +54,13 @@ urlpatterns = [
     path('profil/push-subscribe/',   push_subscribe,   name='profil_push_subscribe'),
     path('profil/push-unsubscribe/', push_unsubscribe, name='profil_push_unsubscribe'),
     path('profil/push-test/',        push_test,        name='profil_push_test'),
-    path('student/notifications/',              student_notifications_api,        name='student_notifications'),
+    path('student/notifications/',               student_notifications_api,           name='student_notifications'),
     path('student/notifications/mark-all-read/', student_notification_mark_all_read, name='student_notifications_mark_all'),
     path('student/notifications/<int:pk>/read/', student_notification_read,          name='student_notification_read'),
+    path('notifications/',                       notification_page_view,             name='notifications_page'),
+    path('notifications/mark-all-read/',         notification_mark_all_read,         name='notifications_mark_all_read'),
+    path('notifications/delete-all/',            notification_delete_all,            name='notifications_delete_all'),
+    path('notifications/<int:pk>/delete/',       notification_delete,                name='notification_delete'),
     path('coach/odeme/', coach_billing_view, name='coach_billing'),
     path('panel/odeme/', panel_billing_view, name='panel_billing'),
     path('panel/odeme/<int:pk>/update/', panel_billing_update, name='panel_billing_update'),

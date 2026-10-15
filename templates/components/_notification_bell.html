@@ -1,6 +1,6 @@
 {% if user.is_student %}
 <div x-data="notifBell()" class="relative">
-  <button @click="open = !open"
+  <button @click="{% if sidebar_bell %}open = !open{% else %}window.location.href='{% url 'notifications_page' %}'{% endif %}"
           class="relative h-9 w-9 rounded-lg flex items-center justify-center
                  text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
                  transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
@@ -44,7 +44,7 @@
       </template>
       <template x-for="n in notifications" :key="n.id">
         <button @click="tap(n)"
-                :class="!n.is_read ? 'bg-steel-500/5' : ''"
+                :style="!n.is_read ? 'background:var(--primary-tint)' : ''"
                 class="w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] transition-colors block">
           <div class="flex items-start gap-2.5">
             <div :style="!n.is_read ? 'background:var(--primary, #6D5BFF)' : 'background:transparent'"
@@ -58,8 +58,15 @@
         </button>
       </template>
     </div>
+    <div style="padding:10px 16px; border-top:1px solid var(--border); text-align:right;">
+      <a href="{% url 'notifications_page' %}"
+         style="font-size:12px; font-weight:600; color:var(--primary); text-decoration:none;">
+        Tüm bildirimleri gör →
+      </a>
+    </div>
   </div>
 </div>
+{% endif %}
 
 <script>
 if (typeof notifBell === 'undefined') {
@@ -113,4 +120,3 @@ if (typeof notifBell === 'undefined') {
   }
 }
 </script>
-{% endif %}

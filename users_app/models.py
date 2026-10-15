@@ -384,8 +384,9 @@ class Notification(models.Model):
     title      = models.CharField(max_length=255)
     body       = models.TextField()
     url        = models.CharField(max_length=500, blank=True, default='')
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read    = models.BooleanField(default=False, db_index=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    is_read        = models.BooleanField(default=False, db_index=True)
+    hidden_by_user = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']

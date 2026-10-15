@@ -1039,9 +1039,15 @@ def _rel_time_tr(dt):
 @require_http_methods(['GET'])
 def student_notifications_api(request):
     from .models import Notification
-    if not request.user.is_student:
-        return JsonResponse({'ok': False}, status=403)
-    qs = Notification.objects.filter(user=request.user).order_by('-created_at')[:50]
+    PAGE_SIZE = 50
+    qs = Notification.objects.filter(user=request.user, hidden_by_user=False).order_by('-created_at')
+    try:
+        offset = max(0, int(request.GET.get('offset', 0)))
+    except (TypeError, ValueError):
+        offset = 0
+    batch = list(qs[offset:offset + PAGE_SIZE])
+    total = qs.count()
+    has_next = total > offset + PAGE_SIZE
     notifications = [
         {
             'id': n.id,
@@ -1051,18 +1057,16 @@ def student_notifications_api(request):
             'is_read': n.is_read,
             'time': _rel_time_tr(n.created_at),
         }
-        for n in qs
+        for n in batch
     ]
-    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
-    return JsonResponse({'ok': True, 'notifications': notifications, 'unread_count': unread_count})
+    unread_count = qs.filter(is_read=False).count()
+    return JsonResponse({'ok': True, 'notifications': notifications, 'unread_count': unread_count, 'has_next': has_next})
 
 
 @login_required
 @require_http_methods(['POST'])
 def student_notification_read(request, pk):
     from .models import Notification
-    if not request.user.is_student:
-        return JsonResponse({'ok': False}, status=403)
     Notification.objects.filter(user=request.user, pk=pk).update(is_read=True)
     return JsonResponse({'ok': True})
 
@@ -1071,9 +1075,69 @@ def student_notification_read(request, pk):
 @require_http_methods(['POST'])
 def student_notification_mark_all_read(request):
     from .models import Notification
-    if not request.user.is_student:
-        return JsonResponse({'ok': False}, status=403)
-    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).update(is_read=True)
+    return JsonResponse({'ok': True})
+
+
+# ── Shared notifications page + delete endpoints (both roles) ─────────────────
+
+@login_required
+def notification_page_view(request):
+    from .models import Notification
+    PAGE_SIZE = 50
+    qs = Notification.objects.filter(user=request.user, hidden_by_user=False).order_by('-created_at')
+    total = qs.count()
+    items = list(qs[:PAGE_SIZE])
+    has_next = total > PAGE_SIZE
+    unread_count = qs.filter(is_read=False).count()
+    notif_data = {
+        'items': [
+            {
+                'id': n.id,
+                'title': n.title,
+                'body': n.body,
+                'url': n.url,
+                'is_read': n.is_read,
+                'time': _rel_time_tr(n.created_at),
+            }
+            for n in items
+        ],
+        'unread_count': unread_count,
+        'has_next': has_next,
+    }
+    return render(request, 'notifications/page.html', {
+        'notif_data': notif_data,
+        'unread_count': unread_count,
+        'v2_shell': True,
+        'desktop_v2': True,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def notification_delete(request, pk):
+    from .models import Notification
+    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    was_unread = not notif.is_read
+    notif.hidden_by_user = True
+    notif.save(update_fields=['hidden_by_user'])
+    unread_count = Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).count()
+    return JsonResponse({'ok': True, 'unread_count': unread_count})
+
+
+@login_required
+@require_http_methods(['POST'])
+def notification_delete_all(request):
+    from .models import Notification
+    Notification.objects.filter(user=request.user, hidden_by_user=False).update(hidden_by_user=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def notification_mark_all_read(request):
+    from .models import Notification
+    Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).update(is_read=True)
     return JsonResponse({'ok': True})
 
 

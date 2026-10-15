@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Bildirimler — Vagus{% endblock %}
+
+{% block content %}
+{{ notif_data|json_script:"notif-data" }}
+
+<div x-data="notifPage()" style="max-width:680px; margin:0 auto; padding-bottom:2rem;">
+
+  {# ── Header ───────────────────────────────────────────────────────────── #}
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <h1 style="font-size:20px; font-weight:800; color:var(--heading); margin:0;">Bildirimler</h1>
+      <span x-show="unread > 0" x-cloak
+            x-text="unread"
+            style="min-width:22px; height:22px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 5px;">
+      </span>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <button @click="markAllRead()"
+              x-show="unread > 0"
+              x-cloak
+              style="padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
+        Tümünü okundu yap
+      </button>
+
+      <template x-if="!confirmDeleteAll">
+        <button @click="confirmDeleteAll = true"
+                x-show="visibleCount > 0"
+                style="padding:6px 12px; border-radius:8px; border:1px solid rgba(239,68,68,.4); background:rgba(239,68,68,.07); color:#dc2626; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
+          Tümünü sil
+        </button>
+      </template>
+      <template x-if="confirmDeleteAll">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:12px; color:var(--muted);">Emin misiniz?</span>
+          <button @click="confirmDeleteAll = false"
+                  style="padding:5px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:600; cursor:pointer;">
+            İptal
+          </button>
+          <button @click="deleteAll()"
+                  style="padding:5px 10px; border-radius:8px; border:none; background:#dc2626; color:#fff; font-size:12px; font-weight:600; cursor:pointer;">
+            Evet, sil
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  {# ── Notification list ─────────────────────────────────────────────────── #}
+  <div style="border-radius:16px; overflow:hidden; border:1px solid var(--border); background:var(--surface-1);">
+
+    {# Empty state #}
+    <template x-if="visibleCount === 0">
+      <div style="padding:48px 24px; text-align:center;">
+        <svg style="width:40px; height:40px; color:var(--muted); margin:0 auto 12px;" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <p style="font-size:15px; font-weight:600; color:var(--muted); margin:0 0 4px;">Bildirim yok</p>
+        <p style="font-size:13px; color:var(--muted-2); margin:0;">Yeni bildirimler burada görünecek.</p>
+      </div>
+    </template>
+
+    <template x-for="(item, idx) in items" :key="item.id">
+      <div x-show="!item._hidden"
+           :style="idx > 0 && !items[idx-1]._hidden ? 'border-top:1px solid var(--border)' : ''"
+           style="display:flex; align-items:stretch;">
+
+        {# Unread left bar #}
+        <div style="width:4px; flex-shrink:0; border-radius:0;"
+             :style="!item.is_read ? 'background:var(--primary)' : 'background:transparent'">
+        </div>
+
+        {# Clickable content area #}
+        <button @click="tap(item)"
+                :style="!item.is_read ? 'background:var(--primary-tint)' : 'background:transparent'"
+                style="flex:1; min-width:0; text-align:left; padding:14px 12px 14px 14px; border:none; cursor:pointer; display:flex; flex-direction:column; gap:3px; transition:background 0.15s;">
+          <p style="font-size:14px; font-weight:700; color:var(--heading); margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+             x-text="item.title"></p>
+          <p style="font-size:13px; color:var(--muted); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.4;"
+             x-text="item.body"></p>
+          <p style="font-size:11px; color:var(--muted-2); margin:0;" x-text="item.time"></p>
+        </button>
+
+        {# Delete button — 44×44 touch target #}
+        <button @click.stop="deleteOne(item)"
+                title="Sil"
+                style="flex-shrink:0; width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:color 0.15s;"
+                onmouseenter="this.style.color='#dc2626'" onmouseleave="this.style.color='var(--muted)'">
+          <svg style="width:16px; height:16px; pointer-events:none;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+          <span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);">Sil</span>
+        </button>
+      </div>
+    </template>
+  </div>
+
+  {# ── Load more ─────────────────────────────────────────────────────────── #}
+  <template x-if="hasMore">
+    <div style="text-align:center; margin-top:16px;">
+      <button @click="loadMore()"
+              :disabled="loading"
+              style="padding:10px 24px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;">
+        <span x-show="!loading">Daha fazla göster</span>
+        <span x-show="loading" x-cloak>Yükleniyor…</span>
+      </button>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function notifPage() {
+  var raw = JSON.parse(document.getElementById('notif-data').textContent);
+  return {
+    items: (raw.items || []).map(function(i) { return Object.assign({_hidden: false}, i); }),
+    unread: raw.unread_count || 0,
+    hasMore: raw.has_next || false,
+    loading: false,
+    confirmDeleteAll: false,
+
+    get visibleCount() {
+      var count = 0;
+      for (var i = 0; i < this.items.length; i++) { if (!this.items[i]._hidden) count++; }
+      return count;
+    },
+
+    csrf: function() {
+      return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+    },
+
+    tap: function(item) {
+      var url = item.url;
+      if (!item.is_read) {
+        item.is_read = true;
+        this.unread = Math.max(0, this.unread - 1);
+        fetch('/student/notifications/' + item.id + '/read/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': this.csrf() },
+          credentials: 'same-origin',
+        });
+      }
+      if (url) window.location.href = url;
+    },
+
+    deleteOne: async function(item) {
+      var r = await fetch('/notifications/' + item.id + '/delete/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': this.csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
+        item._hidden = true;
+      }
+    },
+
+    markAllRead: async function() {
+      var self = this;
+      var r = await fetch('/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': self.csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        self.items.forEach(function(i) { i.is_read = true; });
+        self.unread = 0;
+      }
+    },
+
+    deleteAll: async function() {
+      this.confirmDeleteAll = false;
+      var self = this;
+      var r = await fetch('/notifications/delete-all/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': self.csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        self.items.forEach(function(i) { i._hidden = true; });
+        self.unread = 0;
+      }
+    },
+
+    loadMore: async function() {
+      if (this.loading || !this.hasMore) return;
+      this.loading = true;
+      var self = this;
+      try {
+        var r = await fetch('/student/notifications/?offset=' + self.items.length, {
+          credentials: 'same-origin',
+        });
+        var d = await r.json();
+        if (d.ok) {
+          var newItems = (d.notifications || []).map(function(i) { return Object.assign({_hidden: false}, i); });
+          self.items = self.items.concat(newItems);
+          self.hasMore = d.has_next || false;
+        }
+      } finally {
+        self.loading = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

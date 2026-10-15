@@ -165,6 +165,7 @@
   transition: opacity 150ms ease, max-height 200ms var(--ease-out, ease), margin-top 200ms;
 }
 .das-sidebar-toggle svg { transition: transform 250ms var(--ease-out, ease); }
+.das-bell-collapsed-nav { display: none; }
 
 @media (min-width: 768px) {
   html.sidebar-collapsed .das-sidebar { width: 64px; }
@@ -175,7 +176,8 @@
   html.sidebar-collapsed .das-nav-group   { opacity: 0; max-height: 0; margin-bottom: 0; }
   html.sidebar-collapsed .das-hesap-label { opacity: 0; max-height: 0; margin-bottom: 0; }
   html.sidebar-collapsed .das-user-chip   { opacity: 0; max-height: 0; margin-top: 0; }
-  html.sidebar-collapsed .das-bell-wrap   { display: none; }
+  html.sidebar-collapsed .das-bell-wrap          { display: none; }
+  html.sidebar-collapsed .das-bell-collapsed-nav { display: block; }
 
   html.sidebar-collapsed .das-nav-link { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; gap: 0; }
 
