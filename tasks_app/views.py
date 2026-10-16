@@ -578,6 +578,9 @@ class StudentGorevCompleteView(View):
         data = tasks.toggle_complete(request.user, pk, student_note, time_spent_dk)
         if not data:
             return JsonResponse({"errors": "Bulunamadı"}, status=404)
+        if data.get('is_completed'):
+            from users_app.services.streak_engine import record_activity
+            record_activity(request.user)
         return JsonResponse({"ok": True, "gorev": data})
 
 

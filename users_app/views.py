@@ -696,7 +696,14 @@ def activity_calendar_api(request):
             completed_at__date__gte=month_start, completed_at__date__lte=month_end
         ).values_list('completed_at__date', flat=True)
     )
-    active_days = {d.day for d in (exam_dates | task_dates)}
+    from tasks_app.models import GorevGrubu as _GorevGrubu
+    gorev_dates = set(
+        _GorevGrubu.objects.filter(
+            student=user, is_completed=True,
+            completed_at__date__gte=month_start, completed_at__date__lte=month_end
+        ).values_list('completed_at__date', flat=True)
+    )
+    active_days = {d.day for d in (exam_dates | task_dates | gorev_dates)}
 
     return JsonResponse({
         'ok':           True,
@@ -751,7 +758,13 @@ def profil_view(request):
                                        completed_at__date__gte=today - timedelta(days=6))
             .values_list('completed_at__date', flat=True)
         )
-        active_dates = exam_dates | task_dates
+        from tasks_app.models import GorevGrubu as _GorevGrubu
+        gorev_dates = set(
+            _GorevGrubu.objects.filter(student=user, is_completed=True,
+                                       completed_at__date__gte=today - timedelta(days=6))
+            .values_list('completed_at__date', flat=True)
+        )
+        active_dates = exam_dates | task_dates | gorev_dates
         activity_week = [
             {'date': today - timedelta(days=6 - i), 'active': (today - timedelta(days=6 - i)) in active_dates}
             for i in range(7)
