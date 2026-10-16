@@ -9,3 +9,5 @@ media/
 *.log
 .DS_Store
 Thumbs.db
+test_out.txt
+.claude/settings.local.json
