@@ -46,18 +46,20 @@
       <div class="das-bell-collapsed-nav" x-data="notifBell()">
         <a href="{% url 'notifications_page' %}"
            title="Bildirimler"
-           class="das-nav-link relative flex items-center justify-center px-2 py-2 rounded-lg
+           class="das-nav-link flex items-center justify-center px-2 py-2 rounded-lg
                   text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]
                   transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-          <span x-show="unread > 0" x-cloak
-                x-text="unread > 9 ? '9+' : unread"
-                style="position:absolute; top:-2px; right:-2px; min-width:1rem; height:1rem; border-radius:9999px; background:#ef4444; color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 2px; pointer-events:none; line-height:1;">
-          </span>
+          <div class="relative">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span x-show="unread > 0" x-cloak
+                  x-text="unread > 9 ? '9+' : unread"
+                  style="position:absolute; top:-5px; right:-5px; min-width:1rem; height:1rem; border-radius:9999px; background:#ef4444; color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 2px; pointer-events:none; line-height:1; user-select:none;">
+            </span>
+          </div>
         </a>
       </div>
 
@@ -153,22 +155,6 @@
                     {% if '/coach/sorularim' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span class="das-nav-label">Sorularım</span>
-          </a>
-          <a href="{% url 'notifications_page' %}" title="Bildirimler"
-             x-data="notifBell()"
-             class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                    {% if '/notifications' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
-            <div class="relative shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              </svg>
-              <span x-show="unread > 0" x-cloak
-                    x-text="unread > 9 ? '9+' : unread"
-                    style="position:absolute; top:-5px; right:-5px; min-width:0.875rem; height:0.875rem; border-radius:9999px; background:#ef4444; color:#fff; font-size:8px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 2px; pointer-events:none; line-height:1;">
-              </span>
-            </div>
-            <span class="das-nav-label">Bildirimler</span>
           </a>
         </div>
       </div>
