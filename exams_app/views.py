@@ -2439,15 +2439,37 @@ def coach_dashboard(request):
             '-created_at',
         )
     )
-    inbox_unread = sum(1 for a in inbox_alerts if not a.is_read)
+    alert_unread = sum(1 for a in inbox_alerts if not a.is_read)
     inbox_students = list({a.student_id: a.student for a in inbox_alerts}.values())
+
+    # ── Coach system notifications (Bildirimler tab) ────────────────────────
+    from users_app.models import Notification as _Notif
+    from users_app.views import _rel_time_tr
+    _notif_qs = _Notif.objects.filter(user=request.user, hidden_by_user=False).order_by('-created_at')
+    _notif_count = _notif_qs.count()
+    _notif_batch = list(_notif_qs[:50])
+    notif_unread = _notif_qs.filter(is_read=False).count()
+    notif_data = {
+        'items': [
+            {
+                'id': n.id, 'title': n.title, 'body': n.body, 'url': n.url,
+                'is_read': n.is_read, 'time': _rel_time_tr(n.created_at),
+            }
+            for n in _notif_batch
+        ],
+        'unread_count': notif_unread,
+        'has_next': _notif_count > 50,
+    }
 
     return render(request, 'coach/roster.html', {
         'student_data':   student_data,
         'status_counts':  status_counts,
         'total':          len(student_data),
         'inbox_alerts':   inbox_alerts,
-        'inbox_unread':   inbox_unread,
+        'alert_unread':   alert_unread,
+        'inbox_unread':   alert_unread + notif_unread,
+        'notif_data':     notif_data,
+        'notif_unread':   notif_unread,
         'inbox_students': inbox_students,
         'first_run':      request.session.pop('first_run', False),
     })

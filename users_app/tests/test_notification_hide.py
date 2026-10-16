@@ -195,3 +195,45 @@ def test_post_views_reject_get(client, student, name, kwargs):
     client.force_login(student)
     r = client.get(reverse(name, kwargs=kwargs or None))
     assert r.status_code == 405
+
+
+# ── Coach Bildirimler tab in drawer ──────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_coach_roster_bildirimler_tab(client):
+    """Coach home renders 200, includes the Bildirimler tab and the notif JSON blob."""
+    approved_coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    _notif(approved_coach, title='Öğrenci Panelinizden Kaldırıldı', is_read=False)
+    _notif(approved_coach, title='Yeni Deneme', is_read=True)
+    client.force_login(approved_coach)
+    r = client.get(reverse('coach:dashboard'))
+    assert r.status_code == 200
+    assert b'Bildirimler' in r.content
+    assert b'coach-notif-data' in r.content
+    assert b'Shared notification list rows' not in r.content
+
+
+@pytest.mark.django_db
+def test_coach_roster_notif_tab_own_notifications_only(client):
+    """Coach sees only their own notifications in the drawer JSON blob."""
+    approved_coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    other = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    _notif(approved_coach, title='MineNotif')
+    _notif(other, title='TheirsNotif')
+    client.force_login(approved_coach)
+    r = client.get(reverse('coach:dashboard'))
+    assert r.status_code == 200
+    assert b'MineNotif' in r.content
+    assert b'TheirsNotif' not in r.content
+
+
+def test_templates_referenced_by_roster_exist():
+    """Every {% include %}/{% extends %} path in roster.html exists on disk."""
+    import re
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[2] / 'templates'
+    tpl_path = root / 'coach' / 'roster.html'
+    content = tpl_path.read_text(encoding='utf-8', errors='replace')
+    pattern = re.compile(r'''\{%-?\s+(?:include|extends)\s+["']([^"']+)["']''')
+    missing = [m.group(1) for m in pattern.finditer(content) if not (root / m.group(1)).exists()]
+    assert not missing, f'roster.html references missing templates: {missing}'

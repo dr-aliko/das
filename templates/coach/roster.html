@@ -5,7 +5,7 @@
 
 {% block content %}
 {% include "coach/partials/_first_run_coach.html" %}
-<div x-data="{ activeFilter: 'tumu', inboxOpen: false, selectedStudent: '',
+<div x-data="{ activeFilter: 'tumu', inboxOpen: false, inboxTab: 'alerts', selectedStudent: '',
               viewMode: localStorage.getItem('coach_view_mode') || 'card',
               setViewMode(m) { this.viewMode = m; localStorage.setItem('coach_view_mode', m); } }"
      @keydown.escape.window="inboxOpen = false; selectedStudent = ''">
@@ -424,40 +424,67 @@
               bg-ink-900 border-l border-ink-700 shadow-card-lg"
        x-cloak>
 
-    {# Drawer header #}
-    <div class="flex items-center justify-between px-5 py-4 border-b border-ink-700 shrink-0">
-      <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold text-ink-100">Gelen Kutusu</h2>
-        {% if inbox_unread %}
-        <span class="px-1.5 py-0.5 rounded-full bg-ruby-tint text-ruby-500 text-xs font-bold">
-          {{ inbox_unread }} okunmadı
-        </span>
-        {% endif %}
+    {# Drawer header with tab strip #}
+    <div class="px-5 pt-4 pb-0 border-b border-ink-700 shrink-0">
+      <div class="flex items-center justify-between pb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-semibold text-ink-100">Gelen Kutusu</h2>
+          {% if inbox_unread %}
+          <span class="px-1.5 py-0.5 rounded-full bg-ruby-tint text-ruby-500 text-xs font-bold">
+            {{ inbox_unread }} okunmadı
+          </span>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-1">
+          {% if alert_unread %}
+          <button x-show="inboxTab === 'alerts'"
+                  onclick="
+                    fetch('{% url 'users_app:alert_mark_all_read' %}', {
+                      method:'POST', headers:{'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1]??''}
+                    });
+                    document.querySelectorAll('.unread-dot').forEach(el=>el.remove());
+                    document.querySelectorAll('[id^=alert-]').forEach(el=>el.classList.remove('bg-ink-800'));"
+                  class="text-xs text-steel-400 hover:text-steel-300 transition-colors font-medium">
+            Tümünü oku
+          </button>
+          {% endif %}
+          <button @click="inboxOpen = false"
+                  class="w-11 h-11 flex items-center justify-center rounded-lg
+                         text-ink-400 hover:text-ink-200 hover:bg-ink-800 transition-colors">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        {% if inbox_unread %}
-        <button onclick="
-          fetch('{% url 'users_app:alert_mark_all_read' %}', {
-            method:'POST', headers:{'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1]??''}
-          }).then(() => { document.querySelectorAll('[data-unread]').forEach(el=>el.removeAttribute('data-unread')); });
-          this.closest('[x-show]').querySelectorAll('.unread-dot').forEach(el=>el.remove());
-          document.querySelectorAll('.inbox-row-unread').forEach(el=>el.classList.remove('inbox-row-unread','bg-ink-800'));"
-          class="text-xs text-steel-400 hover:text-steel-300 transition-colors font-medium">
-          Tümünü oku
+      {# Tab strip #}
+      <div class="flex gap-5">
+        <button @click="inboxTab = 'alerts'"
+                :class="inboxTab === 'alerts'
+                  ? 'border-b-2 border-steel-400 text-ink-100'
+                  : 'border-b-2 border-transparent text-ink-500 hover:text-ink-300'"
+                class="pb-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5">
+          Uyarılar
+          {% if alert_unread %}
+          <span style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">{{ alert_unread }}</span>
+          {% endif %}
         </button>
-        {% endif %}
-        <button @click="inboxOpen = false"
-                class="w-11 h-11 flex items-center justify-center rounded-lg
-                       text-ink-400 hover:text-ink-200 hover:bg-ink-800 transition-colors">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <button @click="inboxTab = 'notifs'"
+                :class="inboxTab === 'notifs'
+                  ? 'border-b-2 border-steel-400 text-ink-100'
+                  : 'border-b-2 border-transparent text-ink-500 hover:text-ink-300'"
+                class="pb-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5">
+          Bildirimler
+          {% if notif_unread %}
+          <span style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">{{ notif_unread }}</span>
+          {% endif %}
         </button>
       </div>
     </div>
 
     {# Student filter dropdown — only when multiple students have alerts #}
     {% if inbox_students|length > 1 %}
-    <div class="px-4 py-2.5 border-b border-ink-700 bg-ink-900 shrink-0">
+    <div x-show="inboxTab === 'alerts'"
+         class="px-4 py-2.5 border-b border-ink-700 bg-ink-900 shrink-0">
       <select x-model="selectedStudent"
               class="w-full h-8 px-2.5 rounded-lg bg-ink-800 border border-ink-700
                      text-xs text-ink-200 focus:outline-none focus:border-steel-500 transition-colors">
@@ -469,8 +496,9 @@
     </div>
     {% endif %}
 
-    {# Alert list #}
-    <div class="flex-1 overflow-y-auto divide-y divide-ink-700">
+    {# Alert list — Uyarılar tab #}
+    <div x-show="inboxTab === 'alerts'"
+         class="flex-1 overflow-y-auto divide-y divide-ink-700">
       {% for alert in inbox_alerts %}
       <div class="relative flex items-stretch group {% if not alert.is_read %}bg-ink-800{% endif %}"
            id="alert-{{ alert.id }}" data-alert
@@ -536,14 +564,215 @@
       {% endfor %}
     </div>
 
+    {# Bildirimler tab — Notification rows for the coach #}
+    {{ notif_data|json_script:"coach-notif-data" }}
+    <div x-show="inboxTab === 'notifs'" x-cloak
+         x-data="coachNotifDrawer()"
+         class="flex-1 overflow-y-auto flex flex-col">
+
+      {# Action bar: mark-all-read + delete-all with two-step confirm #}
+      <div class="px-5 py-2 border-b border-ink-700 shrink-0 flex items-center justify-between gap-2">
+        <button x-show="unread > 0" @click="markAllRead()"
+                class="text-xs text-steel-400 hover:text-steel-300 transition-colors font-medium">
+          Tümünü okundu yap
+        </button>
+        <span x-show="unread === 0 && visibleCount > 0" x-cloak
+              class="text-xs text-ink-600">Tümü okundu</span>
+        <template x-if="!confirmDeleteAll">
+          <button x-show="visibleCount > 0" @click="confirmDeleteAll = true"
+                  class="ml-auto text-xs text-ruby-500 hover:text-ruby-400 transition-colors font-medium">
+            Tümünü sil
+          </button>
+        </template>
+        <template x-if="confirmDeleteAll">
+          <div class="ml-auto flex items-center gap-2">
+            <span class="text-xs text-ink-400">Emin misin?</span>
+            <button @click="confirmDeleteAll = false"
+                    class="text-xs text-ink-400 hover:text-ink-200 font-medium">İptal</button>
+            <button @click="deleteAll()"
+                    class="text-xs text-ruby-500 hover:text-ruby-400 font-semibold">Evet, sil</button>
+          </div>
+        </template>
+      </div>
+
+      {# Empty state #}
+      <template x-if="visibleCount === 0">
+        <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5"
+               class="text-ink-600 mb-3" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <p class="text-sm font-semibold text-ink-300">Bildirim yok</p>
+          <p class="text-xs text-ink-500 mt-1">Yeni bildirimler burada görünecek.</p>
+        </div>
+      </template>
+
+      {# Notification rows #}
+      <div class="flex-1 divide-y divide-ink-700">
+        <template x-for="(item, idx) in items" :key="item.id">
+          <div x-show="!item._hidden"
+               class="flex items-stretch group"
+               :class="!item.is_read ? 'bg-ink-800' : ''">
+
+            {# Unread accent bar — full row height #}
+            <div class="w-1 shrink-0"
+                 :style="!item.is_read ? 'background:#3b82f6' : 'background:transparent'">
+            </div>
+
+            {# Clickable content area #}
+            <button @click="tap(item)"
+                    class="flex-1 min-w-0 text-left px-4 py-3 flex flex-col gap-0.5
+                           hover:bg-ink-750 transition-colors"
+                    style="border:none;cursor:pointer;background:transparent;">
+              <p class="text-sm font-semibold text-ink-100 leading-snug"
+                 style="overflow-wrap:anywhere;word-break:break-word;"
+                 x-text="item.title"></p>
+              <p class="text-xs text-ink-400 leading-relaxed"
+                 style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
+                 x-text="item.body"></p>
+              <p style="font-size:11px;" class="text-ink-600 mt-0.5" x-text="item.time"></p>
+            </button>
+
+            {# Delete — 44px tap target, muted → red on hover/active #}
+            <button @click.stop="deleteOne(item)"
+                    aria-label="Sil"
+                    class="w-11 shrink-0 flex items-center justify-center self-stretch
+                           text-ink-600 transition-all
+                           opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    style="border:none;cursor:pointer;background:transparent;"
+                    onmouseenter="this.style.color='#ef4444'"
+                    onmouseleave="this.style.color=''"
+                    ontouchstart="this.style.color='#ef4444'"
+                    ontouchend="this.style.color=''">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75"
+                   viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+              </svg>
+            </button>
+          </div>
+        </template>
+      </div>
+
+      {# Load more #}
+      <template x-if="hasMore">
+        <div class="px-5 py-4 text-center shrink-0">
+          <button @click="loadMore()" :disabled="loading"
+                  class="text-xs text-steel-400 hover:text-steel-300 font-medium transition-colors">
+            <span x-show="!loading">Daha fazla göster</span>
+            <span x-show="loading" x-cloak>Yükleniyor…</span>
+          </button>
+        </div>
+      </template>
+    </div>
+
     {# Footer #}
-    <div class="px-5 py-3 border-t border-ink-700 shrink-0">
+    <div class="px-5 py-3 border-t border-ink-700 shrink-0"
+         style="padding-bottom:max(12px, env(safe-area-inset-bottom))">
       <p class="text-xs text-ink-600 text-center">
-        Uyarılar her gece otomatik güncellenir.
+        <span x-show="inboxTab === 'alerts'">Uyarılar her gece otomatik güncellenir.</span>
+        <span x-show="inboxTab === 'notifs'" x-cloak>Bildirimler anlık güncellenir.</span>
       </p>
     </div>
 
   </div>
 
 </div>
+
+<script>
+function coachNotifDrawer() {
+  var raw = JSON.parse(document.getElementById('coach-notif-data').textContent || '{}');
+  return {
+    items: (raw.items || []).map(function(i) { return Object.assign({ _hidden: false }, i); }),
+    unread: raw.unread_count || 0,
+    hasMore: raw.has_next || false,
+    loading: false,
+    confirmDeleteAll: false,
+
+    get visibleCount() {
+      var c = 0;
+      for (var i = 0; i < this.items.length; i++) { if (!this.items[i]._hidden) c++; }
+      return c;
+    },
+
+    _csrf: function() {
+      return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+    },
+
+    tap: function(item) {
+      var url = item.url;
+      if (!item.is_read) {
+        item.is_read = true;
+        this.unread = Math.max(0, this.unread - 1);
+        fetch('/student/notifications/' + item.id + '/read/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': this._csrf() },
+          credentials: 'same-origin',
+        });
+      }
+      if (url) window.location.href = url;
+    },
+
+    deleteOne: async function(item) {
+      var r = await fetch('/notifications/' + item.id + '/delete/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': this._csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
+        item._hidden = true;
+      }
+    },
+
+    markAllRead: async function() {
+      var self = this;
+      var r = await fetch('/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': self._csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        self.items.forEach(function(i) { i.is_read = true; });
+        self.unread = 0;
+      }
+    },
+
+    deleteAll: async function() {
+      this.confirmDeleteAll = false;
+      var self = this;
+      var r = await fetch('/notifications/delete-all/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': self._csrf() },
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        self.items.forEach(function(i) { i._hidden = true; });
+        self.unread = 0;
+      }
+    },
+
+    loadMore: async function() {
+      if (this.loading || !this.hasMore) return;
+      this.loading = true;
+      var self = this;
+      try {
+        var r = await fetch('/student/notifications/?offset=' + self.items.length, {
+          credentials: 'same-origin',
+        });
+        var d = await r.json();
+        if (d.ok) {
+          var more = (d.notifications || []).map(function(i) { return Object.assign({ _hidden: false }, i); });
+          self.items = self.items.concat(more);
+          self.hasMore = d.has_next || false;
+        }
+      } finally {
+        self.loading = false;
+      }
+    },
+  };
+}
+</script>
 {% endblock %}
