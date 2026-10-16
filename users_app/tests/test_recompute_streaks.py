@@ -171,12 +171,13 @@ def test_dry_run_does_not_write(capsys):
 # ── --apply writes streak fields ─────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_apply_writes_streak_fields():
-    """--apply updates current_streak, longest_streak, last_activity_date."""
+def test_apply_writes_streak_fields_stale():
+    """--apply with past dates: longest=3, current=0 (stale run)."""
     student = baker.make(
         'users_app.User', role='student', is_active=True,
         current_streak=0, last_activity_date=None, longest_streak=0,
     )
+    # Dates far in the past → streak is broken → current_streak must be 0
     baker.make('exams_app.Exam', student=student, exam_date=date(2024, 5, 10))
     baker.make('exams_app.Exam', student=student, exam_date=date(2024, 5, 11))
     baker.make('exams_app.Exam', student=student, exam_date=date(2024, 5, 12))
@@ -184,9 +185,32 @@ def test_apply_writes_streak_fields():
     call_command('recompute_streaks', student=student.pk, apply=True)
 
     student.refresh_from_db()
-    assert student.current_streak == 3
+    assert student.current_streak == 0         # stale — run ended before yesterday
     assert student.longest_streak == 3
     assert student.last_activity_date == date(2024, 5, 12)
+
+
+@pytest.mark.django_db
+def test_apply_writes_streak_fields_current():
+    """--apply with recent dates: current_streak reflects live run."""
+    from datetime import date as _date
+    today = _date.today()
+    yesterday = today - timedelta(days=1)
+    day_before = today - timedelta(days=2)
+
+    student = baker.make(
+        'users_app.User', role='student', is_active=True,
+        current_streak=0, last_activity_date=None, longest_streak=0,
+    )
+    baker.make('exams_app.Exam', student=student, exam_date=day_before)
+    baker.make('exams_app.Exam', student=student, exam_date=yesterday)
+
+    call_command('recompute_streaks', student=student.pk, apply=True)
+
+    student.refresh_from_db()
+    assert student.current_streak == 2         # live run ending yesterday
+    assert student.longest_streak == 2
+    assert student.last_activity_date == yesterday
 
 
 # ── longest streak never lowered ─────────────────────────────────────────────
@@ -242,3 +266,71 @@ def test_no_achievements_created():
     before = StudentAchievement.objects.filter(student=student).count()
     call_command('recompute_streaks', student=student.pk, apply=True)
     assert StudentAchievement.objects.filter(student=student).count() == before
+
+
+# ── Fix 1: stale current_streak is zeroed out ─────────────────────────────────
+
+@pytest.mark.django_db
+def test_stale_current_streak_zeroed():
+    """
+    A student whose last activity was months ago gets current_streak = 0,
+    not the length of that old run.
+    """
+    student = baker.make(
+        'users_app.User', role='student', is_active=True,
+        # Simulates what the old recompute (without fix 1) would have left:
+        # current_streak = 4, last active 2026-05-18
+        current_streak=4, last_activity_date=date(2026, 5, 18), longest_streak=4,
+    )
+    # History matches: 4-day run ending 2026-05-18 (stale)
+    for d in range(15, 19):
+        baker.make('exams_app.Exam', student=student, exam_date=date(2026, 5, d))
+
+    call_command('recompute_streaks', student=student.pk, apply=True)
+
+    student.refresh_from_db()
+    assert student.current_streak == 0         # stale — must be zeroed
+    assert student.longest_streak == 4         # history preserved
+
+
+@pytest.mark.django_db
+def test_stale_streak_dry_run_shows_zero():
+    """Dry run reports 4 → 0 for a stale student without writing."""
+    student = baker.make(
+        'users_app.User', role='student', is_active=True,
+        current_streak=4, last_activity_date=date(2026, 5, 18), longest_streak=4,
+    )
+    for d in range(15, 19):
+        baker.make('exams_app.Exam', student=student, exam_date=date(2026, 5, d))
+
+    call_command('recompute_streaks', student=student.pk)   # no --apply
+
+    student.refresh_from_db()
+    assert student.current_streak == 4         # dry run — unchanged
+
+
+# ── Fix 2: last_activity_date never lowered ────────────────────────────────────
+
+@pytest.mark.django_db
+def test_last_activity_date_never_lowered():
+    """
+    If the stored last_activity_date is later than anything in the collected
+    history (e.g. due to BransDeneme or other sources not in _collect_activity_dates),
+    --apply must NOT move it backward.
+    """
+    stored_last = date(2026, 9, 27)
+    history_last = date(2026, 9, 23)
+
+    student = baker.make(
+        'users_app.User', role='student', is_active=True,
+        current_streak=1, last_activity_date=stored_last, longest_streak=1,
+    )
+    # History only has data up to 2026-09-23
+    baker.make('exams_app.Exam', student=student, exam_date=history_last)
+
+    call_command('recompute_streaks', student=student.pk, apply=True)
+
+    student.refresh_from_db()
+    assert student.last_activity_date == stored_last, (
+        f'last_activity_date must not be lowered from {stored_last} to {history_last}'
+    )
