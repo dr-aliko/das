@@ -4,8 +4,43 @@ Tracks daily study streaks and awards milestone badges.
 
 Entry point: record_activity(student)
 Called explicitly from qualifying view endpoints after each study action.
+
+Bulk helper: streak_from_dates(dates)
+Used by the recompute_streaks management command.
 """
+from datetime import timedelta as _td
+
 from django.utils import timezone
+
+
+def streak_from_dates(dates):
+    """
+    Given an iterable of activity date objects, return
+    (current_streak, longest_streak, last_activity_date).
+
+    Uses the same consecutive-day rule as record_activity:
+    a day extends the streak only when it immediately follows the previous
+    activity day (d == prev + 1 day).  Duplicate and None entries are ignored.
+    Returns (0, 0, None) for empty/all-None input.
+    """
+    sorted_dates = sorted(d for d in set(dates) if d is not None)
+    if not sorted_dates:
+        return 0, 0, None
+
+    current = 1
+    longest = 1
+    prev = sorted_dates[0]
+
+    for d in sorted_dates[1:]:
+        if d == prev + _td(days=1):
+            current += 1
+        else:
+            current = 1
+        if current > longest:
+            longest = current
+        prev = d
+
+    return current, longest, sorted_dates[-1]
 
 
 def record_activity(student):
