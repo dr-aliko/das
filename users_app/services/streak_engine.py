@@ -43,6 +43,21 @@ def streak_from_dates(dates):
     return current, longest, sorted_dates[-1]
 
 
+def effective_streak(user, today=None):
+    """
+    Display-only guard: returns 0 when the stored streak is stale (last activity
+    was before yesterday in Europe/Istanbul), otherwise returns current_streak.
+    Does NOT write to the database.
+    """
+    if today is None:
+        today = timezone.localdate()
+    yesterday = today - _td(days=1)
+    last = user.last_activity_date
+    if not last or last < yesterday:
+        return 0
+    return user.current_streak
+
+
 def record_activity(student):
     """
     Update streak fields for a qualifying study action (exam saved, task completed).

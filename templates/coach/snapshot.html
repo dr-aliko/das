@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n streak_tags %}
 
 {% block title %}{{ student.full_name }} — Koç Görünümü — DAS{% endblock %}
 
@@ -402,13 +402,13 @@
         </div>
         {% endif %}
 
-        {% if student.current_streak > 0 or student_badges %}
+        {% with es=student|effective_streak %}{% if es > 0 or student_badges %}
         <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
           <h3 class="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-3">Seri & Başarılar</h3>
           <div class="flex items-center gap-4 mb-3">
             <div class="text-center">
               <p class="text-[10px] text-ink-500 uppercase tracking-wider font-semibold">Güncel Seri</p>
-              <p class="text-xl font-bold text-amber-400 tnum mt-0.5">🔥 {{ student.current_streak }}g</p>
+              <p class="text-xl font-bold text-amber-400 tnum mt-0.5">🔥 {{ es }}g</p>
             </div>
             <div class="text-center">
               <p class="text-[10px] text-ink-500 uppercase tracking-wider font-semibold">En Uzun</p>
@@ -426,7 +426,7 @@
           </div>
           {% endif %}
         </div>
-        {% endif %}
+        {% endif %}{% endwith %}
 
         <a href="{% url 'coach:student_brans_hub' student.id %}"
            class="flex items-center justify-between p-4 rounded-xl border border-steel-500/30

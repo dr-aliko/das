@@ -735,7 +735,8 @@ def profil_view(request):
             best_net = net
 
     # Use cached streak fields (updated by streak_engine on each qualifying action)
-    current_streak = user.current_streak if user.is_student else 0
+    from users_app.services.streak_engine import effective_streak as _effective_streak
+    current_streak = _effective_streak(user) if user.is_student else 0
     longest_streak = user.longest_streak if user.is_student else 0
 
     stats = {

@@ -219,9 +219,9 @@
       {% endif %}
       <div class="min-w-0 flex-1 overflow-hidden">
         <div class="text-sm text-[var(--body)] font-medium truncate">{{ user.full_name }}</div>
-        {% if user.is_student and user.current_streak > 0 %}
-          <div class="text-[10px] text-amber-400 font-bold whitespace-nowrap">🔥{{ user.current_streak }} gün serisi</div>
-        {% endif %}
+        {% load streak_tags %}{% with es=user|effective_streak %}{% if user.is_student and es > 0 %}
+          <div style="font-size:10px;" class="text-amber-400 font-bold whitespace-nowrap">🔥{{ es }} gün serisi</div>
+        {% endif %}{% endwith %}
       </div>
     </a>
   </div>
