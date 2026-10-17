@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -421,8 +422,8 @@
 <body>
 
 <header class="pg-header">
-  <a href="https://vagus.tr" style="display:inline-flex;align-items:center;text-decoration:none;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.03em;">
-    Vagus<span style="color:#4f46e5;">.</span>
+  <a href="https://vagus.tr" style="display:inline-flex;align-items:center;text-decoration:none;">
+    <img src="{% static 'img/vagus-site-logo.png' %}" alt="Vagus" style="height:30px;display:block;">
   </a>
 </header>
 

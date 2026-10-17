@@ -49,6 +49,13 @@ def _sandbox_on():
     return settings.DEBUG or getattr(settings, 'PAYMENT_SANDBOX', False)
 
 
+def _sandbox_test_emails():
+    raw = getattr(settings, 'SANDBOX_TEST_EMAILS', '')
+    if not raw:
+        return set()
+    return {e.strip().lower() for e in raw.split(',') if e.strip()}
+
+
 def _coach_initials(full_name):
     parts = full_name.strip().split()
     if len(parts) >= 2:
@@ -534,21 +541,25 @@ def step3_payment(request, wp_id):
 # ── Sandbox ───────────────────────────────────────────────────────────────────
 
 def sandbox_pay(request, order_token):
-    """Fake payment page. Staff + sandbox only."""
-    if not _sandbox_on() or not request.user.is_authenticated or not request.user.is_staff:
+    """Sandbox payment page. Staff always; buyers via SANDBOX_TEST_EMAILS."""
+    if not _sandbox_on():
         raise Http404
-
     order = get_object_or_404(Order, token=order_token, status=Order.STATUS_PENDING)
+    is_staff = request.user.is_authenticated and request.user.is_staff
+    if not is_staff and order.email.lower() not in _sandbox_test_emails():
+        raise Http404
     return render(request, 'purchase/sandbox_pay.html', {'order': order})
 
 
 @require_POST
 def sandbox_confirm(request, order_token):
-    """Staff confirms sandbox payment."""
-    if not _sandbox_on() or not request.user.is_authenticated or not request.user.is_staff:
+    """Sandbox payment confirm. Staff always; buyers via SANDBOX_TEST_EMAILS."""
+    if not _sandbox_on():
         raise Http404
-
     order = get_object_or_404(Order, token=order_token, status=Order.STATUS_PENDING)
+    is_staff = request.user.is_authenticated and request.user.is_staff
+    if not is_staff and order.email.lower() not in _sandbox_test_emails():
+        raise Http404
     on_payment_success(order)
     order.refresh_from_db()
     return redirect('purchase:success', order_token=str(order.token))

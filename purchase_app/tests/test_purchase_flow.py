@@ -552,16 +552,21 @@ def test_phone_required(active_plan):
 @pytest.mark.django_db
 def test_phone_normalization_formats(active_plan):
     from purchase_app.forms import PurchaseForm
+    # (raw_input, expected_normalized)
     valid_inputs = [
-        '05321234567',
-        '5321234567',
-        '+905321234567',
-        '905321234567',
-        '0532 123 45 67',
-        '0532-123-45-67',
-        '(0532) 123 45 67',
+        ('05321234567',     '05321234567'),
+        ('5321234567',      '05321234567'),
+        ('+905321234567',   '05321234567'),
+        ('905321234567',    '05321234567'),
+        ('0532 123 45 67',  '05321234567'),
+        ('0532-123-45-67',  '05321234567'),
+        ('(0532) 123 45 67','05321234567'),
+        # 050 prefix (Türk Telekom)
+        ('05051234567',     '05051234567'),
+        ('5051234567',      '05051234567'),
+        ('+905051234567',   '05051234567'),
     ]
-    for raw in valid_inputs:
+    for raw, expected in valid_inputs:
         data = {
             'full_name': 'T', 'email': 'x@x.com', 'phone': raw,
             'sinif': '9', 'alan': '', 'plan': active_plan.pk,
@@ -569,8 +574,8 @@ def test_phone_normalization_formats(active_plan):
         }
         form = PurchaseForm(data)
         assert form.is_valid(), f'Expected valid for {raw!r}: {form.errors}'
-        assert form.cleaned_data['phone'] == '05321234567', \
-            f'{raw!r} normalized to {form.cleaned_data["phone"]!r}'
+        assert form.cleaned_data['phone'] == expected, \
+            f'{raw!r} normalized to {form.cleaned_data["phone"]!r}, expected {expected!r}'
 
 
 @pytest.mark.django_db
@@ -723,3 +728,62 @@ def test_payment_success_does_not_overwrite_existing_sinif_alan(db, active_plan)
     existing.refresh_from_db()
     assert existing.sinif == '12', 'sinif must not be overwritten'
     assert existing.alan == 'EA',  'alan must not be overwritten'
+
+
+# ── SANDBOX_TEST_EMAILS ────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_sandbox_test_email_can_pay(pending_order, settings):
+    """Listed email can access sandbox_pay without being staff."""
+    settings.PAYMENT_SANDBOX = True
+    settings.DEBUG = False
+    settings.SANDBOX_TEST_EMAILS = pending_order.email  # 'buyer@example.com'
+    client_obj = Client()
+    resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_sandbox_test_email_other_returns_404(pending_order, settings):
+    """Order whose email is NOT in SANDBOX_TEST_EMAILS returns 404 for anonymous."""
+    settings.PAYMENT_SANDBOX = True
+    settings.DEBUG = False
+    settings.SANDBOX_TEST_EMAILS = 'other@example.com'
+    client_obj = Client()
+    resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_sandbox_test_email_empty_list_returns_404(pending_order, settings):
+    """Empty SANDBOX_TEST_EMAILS gives 404 to non-staff."""
+    settings.PAYMENT_SANDBOX = True
+    settings.DEBUG = False
+    settings.SANDBOX_TEST_EMAILS = ''
+    client_obj = Client()
+    resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_sandbox_test_email_flag_off_returns_404(pending_order, settings):
+    """SANDBOX_TEST_EMAILS has no effect when the sandbox flag is off."""
+    settings.PAYMENT_SANDBOX = False
+    settings.DEBUG = False
+    settings.SANDBOX_TEST_EMAILS = pending_order.email
+    client_obj = Client()
+    resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
+    assert resp.status_code == 404
+
+
+@pytest.mark.django_db
+def test_sandbox_test_email_staff_still_works(pending_order, settings):
+    """Staff can access sandbox_pay regardless of SANDBOX_TEST_EMAILS."""
+    settings.PAYMENT_SANDBOX = True
+    settings.DEBUG = False
+    settings.SANDBOX_TEST_EMAILS = ''
+    staff_user = baker.make('users_app.User', role='coach', is_active=True, is_staff=True)
+    client_obj = Client()
+    client_obj.force_login(staff_user)
+    resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
+    assert resp.status_code == 200

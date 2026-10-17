@@ -39,7 +39,7 @@ def _normalize_tr_mobile(raw):
         digits = '0' + digits[2:]
     elif re.match(r'^5\d{9}$', digits):
         digits = '0' + digits
-    if not re.match(r'^05[3-5]\d{8}$', digits):
+    if not re.match(r'^05\d{9}$', digits):
         raise ValueError('invalid turkish mobile')
     return digits
 
@@ -83,7 +83,7 @@ class PurchaseForm(forms.Form):
             return _normalize_tr_mobile(raw)
         except ValueError:
             raise forms.ValidationError(
-                'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0532 123 45 67'
+                'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
             )
 
     def clean(self):
