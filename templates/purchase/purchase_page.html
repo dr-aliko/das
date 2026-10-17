@@ -10,169 +10,571 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; padding: 40px 16px; background: #111827; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e5e7eb; min-height: 100vh; }
-    .container { max-width: 520px; margin: 0 auto; }
-    .logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.025em; margin-bottom: 32px; }
-    .logo span { color: #818cf8; }
-    h1 { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #f9fafb; }
-    .subtitle { margin: 0 0 32px; color: #9ca3af; font-size: 15px; }
-    .error-box { background: rgba(127,29,29,0.4); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
-    .space-y { display: flex; flex-direction: column; gap: 16px; }
-    .field label { display: block; font-size: 13px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; }
-    .field input[type=text], .field input[type=email], .field input[type=tel] {
-      width: 100%; padding: 10px 14px; background: #1f2937; border: 1px solid #374151;
-      border-radius: 8px; color: #f9fafb; font-size: 15px; font-family: inherit; outline: none; transition: border-color .15s;
+    body {
+      margin: 0;
+      background: #f1f5f9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #0f172a;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
-    .field input:focus { border-color: #6366f1; }
-    .field .field-error { color: #f87171; font-size: 13px; margin-top: 4px; }
-    .plan-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; border: 1px solid #374151; cursor: pointer; margin-bottom: 8px; transition: border-color .15s; background: #1f2937; }
-    .plan-option:hover { border-color: #6366f1; }
-    .plan-option input[type=radio] { accent-color: #6366f1; width: 16px; height: 16px; flex-shrink: 0; }
-    .plan-name { font-size: 15px; font-weight: 600; color: #f9fafb; }
-    .plan-price { margin-left: auto; font-size: 16px; font-weight: 700; color: #818cf8; }
-    .guardian-box { border: 1px solid #374151; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-    .checkbox-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
-    .checkbox-label input[type=checkbox] { accent-color: #6366f1; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
-    .checkbox-label span { font-size: 14px; color: #9ca3af; line-height: 1.5; }
-    .checkbox-label span a { color: #818cf8; }
-    .consent-section { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
-    .btn-submit { width: 100%; background: #6366f1; color: #fff; font-size: 16px; font-weight: 700; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; transition: background .15s; margin-top: 8px; }
-    .btn-submit:hover { background: #4f46e5; }
-    .section-label { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    a { color: #4f46e5; }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    .pg-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 16px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+    }
+    .pg-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.03em;
+      text-decoration: none;
+    }
+    .pg-logo span { color: #4f46e5; }
+
+    /* ── Container ──────────────────────────────────────────────────────────── */
+    .pg-main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 28px 16px 80px;
+    }
+
+    /* ── Coach card ─────────────────────────────────────────────────────────── */
+    .coach-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+    .coach-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+    .coach-name { font-size: 16px; font-weight: 600; line-height: 1.3; }
+    .coach-role { font-size: 13px; color: #64748b; margin-top: 2px; }
+
+    /* ── Error box ──────────────────────────────────────────────────────────── */
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Section label ──────────────────────────────────────────────────────── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      margin: 0 0 12px;
+    }
+
+    /* ── Plan cards ─────────────────────────────────────────────────────────── */
+    .plan-card {
+      display: block;
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .plan-card:hover { border-color: #a5b4fc; }
+    .plan-card:has(input[type="radio"]:checked) {
+      border-color: #4f46e5;
+      background: #fafaff;
+    }
+    .plan-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .plan-card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .plan-card__name { font-size: 15px; font-weight: 700; }
+    .plan-card__price {
+      font-size: 22px;
+      font-weight: 800;
+      color: #4f46e5;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+    .plan-card__duration { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+    .plan-card__features-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .plan-card__features {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .plan-card__features li {
+      font-size: 13px;
+      color: #475569;
+      padding-left: 18px;
+      position: relative;
+    }
+    .plan-card__features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #4f46e5;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    /* ── How it works ───────────────────────────────────────────────────────── */
+    .how-strip {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    @media (max-width: 460px) {
+      .how-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    .how-step { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .how-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .how-label { font-size: 11px; color: #475569; line-height: 1.3; }
+
+    /* ── Form card ──────────────────────────────────────────────────────────── */
+    .form-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Fields ─────────────────────────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .field input[type="text"],
+    .field input[type="email"],
+    .field input[type="tel"],
+    .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #0f172a;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2364748b' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .field input:focus, .field select:focus { border-color: #4f46e5; }
+    .field input.is-error, .field select.is-error { border-color: #dc2626; }
+    .field-error { font-size: 12px; color: #dc2626; margin-top: 4px; }
+    .field-hint  { font-size: 12px; color: #64748b;  margin-top: 4px; }
+    .req-mark { color: #dc2626; }
+
+    /* ── Guardian box ───────────────────────────────────────────────────────── */
+    .guardian-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+
+    /* ── Under-18 row ───────────────────────────────────────────────────────── */
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .check-row + .check-row { margin-top: 12px; }
+    .check-row + .field-error { margin-top: 4px; margin-left: 26px; }
+    .check-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: #4f46e5;
+      cursor: pointer;
+    }
+    .check-row label {
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+    .check-row label a { color: #4f46e5; text-decoration: none; }
+    .check-row label a:hover { text-decoration: underline; }
+
+    .under18-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 14px;
+    }
+    .under18-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #4f46e5;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .under18-row label { font-size: 14px; color: #374151; cursor: pointer; }
+
+    /* ── Submit button ──────────────────────────────────────────────────────── */
+    .btn-submit {
+      width: 100%;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+    .btn-submit:hover  { background: #4338ca; }
+    .btn-submit:active { background: #3730a3; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">Vagus<span>.</span></div>
-    <h1>{{ coach.full_name }}</h1>
-    <p class="subtitle">Vagus platformuna katılmak için aşağıdaki formu doldurun.</p>
 
-    {% if form.non_field_errors %}
-      <div class="error-box">
-        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
-      </div>
-    {% endif %}
+<header class="pg-header">
+  <span class="pg-logo">Vagus<span>.</span></span>
+</header>
 
-    <form method="post" action="{% url 'purchase:checkout' coach.wordpress_post_id %}" novalidate>
-      {% csrf_token %}
-      <div class="space-y">
+<main class="pg-main">
 
-        <!-- Plan selection -->
-        <div class="field">
-          <div class="section-label">Plan Seç</div>
-          {% for plan in plans %}
-            <label class="plan-option">
-              <input type="radio" name="plan" value="{{ plan.pk }}"
-                {% if forloop.first %}checked{% endif %}>
-              <span class="plan-name">{{ plan.name }}</span>
-              <span class="plan-price">{{ plan.price_tl|floatformat:2 }} ₺</span>
-            </label>
-          {% endfor %}
-          {% if form.plan.errors %}
-            <p class="field-error">{{ form.plan.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <!-- Full name -->
-        <div class="field">
-          <label for="id_full_name">Ad Soyad</label>
-          <input type="text" name="full_name" id="id_full_name"
-            value="{{ form.full_name.value|default:'' }}" autocomplete="name">
-          {% if form.full_name.errors %}
-            <p class="field-error">{{ form.full_name.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <!-- Email -->
-        <div class="field">
-          <label for="id_email">E-posta</label>
-          <input type="email" name="email" id="id_email"
-            value="{{ form.email.value|default:'' }}" autocomplete="email">
-          {% if form.email.errors %}
-            <p class="field-error">{{ form.email.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <!-- Phone -->
-        <div class="field">
-          <label for="id_phone">Telefon <span style="color:#6b7280;">(isteğe bağlı)</span></label>
-          <input type="tel" name="phone" id="id_phone"
-            value="{{ form.phone.value|default:'' }}" autocomplete="tel">
-        </div>
-
-        <!-- Under 18 -->
-        <div class="field">
-          <label class="checkbox-label">
-            <input type="checkbox" name="is_under_18" id="id_is_under_18"
-              {% if form.is_under_18.value %}checked{% endif %}>
-            <span>18 yaşından küçüğüm (veli bilgileri gerekli)</span>
-          </label>
-        </div>
-
-        <!-- Guardian fields -->
-        <div id="guardian_fields" class="guardian-box" {% if not form.is_under_18.value %}style="display:none"{% endif %}>
-          <div class="field">
-            <label for="id_guardian_name">Veli Adı Soyadı</label>
-            <input type="text" name="guardian_name" id="id_guardian_name"
-              value="{{ form.guardian_name.value|default:'' }}">
-            {% if form.guardian_name.errors %}
-              <p class="field-error">{{ form.guardian_name.errors.0 }}</p>
-            {% endif %}
-          </div>
-          <div class="field">
-            <label for="id_guardian_phone">Veli Telefonu</label>
-            <input type="tel" name="guardian_phone" id="id_guardian_phone"
-              value="{{ form.guardian_phone.value|default:'' }}">
-            {% if form.guardian_phone.errors %}
-              <p class="field-error">{{ form.guardian_phone.errors.0 }}</p>
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- Consents -->
-        <div class="consent-section">
-          <div class="section-label">Onaylar</div>
-          <label class="checkbox-label">
-            <input type="checkbox" name="consent_terms" {% if form.consent_terms.value %}checked{% endif %}>
-            <span>
-              <a href="{{ legal_terms_url }}" target="_blank" rel="noopener">Kullanım Koşullarını</a> okudum ve kabul ediyorum.
-            </span>
-          </label>
-          {% if form.consent_terms.errors %}
-            <p class="field-error" style="margin-top:-8px;">{{ form.consent_terms.errors.0 }}</p>
-          {% endif %}
-
-          <label class="checkbox-label">
-            <input type="checkbox" name="consent_distance" {% if form.consent_distance.value %}checked{% endif %}>
-            <span>
-              <a href="{{ legal_distance_sales_url }}" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesini</a> okudum ve kabul ediyorum.
-            </span>
-          </label>
-          {% if form.consent_distance.errors %}
-            <p class="field-error" style="margin-top:-8px;">{{ form.consent_distance.errors.0 }}</p>
-          {% endif %}
-
-          <label class="checkbox-label">
-            <input type="checkbox" name="consent_kvkk" {% if form.consent_kvkk.value %}checked{% endif %}>
-            <span>
-              <a href="{{ legal_privacy_url }}" target="_blank" rel="noopener">Kişisel Verilerin Korunması Politikasını</a> okudum ve kabul ediyorum.
-            </span>
-          </label>
-          {% if form.consent_kvkk.errors %}
-            <p class="field-error" style="margin-top:-8px;">{{ form.consent_kvkk.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <button type="submit" class="btn-submit">Ödemeye Geç →</button>
-
-      </div>
-    </form>
+  <!-- Coach card -->
+  <div class="coach-card">
+    <div class="coach-avatar" aria-hidden="true">{{ coach_initials }}</div>
+    <div>
+      <div class="coach-name">{{ coach.full_name }}</div>
+      <div class="coach-role">Vagus Koçu</div>
+    </div>
   </div>
 
-  <script>
-    document.getElementById('id_is_under_18').addEventListener('change', function () {
-      document.getElementById('guardian_fields').style.display = this.checked ? '' : 'none';
+  {% if form.non_field_errors %}
+  <div class="error-box" role="alert">
+    {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'purchase:checkout' coach.wordpress_post_id %}" novalidate>
+    {% csrf_token %}
+
+    <!-- Plan selection -->
+    <div style="margin-bottom:20px;">
+      <div class="section-label">Plan Seç</div>
+      {% for plan in plans %}
+      <label class="plan-card">
+        <input type="radio" name="plan" value="{{ plan.pk }}"
+          {% if plan.pk|stringformat:"s" == selected_plan_id %}checked{% endif %}>
+        <div class="plan-card__top">
+          <div>
+            <div class="plan-card__name">{{ plan.name }}</div>
+            <div class="plan-card__duration">{{ plan.duration_days }} günlük erişim</div>
+          </div>
+          <div class="plan-card__price">{{ plan.price_display }}</div>
+        </div>
+        <div class="plan-card__features-label">Dahil olanlar</div>
+        <ul class="plan-card__features">
+          <li>Kişiye özel haftalık program</li>
+          <li>Deneme sonuçlarının ders ve konu bazında analizi</li>
+          <li>Konu takibi</li>
+          <li>Zorlandığın soruları aralıklı tekrar</li>
+          <li>İlerleme raporları</li>
+        </ul>
+      </label>
+      {% endfor %}
+      {% if form.plan.errors %}
+        <p class="field-error">{{ form.plan.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Nasıl çalışır -->
+    <div class="how-strip" role="list" aria-label="Nasıl çalışır">
+      <div class="how-step" role="listitem">
+        <div class="how-num">1</div>
+        <div class="how-label">Form</div>
+      </div>
+      <div class="how-step" role="listitem">
+        <div class="how-num">2</div>
+        <div class="how-label">Ödeme</div>
+      </div>
+      <div class="how-step" role="listitem">
+        <div class="how-num">3</div>
+        <div class="how-label">Şifre belirleme e-postası</div>
+      </div>
+      <div class="how-step" role="listitem">
+        <div class="how-num">4</div>
+        <div class="how-label">Koçunla başla</div>
+      </div>
+    </div>
+
+    <!-- Personal info -->
+    <div class="form-card">
+      <p class="section-label">Bilgiler</p>
+
+      <div class="field">
+        <label for="id_full_name">Ad Soyad <span class="req-mark">*</span></label>
+        <input type="text" name="full_name" id="id_full_name"
+          value="{{ form.full_name.value|default:'' }}"
+          autocomplete="name"
+          {% if form.full_name.errors %}class="is-error"{% endif %}>
+        {% if form.full_name.errors %}
+          <p class="field-error">{{ form.full_name.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_email">E-posta <span class="req-mark">*</span></label>
+        <input type="email" name="email" id="id_email"
+          value="{{ form.email.value|default:'' }}"
+          autocomplete="email"
+          {% if form.email.errors %}class="is-error"{% endif %}>
+        {% if form.email.errors %}
+          <p class="field-error">{{ form.email.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_phone">Telefon <span class="req-mark">*</span></label>
+        <input type="tel" name="phone" id="id_phone"
+          value="{{ form.phone.value|default:'' }}"
+          autocomplete="tel"
+          placeholder="0532 123 45 67"
+          {% if form.phone.errors %}class="is-error"{% endif %}>
+        {% if form.phone.errors %}
+          <p class="field-error">{{ form.phone.errors.0 }}</p>
+        {% else %}
+          <p class="field-hint">Türk cep telefonu numarası</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_sinif">Sınıf <span class="req-mark">*</span></label>
+        <select name="sinif" id="id_sinif" {% if form.sinif.errors %}class="is-error"{% endif %}>
+          <option value="">Seçin</option>
+          <option value="9"     {% if form.sinif.value == '9'     %}selected{% endif %}>9. Sınıf</option>
+          <option value="10"    {% if form.sinif.value == '10'    %}selected{% endif %}>10. Sınıf</option>
+          <option value="11"    {% if form.sinif.value == '11'    %}selected{% endif %}>11. Sınıf</option>
+          <option value="12"    {% if form.sinif.value == '12'    %}selected{% endif %}>12. Sınıf</option>
+          <option value="mezun" {% if form.sinif.value == 'mezun' %}selected{% endif %}>Mezun</option>
+        </select>
+        {% if form.sinif.errors %}
+          <p class="field-error">{{ form.sinif.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_alan" id="id_alan_label">
+          Alan
+          <span id="alan-req-mark" class="req-mark" style="display:none"> *</span>
+          <span id="alan-opt-mark" style="font-size:12px;color:#64748b;font-weight:400"> (isteğe bağlı)</span>
+        </label>
+        <select name="alan" id="id_alan" {% if form.alan.errors %}class="is-error"{% endif %}>
+          <option value=""    {% if not form.alan.value         %}selected{% endif %}>Henüz seçmedim</option>
+          <option value="SAY" {% if form.alan.value == 'SAY'    %}selected{% endif %}>Sayısal</option>
+          <option value="EA"  {% if form.alan.value == 'EA'     %}selected{% endif %}>Eşit Ağırlık</option>
+          <option value="SOZ" {% if form.alan.value == 'SOZ'    %}selected{% endif %}>Sözel</option>
+          <option value="DIL" {% if form.alan.value == 'DIL'    %}selected{% endif %}>Dil</option>
+        </select>
+        {% if form.alan.errors %}
+          <p class="field-error">{{ form.alan.errors.0 }}</p>
+        {% else %}
+          <p class="field-hint" id="alan-hint" style="display:none">11. sınıf ve üzerinde alan seçimi zorunludur.</p>
+        {% endif %}
+      </div>
+
+    </div><!-- /form-card bilgiler -->
+
+    <!-- Under-18 + guardian -->
+    <div class="form-card">
+      <div class="under18-row">
+        <input type="checkbox" name="is_under_18" id="id_is_under_18"
+          {% if form.is_under_18.value %}checked{% endif %}>
+        <label for="id_is_under_18">18 yaşından küçüğüm (veli bilgileri gerekli)</label>
+      </div>
+
+      <div id="guardian-fields" class="guardian-box"
+        {% if not form.is_under_18.value %}style="display:none"{% endif %}>
+        <div class="field">
+          <label for="id_guardian_name">Veli Adı Soyadı <span class="req-mark">*</span></label>
+          <input type="text" name="guardian_name" id="id_guardian_name"
+            value="{{ form.guardian_name.value|default:'' }}"
+            {% if form.guardian_name.errors %}class="is-error"{% endif %}>
+          {% if form.guardian_name.errors %}
+            <p class="field-error">{{ form.guardian_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div class="field">
+          <label for="id_guardian_phone">Veli Telefonu <span class="req-mark">*</span></label>
+          <input type="tel" name="guardian_phone" id="id_guardian_phone"
+            value="{{ form.guardian_phone.value|default:'' }}"
+            {% if form.guardian_phone.errors %}class="is-error"{% endif %}>
+          {% if form.guardian_phone.errors %}
+            <p class="field-error">{{ form.guardian_phone.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div><!-- /guardian card -->
+
+    <!-- Consents -->
+    <div class="form-card">
+      <p class="section-label">Onaylar</p>
+
+      <div class="check-row">
+        <input type="checkbox" name="consent_terms" id="id_consent_terms"
+          {% if form.consent_terms.value %}checked{% endif %}>
+        <label for="id_consent_terms">
+          <a href="{{ legal_terms_url }}" target="_blank" rel="noopener">Kullanım Koşullarını</a>
+          okudum ve kabul ediyorum.
+        </label>
+      </div>
+      {% if form.consent_terms.errors %}
+        <p class="field-error" style="margin-left:26px;">{{ form.consent_terms.errors.0 }}</p>
+      {% endif %}
+
+      <div class="check-row">
+        <input type="checkbox" name="consent_distance" id="id_consent_distance"
+          {% if form.consent_distance.value %}checked{% endif %}>
+        <label for="id_consent_distance">
+          <a href="{{ legal_distance_sales_url }}" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesini</a>
+          okudum ve kabul ediyorum.
+        </label>
+      </div>
+      {% if form.consent_distance.errors %}
+        <p class="field-error" style="margin-left:26px;">{{ form.consent_distance.errors.0 }}</p>
+      {% endif %}
+
+      <div class="check-row">
+        <input type="checkbox" name="consent_kvkk" id="id_consent_kvkk"
+          {% if form.consent_kvkk.value %}checked{% endif %}>
+        <label for="id_consent_kvkk">
+          <a href="{{ legal_privacy_url }}" target="_blank" rel="noopener">Kişisel Verilerin Korunması Politikasını</a>
+          okudum ve kabul ediyorum.
+        </label>
+      </div>
+      {% if form.consent_kvkk.errors %}
+        <p class="field-error" style="margin-left:26px;">{{ form.consent_kvkk.errors.0 }}</p>
+      {% endif %}
+    </div><!-- /consents card -->
+
+    <button type="submit" class="btn-submit">Ödemeye Geç →</button>
+
+  </form>
+</main>
+
+{{ alan_required_grades|json_script:"alan-required-grades" }}
+
+<script>
+(function () {
+  'use strict';
+
+  // Under-18 guardian toggle
+  var cb18 = document.getElementById('id_is_under_18');
+  var gBox = document.getElementById('guardian-fields');
+  if (cb18 && gBox) {
+    cb18.addEventListener('change', function () {
+      gBox.style.display = this.checked ? '' : 'none';
     });
-  </script>
+  }
+
+  // Alan/sinif required-state indicator
+  var alanReqGrades = JSON.parse(
+    document.getElementById('alan-required-grades').textContent
+  );
+  var sinifSel  = document.getElementById('id_sinif');
+  var reqMark   = document.getElementById('alan-req-mark');
+  var optMark   = document.getElementById('alan-opt-mark');
+  var alanHint  = document.getElementById('alan-hint');
+
+  function syncAlanLabel() {
+    if (!sinifSel) return;
+    var isReq = alanReqGrades.indexOf(sinifSel.value) !== -1;
+    if (reqMark)  reqMark.style.display  = isReq ? '' : 'none';
+    if (optMark)  optMark.style.display  = isReq ? 'none' : '';
+    if (alanHint) alanHint.style.display = isReq ? '' : 'none';
+  }
+
+  if (sinifSel) {
+    sinifSel.addEventListener('change', syncAlanLabel);
+    syncAlanLabel();
+  }
+}());
+</script>
 </body>
 </html>

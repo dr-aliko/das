@@ -31,6 +31,15 @@ class Plan(models.Model):
     def price_tl(self):
         return self.price_kurus / 100
 
+    @property
+    def price_display(self):
+        tl = self.price_kurus // 100
+        kurus = self.price_kurus % 100
+        tl_str = f'{tl:,}'.replace(',', '.')
+        if kurus:
+            return f'{tl_str},{kurus:02d} ₺'
+        return f'{tl_str} ₺'
+
 
 class Order(models.Model):
     STATUS_PENDING      = 'pending'
@@ -72,6 +81,8 @@ class Order(models.Model):
     phone        = models.CharField(max_length=32, blank=True, default='')
     guardian_name  = models.CharField(max_length=255, blank=True, default='')
     guardian_phone = models.CharField(max_length=32,  blank=True, default='')
+    sinif          = models.CharField(max_length=5,   blank=True, default='')
+    alan           = models.CharField(max_length=5,   blank=True, default='')
     seen_by_coach  = models.BooleanField(default=False)
     notes        = models.TextField(blank=True, default='')
     created_at   = models.DateTimeField(auto_now_add=True)

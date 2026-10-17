@@ -6,14 +6,14 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import PurchaseForm
+from .forms import ALAN_REQUIRED_GRADES, PurchaseForm
 from .models import Order, Plan
 from .services import (
+    _checkout_get_ip,
     get_provider,
     increment_checkout_counters,
     is_checkout_rate_limited,
     on_payment_success,
-    _checkout_get_ip,
 )
 
 _log = logging.getLogger(__name__)
@@ -32,6 +32,27 @@ def _purchase_enabled():
 
 def _sandbox_on():
     return settings.DEBUG or getattr(settings, 'PAYMENT_SANDBOX', False)
+
+
+def _coach_initials(full_name):
+    parts = full_name.strip().split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return full_name[:2].upper() if full_name else '?'
+
+
+def _page_ctx(coach, plans, form, selected_plan_id=''):
+    return {
+        'coach':                  coach,
+        'plans':                  plans,
+        'form':                   form,
+        'coach_initials':         _coach_initials(coach.full_name),
+        'selected_plan_id':       selected_plan_id,
+        'alan_required_grades':   sorted(ALAN_REQUIRED_GRADES),
+        'legal_terms_url':          settings.LEGAL_TERMS_URL,
+        'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
+        'legal_privacy_url':        settings.LEGAL_PRIVACY_URL,
+    }
 
 
 def purchase_page(request, wp_id):
@@ -56,15 +77,10 @@ def purchase_page(request, wp_id):
     if not plans.exists():
         raise Http404
 
+    first = plans.first()
     form = PurchaseForm()
-    return render(request, 'purchase/purchase_page.html', {
-        'coach': coach,
-        'plans': plans,
-        'form':  form,
-        'legal_terms_url':          settings.LEGAL_TERMS_URL,
-        'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
-        'legal_privacy_url':        settings.LEGAL_PRIVACY_URL,
-    })
+    return render(request, 'purchase/purchase_page.html',
+                  _page_ctx(coach, plans, form, str(first.pk) if first else ''))
 
 
 @require_POST
@@ -87,36 +103,23 @@ def checkout(request, wp_id):
         return render(request, 'purchase/unavailable.html', status=200)
 
     form = PurchaseForm(request.POST)
+    plans = Plan.objects.filter(active=True).order_by('price_kurus')
+
     if not form.is_valid():
-        plans = Plan.objects.filter(active=True).order_by('price_kurus')
-        return render(request, 'purchase/purchase_page.html', {
-            'coach': coach,
-            'plans': plans,
-            'form':  form,
-            'legal_terms_url':          settings.LEGAL_TERMS_URL,
-            'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
-            'legal_privacy_url':        settings.LEGAL_PRIVACY_URL,
-        })
+        return render(request, 'purchase/purchase_page.html',
+                      _page_ctx(coach, plans, form, request.POST.get('plan', '')))
 
     email = form.cleaned_data['email'].lower().strip()
     ip    = _checkout_get_ip(request)
 
     if is_checkout_rate_limited(email, ip):
-        plans = Plan.objects.filter(active=True).order_by('price_kurus')
         form.add_error(None, 'Çok fazla istek gönderildi. Lütfen 15 dakika sonra tekrar deneyin.')
-        return render(request, 'purchase/purchase_page.html', {
-            'coach': coach,
-            'plans': plans,
-            'form':  form,
-            'legal_terms_url':          settings.LEGAL_TERMS_URL,
-            'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
-            'legal_privacy_url':        settings.LEGAL_PRIVACY_URL,
-        })
+        return render(request, 'purchase/purchase_page.html',
+                      _page_ctx(coach, plans, form, request.POST.get('plan', '')))
 
     increment_checkout_counters(email, ip)
 
-    plan = form.cleaned_data['plan']  # always from DB — amount_kurus is snapshotted
-
+    plan     = form.cleaned_data['plan']
     provider = get_provider()
 
     order = Order(
@@ -125,7 +128,9 @@ def checkout(request, wp_id):
         plan=plan,
         amount_kurus=plan.price_kurus,
         full_name=form.cleaned_data['full_name'],
-        phone=form.cleaned_data.get('phone', ''),
+        phone=form.cleaned_data['phone'],
+        sinif=form.cleaned_data.get('sinif', ''),
+        alan=form.cleaned_data.get('alan', ''),
         guardian_name=form.cleaned_data.get('guardian_name', ''),
         guardian_phone=form.cleaned_data.get('guardian_phone', ''),
         provider=provider.name,

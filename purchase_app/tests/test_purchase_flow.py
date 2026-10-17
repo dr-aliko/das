@@ -519,3 +519,194 @@ def test_purchased_student_not_visible_to_other_coach(db, active_plan):
     # Dropdown check
     dropdown_emails = [u.email for u in list_for_coach(coach_b)]
     assert 'isolation@example.com' not in dropdown_emails
+
+
+# ── Phone validation ──────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_phone_required(active_plan):
+    from purchase_app.forms import PurchaseForm
+    data = {
+        'full_name': 'Test', 'email': 'a@b.com', 'phone': '',
+        'sinif': '9', 'alan': '', 'plan': active_plan.pk,
+        'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+    }
+    form = PurchaseForm(data)
+    assert not form.is_valid()
+    assert 'phone' in form.errors
+
+
+@pytest.mark.django_db
+def test_phone_normalization_formats(active_plan):
+    from purchase_app.forms import PurchaseForm
+    valid_inputs = [
+        '05321234567',
+        '5321234567',
+        '+905321234567',
+        '905321234567',
+        '0532 123 45 67',
+        '0532-123-45-67',
+        '(0532) 123 45 67',
+    ]
+    for raw in valid_inputs:
+        data = {
+            'full_name': 'T', 'email': 'x@x.com', 'phone': raw,
+            'sinif': '9', 'alan': '', 'plan': active_plan.pk,
+            'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+        }
+        form = PurchaseForm(data)
+        assert form.is_valid(), f'Expected valid for {raw!r}: {form.errors}'
+        assert form.cleaned_data['phone'] == '05321234567', \
+            f'{raw!r} normalized to {form.cleaned_data["phone"]!r}'
+
+
+@pytest.mark.django_db
+def test_phone_invalid_rejected(active_plan):
+    from purchase_app.forms import PurchaseForm
+    invalid_inputs = ['12345', 'abcdef', '04321234567', '0123456789']
+    for raw in invalid_inputs:
+        data = {
+            'full_name': 'T', 'email': 'x@x.com', 'phone': raw,
+            'sinif': '9', 'alan': '', 'plan': active_plan.pk,
+            'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+        }
+        form = PurchaseForm(data)
+        assert not form.is_valid(), f'Expected invalid for {raw!r}'
+        assert 'phone' in form.errors, f'Expected phone error for {raw!r}'
+
+
+# ── Sınıf / Alan validation ───────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_sinif_required(active_plan):
+    from purchase_app.forms import PurchaseForm
+    data = {
+        'full_name': 'T', 'email': 'x@x.com', 'phone': '05321234567',
+        'sinif': '', 'alan': '', 'plan': active_plan.pk,
+        'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+    }
+    form = PurchaseForm(data)
+    assert not form.is_valid()
+    assert 'sinif' in form.errors
+
+
+@pytest.mark.parametrize('sinif', ['11', '12', 'mezun'])
+@pytest.mark.django_db
+def test_alan_required_for_upper_grades(active_plan, sinif):
+    from purchase_app.forms import PurchaseForm
+    data = {
+        'full_name': 'T', 'email': 'x@x.com', 'phone': '05321234567',
+        'sinif': sinif, 'alan': '', 'plan': active_plan.pk,
+        'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+    }
+    form = PurchaseForm(data)
+    assert not form.is_valid()
+    assert 'alan' in form.errors, f'Expected alan error for sinif={sinif}'
+
+
+@pytest.mark.parametrize('sinif', ['9', '10'])
+@pytest.mark.django_db
+def test_alan_optional_for_lower_grades(active_plan, sinif):
+    from purchase_app.forms import PurchaseForm
+    data = {
+        'full_name': 'T', 'email': 'x@x.com', 'phone': '05321234567',
+        'sinif': sinif, 'alan': '', 'plan': active_plan.pk,
+        'consent_terms': 'on', 'consent_distance': 'on', 'consent_kvkk': 'on',
+    }
+    form = PurchaseForm(data)
+    assert form.is_valid(), f'Expected valid (alan optional) for sinif={sinif}: {form.errors}'
+
+
+@pytest.mark.django_db
+def test_consent_still_required(active_plan):
+    from purchase_app.forms import PurchaseForm
+    data = {
+        'full_name': 'T', 'email': 'x@x.com', 'phone': '05321234567',
+        'sinif': '10', 'alan': '', 'plan': active_plan.pk,
+        # consents missing
+    }
+    form = PurchaseForm(data)
+    assert not form.is_valid()
+    assert 'consent_terms' in form.errors or 'consent_distance' in form.errors or 'consent_kvkk' in form.errors
+
+
+# ── Sinif/Alan snapshot on Order + student ────────────────────────────────────
+
+@pytest.mark.django_db(transaction=True)
+def test_sinif_alan_snapshot_on_order(db, active_plan, coach):
+    """Checkout must write sinif and alan to the Order row."""
+    order = baker.make(
+        'purchase_app.Order',
+        email='snap@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='Snap User',
+        sinif='11',
+        alan='SAY',
+    )
+    assert order.sinif == '11'
+    assert order.alan == 'SAY'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_payment_success_applies_sinif_alan_to_new_student(db, active_plan):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    order = baker.make(
+        'purchase_app.Order',
+        email='newstusnif@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='New Student',
+        sinif='11',
+        alan='SAY',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    student = User.objects.get(email='newstusnif@example.com')
+    assert student.sinif == '11'
+    assert student.alan == 'SAY'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_payment_success_does_not_overwrite_existing_sinif_alan(db, active_plan):
+    """on_payment_success must not clobber a student who already has sinif/alan."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    existing = baker.make(
+        'users_app.User',
+        role='student',
+        email='existing_snif@example.com',
+        sinif='12',
+        alan='EA',
+        is_active=True,
+    )
+    order = baker.make(
+        'purchase_app.Order',
+        email=existing.email,
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name=existing.full_name,
+        sinif='9',
+        alan='SOZ',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    existing.refresh_from_db()
+    assert existing.sinif == '12', 'sinif must not be overwritten'
+    assert existing.alan == 'EA',  'alan must not be overwritten'

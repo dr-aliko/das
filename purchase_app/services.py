@@ -151,6 +151,15 @@ def on_payment_success(order):
             User.objects.filter(pk=user.pk).update(coach=order.coach)
             user.coach_id = order.coach_id
 
+        # Apply sinif/alan snapshot from order — never overwrite an existing value.
+        profile_patch = {}
+        if order.sinif and not user.sinif:
+            profile_patch['sinif'] = order.sinif
+        if order.alan and not user.alan:
+            profile_patch['alan'] = order.alan
+        if profile_patch:
+            User.objects.filter(pk=user.pk).update(**profile_patch)
+
         order.status = Order.STATUS_PAID
         order.save(update_fields=['student', 'status', 'updated_at'])
 
