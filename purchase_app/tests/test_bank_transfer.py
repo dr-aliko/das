@@ -70,6 +70,39 @@ def awaiting_order(db, coach, active_plan):
     )
 
 
+# ── 0. Settings-level regression: IBAN from settings reaches _purchase_enabled ─
+
+@pytest.mark.django_db
+def test_iban_in_settings_makes_page_reachable(coach, active_plan, client, settings):
+    """Regression: PURCHASE_IBAN etc. must be read from settings, not os.environ."""
+    settings.SELF_PURCHASE_ENABLED = True
+    settings.LEGAL_TERMS_URL = 'https://example.com/terms'
+    settings.LEGAL_DISTANCE_SALES_URL = 'https://example.com/ds'
+    settings.LEGAL_PRIVACY_URL = 'https://example.com/kvkk'
+    settings.PAYMENT_SANDBOX = False
+    settings.DEBUG = False
+    settings.PURCHASE_IBAN = 'TR330006100519786457841326'
+    settings.PURCHASE_IBAN_HOLDER = 'Vagus Teknoloji A.Ş.'
+    settings.PURCHASE_BANK_NAME = 'Garanti BBVA'
+    resp = client.get(f'/satin-al/{coach.wordpress_post_id}/')
+    assert resp.status_code == 200, (
+        'Purchase page must return 200 when IBAN settings are set; '
+        f'got {resp.status_code} — IBAN is likely read from env not settings'
+    )
+
+
+@pytest.mark.django_db
+def test_iban_in_settings_shown_on_instructions_page(awaiting_order, settings):
+    """IBAN from settings must appear on the bank-transfer instructions page."""
+    settings.PURCHASE_IBAN = 'TR330006100519786457841326'
+    settings.PURCHASE_IBAN_HOLDER = 'Vagus Teknoloji A.Ş.'
+    settings.PURCHASE_BANK_NAME = 'Garanti BBVA'
+    c = Client()
+    resp = c.get(f'/satin-al/havale/{awaiting_order.token}/')
+    assert resp.status_code == 200
+    assert b'TR330006100519786457841326' in resp.content
+
+
 # ── 1. Empty IBAN blocks the purchase flow ────────────────────────────────────
 
 @pytest.mark.django_db

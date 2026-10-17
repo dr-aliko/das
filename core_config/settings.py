@@ -247,6 +247,13 @@ LEGAL_DISTANCE_SALES_URL = config('LEGAL_DISTANCE_SALES_URL', default='')
 LEGAL_PRIVACY_URL        = config('LEGAL_PRIVACY_URL',        default='')
 PAYMENT_SANDBOX          = config('PAYMENT_SANDBOX',          default=False, cast=bool)
 
+# Bank-transfer provider
+PURCHASE_IBAN                     = config('PURCHASE_IBAN',                     default='')
+PURCHASE_IBAN_HOLDER              = config('PURCHASE_IBAN_HOLDER',              default='')
+PURCHASE_BANK_NAME                = config('PURCHASE_BANK_NAME',                default='')
+PURCHASE_STAFF_NOTIFICATION_EMAIL = config('PURCHASE_STAFF_NOTIFICATION_EMAIL', default='')
+BANK_TRANSFER_EXPIRY_DAYS         = config('BANK_TRANSFER_EXPIRY_DAYS',         default=7, cast=int)
+
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)
 
