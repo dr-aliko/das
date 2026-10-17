@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Satın Alma Siparişleri{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Satın Alma Siparişleri</h1>
+      </div>
+      <p class="text-sm text-ink-400">Tüm satın alma işlemlerini görüntüleyin ve yönetin.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'purchase_panel:plans' %}" class="text-sm text-steel-400 hover:text-steel-300 transition-colors">Planlar</a>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-3 flex-wrap">
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-xs text-ink-500 shrink-0">Durum:</label>
+        <select name="status" onchange="this.form.submit()"
+                class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+          <option value="">Tümü</option>
+          {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if status_filter %}
+          <a href="{% url 'purchase_panel:orders' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>
+        {% endif %}
+      </form>
+      <span class="ml-auto text-xs text-ink-500">{{ orders|length }} kayıt</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-12">#</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">E-posta</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Plan</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Tutar</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-32">Durum</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-36">Tarih</th>
+            <th class="px-4 py-2.5 w-16"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for order in orders %}
+          <tr class="{% if order.status == 'needs_review' %}bg-amber-950/20{% endif %}">
+            <td class="px-4 py-3 text-ink-400 tabular-nums">{{ order.pk }}</td>
+            <td class="px-4 py-3 text-ink-200">{{ order.email }}</td>
+            <td class="px-4 py-3 text-ink-300">{{ order.coach.full_name }}</td>
+            <td class="px-4 py-3 text-ink-300">{{ order.plan.name }}</td>
+            <td class="px-4 py-3 text-ink-200 text-right tabular-nums">{{ order.plan.price_tl|floatformat:2 }} ₺</td>
+            <td class="px-4 py-3">
+              {% if order.status == 'paid' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Ödendi</span>
+              {% elif order.status == 'pending' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-ink-700 text-ink-400 border border-ink-600">Bekliyor</span>
+              {% elif order.status == 'needs_review' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">İnceleme</span>
+              {% elif order.status == 'failed' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30">Başarısız</span>
+              {% elif order.status == 'cancelled' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-ink-700 text-ink-500 border border-ink-600">İptal</span>
+              {% elif order.status == 'refunded' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30">İade</span>
+              {% else %}
+                <span class="text-ink-500 text-xs">{{ order.get_status_display }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-500 text-xs tabular-nums">{{ order.created_at|date:"d.m.Y H:i" }}</td>
+            <td class="px-4 py-3">
+              <a href="{% url 'purchase_panel:order_detail' order.pk %}"
+                 class="text-xs text-steel-400 hover:text-steel-300 transition-colors">Detay</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="px-4 py-10 text-center text-ink-600">Henüz sipariş yok.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

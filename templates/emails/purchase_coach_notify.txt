@@ -1,0 +1,16 @@
+Vagus — Yeni Öğrenci Katıldı
+
+Merhaba {{ coach.full_name }},
+
+{{ student.full_name }} adlı öğrenci {{ order.plan.name }} planını satın alarak Vagus platformuna katıldı. Hesabı otomatik olarak aktifleştirildi.
+
+Öğrencinin profilini görüntülemek için:
+{{ student_url }}
+
+---
+E-posta: {{ student.email }}
+Plan: {{ order.plan.name }}
+Sipariş #: {{ order.pk }}
+
+Başarılar dileriz,
+Vagus Ekibi

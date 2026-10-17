@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'konu_takip_app',
     'struggle_app',
     'marketing_app',
+    'purchase_app',
 ]
 
 MIDDLEWARE = [
@@ -238,6 +239,13 @@ DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL',  default='Vagus <noreply@vagu
 VAPID_PUBLIC_KEY  = config('VAPID_PUBLIC_KEY',  default='')
 VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
 VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='info@vagus.tr')
+
+# ── Self-purchase feature ──────────────────────────────────────────────────────
+SELF_PURCHASE_ENABLED    = config('SELF_PURCHASE_ENABLED',    default=False, cast=bool)
+LEGAL_TERMS_URL          = config('LEGAL_TERMS_URL',          default='')
+LEGAL_DISTANCE_SALES_URL = config('LEGAL_DISTANCE_SALES_URL', default='')
+LEGAL_PRIVACY_URL        = config('LEGAL_PRIVACY_URL',        default='')
+PAYMENT_SANDBOX          = config('PAYMENT_SANDBOX',          default=False, cast=bool)
 
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)

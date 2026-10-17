@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Satın Alma Planları{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Satın Alma Planları</h1>
+      </div>
+      <p class="text-sm text-ink-400">Mevcut planları yönetin ve yeni plan oluşturun.</p>
+    </div>
+    <a href="{% url 'purchase_panel:orders' %}" class="text-sm text-steel-400 hover:text-steel-300 transition-colors">Siparişler</a>
+  </div>
+
+  {% if errors %}
+  <div class="rounded-xl border border-red-500/30 bg-red-950/20 px-5 py-3">
+    {% for e in errors %}
+      <p class="text-sm text-red-400">{{ e }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Mevcut planlar ── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Mevcut Planlar</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Ad</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-32">Tür</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-32">Fiyat (₺)</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-28">Süre (gün)</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-24">Aktif</th>
+            <th class="px-4 py-2.5 w-32"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for plan in plans %}
+          <tr>
+            <form method="post" action="{% url 'purchase_panel:plan_update' plan.pk %}">
+              {% csrf_token %}
+              <td class="px-4 py-2.5">
+                <input type="text" name="name" value="{{ plan.name }}"
+                       class="w-full h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+              </td>
+              <td class="px-4 py-2.5">
+                <select name="kind"
+                        class="w-full h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+                  <option value="one_time" {% if plan.kind == 'one_time' %}selected{% endif %}>Tek Seferlik</option>
+                  <option value="subscription" {% if plan.kind == 'subscription' %}selected{% endif %}>Abonelik</option>
+                </select>
+              </td>
+              <td class="px-4 py-2.5">
+                <input type="number" name="price_kurus" value="{{ plan.price_kurus }}" min="1"
+                       class="w-full h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 text-right focus:outline-none focus:ring-1 focus:ring-steel-500">
+              </td>
+              <td class="px-4 py-2.5">
+                <input type="number" name="duration_days" value="{{ plan.duration_days }}" min="1"
+                       class="w-full h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 text-right focus:outline-none focus:ring-1 focus:ring-steel-500">
+              </td>
+              <td class="px-4 py-2.5">
+                <input type="checkbox" name="active" {% if plan.active %}checked{% endif %}
+                       class="rounded" style="accent-color:#6366f1;">
+              </td>
+              <td class="px-4 py-2.5">
+                <button type="submit"
+                        class="h-7 px-3 rounded-lg text-xs font-semibold bg-steel-500 hover:bg-steel-400 text-white transition-colors">
+                  Kaydet
+                </button>
+              </td>
+            </form>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-ink-600">Henüz plan yok.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Yeni plan ── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Yeni Plan Ekle</h2>
+    </div>
+    <form method="post" action="{% url 'purchase_panel:plan_create' %}" class="px-5 py-4">
+      {% csrf_token %}
+      <div class="flex items-end gap-3 flex-wrap">
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Ad</label>
+          <input type="text" name="name" placeholder="1 aylık"
+                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500 w-40">
+        </div>
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Tür</label>
+          <select name="kind"
+                  class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+            <option value="one_time">Tek Seferlik</option>
+            <option value="subscription">Abonelik</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Fiyat (kuruş)</label>
+          <input type="number" name="price_kurus" placeholder="319900" min="1"
+                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500 w-28">
+        </div>
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Süre (gün)</label>
+          <input type="number" name="duration_days" placeholder="30" min="1"
+                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500 w-20">
+        </div>
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Aktif</label>
+          <input type="checkbox" name="active" checked class="rounded" style="accent-color:#6366f1; margin-top:4px;">
+        </div>
+        <button type="submit"
+                class="h-8 px-4 rounded-lg text-xs font-semibold bg-steel-500 hover:bg-steel-400 text-white transition-colors">
+          + Ekle
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

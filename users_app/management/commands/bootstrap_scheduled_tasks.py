@@ -77,3 +77,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'{action} schedule: {schedule.name}'
         ))
+
+        schedule, created = Schedule.objects.update_or_create(
+            func='purchase_app.tasks.cancel_stale_orders_task',
+            defaults={
+                'name': 'Cancel stale purchase orders (hourly)',
+                'schedule_type': Schedule.HOURLY,
+                'repeats': -1,
+            },
+        )
+        action = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(
+            f'{action} schedule: {schedule.name}'
+        ))

@@ -1,0 +1,178 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ coach.full_name }} ile Vagus — Satın Al</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 40px 16px; background: #111827; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e5e7eb; min-height: 100vh; }
+    .container { max-width: 520px; margin: 0 auto; }
+    .logo { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.025em; margin-bottom: 32px; }
+    .logo span { color: #818cf8; }
+    h1 { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #f9fafb; }
+    .subtitle { margin: 0 0 32px; color: #9ca3af; font-size: 15px; }
+    .error-box { background: rgba(127,29,29,0.4); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
+    .space-y { display: flex; flex-direction: column; gap: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: #9ca3af; margin-bottom: 6px; }
+    .field input[type=text], .field input[type=email], .field input[type=tel] {
+      width: 100%; padding: 10px 14px; background: #1f2937; border: 1px solid #374151;
+      border-radius: 8px; color: #f9fafb; font-size: 15px; font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .field input:focus { border-color: #6366f1; }
+    .field .field-error { color: #f87171; font-size: 13px; margin-top: 4px; }
+    .plan-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; border: 1px solid #374151; cursor: pointer; margin-bottom: 8px; transition: border-color .15s; background: #1f2937; }
+    .plan-option:hover { border-color: #6366f1; }
+    .plan-option input[type=radio] { accent-color: #6366f1; width: 16px; height: 16px; flex-shrink: 0; }
+    .plan-name { font-size: 15px; font-weight: 600; color: #f9fafb; }
+    .plan-price { margin-left: auto; font-size: 16px; font-weight: 700; color: #818cf8; }
+    .guardian-box { border: 1px solid #374151; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .checkbox-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .checkbox-label input[type=checkbox] { accent-color: #6366f1; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+    .checkbox-label span { font-size: 14px; color: #9ca3af; line-height: 1.5; }
+    .checkbox-label span a { color: #818cf8; }
+    .consent-section { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+    .btn-submit { width: 100%; background: #6366f1; color: #fff; font-size: 16px; font-weight: 700; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; transition: background .15s; margin-top: 8px; }
+    .btn-submit:hover { background: #4f46e5; }
+    .section-label { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">Vagus<span>.</span></div>
+    <h1>{{ coach.full_name }}</h1>
+    <p class="subtitle">Vagus platformuna katılmak için aşağıdaki formu doldurun.</p>
+
+    {% if form.non_field_errors %}
+      <div class="error-box">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'purchase:checkout' coach.wordpress_post_id %}" novalidate>
+      {% csrf_token %}
+      <div class="space-y">
+
+        <!-- Plan selection -->
+        <div class="field">
+          <div class="section-label">Plan Seç</div>
+          {% for plan in plans %}
+            <label class="plan-option">
+              <input type="radio" name="plan" value="{{ plan.pk }}"
+                {% if forloop.first %}checked{% endif %}>
+              <span class="plan-name">{{ plan.name }}</span>
+              <span class="plan-price">{{ plan.price_tl|floatformat:2 }} ₺</span>
+            </label>
+          {% endfor %}
+          {% if form.plan.errors %}
+            <p class="field-error">{{ form.plan.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Full name -->
+        <div class="field">
+          <label for="id_full_name">Ad Soyad</label>
+          <input type="text" name="full_name" id="id_full_name"
+            value="{{ form.full_name.value|default:'' }}" autocomplete="name">
+          {% if form.full_name.errors %}
+            <p class="field-error">{{ form.full_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Email -->
+        <div class="field">
+          <label for="id_email">E-posta</label>
+          <input type="email" name="email" id="id_email"
+            value="{{ form.email.value|default:'' }}" autocomplete="email">
+          {% if form.email.errors %}
+            <p class="field-error">{{ form.email.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Phone -->
+        <div class="field">
+          <label for="id_phone">Telefon <span style="color:#6b7280;">(isteğe bağlı)</span></label>
+          <input type="tel" name="phone" id="id_phone"
+            value="{{ form.phone.value|default:'' }}" autocomplete="tel">
+        </div>
+
+        <!-- Under 18 -->
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" name="is_under_18" id="id_is_under_18"
+              {% if form.is_under_18.value %}checked{% endif %}>
+            <span>18 yaşından küçüğüm (veli bilgileri gerekli)</span>
+          </label>
+        </div>
+
+        <!-- Guardian fields -->
+        <div id="guardian_fields" class="guardian-box" {% if not form.is_under_18.value %}style="display:none"{% endif %}>
+          <div class="field">
+            <label for="id_guardian_name">Veli Adı Soyadı</label>
+            <input type="text" name="guardian_name" id="id_guardian_name"
+              value="{{ form.guardian_name.value|default:'' }}">
+            {% if form.guardian_name.errors %}
+              <p class="field-error">{{ form.guardian_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div class="field">
+            <label for="id_guardian_phone">Veli Telefonu</label>
+            <input type="tel" name="guardian_phone" id="id_guardian_phone"
+              value="{{ form.guardian_phone.value|default:'' }}">
+            {% if form.guardian_phone.errors %}
+              <p class="field-error">{{ form.guardian_phone.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Consents -->
+        <div class="consent-section">
+          <div class="section-label">Onaylar</div>
+          <label class="checkbox-label">
+            <input type="checkbox" name="consent_terms" {% if form.consent_terms.value %}checked{% endif %}>
+            <span>
+              <a href="{{ legal_terms_url }}" target="_blank" rel="noopener">Kullanım Koşullarını</a> okudum ve kabul ediyorum.
+            </span>
+          </label>
+          {% if form.consent_terms.errors %}
+            <p class="field-error" style="margin-top:-8px;">{{ form.consent_terms.errors.0 }}</p>
+          {% endif %}
+
+          <label class="checkbox-label">
+            <input type="checkbox" name="consent_distance" {% if form.consent_distance.value %}checked{% endif %}>
+            <span>
+              <a href="{{ legal_distance_sales_url }}" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesini</a> okudum ve kabul ediyorum.
+            </span>
+          </label>
+          {% if form.consent_distance.errors %}
+            <p class="field-error" style="margin-top:-8px;">{{ form.consent_distance.errors.0 }}</p>
+          {% endif %}
+
+          <label class="checkbox-label">
+            <input type="checkbox" name="consent_kvkk" {% if form.consent_kvkk.value %}checked{% endif %}>
+            <span>
+              <a href="{{ legal_privacy_url }}" target="_blank" rel="noopener">Kişisel Verilerin Korunması Politikasını</a> okudum ve kabul ediyorum.
+            </span>
+          </label>
+          {% if form.consent_kvkk.errors %}
+            <p class="field-error" style="margin-top:-8px;">{{ form.consent_kvkk.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn-submit">Ödemeye Geç →</button>
+
+      </div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('id_is_under_18').addEventListener('change', function () {
+      document.getElementById('guardian_fields').style.display = this.checked ? '' : 'none';
+    });
+  </script>
+</body>
+</html>

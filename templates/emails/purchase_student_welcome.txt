@@ -1,0 +1,15 @@
+Vagus — Hesabınız Hazır
+
+Merhaba {{ user.full_name }},
+
+{{ coach.full_name }} koçunuz aracılığıyla {{ plan.name }} planına kaydoldunuz. Vagus platformuna hoş geldiniz!
+
+Hesabınıza erişmek için lütfen aşağıdaki bağlantıya tıklayarak şifrenizi belirleyin:
+
+{{ reset_link }}
+
+Önemli: Bu link {{ reset_timeout_display }} geçerlidir ve tek kullanımlıktır.
+Bu işlemi siz yapmadıysanız lütfen bu e-postayı dikkate almayın.
+
+Başarılar dileriz,
+Vagus Ekibi

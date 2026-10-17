@@ -75,6 +75,8 @@ urlpatterns = [
     path('panel/wp-koclar/confirm/', panel_wp_koclar_confirm, name='panel_wp_koclar_confirm'),
     path('panel/wp-koclar/<int:coach_id>/unlink/', panel_wp_koclar_unlink, name='panel_wp_koclar_unlink'),
     path('profil/wp-availability/', profil_wp_availability, name='profil_wp_availability'),
+    path('satin-al/', include('purchase_app.urls', namespace='purchase')),
+    path('panel/satin-al/', include('purchase_app.panel_urls', namespace='purchase_panel')),
 ]
 
 if settings.DEBUG:

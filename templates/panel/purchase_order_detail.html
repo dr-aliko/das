@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sipariş #{{ order.pk }} — Panel{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-2xl">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <div class="flex items-center gap-2 mb-0.5">
+      <a href="{% url 'purchase_panel:orders' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Siparişler</a>
+    </div>
+    <h1 class="text-lg font-semibold text-white mt-2">Sipariş #{{ order.pk }}</h1>
+    <p class="text-sm text-ink-400">{{ order.created_at|date:"d.m.Y H:i" }}</p>
+  </div>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Sipariş Bilgileri</h2>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Durum</span>
+        <span class="font-medium
+          {% if order.status == 'paid' %}text-emerald-400
+          {% elif order.status == 'needs_review' %}text-amber-400
+          {% elif order.status == 'failed' or order.status == 'cancelled' %}text-red-400
+          {% else %}text-ink-300{% endif %}">
+          {{ order.get_status_display }}
+        </span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Token</span>
+        <span class="text-ink-300 font-mono text-xs break-all">{{ order.token }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">E-posta</span>
+        <span class="text-ink-200">{{ order.email }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Ad Soyad</span>
+        <span class="text-ink-200">{{ order.full_name }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Telefon</span>
+        <span class="text-ink-300">{{ order.phone|default:"—" }}</span>
+      </div>
+      {% if order.guardian_name %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Veli</span>
+        <span class="text-ink-300">{{ order.guardian_name }} ({{ order.guardian_phone }})</span>
+      </div>
+      {% endif %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Koç</span>
+        <span class="text-ink-200">{{ order.coach.full_name }} ({{ order.coach.email }})</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Öğrenci</span>
+        <span class="text-ink-200">
+          {% if order.student %}{{ order.student.full_name }} ({{ order.student.email }}){% else %}—{% endif %}
+        </span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Plan</span>
+        <span class="text-ink-200">{{ order.plan.name }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Tutar (snapshot)</span>
+        <span class="text-ink-200 tabular-nums">{{ order.amount_kurus }} kuruş ({{ order.plan.price_tl|floatformat:2 }} ₺)</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Ödeme Sağlayıcı</span>
+        <span class="text-ink-300">{{ order.provider }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Provider Ref</span>
+        <span class="text-ink-300 font-mono text-xs">{{ order.provider_ref|default:"—" }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Koça Gösterildi</span>
+        <span class="text-ink-300">{% if order.seen_by_coach %}Evet{% else %}Hayır{% endif %}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Son Güncelleme</span>
+        <span class="text-ink-400 text-xs tabular-nums">{{ order.updated_at|date:"d.m.Y H:i" }}</span>
+      </div>
+      {% if order.notes %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Notlar</span>
+        <span class="text-amber-300 text-xs leading-relaxed">{{ order.notes }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
