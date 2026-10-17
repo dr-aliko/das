@@ -101,6 +101,7 @@ def test_unavailable_coach_shows_friendly_page(client, settings):
 
 @pytest.mark.django_db
 def test_price_tampering_ignored(coach, active_plan, settings):
+    """Step 3 POST must always use plan.price_kurus from DB, never a tampered value."""
     settings.SELF_PURCHASE_ENABLED = True
     settings.LEGAL_TERMS_URL = 'https://example.com/terms'
     settings.LEGAL_DISTANCE_SALES_URL = 'https://example.com/ds'
@@ -108,22 +109,28 @@ def test_price_tampering_ignored(coach, active_plan, settings):
     settings.PAYMENT_SANDBOX = True
     settings.DEBUG = False
 
-    staff = baker.make('users_app.User', role='coach', is_staff=True, is_active=True, is_approved=True)
     client_obj = Client()
-    client_obj.force_login(staff)
+    session = client_obj.session
+    session['purchase_step1'] = {
+        'email':     'hacker@example.com',
+        'full_name': 'Hacker',
+        'phone':     '05321234567',
+        'sinif':     '10',
+        'alan':      '',
+        'plan_id':   str(active_plan.pk),
+        'guardian_name':  '',
+        'guardian_phone': '',
+    }
+    session['purchase_verified_email'] = 'hacker@example.com'
+    session.save()
 
-    with patch('purchase_app.views._purchase_enabled', return_value=True):
+    with patch('purchase_app.views._purchase_enabled', return_value=True), \
+         patch('purchase_app.views.get_provider') as mock_prov:
+        mock_prov.return_value.name = 'sandbox'
+        mock_prov.return_value.create_checkout.return_value = '/satin-al/tesekkur/fake/'
         resp = client_obj.post(
-            f'/satin-al/{coach.wordpress_post_id}/checkout/',
-            {
-                'full_name':        'Hacker',
-                'email':            'hacker@example.com',
-                'plan':             active_plan.pk,
-                'consent_terms':    'on',
-                'consent_distance': 'on',
-                'consent_kvkk':     'on',
-                # Attempt to tamper: no price field accepted
-            },
+            f'/satin-al/{coach.wordpress_post_id}/odeme/',
+            follow=False,
         )
 
     order = Order.objects.filter(email='hacker@example.com').first()
@@ -217,7 +224,7 @@ def test_recent_pending_order_not_cancelled(pending_order):
 
 @pytest.mark.django_db
 def test_existing_email_form_response_identical(coach, active_plan, settings):
-    """Submit with existing-account email must return same form page as a new email."""
+    """Step 1 POST with existing student email must redirect to verify (same as new email) — no user enumeration."""
     settings.SELF_PURCHASE_ENABLED = True
     settings.LEGAL_TERMS_URL = 'https://example.com/terms'
     settings.LEGAL_DISTANCE_SALES_URL = 'https://example.com/ds'
@@ -227,25 +234,28 @@ def test_existing_email_form_response_identical(coach, active_plan, settings):
     existing = baker.make('users_app.User', email='existing@example.com', role='student', is_active=True)
 
     with patch('purchase_app.views._purchase_enabled', return_value=True), \
-         patch('purchase_app.views.get_provider') as mock_prov:
+         patch('purchase_app.views.get_provider') as mock_prov, \
+         patch('purchase_app.views.verification.issue_code', return_value='123456'), \
+         patch('django_q.tasks.async_task'):
         mock_prov.return_value.name = 'sandbox'
-        mock_prov.return_value.create_checkout.return_value = '/satin-al/tesekkur/fake/'
 
         client_obj = Client()
         payload = {
             'full_name':        'Test',
             'email':            existing.email,
+            'phone':            '05321234567',
+            'sinif':            '10',
+            'alan':             '',
             'plan':             active_plan.pk,
             'consent_terms':    'on',
             'consent_distance': 'on',
             'consent_kvkk':     'on',
         }
-        resp = client_obj.post(f'/satin-al/{coach.wordpress_post_id}/checkout/', payload, follow=False)
+        resp = client_obj.post(f'/satin-al/{coach.wordpress_post_id}/', payload, follow=False)
 
-    # Should redirect (same as new email path) — no 409 or "you already have an account" message
-    assert resp.status_code in (302, 200)
-    if resp.status_code == 200:
-        assert b'zaten bir hesab' not in resp.content.lower()
+    # Both known and unknown email should redirect to verify — no 409 or "you already have an account"
+    assert resp.status_code == 302
+    assert '/dogrula/' in resp['Location']
 
 
 # ── Non-student role → needs_review ───────────────────────────────────────────
@@ -337,7 +347,7 @@ def test_renewal_extends_next_payment_due(db, active_plan):
 
 @pytest.mark.django_db
 def test_checkout_rate_limited(coach, active_plan, settings):
-    """After exceeding IP limit, checkout POST returns error."""
+    """After exceeding IP limit, step1 POST returns 200 with error; no order created."""
     settings.SELF_PURCHASE_ENABLED = True
     settings.LEGAL_TERMS_URL = 'https://example.com/terms'
     settings.LEGAL_DISTANCE_SALES_URL = 'https://example.com/ds'
@@ -355,10 +365,13 @@ def test_checkout_rate_limited(coach, active_plan, settings):
          patch('purchase_app.views._checkout_get_ip', return_value=ip):
         client_obj = Client()
         resp = client_obj.post(
-            f'/satin-al/{coach.wordpress_post_id}/checkout/',
+            f'/satin-al/{coach.wordpress_post_id}/',
             {
                 'full_name':        'RL Test',
                 'email':            'rl@example.com',
+                'phone':            '05321234567',
+                'sinif':            '10',
+                'alan':             '',
                 'plan':             active_plan.pk,
                 'consent_terms':    'on',
                 'consent_distance': 'on',

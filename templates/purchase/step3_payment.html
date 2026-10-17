@@ -1,0 +1,51 @@
+{% extends "purchase/base.html" %}
+
+{% block title %}Vagus — Ödeme Özeti{% endblock %}
+
+{% block content %}
+
+  <!-- Coach card -->
+  <div class="coach-card">
+    <div class="coach-avatar" aria-hidden="true">{{ coach_initials }}</div>
+    <div>
+      <div class="coach-name">{{ coach.full_name }}</div>
+      <div class="coach-role">Vagus Koçu</div>
+    </div>
+  </div>
+
+  <!-- Summary card -->
+  <div class="summary-card">
+    <p class="section-label">Özet</p>
+
+    <div class="summary-row">
+      <span class="summary-row__label">Koç</span>
+      <span class="summary-row__value">{{ coach.full_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Plan</span>
+      <span class="summary-row__value">{{ plan.name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Süre</span>
+      <span class="summary-row__value">{{ duration_days }} gün</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">E-posta</span>
+      <span class="summary-row__value">{{ email }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Tutar</span>
+      <span class="summary-row__value summary-price">{{ amount_display }}</span>
+    </div>
+  </div>
+
+  <p style="font-size:13px;color:#64748b;margin:0 0 16px;text-align:center;">
+    Bu e-posta ile ödeme yapılacaktır.
+  </p>
+
+  <form method="post" action="{% url 'purchase:payment' wp_id %}">
+    {% csrf_token %}
+    <button type="submit" class="btn-submit">Ödemeye ilerle →</button>
+  </form>
+
+{% endblock %}

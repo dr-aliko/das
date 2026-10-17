@@ -1,0 +1,78 @@
+{% extends "purchase/base.html" %}
+
+{% block title %}Vagus — E-posta Doğrulama{% endblock %}
+
+{% block content %}
+
+  <!-- Coach card -->
+  <div class="coach-card">
+    <div class="coach-avatar" aria-hidden="true">{{ coach_initials }}</div>
+    <div>
+      <div class="coach-name">{{ coach.full_name }}</div>
+      <div class="coach-role">Vagus Koçu</div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <p style="font-size:15px;font-weight:600;margin:0 0 4px;">Doğrulama kodu gönderildi</p>
+    <p style="font-size:14px;color:#64748b;margin:0 0 20px;">
+      <strong>{{ masked_email }}</strong> adresine bir doğrulama kodu gönderdik.
+    </p>
+
+    {% if verify_error %}
+    <div class="error-box" role="alert">{{ verify_error }}</div>
+    {% endif %}
+
+    {% if account_exists_student %}
+    <div class="info-box" role="alert">
+      Bu e-postayla bir hesabın var.
+      Devam etmek için
+      <a href="{% url 'purchase:page' wp_id %}?mod=giris">Hesabım var sekmesine geç</a>.
+    </div>
+    {% endif %}
+
+    {% if account_exists_other %}
+    <div class="warn-box" role="alert">
+      Bu e-posta adresi başka türde bir hesaba ait. Lütfen farklı bir e-posta adresi kullan.
+      <br>
+      <a href="{% url 'purchase:page' wp_id %}">← E-posta adresini değiştir</a>
+    </div>
+    {% endif %}
+
+    {% if not account_exists_other %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="field">
+        <label for="id_code">Doğrulama Kodu <span class="req-mark">*</span></label>
+        <input type="text" name="code" id="id_code"
+          maxlength="6"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          style="letter-spacing:0.2em;font-size:22px;text-align:center;"
+          autofocus>
+      </div>
+      <button type="submit" class="btn-submit">Doğrula</button>
+    </form>
+
+    <div style="margin-top:16px;font-size:13px;color:#64748b;text-align:center;">
+      {% if can_resend %}
+      <form method="post" action="{% url 'purchase:resend' wp_id %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit"
+          style="background:none;border:none;color:#4f46e5;font-size:13px;cursor:pointer;padding:0;font-family:inherit;text-decoration:underline;">
+          Yeni kod gönder
+        </button>
+      </form>
+      {% else %}
+      <span>2 dakika sonra tekrar deneyebilirsiniz</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div style="margin-top:8px;font-size:13px;text-align:center;">
+    <a href="{% url 'purchase:page' wp_id %}">← E-posta adresini değiştir</a>
+  </div>
+
+{% endblock %}

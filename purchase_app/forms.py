@@ -51,6 +51,7 @@ class PurchaseForm(forms.Form):
         max_length=32,
         label='Telefon',
         error_messages={'required': 'Telefon numarası zorunludur.'},
+        widget=forms.TextInput(attrs={'autocomplete': 'tel', 'inputmode': 'tel'}),
     )
     sinif = forms.ChoiceField(
         choices=SINIF_CHOICES,

@@ -1,0 +1,14 @@
+Merhaba {{ order.full_name }},
+
+{{ order.plan.name }} planını satın aldığınız için teşekkürler.
+
+Sipariş No: #{{ order.pk }}
+Koç: {{ order.coach.full_name }}
+Plan: {{ order.plan.name }}
+Tutar: {{ order.plan.price_display }}
+Tarih: {{ order.created_at|date:"d.m.Y" }}
+{% if valid_until %}Geçerlilik: {{ valid_until|date:"d.m.Y" }}{% endif %}
+
+Bu bir sipariş onayıdır.
+
+Vagus Ekibi

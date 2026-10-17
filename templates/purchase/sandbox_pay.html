@@ -1,42 +1,52 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vagus SANDBOX — Ödeme Simülasyonu</title>
-  <style>
-    body { margin: 0; padding: 40px 16px; background: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e5e7eb; display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
-    .card { max-width: 480px; width: 100%; background: #1f2937; border: 2px solid #f59e0b; border-radius: 16px; padding: 40px; }
-    .badge { display: inline-block; background: #f59e0b; color: #111827; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 99px; letter-spacing: 1px; margin-bottom: 20px; text-transform: uppercase; }
-    h1 { margin: 0 0 20px; font-size: 20px; font-weight: 700; color: #f9fafb; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 28px; font-size: 14px; }
-    td { padding: 6px 0; color: #9ca3af; }
-    td:first-child { color: #6b7280; width: 120px; }
-    .amount { font-size: 28px; font-weight: 800; color: #34d399; margin-bottom: 4px; }
-    form { display: flex; gap: 12px; }
-    .btn-pay { flex: 1; background: #059669; color: white; font-size: 15px; font-weight: 700; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; }
-    .btn-pay:hover { background: #047857; }
-    .btn-cancel { background: #374151; color: #9ca3af; font-size: 14px; font-weight: 600; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="badge">🧪 Sandbox</div>
-    <h1>Ödeme Simülasyonu</h1>
-    <div class="amount">{{ order.plan.price_tl|floatformat:2 }} ₺</div>
-    <p style="color:#6b7280;margin:0 0 24px;font-size:13px;">({{ order.amount_kurus }} kuruş)</p>
-    <table>
-      <tr><td>Sipariş #</td><td>{{ order.pk }}</td></tr>
-      <tr><td>E-posta</td><td>{{ order.email }}</td></tr>
-      <tr><td>Ad</td><td>{{ order.full_name }}</td></tr>
-      <tr><td>Plan</td><td>{{ order.plan.name }}</td></tr>
-      <tr><td>Koç</td><td>{{ order.coach.full_name }}</td></tr>
-    </table>
-    <form method="post" action="{% url 'purchase:sandbox_confirm' order.token %}">
-      {% csrf_token %}
-      <button type="submit" class="btn-pay">✓ Ödemeyi Onayla</button>
-      <a href="/"><button type="button" class="btn-cancel">İptal</button></a>
-    </form>
+{% extends "purchase/base.html" %}
+
+{% block title %}Vagus — Sandbox Ödeme{% endblock %}
+
+{% block steps %}{% endblock %}
+
+{% block content %}
+
+  <!-- Sandbox notice -->
+  <div class="warn-box" style="text-align:center;font-weight:700;font-size:15px;margin-bottom:20px;">
+    TEST ODEMESİ (sandbox) — Gerçek ödeme yapılmaz
   </div>
-</body>
-</html>
+
+  <div class="summary-card">
+    <p class="section-label">Sipariş Detayı</p>
+
+    <div class="summary-row">
+      <span class="summary-row__label">Sipariş #</span>
+      <span class="summary-row__value">{{ order.pk }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">E-posta</span>
+      <span class="summary-row__value">{{ order.email }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Ad</span>
+      <span class="summary-row__value">{{ order.full_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Plan</span>
+      <span class="summary-row__value">{{ order.plan.name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Koç</span>
+      <span class="summary-row__value">{{ order.coach.full_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Tutar</span>
+      <span class="summary-row__value summary-price">{{ order.plan.price_display }}</span>
+    </div>
+  </div>
+
+  <form method="post" action="{% url 'purchase:sandbox_confirm' order.token %}">
+    {% csrf_token %}
+    <button type="submit" class="btn-submit" style="background:#059669;">Ödemeyi Onayla</button>
+  </form>
+
+  <div style="margin-top:12px;text-align:center;">
+    <a href="/" style="font-size:14px;color:#64748b;">← Geri</a>
+  </div>
+
+{% endblock %}

@@ -11,8 +11,35 @@ def _reset_timeout_display():
     return f'{secs // 60} dakika'
 
 
+def send_purchase_verify_email(email, code, full_name):
+    """Async task: send email verification code to purchase buyer."""
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    ctx = {
+        'full_name':      full_name,
+        'code':           code,
+        'expiry_minutes': 10,
+    }
+    try:
+        text_body = render_to_string('emails/purchase_verify_email.txt', ctx)
+        html_body = render_to_string('emails/purchase_verify_email.html', ctx)
+        msg = EmailMultiAlternatives(
+            subject='Vagus doğrulama kodun',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
+            reply_to=['destek@vagus.tr'],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+    except Exception:
+        _log.exception('send_purchase_verify_email: failed for %s', email)
+
+
 def send_purchase_emails(order_id):
-    """Async task: send student set-password email and coach notify email + Notification row."""
+    """Async task: send student set-password/welcome email, order confirm email, coach notify + push."""
     from django.conf import settings
     from django.contrib.auth.tokens import default_token_generator
     from django.core.mail import EmailMultiAlternatives
@@ -34,32 +61,62 @@ def send_purchase_emails(order_id):
         _log.warning('send_purchase_emails: order %s has no student', order_id)
         return
 
-    # ── Student: set-password email ───────────────────────────────────────────
+    # ── Student: welcome email only for new accounts (no usable password) ────
+    if not student.has_usable_password():
+        try:
+            uid   = urlsafe_base64_encode(force_bytes(student.pk))
+            token = default_token_generator.make_token(student)
+            reset_path = f'/auth/password-reset/confirm/{uid}/{token}/'
+            reset_link = f'{settings.APP_BASE_URL}{reset_path}'
+
+            ctx = {
+                'user':                  student,
+                'reset_link':            reset_link,
+                'reset_timeout_display': _reset_timeout_display(),
+                'coach':                 order.coach,
+                'plan':                  order.plan,
+            }
+            text_body = render_to_string('emails/purchase_student_welcome.txt', ctx)
+            html_body = render_to_string('emails/purchase_student_welcome.html', ctx)
+            msg = EmailMultiAlternatives(
+                subject='Vagus — Hesabınız Hazır',
+                body=text_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[student.email],
+            )
+            msg.attach_alternative(html_body, 'text/html')
+            msg.send()
+        except Exception:
+            _log.exception('send_purchase_emails: student welcome email failed for order %s', order_id)
+
+    # ── Order confirmation email (always sent) ────────────────────────────────
     try:
-        uid   = urlsafe_base64_encode(force_bytes(student.pk))
-        token = default_token_generator.make_token(student)
-        reset_path = f'/auth/password-reset/confirm/{uid}/{token}/'
-        reset_link = f'{settings.APP_BASE_URL}{reset_path}'
+        from datetime import date, timedelta
+        from users_app.models import CoachStudent
+
+        cs = CoachStudent.objects.filter(coach=order.coach, student=student).first()
+        if cs and cs.next_payment_due:
+            valid_until = cs.next_payment_due
+        else:
+            valid_until = date.today() + timedelta(days=order.plan.duration_days)
 
         ctx = {
-            'user':                  student,
-            'reset_link':            reset_link,
-            'reset_timeout_display': _reset_timeout_display(),
-            'coach':                 order.coach,
-            'plan':                  order.plan,
+            'order':       order,
+            'valid_until': valid_until,
         }
-        text_body = render_to_string('emails/purchase_student_welcome.txt', ctx)
-        html_body = render_to_string('emails/purchase_student_welcome.html', ctx)
+        text_body = render_to_string('emails/purchase_order_confirm.txt', ctx)
+        html_body = render_to_string('emails/purchase_order_confirm.html', ctx)
         msg = EmailMultiAlternatives(
-            subject='Vagus — Hesabınız Hazır',
+            subject='Vagus — Sipariş Onayı',
             body=text_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[student.email],
+            reply_to=['destek@vagus.tr'],
         )
         msg.attach_alternative(html_body, 'text/html')
         msg.send()
     except Exception:
-        _log.exception('send_purchase_emails: student email failed for order %s', order_id)
+        _log.exception('send_purchase_emails: order confirm email failed for order %s', order_id)
 
     # ── Coach: notification email ─────────────────────────────────────────────
     try:
@@ -102,7 +159,7 @@ def notify_staff_needs_review(order_id):
     """Async task: email staff when an order needs manual review."""
     from django.conf import settings
     from django.contrib.auth import get_user_model
-    from django.core.mail import mail_admins
+    from django.core.mail import EmailMessage
 
     from purchase_app.models import Order
 
@@ -127,7 +184,6 @@ def notify_staff_needs_review(order_id):
         f'Panel: {settings.APP_BASE_URL}/panel/satin-al/siparisler/{order.pk}/'
     )
     try:
-        from django.core.mail import EmailMessage
         msg = EmailMessage(subject, message, settings.DEFAULT_FROM_EMAIL, staff_emails)
         msg.send()
     except Exception:

@@ -1,0 +1,11 @@
+Merhaba {% if full_name %}{{ full_name }}{% else %}orada{% endif %},
+
+Vagus satın alma doğrulama kodunuz:
+
+{{ code }}
+
+Bu kod {{ expiry_minutes }} dakika geçerlidir ve tek kullanımlıktır.
+
+Bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayın.
+
+Vagus Ekibi

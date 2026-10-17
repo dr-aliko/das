@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Vagus{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #0f172a;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #4f46e5; }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    .pg-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 16px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── Step indicator ─────────────────────────────────────────────────────── */
+    .steps-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 20px 0 24px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .step-item.active  { color: #4f46e5; font-weight: 700; }
+    .step-item.done    { color: #22c55e; }
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-item.active  .step-num { background: #4f46e5; color: #fff; }
+    .step-item.done    .step-num { background: #22c55e; color: #fff; }
+    .step-sep {
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+      margin: 0 6px;
+      min-width: 16px;
+    }
+
+    /* ── Container ──────────────────────────────────────────────────────────── */
+    .pg-main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 28px 16px 80px;
+    }
+
+    /* ── Coach card ─────────────────────────────────────────────────────────── */
+    .coach-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+    .coach-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+    .coach-name { font-size: 16px; font-weight: 600; line-height: 1.3; }
+    .coach-role { font-size: 13px; color: #64748b; margin-top: 2px; }
+
+    /* ── Error / info box ───────────────────────────────────────────────────── */
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .warn-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Section label ──────────────────────────────────────────────────────── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      margin: 0 0 12px;
+    }
+
+    /* ── Plan cards ─────────────────────────────────────────────────────────── */
+    .plan-card {
+      display: block;
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .plan-card:hover { border-color: #a5b4fc; }
+    .plan-card:has(input[type="radio"]:checked) {
+      border-color: #4f46e5;
+      background: #fafaff;
+    }
+    .plan-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .plan-card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .plan-card__name { font-size: 15px; font-weight: 700; }
+    .plan-card__price {
+      font-size: 22px;
+      font-weight: 800;
+      color: #4f46e5;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+    .plan-card__duration { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+    .plan-card__features-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .plan-card__features {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .plan-card__features li {
+      font-size: 13px;
+      color: #475569;
+      padding-left: 18px;
+      position: relative;
+    }
+    .plan-card__features li::before {
+      content: '\2713';
+      position: absolute;
+      left: 0;
+      color: #4f46e5;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    /* ── Form card ──────────────────────────────────────────────────────────── */
+    .form-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Fields ─────────────────────────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .field input[type="text"],
+    .field input[type="email"],
+    .field input[type="tel"],
+    .field input[type="number"],
+    .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #0f172a;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2364748b' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .field input:focus, .field select:focus { border-color: #4f46e5; }
+    .field input.is-error, .field select.is-error { border-color: #dc2626; }
+    .field-error { font-size: 12px; color: #dc2626; margin-top: 4px; }
+    .field-hint  { font-size: 12px; color: #64748b;  margin-top: 4px; }
+    .req-mark { color: #dc2626; }
+
+    /* ── Read-only email display ────────────────────────────────────────────── */
+    .email-readonly {
+      font-size: 15px;
+      color: #374151;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    /* ── Guardian box ───────────────────────────────────────────────────────── */
+    .guardian-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+
+    /* ── Under-18 row ───────────────────────────────────────────────────────── */
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .check-row + .check-row { margin-top: 12px; }
+    .check-row + .field-error { margin-top: 4px; margin-left: 26px; }
+    .check-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: #4f46e5;
+      cursor: pointer;
+    }
+    .check-row label {
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+    .check-row label a { color: #4f46e5; text-decoration: none; }
+    .check-row label a:hover { text-decoration: underline; }
+
+    .under18-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 14px;
+    }
+    .under18-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #4f46e5;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .under18-row label { font-size: 14px; color: #374151; cursor: pointer; }
+
+    /* ── Submit button ──────────────────────────────────────────────────────── */
+    .btn-submit {
+      width: 100%;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+    .btn-submit:hover  { background: #4338ca; }
+    .btn-submit:active { background: #3730a3; }
+
+    /* ── Tab strip ──────────────────────────────────────────────────────────── */
+    .tab-strip {
+      display: flex;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 20px;
+      gap: 0;
+    }
+    .tab {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab:hover { color: #4f46e5; }
+    .tab--active {
+      color: #4f46e5;
+      font-weight: 700;
+      border-bottom-color: #4f46e5;
+    }
+
+    /* ── How-it-works strip ─────────────────────────────────────────────────── */
+    .how-strip {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    @media (max-width: 460px) {
+      .how-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    .how-step { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .how-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .how-label { font-size: 11px; color: #475569; line-height: 1.3; }
+
+    /* ── Summary card ───────────────────────────────────────────────────────── */
+    .summary-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row__label { color: #64748b; flex-shrink: 0; }
+    .summary-row__value { color: #0f172a; font-weight: 500; text-align: right; }
+    .summary-price {
+      font-size: 24px;
+      font-weight: 800;
+      color: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+
+<header class="pg-header">
+  <a href="https://vagus.tr" style="display:inline-flex;align-items:center;text-decoration:none;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.03em;">
+    Vagus<span style="color:#4f46e5;">.</span>
+  </a>
+</header>
+
+<main class="pg-main">
+
+  {% block steps %}
+  {% if purchase_step and purchase_steps %}
+  <nav class="steps-bar" aria-label="Adımlar">
+    {% for step_name in purchase_steps %}
+    {% with forloop.counter as i %}
+    {% if not forloop.first %}<div class="step-sep"></div>{% endif %}
+    <div class="step-item {% if i == purchase_step %}active{% elif i < purchase_step %}done{% endif %}">
+      <div class="step-num">{{ i }}</div>
+      <span>{{ step_name }}</span>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </nav>
+  {% endif %}
+  {% endblock steps %}
+
+  {% block content %}{% endblock %}
+
+</main>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
