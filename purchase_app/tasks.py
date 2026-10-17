@@ -155,6 +155,77 @@ def send_purchase_emails(order_id):
         _log.exception('send_purchase_emails: coach notification failed for order %s', order_id)
 
 
+def send_bank_transfer_pending_email(order_id):
+    """Async task: send buyer the bank-transfer 'ödeme bekleniyor' email."""
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    from purchase_app.models import Order
+
+    try:
+        order = Order.objects.select_related('plan').get(pk=order_id)
+    except Order.DoesNotExist:
+        _log.warning('send_bank_transfer_pending_email: order %s not found', order_id)
+        return
+
+    ctx = {
+        'order':     order,
+        'iban':      getattr(settings, 'PURCHASE_IBAN', ''),
+        'holder':    getattr(settings, 'PURCHASE_IBAN_HOLDER', ''),
+        'bank_name': getattr(settings, 'PURCHASE_BANK_NAME', ''),
+    }
+    try:
+        text_body = render_to_string('emails/purchase_bank_transfer_pending.txt', ctx)
+        html_body = render_to_string('emails/purchase_bank_transfer_pending.html', ctx)
+        msg = EmailMultiAlternatives(
+            subject='Vagus — Havale/EFT Bilgileri',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[order.email],
+            reply_to=['destek@vagus.tr'],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+    except Exception:
+        _log.exception('send_bank_transfer_pending_email: failed for order %s', order_id)
+
+
+def notify_staff_new_transfer(order_id):
+    """Async task: notify staff of a new bank-transfer order (PURCHASE_STAFF_NOTIFICATION_EMAIL)."""
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    from purchase_app.models import Order
+
+    staff_email = getattr(settings, 'PURCHASE_STAFF_NOTIFICATION_EMAIL', '').strip()
+    if not staff_email:
+        return
+
+    try:
+        order = Order.objects.select_related('coach', 'plan').get(pk=order_id)
+    except Order.DoesNotExist:
+        _log.warning('notify_staff_new_transfer: order %s not found', order_id)
+        return
+
+    panel_url = f'{settings.APP_BASE_URL}/panel/satin-al/siparisler/{order.pk}/'
+    ctx = {'order': order, 'panel_url': panel_url}
+    try:
+        text_body = render_to_string('emails/purchase_staff_new_transfer.txt', ctx)
+        html_body = render_to_string('emails/purchase_staff_new_transfer.html', ctx)
+        msg = EmailMultiAlternatives(
+            subject=f'[Vagus] Yeni havale siparişi #{order.pk}',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[staff_email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+    except Exception:
+        _log.exception('notify_staff_new_transfer: failed for order %s', order_id)
+
+
 def notify_staff_needs_review(order_id):
     """Async task: email staff when an order needs manual review."""
     from django.conf import settings

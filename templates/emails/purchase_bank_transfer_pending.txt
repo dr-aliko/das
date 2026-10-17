@@ -1,0 +1,19 @@
+Merhaba {{ order.full_name }},
+
+Siparişiniz alındı. Aşağıdaki bilgileri kullanarak havale/EFT yapabilirsiniz.
+
+────────────────────────────────
+SİPARİŞ REFERANSI: {{ order.provider_ref }}
+Bu kodu havale açıklamasına yazmayı unutmayın.
+────────────────────────────────
+
+BANKA:        {{ bank_name }}
+HESAP SAHİBİ: {{ holder }}
+IBAN:         {{ iban }}
+TUTAR:        {{ order.plan.price_display }}
+
+Ödemeniz sisteme yansıdığında hesabınız aktifleştirilecektir.
+
+Sorularınız için destek@vagus.tr adresine yazabilirsiniz.
+
+Vagus Ekibi

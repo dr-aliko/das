@@ -9,22 +9,23 @@
   <div class="form-card" style="text-align:center;padding:40px 24px;">
     {% if status == 'paid' %}
       <div style="font-size:48px;margin-bottom:16px;">&#10003;</div>
-      <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Satın alma tamamlandı ✓</h1>
+      <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Satın alma tamamlandı</h1>
       <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
         Bilgilendirme e-postalarını gönderdik.
         Spam klasörünüzü de kontrol etmeyi unutmayın.
       </p>
-    {% elif status == 'pending' %}
+    {% elif status == 'pending' or status == 'awaiting_transfer' %}
       <div style="font-size:48px;margin-bottom:16px;">&#9203;</div>
       <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Ödeme Bekleniyor</h1>
       <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
-        İşleminiz devam ediyor. Ödemeniz onaylandığında e-posta ile bilgilendirileceksiniz.
+        Ödemeniz onaylandığında hesabınız aktifleştirilecektir.
       </p>
     {% else %}
       <div style="font-size:48px;margin-bottom:16px;">&#8505;</div>
       <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Siparişiniz Alındı</h1>
       <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
-        Siparişiniz inceleniyor. Bilgilendirme e-posta ile yapılacaktır.
+        Siparişiniz işleme alındı.
+        Sorularınız için <a href="mailto:destek@vagus.tr">destek@vagus.tr</a> adresine yazabilirsiniz.
       </p>
     {% endif %}
   </div>

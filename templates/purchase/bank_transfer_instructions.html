@@ -1,0 +1,109 @@
+{% extends "purchase/base.html" %}
+
+{% block title %}Vagus — Havale/EFT Bilgileri{% endblock %}
+
+{% block content %}
+
+  {% if order.status == 'awaiting_transfer' or order.status == 'pending' %}
+
+  <div class="form-card" style="text-align:center;padding:28px 24px 20px;">
+    <div style="font-size:36px;margin-bottom:12px;">🏦</div>
+    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#0f172a;">Siparişiniz Alındı</h1>
+    <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0;">
+      Aşağıdaki bilgileri kullanarak havale veya EFT yapın.<br>
+      Ödemeniz sisteme yansıdığında hesabınız aktifleştirilecektir.
+    </p>
+  </div>
+
+  <!-- Reference code highlight -->
+  <div style="background:#eef2ff;border:2px solid #4f46e5;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6366f1;">Havale Açıklamasına Yazın</p>
+    <p style="margin:0;font-size:26px;font-weight:800;color:#4f46e5;letter-spacing:0.06em;">{{ order.provider_ref }}</p>
+  </div>
+
+  <!-- Bank details -->
+  <div class="summary-card">
+    <p class="section-label">Banka Bilgileri</p>
+
+    <div class="summary-row">
+      <span class="summary-row__label">Banka</span>
+      <span class="summary-row__value">{{ bank_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Hesap Sahibi</span>
+      <span class="summary-row__value">{{ holder }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">IBAN</span>
+      <span class="summary-row__value" style="font-family:monospace;font-size:13px;font-weight:600;">{{ iban }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Tutar</span>
+      <span class="summary-row__value summary-price">{{ order.plan.price_display }}</span>
+    </div>
+  </div>
+
+  <!-- Order summary -->
+  <div class="summary-card">
+    <p class="section-label">Sipariş Özeti</p>
+
+    <div class="summary-row">
+      <span class="summary-row__label">Sipariş #</span>
+      <span class="summary-row__value">{{ order.pk }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Plan</span>
+      <span class="summary-row__value">{{ order.plan.name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">Koç</span>
+      <span class="summary-row__value">{{ order.coach.full_name }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row__label">E-posta</span>
+      <span class="summary-row__value">{{ order.email }}</span>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:8px;">
+    <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0 0 8px;">
+      Bilgileriniz e-posta ile de iletildi.<br>
+      Sorularınız için <a href="mailto:destek@vagus.tr">destek@vagus.tr</a> adresine yazabilirsiniz.
+    </p>
+  </div>
+
+  {% elif order.status == 'paid' %}
+
+  <div class="form-card" style="text-align:center;padding:48px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;">&#10003;</div>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Ödeme Tamamlandı</h1>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
+      Siparişiniz onaylandı ve hesabınız aktifleştirildi.
+    </p>
+  </div>
+
+  {% elif order.status == 'cancelled' %}
+
+  <div class="form-card" style="text-align:center;padding:48px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;">&#8999;</div>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Sipariş İptal Edildi</h1>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
+      Bu sipariş iptal edildi. Yeni bir satın alma için
+      lütfen <a href="https://vagus.tr">vagus.tr</a> adresini ziyaret edin.
+    </p>
+  </div>
+
+  {% else %}
+
+  <div class="form-card" style="text-align:center;padding:48px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;">&#8505;</div>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Sipariş Durumu</h1>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0;">
+      Siparişiniz işleme alınmıştır.
+      Sorularınız için <a href="mailto:destek@vagus.tr">destek@vagus.tr</a> adresine yazabilirsiniz.
+    </p>
+  </div>
+
+  {% endif %}
+
+{% endblock %}

@@ -46,8 +46,17 @@ def increment_checkout_counters(email, ip):
 
 def get_provider():
     from .providers.sandbox import SandboxProvider
+    from .providers.bank_transfer import BankTransferProvider
+
     if settings.DEBUG or getattr(settings, 'PAYMENT_SANDBOX', False):
         return SandboxProvider()
+
+    iban   = getattr(settings, 'PURCHASE_IBAN', '').strip()
+    holder = getattr(settings, 'PURCHASE_IBAN_HOLDER', '').strip()
+    bank   = getattr(settings, 'PURCHASE_BANK_NAME', '').strip()
+    if iban and holder and bank:
+        return BankTransferProvider(iban=iban, holder=holder, bank_name=bank)
+
     raise RuntimeError('No payment provider configured.')
 
 
@@ -186,19 +195,34 @@ def _mark_needs_review(order, reason):
 # ── Stale order cleanup ───────────────────────────────────────────────────────
 
 def cancel_stale_orders():
-    """Cancel pending orders older than 2 hours. Called hourly by django-q."""
+    """
+    Cancel stale orders.
+    Regular pending (sandbox/other): after 2 hours.
+    Bank-transfer awaiting_transfer: after BANK_TRANSFER_EXPIRY_DAYS days (default 7).
+    """
     from datetime import timedelta
 
     from django.utils import timezone
 
     from .models import Order
 
-    cutoff = timezone.now() - timedelta(hours=2)
-    updated = (
+    cutoff_2h = timezone.now() - timedelta(hours=2)
+    cancelled_regular = (
         Order.objects
-        .filter(status=Order.STATUS_PENDING, created_at__lt=cutoff)
+        .filter(status=Order.STATUS_PENDING, created_at__lt=cutoff_2h)
         .update(status=Order.STATUS_CANCELLED)
     )
-    if updated:
-        _log.info('cancel_stale_orders: cancelled %d orders', updated)
-    return updated
+
+    expiry_days = getattr(settings, 'BANK_TRANSFER_EXPIRY_DAYS', 7)
+    cutoff_transfer = timezone.now() - timedelta(days=expiry_days)
+    cancelled_transfer = (
+        Order.objects
+        .filter(status=Order.STATUS_AWAITING_TRANSFER, created_at__lt=cutoff_transfer)
+        .update(status=Order.STATUS_CANCELLED)
+    )
+
+    total = cancelled_regular + cancelled_transfer
+    if total:
+        _log.info('cancel_stale_orders: cancelled %d orders (%d regular, %d transfer)',
+                  total, cancelled_regular, cancelled_transfer)
+    return total

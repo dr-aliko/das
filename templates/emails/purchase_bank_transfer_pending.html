@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+
+      <tr><td style="background:#4f46e5;padding:20px 28px;">
+        <span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;">Vagus.</span>
+      </td></tr>
+
+      <tr><td style="padding:28px 28px 8px;">
+        <p style="margin:0 0 8px;font-size:15px;">Merhaba <strong>{{ order.full_name }}</strong>,</p>
+        <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">
+          Siparişiniz alındı. Aşağıdaki bilgileri kullanarak havale/EFT işlemini tamamlayabilirsiniz.
+        </p>
+      </td></tr>
+
+      <tr><td style="padding:16px 28px;">
+        <div style="background:#f8fafc;border:2px solid #4f46e5;border-radius:10px;padding:20px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Sipariş Referansı</p>
+          <p style="margin:0 0 16px;font-size:22px;font-weight:800;color:#4f46e5;letter-spacing:0.04em;">{{ order.provider_ref }}</p>
+          <p style="margin:0;font-size:12px;color:#64748b;">Bu kodu havale/EFT açıklamasına yazın.</p>
+        </div>
+      </td></tr>
+
+      <tr><td style="padding:0 28px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+          <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <td style="padding:10px 16px;font-size:12px;color:#64748b;width:40%;">Banka</td>
+            <td style="padding:10px 16px;font-size:14px;font-weight:500;color:#0f172a;">{{ bank_name }}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:10px 16px;font-size:12px;color:#64748b;">Hesap Sahibi</td>
+            <td style="padding:10px 16px;font-size:14px;font-weight:500;color:#0f172a;">{{ holder }}</td>
+          </tr>
+          <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+            <td style="padding:10px 16px;font-size:12px;color:#64748b;">IBAN</td>
+            <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0f172a;font-family:monospace;">{{ iban }}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 16px;font-size:12px;color:#64748b;">Tutar</td>
+            <td style="padding:10px 16px;font-size:18px;font-weight:800;color:#4f46e5;">{{ order.plan.price_display }}</td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <tr><td style="padding:0 28px 28px;">
+        <p style="margin:0;color:#475569;font-size:13px;line-height:1.6;">
+          Ödemeniz sisteme yansıdığında hesabınız aktifleştirilecektir.<br>
+          Sorularınız için <a href="mailto:destek@vagus.tr" style="color:#4f46e5;">destek@vagus.tr</a> adresine yazabilirsiniz.
+        </p>
+      </td></tr>
+
+      <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 28px;">
+        <p style="margin:0;font-size:12px;color:#94a3b8;">Vagus Ekibi</p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

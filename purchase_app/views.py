@@ -35,25 +35,26 @@ _PURCHASE_STEPS = ['Bilgiler', 'Doğrulama', 'Ödeme']
 
 
 def _purchase_enabled():
-    return (
-        getattr(settings, 'SELF_PURCHASE_ENABLED', False)
-        and all([
-            getattr(settings, 'LEGAL_TERMS_URL', ''),
-            getattr(settings, 'LEGAL_DISTANCE_SALES_URL', ''),
-            getattr(settings, 'LEGAL_PRIVACY_URL', ''),
-        ])
+    if not getattr(settings, 'SELF_PURCHASE_ENABLED', False):
+        return False
+    if not all([
+        getattr(settings, 'LEGAL_TERMS_URL', ''),
+        getattr(settings, 'LEGAL_DISTANCE_SALES_URL', ''),
+        getattr(settings, 'LEGAL_PRIVACY_URL', ''),
+    ]):
+        return False
+    # Sandbox bypasses IBAN check; otherwise all three IBAN vars must be set
+    if settings.DEBUG or getattr(settings, 'PAYMENT_SANDBOX', False):
+        return True
+    return bool(
+        getattr(settings, 'PURCHASE_IBAN', '').strip()
+        and getattr(settings, 'PURCHASE_IBAN_HOLDER', '').strip()
+        and getattr(settings, 'PURCHASE_BANK_NAME', '').strip()
     )
 
 
 def _sandbox_on():
     return settings.DEBUG or getattr(settings, 'PAYMENT_SANDBOX', False)
-
-
-def _sandbox_test_emails():
-    raw = getattr(settings, 'SANDBOX_TEST_EMAILS', '')
-    if not raw:
-        return set()
-    return {e.strip().lower() for e in raw.split(',') if e.strip()}
 
 
 def _coach_initials(full_name):
@@ -541,28 +542,35 @@ def step3_payment(request, wp_id):
 # ── Sandbox ───────────────────────────────────────────────────────────────────
 
 def sandbox_pay(request, order_token):
-    """Sandbox payment page. Staff always; buyers via SANDBOX_TEST_EMAILS."""
-    if not _sandbox_on():
+    """Fake payment page. Staff + sandbox only."""
+    if not _sandbox_on() or not request.user.is_authenticated or not request.user.is_staff:
         raise Http404
     order = get_object_or_404(Order, token=order_token, status=Order.STATUS_PENDING)
-    is_staff = request.user.is_authenticated and request.user.is_staff
-    if not is_staff and order.email.lower() not in _sandbox_test_emails():
-        raise Http404
     return render(request, 'purchase/sandbox_pay.html', {'order': order})
 
 
 @require_POST
 def sandbox_confirm(request, order_token):
-    """Sandbox payment confirm. Staff always; buyers via SANDBOX_TEST_EMAILS."""
-    if not _sandbox_on():
+    """Staff confirms sandbox payment."""
+    if not _sandbox_on() or not request.user.is_authenticated or not request.user.is_staff:
         raise Http404
     order = get_object_or_404(Order, token=order_token, status=Order.STATUS_PENDING)
-    is_staff = request.user.is_authenticated and request.user.is_staff
-    if not is_staff and order.email.lower() not in _sandbox_test_emails():
-        raise Http404
     on_payment_success(order)
     order.refresh_from_db()
     return redirect('purchase:success', order_token=str(order.token))
+
+
+def bank_transfer_instructions(request, order_token):
+    """Public page shown after bank-transfer order creation."""
+    order = get_object_or_404(Order, token=order_token)
+    return render(request, 'purchase/bank_transfer_instructions.html', {
+        'order':     order,
+        'iban':      getattr(settings, 'PURCHASE_IBAN', ''),
+        'holder':    getattr(settings, 'PURCHASE_IBAN_HOLDER', ''),
+        'bank_name': getattr(settings, 'PURCHASE_BANK_NAME', ''),
+        'purchase_step':  3,
+        'purchase_steps': _PURCHASE_STEPS,
+    })
 
 
 def success(request, order_token):
@@ -698,3 +706,23 @@ def panel_plan_update(request, pk):
         'plans':  plans,
         'errors': errors,
     })
+
+
+@staff_required
+@require_POST
+def panel_order_mark_paid(request, pk):
+    """Mark an order as paid and trigger on_payment_success. Idempotent."""
+    order = get_object_or_404(Order, pk=pk)
+    on_payment_success(order)
+    return redirect('purchase_panel:order_detail', pk=pk)
+
+
+@staff_required
+@require_POST
+def panel_order_cancel(request, pk):
+    """Cancel a pending or awaiting-transfer order."""
+    order = get_object_or_404(Order, pk=pk)
+    if order.status in (Order.STATUS_PENDING, Order.STATUS_AWAITING_TRANSFER):
+        order.status = Order.STATUS_CANCELLED
+        order.save(update_fields=['status', 'updated_at'])
+    return redirect('purchase_panel:order_detail', pk=pk)

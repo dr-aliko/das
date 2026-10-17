@@ -74,8 +74,8 @@
         <span class="text-ink-300">{{ order.provider }}</span>
       </div>
       <div class="flex gap-4 text-sm">
-        <span class="text-ink-500 w-40 shrink-0">Provider Ref</span>
-        <span class="text-ink-300 font-mono text-xs">{{ order.provider_ref|default:"—" }}</span>
+        <span class="text-ink-500 w-40 shrink-0">Referans Kodu</span>
+        <span class="text-indigo-400 font-mono font-semibold">{{ order.provider_ref|default:"—" }}</span>
       </div>
       <div class="flex gap-4 text-sm">
         <span class="text-ink-500 w-40 shrink-0">Koça Gösterildi</span>
@@ -93,6 +93,48 @@
       {% endif %}
     </div>
   </div>
+
+  {% if order.status == 'pending' or order.status == 'awaiting_transfer' %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">İşlemler</h2>
+    </div>
+    <div class="px-5 py-4 flex gap-3 flex-wrap">
+      <form method="post" action="{% url 'purchase_panel:order_mark_paid' order.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                onclick="return confirm('Ödeme alındı olarak işaretlensin mi?')"
+                class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+          Ödeme Alındı
+        </button>
+      </form>
+      <form method="post" action="{% url 'purchase_panel:order_cancel' order.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                onclick="return confirm('Sipariş iptal edilsin mi?')"
+                class="px-4 py-2 rounded-lg text-sm font-semibold bg-ink-700 hover:bg-ink-600 text-ink-200 transition-colors border border-ink-600">
+          İptal Et
+        </button>
+      </form>
+    </div>
+  </div>
+  {% elif order.status == 'cancelled' and order.provider == 'bank_transfer' %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">İşlemler</h2>
+    </div>
+    <div class="px-5 py-4 flex gap-3 flex-wrap">
+      <form method="post" action="{% url 'purchase_panel:order_mark_paid' order.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                onclick="return confirm('İptal edilmiş sipariş için ödeme alındı olarak işaretlensin mi?')"
+                class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+          Ödeme Alındı (İptal Edilmişti)
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}

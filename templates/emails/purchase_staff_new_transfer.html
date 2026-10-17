@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a;padding:24px;">
+<p><strong>Yeni havale/EFT siparişi — Sipariş #{{ order.pk }}</strong></p>
+<table cellpadding="4" cellspacing="0" style="font-size:14px;border-collapse:collapse;">
+  <tr><td style="color:#64748b;padding-right:16px;">E-posta</td><td>{{ order.email }}</td></tr>
+  <tr><td style="color:#64748b;">Ad</td><td>{{ order.full_name }}</td></tr>
+  <tr><td style="color:#64748b;">Koç</td><td>{{ order.coach }}</td></tr>
+  <tr><td style="color:#64748b;">Plan</td><td>{{ order.plan }}</td></tr>
+  <tr><td style="color:#64748b;">Tutar</td><td><strong>{{ order.plan.price_display }}</strong></td></tr>
+  <tr><td style="color:#64748b;">Referans</td><td style="font-weight:700;color:#4f46e5;">{{ order.provider_ref }}</td></tr>
+</table>
+<p><a href="{{ panel_url }}" style="color:#4f46e5;">Panel'de görüntüle →</a></p>
+</body>
+</html>

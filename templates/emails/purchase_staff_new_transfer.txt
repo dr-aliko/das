@@ -1,0 +1,10 @@
+Yeni havale/EFT siparişi — Sipariş #{{ order.pk }}
+
+E-posta:   {{ order.email }}
+Ad:        {{ order.full_name }}
+Koç:       {{ order.coach }}
+Plan:      {{ order.plan }}
+Tutar:     {{ order.plan.price_display }}
+Referans:  {{ order.provider_ref }}
+
+Panel: {{ panel_url }}

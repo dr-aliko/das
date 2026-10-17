@@ -42,19 +42,21 @@ class Plan(models.Model):
 
 
 class Order(models.Model):
-    STATUS_PENDING      = 'pending'
-    STATUS_PAID         = 'paid'
-    STATUS_FAILED       = 'failed'
-    STATUS_CANCELLED    = 'cancelled'
-    STATUS_REFUNDED     = 'refunded'
-    STATUS_NEEDS_REVIEW = 'needs_review'
+    STATUS_PENDING            = 'pending'
+    STATUS_AWAITING_TRANSFER  = 'awaiting_transfer'
+    STATUS_PAID               = 'paid'
+    STATUS_FAILED             = 'failed'
+    STATUS_CANCELLED          = 'cancelled'
+    STATUS_REFUNDED           = 'refunded'
+    STATUS_NEEDS_REVIEW       = 'needs_review'
     STATUS_CHOICES = [
-        (STATUS_PENDING,      'Bekliyor'),
-        (STATUS_PAID,         'Ödendi'),
-        (STATUS_FAILED,       'Başarısız'),
-        (STATUS_CANCELLED,    'İptal Edildi'),
-        (STATUS_REFUNDED,     'İade Edildi'),
-        (STATUS_NEEDS_REVIEW, 'İnceleme Gerekiyor'),
+        (STATUS_PENDING,           'Bekliyor'),
+        (STATUS_AWAITING_TRANSFER, 'Havale Bekleniyor'),
+        (STATUS_PAID,              'Ödendi'),
+        (STATUS_FAILED,            'Başarısız'),
+        (STATUS_CANCELLED,         'İptal Edildi'),
+        (STATUS_REFUNDED,          'İade Edildi'),
+        (STATUS_NEEDS_REVIEW,      'İnceleme Gerekiyor'),
     ]
 
     token        = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
