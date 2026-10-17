@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n membership_filters %}
 
 {% block title %}Öğrencilerim — DAS{% endblock %}
 
@@ -224,6 +224,7 @@
                   </div>
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
+                {% if item.cs %}{% membership_badge item.cs %}{% endif %}
               </div>
             </div>
 
@@ -316,6 +317,7 @@
                 {% endif %}
               </div>
               <p class="pii text-[11px] text-ink-500 mt-0.5">{{ item.student.grade|default:"—" }}</p>
+              {% if item.cs %}{% membership_badge item.cs %}{% endif %}
             </div>
             <div class="hidden sm:flex items-center gap-5 shrink-0">
               <div class="text-right">

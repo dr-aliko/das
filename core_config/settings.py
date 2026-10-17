@@ -254,6 +254,7 @@ PURCHASE_BANK_NAME                = config('PURCHASE_BANK_NAME',                
 PURCHASE_STAFF_NOTIFICATION_EMAIL = config('PURCHASE_STAFF_NOTIFICATION_EMAIL', default='')
 BANK_TRANSFER_EXPIRY_DAYS         = config('BANK_TRANSFER_EXPIRY_DAYS',         default=7, cast=int)
 PURCHASE_WHATSAPP_NUMBER          = config('PURCHASE_WHATSAPP_NUMBER',          default='')
+AUTO_DEACTIVATE_VAGUS_OVERDUE     = config('AUTO_DEACTIVATE_VAGUS_OVERDUE',     default=True, cast=bool)
 
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)

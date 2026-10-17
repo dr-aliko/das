@@ -8,6 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.utils import is_student_program_expired
 from tasks_app.forms import GorevForm
 from tasks_app.models import AktiviteTipi
 from tasks_app.services import api_client, tasks, week as week_svc
@@ -52,8 +53,27 @@ def _build_meta(aktivite_tipi: str, body: dict) -> dict | None:
 @method_decorator(coach_required, name='dispatch')
 class HaftaView(View):
     def get(self, request):
-        coached_students = students.list_for_coach(request.user)
-        return render(request, "coach/tasks/hafta.html", {"students": coached_students})
+        from users_app.models import CoachStudent
+        from django.utils import timezone
+        coached_students = list(students.list_for_coach(request.user))
+        cs_map = {
+            cs.student_id: cs
+            for cs in CoachStudent.objects.filter(
+                coach=request.user, active=True,
+                student_id__in=[s.id for s in coached_students],
+            )
+        }
+        today = timezone.localdate()
+        expiry_map = {}
+        for s in coached_students:
+            cs = cs_map.get(s.id)
+            if cs and cs.source == CoachStudent.SOURCE_VAGUS and cs.next_payment_due:
+                expiry_map[s.id] = cs.next_payment_due < today
+        import json as _json
+        return render(request, "coach/tasks/hafta.html", {
+            "students": coached_students,
+            "student_expiry_map_json": _json.dumps(expiry_map),
+        })
 
 
 # ── Students (read-only) ──────────────────────────────────────────────────────
@@ -61,10 +81,25 @@ class HaftaView(View):
 @method_decorator(coach_required, name='dispatch')
 class StudentListView(View):
     def get(self, request):
-        data = [
-            {"id": s.id, "full_name": s.full_name, "alan": s.alan}
-            for s in students.list_for_coach(request.user)
-        ]
+        from users_app.models import CoachStudent
+        from django.utils import timezone
+        student_list = list(students.list_for_coach(request.user))
+        cs_map = {
+            cs.student_id: cs
+            for cs in CoachStudent.objects.filter(
+                coach=request.user, active=True,
+                student_id__in=[s.id for s in student_list],
+            )
+        }
+        today = timezone.localdate()
+        data = []
+        for s in student_list:
+            cs = cs_map.get(s.id)
+            is_expired = bool(
+                cs and cs.source == CoachStudent.SOURCE_VAGUS
+                and cs.next_payment_due and cs.next_payment_due < today
+            )
+            data.append({"id": s.id, "full_name": s.full_name, "alan": s.alan, "is_expired": is_expired})
         return JsonResponse({"students": data})
 
 
@@ -96,6 +131,8 @@ class GorevListView(View):
         student_id = cd.get("student_id") or body.get("student_id")
         if not student_id:
             return JsonResponse({"errors": "student_id gerekli"}, status=400)
+        if is_student_program_expired(request.user, int(student_id)):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         grup = tasks.create(
             request.user,
             int(student_id),
@@ -124,6 +161,12 @@ class GorevDetailView(View):
         form = GorevForm(body)
         if not form.is_valid():
             return JsonResponse({"errors": form.errors}, status=400)
+        from tasks_app.models import GorevGrubu
+        sid = GorevGrubu.objects.filter(
+            student__coach=request.user, pk=pk
+        ).values_list('student_id', flat=True).first()
+        if sid and is_student_program_expired(request.user, sid):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         cd = form.cleaned_data
         ok = tasks.update(
             request.user,
@@ -138,6 +181,12 @@ class GorevDetailView(View):
         return JsonResponse({"ok": ok}, status=200 if ok else 404)
 
     def delete(self, request, pk: int):
+        from tasks_app.models import GorevGrubu
+        sid = GorevGrubu.objects.filter(
+            student__coach=request.user, pk=pk
+        ).values_list('student_id', flat=True).first()
+        if sid and is_student_program_expired(request.user, sid):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         ok = tasks.delete(request.user, pk)
         return JsonResponse({"ok": ok}, status=200 if ok else 404)
 
@@ -149,6 +198,12 @@ class GorevCopyView(View):
             hedef = date.fromisoformat(_body(request)["hedef_tarih"])
         except (KeyError, ValueError):
             return JsonResponse({"errors": "hedef_tarih gerekli"}, status=400)
+        from tasks_app.models import GorevGrubu
+        sid = GorevGrubu.objects.filter(
+            student__coach=request.user, pk=pk
+        ).values_list('student_id', flat=True).first()
+        if sid and is_student_program_expired(request.user, sid):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         yeni = tasks.copy_to_date(request.user, pk, hedef)
         if not yeni:
             return JsonResponse({"ok": False}, status=404)
@@ -162,6 +217,12 @@ class GorevReorderView(View):
             hedef_id = int(_body(request)["hedef_id"])
         except (KeyError, ValueError):
             return JsonResponse({"errors": "hedef_id gerekli"}, status=400)
+        from tasks_app.models import GorevGrubu
+        sid = GorevGrubu.objects.filter(
+            student__coach=request.user, pk=pk
+        ).values_list('student_id', flat=True).first()
+        if sid and is_student_program_expired(request.user, sid):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         ok = tasks.swap_order(request.user, pk, hedef_id)
         return JsonResponse({"ok": ok}, status=200 if ok else 400)
 
@@ -182,6 +243,12 @@ class KaynakKitapListView(View):
 
     def post(self, request):
         body = _body(request)
+        try:
+            sid = int(body.get("student_id") or 0)
+        except (ValueError, TypeError):
+            sid = 0
+        if sid and is_student_program_expired(request.user, sid):
+            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
         ok = resources.add(
             request.user,
             body.get("student_id"),

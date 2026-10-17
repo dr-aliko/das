@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static membership_filters %}
 
 {% block title %}Panel — Öğrenciler{% endblock %}
 
@@ -96,6 +96,7 @@
               {% else %}
                 <span class="text-ink-700">—</span>
               {% endif %}
+              {% membership_badge link %}
             </td>
             <td class="px-5 py-3 text-right">
               <button type="button"

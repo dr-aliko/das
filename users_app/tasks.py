@@ -172,9 +172,17 @@ def send_konu_review_reminders():
 
 def auto_deactivate_overdue_vagus_students():
     """Scheduled daily at 01:00 Istanbul. Deactivates Vagus-sourced students whose payment is overdue."""
+    import logging
+    from django.conf import settings
     from django.utils.timezone import localdate
     from users_app.models import CoachStudent
     from users_app.services.notifications import send_push_notification
+
+    if not getattr(settings, 'AUTO_DEACTIVATE_VAGUS_OVERDUE', True):
+        logging.getLogger(__name__).info(
+            'auto_deactivate_overdue_vagus_students: skipped (AUTO_DEACTIVATE_VAGUS_OVERDUE=False)'
+        )
+        return 0
 
     today = localdate()
     overdue = (

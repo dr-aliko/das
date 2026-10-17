@@ -15,6 +15,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
 from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.utils import is_student_program_expired
+
+_EXPIRED_MSG = 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'
 
 from .forms import BransDenemeForm
 from .models import (
@@ -1286,6 +1289,8 @@ def brans_subject_export_coach(request, student_id, subject_slug):
 def coach_brans_create_for_student(request, student_id):
     if not coach_can_view_student(request.user, student_id):
         return HttpResponseForbidden('Bu öğrenciyi görüntüleme yetkiniz yok.')
+    if request.method == 'POST' and is_student_program_expired(request.user, student_id):
+        return HttpResponseForbidden(_EXPIRED_MSG)
     from users_app.models import User as UserModel
     student = get_object_or_404(UserModel, id=student_id, role='student')
     next_url = _safe_next_url(request, f'/coach/student/{student.id}/brans/')
@@ -2365,6 +2370,15 @@ def coach_dashboard(request):
             coach=request.user, student=student, defaults={'active': True}
         )
 
+    # Build CoachStudent lookup for expiry badges
+    cs_map = {
+        cs.student_id: cs
+        for cs in CoachStudent.objects.filter(
+            coach=request.user, active=True,
+            student_id__in=[s.id for s in students],
+        )
+    }
+
     CoachAuditLog.objects.create(coach=request.user, student=None, action='viewed_roster')
 
     student_data = []
@@ -2412,6 +2426,7 @@ def coach_dashboard(request):
 
         student_data.append({
             'student': student,
+            'cs': cs_map.get(student.id),
             'last_net': last_net,
             'avg_30d': avg_30d,
             'last_exam_ago': last_exam_ago or '—',
@@ -2771,6 +2786,8 @@ def assign_task(request):
         return JsonResponse({'ok': False}, status=400)
 
     direct_complete = bool(data.get('direct_complete', False))
+    if is_student_program_expired(request.user, student_id):
+        return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     from users_app.models import User
     student = get_object_or_404(User, id=student_id, role='student', coach=request.user)
     topic = get_object_or_404(Topic, id=topic_id)
@@ -2824,6 +2841,8 @@ def coach_complete_task(request, task_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     task = get_object_or_404(StudentTask, id=task_id)
+    if is_student_program_expired(request.user, task.student_id):
+        return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     task.is_completed = True
     task.completed_at = timezone.now()
     task.next_review_date = date.today() + timedelta(days=1)
@@ -2885,6 +2904,8 @@ def coach_task_action(request, task_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     task = get_object_or_404(StudentTask, id=task_id)
+    if is_student_program_expired(request.user, task.student_id):
+        return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     return _task_action_handler(request, task)
 
 
@@ -2899,6 +2920,8 @@ def coach_brans_task_assign(request, student_id):
         return JsonResponse({'ok': False}, status=405)
     if not coach_can_view_student(request.user, student_id):
         return JsonResponse({'ok': False}, status=403)
+    if is_student_program_expired(request.user, student_id):
+        return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     try:
         data = json.loads(request.body)
         topic_id = int(data['topic_id'])
@@ -2937,6 +2960,8 @@ def coach_brans_task_action(request, student_id, task_id):
         return JsonResponse({'ok': False}, status=405)
     if not coach_can_view_student(request.user, student_id):
         return JsonResponse({'ok': False}, status=403)
+    if is_student_program_expired(request.user, student_id):
+        return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     from users_app.models import User as UserModel
     student = get_object_or_404(UserModel, id=student_id, role='student')
     task = get_object_or_404(StudentTask, id=task_id, student=student,

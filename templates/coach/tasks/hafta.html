@@ -208,6 +208,13 @@
       <p class="text-sm font-bold text-[var(--muted)]">Görevleri görüntülemek için bir öğrenci seçin.</p>
     </div>
 
+    {# Expiry notice for mobile #}
+    <div x-show="!loading && selectedStudent && window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[selectedStudent?.id]"
+         x-cloak
+         style="border-radius:12px;border:1px solid rgba(248,113,113,0.35);background:rgba(248,113,113,0.07);padding:12px 16px;margin-bottom:12px;font-size:13px;color:#f87171;text-align:center;">
+      Üyelik süresi dolmuş — program düzenlenemiyor.
+    </div>
+
     {# Task cards #}
     <div x-show="!loading && selectedStudent" class="space-y-3">
       <template x-for="task in activeDayActiveTasks" :key="task.id">
@@ -249,16 +256,18 @@
           <svg class="w-8 h-8" viewBox="0 0 24 24"><use href="#das-icon-task"/></svg>
         </div>
         <p class="text-sm font-bold text-[var(--muted)]">Bu gün için görev bulunmuyor.</p>
-        <button @click="openAdd()" class="mt-4 text-[var(--primary)] font-bold text-sm active:scale-95 transition-transform">
+        <button @click="openAdd()"
+                x-show="!(window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[selectedStudent?.id])"
+                class="mt-4 text-[var(--primary)] font-bold text-sm active:scale-95 transition-transform">
           Yeni görev ekle →
         </button>
       </div>
     </div>
   </main>
 
-  {# FAB — add task for selected student #}
+  {# FAB — add task for selected student (hidden when membership expired) #}
   <button @click="openAdd()"
-          x-show="selectedStudent"
+          x-show="selectedStudent && !(window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[selectedStudent?.id])"
           class="fixed bottom-24 right-4 w-14 h-14 bg-[var(--primary)] text-white rounded-2xl shadow-lg shadow-indigo-500/40 flex items-center justify-center active:scale-95 transition-transform z-30">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/>
@@ -272,6 +281,7 @@
 
 <script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
 <script>const _STUDENT_ALAN_MAP = { {% for s in students %}{{ s.id }}: '{{ s.alan }}',{% endfor %} };</script>
+<script>window._STUDENT_EXPIRY_MAP = {{ student_expiry_map_json|default:"{}" }};</script>
 <div class="hidden md:block">
 <div x-data="panel()" x-init="init()" x-cloak
      @playlist-imported.window="onPlaylistImported($event.detail)">
@@ -399,6 +409,12 @@
   </div>
   {% endif %}
 
+  <div x-show="studentId && window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[studentId]"
+       x-cloak
+       style="border-radius:12px;border:1px solid rgba(248,113,113,0.35);background:rgba(248,113,113,0.07);padding:12px 16px;margin-bottom:12px;font-size:13px;color:#f87171;">
+    Bu öğrencinin üyelik süresi dolmuş — program düzenlenemiyor. Yenileme için yöneticiye başvurun.
+  </div>
+
   <div class="overflow-x-auto pb-2">
   <div id="weekly-grid" class="grid grid-cols-7 gap-3 min-h-[60vh] min-w-[900px]">
     <template x-for="(gun, idx) in days" :key="idx">
@@ -423,7 +439,8 @@
         </div>
 
         <div data-pdf-hide class="print:hidden px-2 pt-2 shrink-0">
-          <button @click="openAddTask(gun.tarih)" :disabled="!studentId"
+          <button @click="openAddTask(gun.tarih)"
+                  :disabled="!studentId || (window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[studentId])"
                   class="w-full py-2 text-xs text-[var(--muted-2)] hover:text-[var(--heading)] hover:bg-[var(--surface-2)]
                          rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--border-strong)]
                          disabled:opacity-30 disabled:cursor-not-allowed transition">
@@ -487,7 +504,8 @@
                 </div>
               </div>
 
-              <div data-pdf-hide class="print:hidden mt-2 hidden sm:flex gap-1 flex-wrap">
+              <div data-pdf-hide class="print:hidden mt-2 hidden sm:flex gap-1 flex-wrap"
+                   x-show="!(window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[studentId])">
                 <button @click.stop="editTask(g)"
                         class="flex-1 text-[10px] font-medium py-1 bg-[var(--surface-2)] border border-[var(--border)]
                                text-[var(--body)] rounded-md hover:bg-[var(--surface-3)] transition">
@@ -568,7 +586,8 @@
                       </div>
                     </div>
                   </div>
-                  <div class="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 shrink-0">
+                  <div class="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 shrink-0"
+                       x-show="!(window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[selectedStudent?.id])">
                     <div class="flex gap-2">
                       <button @click="editTask(g); sheetOpen = false"
                               class="flex-1 text-sm font-medium py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition">
