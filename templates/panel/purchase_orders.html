@@ -21,7 +21,7 @@
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-3 flex-wrap">
-      <form method="get" class="flex items-center gap-2">
+      <form method="get" class="flex items-center gap-2 flex-wrap">
         <label class="text-xs text-ink-500 shrink-0">Durum:</label>
         <select name="status" onchange="this.form.submit()"
                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
@@ -30,10 +30,16 @@
             <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
-        {% if status_filter %}
+        <input type="text" name="q" value="{{ q }}" placeholder="E-posta veya kod ara…"
+               class="h-8 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 placeholder-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 w-48">
+        {% if status_filter or q %}
           <a href="{% url 'purchase_panel:orders' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>
         {% endif %}
       </form>
+      <a href="{% url 'purchase_panel:orders' %}?filter=claimed"
+         class="text-xs {% if claimed_filter %}text-amber-400 font-semibold{% else %}text-ink-500 hover:text-ink-300{% endif %} transition-colors">
+        Bildirildi{% if claimed_filter %} ✓{% endif %}
+      </a>
       <span class="ml-auto text-xs text-ink-500">{{ orders|length }} kayıt</span>
     </div>
 
@@ -61,6 +67,7 @@
             <td class="px-4 py-3 text-ink-300">{{ order.plan.name }}</td>
             <td class="px-4 py-3 text-ink-200 text-right tabular-nums">{{ order.plan.price_tl|floatformat:2 }} ₺</td>
             <td class="px-4 py-3">
+              <div class="flex flex-col gap-1">
               {% if order.status == 'paid' %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Ödendi</span>
               {% elif order.status == 'awaiting_transfer' %}
@@ -78,6 +85,10 @@
               {% else %}
                 <span class="text-ink-500 text-xs">{{ order.get_status_display }}</span>
               {% endif %}
+              {% if order.payment_claimed_at %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">Ödeme Bildirildi</span>
+              {% endif %}
+              </div>
             </td>
             <td class="px-4 py-3 text-indigo-400 font-mono text-xs">{{ order.provider_ref|default:"—" }}</td>
             <td class="px-4 py-3 text-ink-500 text-xs tabular-nums">{{ order.created_at|date:"d.m.Y H:i" }}</td>

@@ -12,5 +12,6 @@ urlpatterns = [
     path('sandbox/pay/<uuid:order_token>/',             views.sandbox_pay,                name='sandbox_pay'),
     path('sandbox/confirm/<uuid:order_token>/',         views.sandbox_confirm,            name='sandbox_confirm'),
     path('havale/<uuid:order_token>/',                  views.bank_transfer_instructions, name='bank_transfer_instructions'),
+    path('havale/<uuid:order_token>/bildir/',           views.bank_transfer_claim,        name='bank_transfer_claim'),
     path('tesekkur/<uuid:order_token>/',                views.success,                    name='success'),
 ]

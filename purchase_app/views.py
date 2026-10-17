@@ -33,6 +33,26 @@ _log = logging.getLogger(__name__)
 
 _PURCHASE_STEPS = ['Bilgiler', 'Doğrulama', 'Ödeme']
 
+_CLAIM_WINDOW = 600   # 10-minute window
+_CLAIM_MAX    = 5     # max claim attempts per token per window
+
+
+def _group_iban(iban):
+    s = iban.replace(' ', '')
+    return ' '.join(s[i:i+4] for i in range(0, len(s), 4))
+
+
+def _claim_rate_limited(order_token):
+    key = f'claim_rl_{order_token}'
+    count = cache.get(key) or 0
+    if count >= _CLAIM_MAX:
+        return True
+    try:
+        cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, _CLAIM_WINDOW)
+    return False
+
 
 def _purchase_enabled():
     if not getattr(settings, 'SELF_PURCHASE_ENABLED', False):
@@ -560,17 +580,60 @@ def sandbox_confirm(request, order_token):
     return redirect('purchase:success', order_token=str(order.token))
 
 
+def _instructions_ctx(order):
+    import urllib.parse
+    iban      = getattr(settings, 'PURCHASE_IBAN', '')
+    wa_number = getattr(settings, 'PURCHASE_WHATSAPP_NUMBER', '').strip()
+    wa_link   = ''
+    if wa_number and order.provider_ref:
+        msg     = f'Merhaba, havale referans kodum: {order.provider_ref}'
+        wa_link = f'https://wa.me/{wa_number}?text={urllib.parse.quote(msg)}'
+    return {
+        'order':          order,
+        'iban':           iban,
+        'iban_grouped':   _group_iban(iban),
+        'holder':         getattr(settings, 'PURCHASE_IBAN_HOLDER', ''),
+        'bank_name':      getattr(settings, 'PURCHASE_BANK_NAME', ''),
+        'claimed':        order.payment_claimed_at is not None,
+        'wa_link':        wa_link,
+        'purchase_step':  3,
+        'purchase_steps': _PURCHASE_STEPS,
+    }
+
+
 def bank_transfer_instructions(request, order_token):
     """Public page shown after bank-transfer order creation."""
     order = get_object_or_404(Order, token=order_token)
-    return render(request, 'purchase/bank_transfer_instructions.html', {
-        'order':     order,
-        'iban':      getattr(settings, 'PURCHASE_IBAN', ''),
-        'holder':    getattr(settings, 'PURCHASE_IBAN_HOLDER', ''),
-        'bank_name': getattr(settings, 'PURCHASE_BANK_NAME', ''),
-        'purchase_step':  3,
-        'purchase_steps': _PURCHASE_STEPS,
-    })
+    return render(request, 'purchase/bank_transfer_instructions.html', _instructions_ctx(order))
+
+
+@require_POST
+def bank_transfer_claim(request, order_token):
+    """Buyer notifies that they completed the bank transfer. Idempotent, rate-limited."""
+    from django.utils import timezone
+
+    order = get_object_or_404(Order, token=order_token)
+
+    if order.status != Order.STATUS_AWAITING_TRANSFER:
+        return redirect('purchase:bank_transfer_instructions', order_token=str(order_token))
+
+    if _claim_rate_limited(str(order_token)):
+        return redirect('purchase:bank_transfer_instructions', order_token=str(order_token))
+
+    sender_name    = request.POST.get('sender_name', '').strip()[:80]
+    is_first_claim = order.payment_claimed_at is None
+
+    Order.objects.filter(pk=order.pk).update(
+        payment_claimed_at=timezone.now(),
+        payment_sender_name=sender_name,
+    )
+
+    if is_first_claim:
+        from django_q.tasks import async_task
+        order_pk = order.pk
+        async_task('purchase_app.tasks.notify_staff_payment_claimed', order_pk)
+
+    return redirect('purchase:bank_transfer_instructions', order_token=str(order_token))
 
 
 def success(request, order_token):
@@ -592,18 +655,35 @@ from users_app.decorators import staff_required
 
 @staff_required
 def panel_orders(request):
-    orders = (
-        Order.objects
-        .select_related('coach', 'student', 'plan')
-        .order_by('-created_at')
-    )
-    status_filter = request.GET.get('status', '')
-    if status_filter:
+    from django.db.models import Case, IntegerField, Q, Value, When
+
+    orders         = Order.objects.select_related('coach', 'student', 'plan')
+    status_filter  = request.GET.get('status', '')
+    claimed_filter = request.GET.get('filter', '') == 'claimed'
+    q              = request.GET.get('q', '').strip()
+
+    if claimed_filter:
+        orders = orders.filter(payment_claimed_at__isnull=False)
+    elif status_filter:
         orders = orders.filter(status=status_filter)
+
+    if q:
+        orders = orders.filter(Q(email__icontains=q) | Q(provider_ref__icontains=q))
+
+    orders = orders.annotate(
+        _claimed_sort=Case(
+            When(payment_claimed_at__isnull=False, then=Value(0)),
+            default=Value(1),
+            output_field=IntegerField(),
+        )
+    ).order_by('_claimed_sort', '-created_at')
+
     return render(request, 'panel/purchase_orders.html', {
         'orders':         orders,
         'status_choices': Order.STATUS_CHOICES,
         'status_filter':  status_filter,
+        'claimed_filter': claimed_filter,
+        'q':              q,
     })
 
 

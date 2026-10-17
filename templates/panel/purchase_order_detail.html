@@ -77,6 +77,18 @@
         <span class="text-ink-500 w-40 shrink-0">Referans Kodu</span>
         <span class="text-indigo-400 font-mono font-semibold">{{ order.provider_ref|default:"—" }}</span>
       </div>
+      {% if order.payment_claimed_at %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Ödeme Bildirimi</span>
+        <span class="text-amber-400 font-medium">{{ order.payment_claimed_at|date:"d.m.Y H:i" }}</span>
+      </div>
+      {% if order.payment_sender_name %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Havale Yapan</span>
+        <span class="text-ink-200">{{ order.payment_sender_name }}</span>
+      </div>
+      {% endif %}
+      {% endif %}
       <div class="flex gap-4 text-sm">
         <span class="text-ink-500 w-40 shrink-0">Koça Gösterildi</span>
         <span class="text-ink-300">{% if order.seen_by_coach %}Evet{% else %}Hayır{% endif %}</span>

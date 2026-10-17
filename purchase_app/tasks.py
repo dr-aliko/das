@@ -261,6 +261,41 @@ def notify_staff_needs_review(order_id):
         _log.exception('notify_staff_needs_review: email failed for order %s', order_id)
 
 
+def notify_staff_payment_claimed(order_id):
+    """Async task: email staff when buyer self-reports that payment has been made."""
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    from purchase_app.models import Order
+
+    staff_email = getattr(settings, 'PURCHASE_STAFF_NOTIFICATION_EMAIL', '').strip()
+    if not staff_email:
+        return
+
+    try:
+        order = Order.objects.select_related('coach', 'plan').get(pk=order_id)
+    except Order.DoesNotExist:
+        _log.warning('notify_staff_payment_claimed: order %s not found', order_id)
+        return
+
+    panel_url = f'{settings.APP_BASE_URL}/panel/satin-al/siparisler/{order.pk}/'
+    ctx = {'order': order, 'panel_url': panel_url}
+    try:
+        text_body = render_to_string('emails/purchase_staff_claimed.txt', ctx)
+        html_body = render_to_string('emails/purchase_staff_claimed.html', ctx)
+        msg = EmailMultiAlternatives(
+            subject=f'[Vagus] Ödeme bildirimi — {order.provider_ref}',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[staff_email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+    except Exception:
+        _log.exception('notify_staff_payment_claimed: failed for order %s', order_id)
+
+
 def cancel_stale_orders_task():
     """Wrapper called by django-q schedule."""
     from purchase_app.services import cancel_stale_orders

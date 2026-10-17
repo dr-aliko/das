@@ -1,0 +1,13 @@
+Yeni ödeme bildirimi alındı.
+
+Referans:     {{ order.provider_ref }}
+Ad Soyad:     {{ order.full_name }}
+E-posta:      {{ order.email }}
+Koç:          {{ order.coach.full_name }}
+Tutar:        {{ order.plan.price_display }}
+{% if order.payment_sender_name %}Havale Yapan: {{ order.payment_sender_name }}
+{% endif %}Bildirim:     {{ order.payment_claimed_at|date:"d.m.Y H:i" }}
+
+Panel: {{ panel_url }}
+
+Vagus Ekibi

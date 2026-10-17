@@ -312,3 +312,271 @@ def test_staff_can_mark_expired_transfer_paid(awaiting_order):
     assert resp.status_code == 302
     awaiting_order.refresh_from_db()
     assert awaiting_order.status == Order.STATUS_PAID
+
+
+# ── 10. Claim: does not activate account ──────────────────────────────────────
+
+@pytest.mark.django_db
+def test_claim_does_not_activate_account(awaiting_order):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    with patch('django_q.tasks.async_task'):
+        resp = Client().post(
+            f'/satin-al/havale/{awaiting_order.token}/bildir/',
+            {'sender_name': 'Test User'},
+        )
+
+    assert resp.status_code == 302
+    awaiting_order.refresh_from_db()
+    assert awaiting_order.status == Order.STATUS_AWAITING_TRANSFER
+    assert not User.objects.filter(email=awaiting_order.email).exists()
+
+
+# ── 11. Claim: staff email sent exactly once for two presses ─────────────────
+
+@pytest.mark.django_db
+def test_claim_staff_email_sent_once(awaiting_order):
+    c = Client()
+    with patch('django_q.tasks.async_task') as mock_at:
+        c.post(f'/satin-al/havale/{awaiting_order.token}/bildir/', {'sender_name': 'A'})
+        c.post(f'/satin-al/havale/{awaiting_order.token}/bildir/', {'sender_name': 'B'})
+
+    claimed_tasks = [
+        call.args[0] for call in mock_at.call_args_list
+        if call.args[0] == 'purchase_app.tasks.notify_staff_payment_claimed'
+    ]
+    assert len(claimed_tasks) == 1, 'notify_staff_payment_claimed must be called exactly once'
+
+
+# ── 12. Claim: anonymous with valid token redirects (succeeds) ───────────────
+
+@pytest.mark.django_db
+def test_claim_valid_token_anonymous_succeeds(awaiting_order):
+    with patch('django_q.tasks.async_task'):
+        resp = Client().post(
+            f'/satin-al/havale/{awaiting_order.token}/bildir/', {}
+        )
+    assert resp.status_code == 302
+
+
+# ── 13. Claim: wrong token returns 404 ───────────────────────────────────────
+
+@pytest.mark.django_db
+def test_claim_wrong_token_returns_404(db):
+    import uuid
+    resp = Client().post(f'/satin-al/havale/{uuid.uuid4()}/bildir/', {})
+    assert resp.status_code == 404
+
+
+# ── 14. Claim: paid order silently ignored ────────────────────────────────────
+
+@pytest.mark.django_db
+def test_claim_after_paid_silently_ignored(awaiting_order):
+    Order.objects.filter(pk=awaiting_order.pk).update(status=Order.STATUS_PAID)
+    resp = Client().post(
+        f'/satin-al/havale/{awaiting_order.token}/bildir/', {}
+    )
+    assert resp.status_code == 302
+    awaiting_order.refresh_from_db()
+    assert awaiting_order.status == Order.STATUS_PAID
+    assert awaiting_order.payment_claimed_at is None
+
+
+# ── 15. Claim: cancelled order silently ignored ───────────────────────────────
+
+@pytest.mark.django_db
+def test_claim_after_cancelled_silently_ignored(awaiting_order):
+    Order.objects.filter(pk=awaiting_order.pk).update(status=Order.STATUS_CANCELLED)
+    resp = Client().post(
+        f'/satin-al/havale/{awaiting_order.token}/bildir/', {}
+    )
+    assert resp.status_code == 302
+    awaiting_order.refresh_from_db()
+    assert awaiting_order.status == Order.STATUS_CANCELLED
+    assert awaiting_order.payment_claimed_at is None
+
+
+# ── 16. Claim: sender_name stored, claimed_at set ────────────────────────────
+
+@pytest.mark.django_db
+def test_claim_sender_name_stored(awaiting_order):
+    with patch('django_q.tasks.async_task'):
+        Client().post(
+            f'/satin-al/havale/{awaiting_order.token}/bildir/',
+            {'sender_name': 'Ahmet Yılmaz'},
+        )
+    awaiting_order.refresh_from_db()
+    assert awaiting_order.payment_sender_name == 'Ahmet Yılmaz'
+    assert awaiting_order.payment_claimed_at is not None
+
+
+# ── 17. Claimed orders excluded from stale-cancel (7-day rule) ───────────────
+
+@pytest.mark.django_db
+def test_claimed_excluded_from_7day_cancel(awaiting_order, settings):
+    from django.utils import timezone
+
+    settings.BANK_TRANSFER_EXPIRY_DAYS = 7
+    Order.objects.filter(pk=awaiting_order.pk).update(
+        created_at=timezone.now() - timezone.timedelta(days=8),
+        payment_claimed_at=timezone.now() - timezone.timedelta(days=1),
+    )
+    cancel_stale_orders()
+    awaiting_order.refresh_from_db()
+    assert awaiting_order.status == Order.STATUS_AWAITING_TRANSFER, \
+        'Claimed orders must not be auto-cancelled'
+
+
+# ── 18. Panel: claimed badge appears ─────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_panel_shows_claimed_badge(awaiting_order):
+    from django.utils import timezone
+
+    Order.objects.filter(pk=awaiting_order.pk).update(
+        payment_claimed_at=timezone.now(),
+    )
+    staff = baker.make('users_app.User', role='coach', is_active=True, is_staff=True)
+    c = Client()
+    c.force_login(staff)
+    resp = c.get('/panel/satin-al/siparisler/')
+    assert resp.status_code == 200
+    assert 'Ödeme Bildirildi'.encode() in resp.content
+
+
+# ── 19. Panel: filter=claimed shows only claimed orders ──────────────────────
+
+@pytest.mark.django_db
+def test_panel_filter_claimed(awaiting_order, coach, active_plan):
+    from django.utils import timezone
+
+    unclaimed = baker.make(
+        'purchase_app.Order',
+        email='unclaimed@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_AWAITING_TRANSFER,
+        provider='bank_transfer',
+        provider_ref='VG-UNCLMD',
+        full_name='Unclaimed User',
+    )
+    Order.objects.filter(pk=awaiting_order.pk).update(
+        payment_claimed_at=timezone.now(),
+    )
+    staff = baker.make('users_app.User', role='coach', is_active=True, is_staff=True)
+    c = Client()
+    c.force_login(staff)
+    resp = c.get('/panel/satin-al/siparisler/?filter=claimed')
+    assert resp.status_code == 200
+    assert awaiting_order.email.encode() in resp.content
+    assert unclaimed.email.encode() not in resp.content
+
+
+# ── 20. Panel: search by ref code ────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_panel_search_by_ref(awaiting_order, coach, active_plan):
+    other = baker.make(
+        'purchase_app.Order',
+        email='other@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_AWAITING_TRANSFER,
+        provider='bank_transfer',
+        provider_ref='VG-OTHER1',
+        full_name='Other User',
+    )
+    staff = baker.make('users_app.User', role='coach', is_active=True, is_staff=True)
+    c = Client()
+    c.force_login(staff)
+    resp = c.get(f'/panel/satin-al/siparisler/?q={awaiting_order.provider_ref}')
+    assert resp.status_code == 200
+    assert awaiting_order.email.encode() in resp.content
+    assert other.email.encode() not in resp.content
+
+
+# ── 21. Ref code format and alphabet ─────────────────────────────────────────
+
+def test_ref_code_format():
+    from purchase_app.providers.bank_transfer import _REF_ALPHABET, _generate_ref
+    for _ in range(30):
+        ref = _generate_ref()
+        assert ref.startswith('VG-'), f'Ref must start with VG-: {ref}'
+        assert len(ref) == 9, f'Ref length must be 9: {ref}'
+        code = ref[3:]
+        for ch in code:
+            assert ch in _REF_ALPHABET, f'Char {ch!r} not in alphabet'
+
+
+def test_ref_code_alphabet_excludes_ambiguous():
+    from purchase_app.providers.bank_transfer import _REF_ALPHABET
+    for ch in ('O', 'I', 'L', '0', '1'):
+        assert ch not in _REF_ALPHABET, f'Ambiguous char {ch!r} must be excluded'
+
+
+# ── 22. Ref code collision causes retry ──────────────────────────────────────
+
+@pytest.mark.django_db
+def test_ref_code_collision_retry(coach, active_plan):
+    import purchase_app.providers.bank_transfer as bt_module
+    from purchase_app.providers.bank_transfer import BankTransferProvider
+
+    baker.make(
+        'purchase_app.Order',
+        email='existing@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_AWAITING_TRANSFER,
+        provider='bank_transfer',
+        provider_ref='VG-CLASH1',
+        full_name='Existing',
+    )
+    new_order = baker.make(
+        'purchase_app.Order',
+        email='new@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='bank_transfer',
+        provider_ref=None,
+        full_name='New',
+    )
+    refs = iter(['VG-CLASH1', 'VG-UNIQUE'])
+    with patch.object(bt_module, '_generate_ref', side_effect=refs):
+        with patch('django_q.tasks.async_task'):
+            with patch('django.db.transaction.on_commit', side_effect=lambda f: f()):
+                BankTransferProvider('TR33x', 'H', 'B').create_checkout(new_order)
+
+    new_order.refresh_from_db()
+    assert new_order.provider_ref == 'VG-UNIQUE'
+
+
+# ── 23. No sequential order number on buyer-facing instructions page ──────────
+
+@pytest.mark.django_db
+def test_no_order_number_on_instructions_page(awaiting_order, bt_settings):
+    resp = Client().get(f'/satin-al/havale/{awaiting_order.token}/')
+    assert resp.status_code == 200
+    # The old template had a visible "Sipariş #" label row; after removal it must not appear.
+    # CSS color codes (e.g. #1e40af) won't be preceded by "Sipariş".
+    assert 'Sipariş #'.encode('utf-8') not in resp.content, \
+        '"Sipariş #" order-number label must not appear on the buyer-facing instructions page'
+
+
+# ── 24. Instructions page shows confirmation when order is already claimed ────
+
+@pytest.mark.django_db
+def test_instructions_page_shows_claimed_confirmation(awaiting_order, bt_settings):
+    from django.utils import timezone
+
+    Order.objects.filter(pk=awaiting_order.pk).update(
+        payment_claimed_at=timezone.now(),
+    )
+    resp = Client().get(f'/satin-al/havale/{awaiting_order.token}/')
+    assert resp.status_code == 200
+    assert 'Bildiriminiz'.encode() in resp.content

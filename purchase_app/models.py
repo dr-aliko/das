@@ -85,8 +85,10 @@ class Order(models.Model):
     guardian_phone = models.CharField(max_length=32,  blank=True, default='')
     sinif          = models.CharField(max_length=5,   blank=True, default='')
     alan           = models.CharField(max_length=5,   blank=True, default='')
-    seen_by_coach  = models.BooleanField(default=False)
-    notes        = models.TextField(blank=True, default='')
+    seen_by_coach        = models.BooleanField(default=False)
+    notes                = models.TextField(blank=True, default='')
+    payment_claimed_at   = models.DateTimeField(null=True, blank=True, db_index=True)
+    payment_sender_name  = models.CharField(max_length=80, blank=True, default='')
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 

@@ -253,6 +253,7 @@ PURCHASE_IBAN_HOLDER              = config('PURCHASE_IBAN_HOLDER',              
 PURCHASE_BANK_NAME                = config('PURCHASE_BANK_NAME',                default='')
 PURCHASE_STAFF_NOTIFICATION_EMAIL = config('PURCHASE_STAFF_NOTIFICATION_EMAIL', default='')
 BANK_TRANSFER_EXPIRY_DAYS         = config('BANK_TRANSFER_EXPIRY_DAYS',         default=7, cast=int)
+PURCHASE_WHATSAPP_NUMBER          = config('PURCHASE_WHATSAPP_NUMBER',          default='')
 
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)

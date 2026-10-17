@@ -209,7 +209,11 @@ def cancel_stale_orders():
     cutoff_2h = timezone.now() - timedelta(hours=2)
     cancelled_regular = (
         Order.objects
-        .filter(status=Order.STATUS_PENDING, created_at__lt=cutoff_2h)
+        .filter(
+            status=Order.STATUS_PENDING,
+            created_at__lt=cutoff_2h,
+            payment_claimed_at__isnull=True,
+        )
         .update(status=Order.STATUS_CANCELLED)
     )
 
@@ -217,7 +221,11 @@ def cancel_stale_orders():
     cutoff_transfer = timezone.now() - timedelta(days=expiry_days)
     cancelled_transfer = (
         Order.objects
-        .filter(status=Order.STATUS_AWAITING_TRANSFER, created_at__lt=cutoff_transfer)
+        .filter(
+            status=Order.STATUS_AWAITING_TRANSFER,
+            created_at__lt=cutoff_transfer,
+            payment_claimed_at__isnull=True,
+        )
         .update(status=Order.STATUS_CANCELLED)
     )
 

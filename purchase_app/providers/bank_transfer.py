@@ -1,6 +1,15 @@
+import secrets
+
 from django.urls import reverse
 
 from .base import BaseProvider
+
+# Unambiguous: A-Z minus O, I, L; digits 2-9 (no 0, 1)
+_REF_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+
+def _generate_ref():
+    return 'VG-' + ''.join(secrets.choice(_REF_ALPHABET) for _ in range(6))
 
 
 class BankTransferProvider(BaseProvider):
@@ -16,7 +25,12 @@ class BankTransferProvider(BaseProvider):
         from django_q.tasks import async_task
         from purchase_app.models import Order
 
-        ref = f'VAGUS-{order.pk}'
+        # Generate unique ref, regenerate on collision
+        while True:
+            ref = _generate_ref()
+            if not Order.objects.filter(provider_ref=ref).exists():
+                break
+
         Order.objects.filter(pk=order.pk).update(
             provider_ref=ref,
             status=Order.STATUS_AWAITING_TRANSFER,
