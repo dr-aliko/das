@@ -145,6 +145,12 @@ def on_payment_success(order):
             cs.deactivation_reason = None
             cs.save(update_fields=['next_payment_due', 'active', 'deactivation_reason'])
 
+        # Mirror invite_register_view (users_app/views.py:512): set legacy User.coach FK.
+        # Roster, task-create, GorevGrubu ownership all traverse this field.
+        if user.coach_id != order.coach_id:
+            User.objects.filter(pk=user.pk).update(coach=order.coach)
+            user.coach_id = order.coach_id
+
         order.status = Order.STATUS_PAID
         order.save(update_fields=['student', 'status', 'updated_at'])
 

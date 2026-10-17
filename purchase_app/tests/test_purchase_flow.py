@@ -399,3 +399,123 @@ def test_sandbox_pay_non_staff_returns_404(pending_order, settings):
     client_obj.force_login(non_staff)
     resp = client_obj.get(f'/satin-al/sandbox/pay/{pending_order.token}/')
     assert resp.status_code == 404
+
+
+# ── Purchased student full-integration ────────────────────────────────────────
+
+@pytest.mark.django_db(transaction=True)
+def test_purchased_student_in_roster_queryset(db, active_plan):
+    """on_payment_success must set User.coach so the legacy roster query includes the student."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    order = baker.make(
+        'purchase_app.Order',
+        email='roster@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='Roster Student',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    assert User.objects.filter(role='student', coach=coach, email='roster@example.com').exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_purchased_student_in_task_dropdown(db, active_plan):
+    """After payment, list_for_coach() must include the new student."""
+    from tasks_app.services.students import list_for_coach
+
+    coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    order = baker.make(
+        'purchase_app.Order',
+        email='dropdown@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='Dropdown Student',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    student_emails = [u.email for u in list_for_coach(coach)]
+    assert 'dropdown@example.com' in student_emails
+
+
+@pytest.mark.django_db(transaction=True)
+def test_task_creation_endpoint_succeeds_for_purchased_student(db, active_plan):
+    """POST /coach/tasks/api/gorev must return 201 for a purchased student."""
+    import json
+    from datetime import date
+
+    coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True, is_staff=False)
+    order = baker.make(
+        'purchase_app.Order',
+        email='tasktest@example.com',
+        coach=coach,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='Task Student',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    from django.contrib.auth import get_user_model
+    student = get_user_model().objects.get(email='tasktest@example.com')
+
+    client_obj = Client()
+    client_obj.force_login(coach)
+    resp = client_obj.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps({
+            'student_id': student.pk,
+            'tarih': str(date.today()),
+            'aktivite_tipi': 'konu_anlatimi',
+            'ders_title': 'Matematik',
+            'detaylar': json.dumps([{'aciklama': 'Türev', 'sure_bilgisi': '30 dk'}]),
+        }),
+        content_type='application/json',
+    )
+    assert resp.status_code == 201, f'Expected 201, got {resp.status_code}: {resp.content}'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_purchased_student_not_visible_to_other_coach(db, active_plan):
+    """The purchased student must NOT appear in another coach's roster or dropdown."""
+    from django.contrib.auth import get_user_model
+    from tasks_app.services.students import list_for_coach
+
+    User = get_user_model()
+    coach_a = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    coach_b = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    order = baker.make(
+        'purchase_app.Order',
+        email='isolation@example.com',
+        coach=coach_a,
+        plan=active_plan,
+        amount_kurus=active_plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        full_name='Isolated Student',
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    # Roster check
+    assert not User.objects.filter(role='student', coach=coach_b, email='isolation@example.com').exists()
+    # Dropdown check
+    dropdown_emails = [u.email for u in list_for_coach(coach_b)]
+    assert 'isolation@example.com' not in dropdown_emails
