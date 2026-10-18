@@ -6,7 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.views.generic import RedirectView, TemplateView
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
-from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, notification_page_view, notification_delete, notification_delete_all, notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update, panel_odemeler_view, panel_davetler_view, panel_ogrenciler_view, panel_student_unlink, panel_fee_tier_add, panel_fee_tier_update, panel_fee_tier_delete, panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink, profil_wp_availability
+from users_app.views import profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar, geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test, student_notifications_api, student_notification_read, student_notification_mark_all_read, notification_page_view, notification_delete, notification_delete_all, notification_mark_all_read, coach_billing_view, panel_billing_view, panel_billing_update, panel_odemeler_view, panel_davetler_view, panel_ogrenciler_view, panel_student_unlink, panel_fee_tier_add, panel_fee_tier_update, panel_fee_tier_delete, panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink, panel_koc_ekle_view, panel_koc_davet_resend, profil_wp_availability
 from struggle_app.views import CoachStruggleStatsView
 
 urlpatterns = [
@@ -74,6 +74,8 @@ urlpatterns = [
     path('panel/wp-koclar/', panel_wp_koclar_view, name='panel_wp_koclar'),
     path('panel/wp-koclar/confirm/', panel_wp_koclar_confirm, name='panel_wp_koclar_confirm'),
     path('panel/wp-koclar/<int:coach_id>/unlink/', panel_wp_koclar_unlink, name='panel_wp_koclar_unlink'),
+    path('panel/koc-ekle/', panel_koc_ekle_view, name='panel_koc_ekle'),
+    path('panel/koc-davet-resend/<int:coach_id>/', panel_koc_davet_resend, name='panel_koc_davet_resend'),
     path('profil/wp-availability/', profil_wp_availability, name='profil_wp_availability'),
     path('satin-al/', include('purchase_app.urls', namespace='purchase')),
     path('panel/satin-al/', include('purchase_app.panel_urls', namespace='purchase_panel')),

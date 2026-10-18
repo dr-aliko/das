@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import secrets
 from datetime import date, timedelta
 from decimal import Decimal
@@ -7,7 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import (
@@ -28,6 +29,9 @@ from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
 from .models import CoachAlert, CoachStudent, EmailVerificationCode, FeeTier, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
+
+
+_log = logging.getLogger(__name__)
 
 
 def _reset_timeout_display():
@@ -268,6 +272,9 @@ class CustomPasswordResetConfirmView(DjangoPRConfirmView):
     def form_valid(self, form):
         response = super().form_valid(form)
         _invalidate_other_sessions(self.request, self.user)
+        if not self.user.email_verified:
+            self.user.email_verified = True
+            self.user.save(update_fields=['email_verified'])
         return response
 
 
@@ -1516,6 +1523,136 @@ def panel_wp_koclar_unlink(request, coach_id):
     coach.wp_is_available = None
     coach.save(update_fields=['wordpress_post_id', 'wp_is_available'])
     return JsonResponse({'ok': True})
+
+
+# ── Staff panel — Add coach ───────────────────────────────────────────────────
+
+def _send_koc_invite_email_now(coach, request):
+    """Generate a one-time password-set link and email it to the new coach."""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_encode
+    from django.utils.encoding import force_bytes
+    from django.template.loader import render_to_string
+
+    secs = getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600)
+    if secs >= 3600 and secs % 3600 == 0:
+        timeout_display = f'{secs // 3600} saat'
+    else:
+        timeout_display = f'{secs // 60} dakika'
+
+    uid = urlsafe_base64_encode(force_bytes(coach.pk))
+    token = default_token_generator.make_token(coach)
+    proto = 'https' if request.is_secure() else 'http'
+    domain = request.get_host()
+    reset_url = f'{proto}://{domain}/auth/password-reset/confirm/{uid}/{token}/'
+
+    plain_text = (
+        f'Merhaba {coach.full_name},\n\n'
+        f'Vagus platformuna koç olarak eklendiniz. Şifrenizi belirlemek için aşağıdaki linke tıklayın:\n\n'
+        f'{reset_url}\n\n'
+        f'Bu link {timeout_display} geçerlidir ve tek kullanımlıktır.\n\n'
+        f'Başarılar,\nVagus Ekibi'
+    )
+    html_body = render_to_string('emails/koc_davet.html', {
+        'full_name': coach.full_name,
+        'reset_url': reset_url,
+        'reset_timeout_display': timeout_display,
+    })
+    try:
+        msg = EmailMultiAlternatives(
+            subject='Vagus — Hesabınız Hazır, Şifrenizi Belirleyin',
+            body=plain_text,
+            from_email='Vagus <noreply@vagus.tr>',
+            to=[coach.email],
+            reply_to=['destek@vagus.tr'],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+        return True
+    except Exception as exc:
+        _log.error('koc_davet: e-posta gönderilemedi (%s): %s', coach.email, exc)
+        return False
+
+
+@staff_required
+@ratelimit(key='ip', rate='20/h', block=True)
+def panel_koc_ekle_view(request):
+    coaches_no_pw = [
+        c for c in User.objects.filter(role='coach', is_active=True).order_by('full_name')
+        if not c.has_usable_password()
+    ]
+    step = None
+    form_data = {}
+    error = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        full_name = request.POST.get('full_name', '').strip()
+        email_raw = request.POST.get('email', '').strip().lower()
+        form_data = {'full_name': full_name, 'email': email_raw}
+
+        if action == 'preview':
+            if not full_name:
+                error = 'Ad Soyad boş bırakılamaz.'
+            elif not email_raw or '@' not in email_raw:
+                error = 'Geçerli bir e-posta adresi girin.'
+            elif User.objects.filter(email__iexact=email_raw).exists():
+                error = f'"{email_raw}" e-postası zaten kayıtlı. Hesap oluşturulmadı.'
+            else:
+                step = 'confirm'
+
+        elif action == 'create':
+            if not full_name or not email_raw:
+                error = 'Eksik bilgi — lütfen formu tekrar doldurun.'
+            elif User.objects.filter(email__iexact=email_raw).exists():
+                error = f'"{email_raw}" e-postası zaten kayıtlı. Hesap oluşturulmadı.'
+            else:
+                coach = User.objects.create_user(
+                    email=email_raw,
+                    full_name=full_name,
+                    role='coach',
+                    password=None,
+                )
+                coach.is_active = True
+                coach.is_approved = True
+                coach.save(update_fields=['is_active', 'is_approved'])
+
+                ok = _send_koc_invite_email_now(coach, request)
+                if ok:
+                    messages.success(request, f'Koç oluşturuldu ve davet e-postası gönderildi: {email_raw}')
+                else:
+                    messages.warning(
+                        request,
+                        f'Koç oluşturuldu ({email_raw}) ancak davet e-postası gönderilemedi. '
+                        f'Lütfen sunucu loglarını kontrol edin ve aşağıdan tekrar gönderin.',
+                    )
+                return redirect('panel_koc_ekle')
+
+    return render(request, 'panel/koc_ekle.html', {
+        'active_tab': 'koc_ekle',
+        'step': step,
+        'form_data': form_data,
+        'error': error,
+        'coaches_no_pw': coaches_no_pw,
+        'get_full_name': request.GET.get('full_name', ''),
+        'get_email': request.GET.get('email', ''),
+    })
+
+
+@staff_required
+@require_http_methods(['POST'])
+@ratelimit(key='ip', rate='30/h', block=True)
+def panel_koc_davet_resend(request, coach_id):
+    coach = get_object_or_404(User, pk=coach_id, role='coach', is_active=True)
+    if coach.has_usable_password():
+        messages.error(request, f'{coach.full_name} zaten şifresini belirlemiş.')
+        return redirect('panel_koc_ekle')
+    ok = _send_koc_invite_email_now(coach, request)
+    if ok:
+        messages.success(request, f'Davet e-postası yeniden gönderildi: {coach.email}')
+    else:
+        messages.warning(request, f'E-posta gönderilemedi ({coach.email}). Lütfen sunucu loglarını kontrol edin.')
+    return redirect('panel_koc_ekle')
 
 
 # ── Coach profil — WordPress availability toggle ──────────────────────────────

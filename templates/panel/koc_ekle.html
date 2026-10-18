@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Koç Ekle{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Koç Ekle</h1>
+      </div>
+      <p class="text-sm text-ink-400">Yeni bir koç hesabı oluştur ve şifre belirleme daveti gönder.</p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
+        <a href="{% url 'panel_billing' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'classification' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Sınıflandırma &amp; Tarifeler
+        </a>
+        <a href="{% url 'panel_odemeler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'payments' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Ödemeler
+        </a>
+        <a href="{% url 'panel_davetler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'invites' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Davetler
+        </a>
+        <a href="{% url 'panel_ogrenciler' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'students' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Öğrenciler
+        </a>
+        <a href="{% url 'panel_wp_koclar' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'wp_koclar' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          WP Koçlar
+        </a>
+        <a href="{% url 'panel_koc_ekle' %}"
+           class="px-3 py-1.5 rounded-md transition-colors {% if active_tab == 'koc_ekle' %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+          Koç Ekle
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Flash messages ─────────────────────────────────────────────────────── #}
+  {% if messages %}
+  <div class="space-y-2">
+    {% for msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium
+      {% if msg.tags == 'success' %}bg-emerald-500/10 border border-emerald-500/30 text-emerald-300
+      {% elif msg.tags == 'warning' %}bg-amber-500/10 border border-amber-500/30 text-amber-300
+      {% else %}bg-ruby-500/10 border border-ruby-500/30 text-ruby-300{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Add form / confirm step ────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-5 max-w-lg">
+
+    {% if step == 'confirm' %}
+    {# ── Confirm step ── #}
+    <h2 class="text-sm font-semibold text-ink-200 mb-4">Onay</h2>
+    <p class="text-sm text-ink-400 mb-1">Aşağıdaki bilgilerle koç hesabı oluşturulacak:</p>
+    <div class="rounded-lg bg-ink-900 border border-ink-700 px-4 py-3 mb-5 space-y-1 text-sm">
+      <div><span class="text-ink-500">Ad Soyad:</span> <span class="text-white font-medium">{{ form_data.full_name }}</span></div>
+      <div><span class="text-ink-500">E-posta:</span> <span class="text-white font-medium">{{ form_data.email }}</span></div>
+    </div>
+    <p class="text-xs text-ink-500 mb-5">Hesap oluşturulduktan sonra koça şifre belirleme e-postası gönderilecek.</p>
+    <div class="flex gap-3">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        <input type="hidden" name="full_name" value="{{ form_data.full_name }}">
+        <input type="hidden" name="email" value="{{ form_data.email }}">
+        <button type="submit"
+                class="px-4 py-2 rounded-lg bg-steel-600 hover:bg-steel-500 text-white text-sm font-semibold transition-colors">
+          Oluştur
+        </button>
+      </form>
+      <a href="{% url 'panel_koc_ekle' %}?full_name={{ form_data.full_name|urlencode }}&email={{ form_data.email|urlencode }}"
+         class="px-4 py-2 rounded-lg bg-ink-800 hover:bg-ink-700 text-ink-300 text-sm font-medium transition-colors">
+        Düzenle
+      </a>
+    </div>
+
+    {% else %}
+    {# ── Add form ── #}
+    <h2 class="text-sm font-semibold text-ink-200 mb-4">Yeni Koç</h2>
+    {% if error %}
+    <div class="rounded-lg bg-ruby-500/10 border border-ruby-500/30 text-ruby-300 px-4 py-2.5 text-sm mb-4">
+      {{ error }}
+    </div>
+    {% endif %}
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="preview">
+      <div>
+        <label class="block text-xs text-ink-400 mb-1.5" for="full_name">Ad Soyad</label>
+        <input id="full_name" name="full_name" type="text" autocomplete="name"
+               value="{{ form_data.full_name|default:get_full_name }}"
+               required
+               class="w-full h-9 px-3 rounded-lg text-sm bg-ink-900 border border-ink-700 text-ink-100
+                      focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+      </div>
+      <div>
+        <label class="block text-xs text-ink-400 mb-1.5" for="email">E-posta</label>
+        <input id="email" name="email" type="email" autocomplete="email"
+               value="{{ form_data.email|default:get_email }}"
+               required
+               class="w-full h-9 px-3 rounded-lg text-sm bg-ink-900 border border-ink-700 text-ink-100
+                      focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+      </div>
+      <button type="submit"
+              class="px-4 py-2 rounded-lg bg-steel-600 hover:bg-steel-500 text-white text-sm font-semibold transition-colors">
+        Devam
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ── Coaches awaiting password set ──────────────────────────────────────── #}
+  {% if coaches_no_pw %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-800">
+      <h2 class="text-sm font-semibold text-ink-200">Şifre Belirlenmemiş Koçlar</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Davet e-postasını almamış veya linki kullanmamış koçlar.</p>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-[11px] font-semibold text-ink-500 uppercase tracking-wider border-b border-ink-800">
+          <th class="px-5 py-2.5 text-left">Ad Soyad</th>
+          <th class="px-5 py-2.5 text-left">E-posta</th>
+          <th class="px-5 py-2.5 text-right"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink-800/60">
+        {% for coach in coaches_no_pw %}
+        <tr class="hover:bg-ink-900/50 transition-colors">
+          <td class="px-5 py-3 text-ink-200 font-medium">{{ coach.full_name }}</td>
+          <td class="px-5 py-3 text-ink-400">{{ coach.email }}</td>
+          <td class="px-5 py-3 text-right">
+            <form method="post" action="{% url 'panel_koc_davet_resend' coach.pk %}">
+              {% csrf_token %}
+              <button type="submit"
+                      class="px-3 py-1.5 rounded-lg bg-ink-800 hover:bg-ink-700 text-ink-300 text-xs font-medium transition-colors">
+                Daveti yeniden gönder
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
