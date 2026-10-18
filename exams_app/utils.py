@@ -10,36 +10,23 @@ def safe_json(data, **kwargs):
 
 
 def get_student_status(student):
-    """Returns {'status': 'iyi'|'dusus'|'pasif'} based on recent exam activity (DAS-415).
+    """Returns {'status': 'iyi'|'dusus'}.
 
-    iyi   🟢 — exam within 7 days and no significant net drop
-    dusus 🟡 — exam 8-14 days ago, or net dropped >5 points vs previous
-    pasif 🔴 — no exam in 14+ days, or no exams at all
+    dusus — at least two exams and the most-recent net is strictly lower than the previous
+    iyi   — everyone else (no exams, one exam, equal or improved net)
     """
     from exams_app.models import Exam
 
-    today = date.today()
     recent = list(
         Exam.objects.filter(student=student)
         .prefetch_related('results')
-        .order_by('-exam_date')[:3]
+        .order_by('-exam_date')[:2]
     )
 
-    if not recent:
-        return {'status': 'pasif'}
-
-    days_since = (today - recent[0].exam_date).days
-
-    if days_since > 14:
-        return {'status': 'pasif'}
-
-    if days_since > 7:
-        return {'status': 'dusus'}
-
     if len(recent) >= 2:
-        net0 = float(recent[0].total_net() if callable(recent[0].total_net) else recent[0].total_net)
-        net1 = float(recent[1].total_net() if callable(recent[1].total_net) else recent[1].total_net)
-        if net0 < net1 - 5:
+        net0 = float(recent[0].total_net())
+        net1 = float(recent[1].total_net())
+        if net0 < net1:
             return {'status': 'dusus'}
 
     return {'status': 'iyi'}

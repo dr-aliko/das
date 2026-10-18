@@ -2357,7 +2357,6 @@ def exam_compare(request):
 def coach_dashboard(request):
     """DAS-413/414/416: Coach Roster — lists active students with status and quick stats."""
     from users_app.models import User, CoachStudent, CoachAuditLog
-    from exams_app.utils import get_student_status
 
     students = list(
         User.objects.filter(role='student', coach=request.user).order_by('full_name')
@@ -2382,7 +2381,7 @@ def coach_dashboard(request):
     CoachAuditLog.objects.create(coach=request.user, student=None, action='viewed_roster')
 
     student_data = []
-    status_counts = {'iyi': 0, 'dusus': 0, 'pasif': 0}
+    status_counts = {'iyi': 0, 'dusus': 0}
 
     for student in students:
         exams = list(
@@ -2417,9 +2416,6 @@ def coach_dashboard(request):
                     sum(float(e.total_net()) for e in exams_30) / len(exams_30), 2
                 )
 
-        status_key = get_student_status(student)['status']
-        status_counts[status_key] += 1
-
         initials = ''.join(p[0].upper() for p in student.full_name.split()[:2])
 
         trend = round(last_net - avg_30d, 2) if last_net is not None and avg_30d is not None else None
@@ -2428,6 +2424,9 @@ def coach_dashboard(request):
         if len(exams) >= 2 and last_net is not None:
             prev_net = round(float(exams[1].total_net()), 2)
             net_delta = round(last_net - prev_net, 2)
+
+        status_key = 'dusus' if (net_delta is not None and net_delta < 0) else 'iyi'
+        status_counts[status_key] += 1
 
         student_data.append({
             'student': student,

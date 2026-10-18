@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-4">
+      <div class="grid grid-cols-3 gap-2 md:gap-3 mt-4">
         <button @click="activeFilter = 'tumu'"
                 class="rounded-xl border p-3 text-left transition-colors
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
@@ -101,17 +101,6 @@
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
           </span>
           <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.dusus }}</span>
-        </button>
-        <button @click="activeFilter = 'pasif'"
-                class="rounded-xl border p-3 text-left transition-colors
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
-                :class="activeFilter === 'pasif'
-                  ? 'bg-steel-tint border-steel-500'
-                  : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
-          <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
-            <span class="w-1.5 h-1.5 rounded-full bg-ink-500"></span>Pasif
-          </span>
-          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.pasif }}</span>
         </button>
       </div>
     </div>
@@ -149,16 +138,6 @@
           Düşüş <span class="ml-0.5 tnum"
                       :class="activeFilter === 'dusus' ? 'text-steel-400' : 'text-ink-500'">{{ status_counts.dusus }}</span>
         </button>
-        <button @click="activeFilter = 'pasif'"
-                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs font-medium
-                       transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
-                :class="activeFilter === 'pasif'
-                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
-                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
-          <span class="w-1.5 h-1.5 rounded-full bg-ruby-500"></span>
-          Pasif <span class="ml-0.5 tnum"
-                      :class="activeFilter === 'pasif' ? 'text-steel-400' : 'text-ink-500'">{{ status_counts.pasif }}</span>
-        </button>
       </div>
 
       {% if student_data %}
@@ -176,16 +155,14 @@
                     hover:bg-ink-800 hover:shadow-card-lg hover:scale-[1.02]
                     active:scale-[0.99] transition-all duration-200 cursor-pointer
                     {% if item.status == 'dusus' %}border-amber-500/30 hover:border-amber-500/60
-                    {% else %}border-ink-700 hover:border-ink-600{% endif %}
-                    {% if item.status == 'pasif' %}opacity-80{% endif %}"
+                    {% else %}border-ink-700 hover:border-ink-600{% endif %}"
              :class="confirm ? 'opacity-30 pointer-events-none select-none' : ''">
 
             <div class="flex items-start gap-3">
               <div class="pii w-10 h-10 rounded-full flex items-center justify-center
                           font-semibold text-sm shrink-0
-                          {% if item.status == 'iyi' %}bg-gradient-to-br from-steel-500 to-steel-700 text-white
-                          {% elif item.status == 'dusus' %}bg-gradient-to-br from-amber-400 to-orange-500 text-white
-                          {% else %}bg-ink-700 text-ink-200{% endif %}">
+                          {% if item.status == 'dusus' %}bg-gradient-to-br from-amber-400 to-orange-500 text-white
+                          {% else %}bg-gradient-to-br from-steel-500 to-steel-700 text-white{% endif %}">
                 {{ item.initials }}
               </div>
               <div class="flex-1 min-w-0">
@@ -223,8 +200,7 @@
               </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-3 divide-x divide-ink-700 border-y border-ink-700 py-3
-                        {% if item.status == 'pasif' %}opacity-50{% endif %}">
+            <div class="mt-4 grid grid-cols-3 divide-x divide-ink-700 border-y border-ink-700 py-3">
               <div class="text-center">
                 <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Son net</p>
                 <p class="mt-0.5 text-base font-bold text-ink-100 tnum">
@@ -289,13 +265,11 @@
              href="{% url 'coach:student_detail' item.student.id %}"
              class="group flex items-center gap-3 px-4 py-3 rounded-xl border bg-ink-850
                     hover:bg-ink-800 hover:border-ink-600 transition-all duration-200 cursor-pointer
-                    {% if item.status == 'dusus' %}border-amber-500/20{% else %}border-ink-700{% endif %}
-                    {% if item.status == 'pasif' %}opacity-80{% endif %}"
+                    {% if item.status == 'dusus' %}border-amber-500/20{% else %}border-ink-700{% endif %}"
              :class="confirm ? 'opacity-30 pointer-events-none select-none' : ''">
             <div class="pii w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs shrink-0
-                        {% if item.status == 'iyi' %}bg-gradient-to-br from-steel-500 to-steel-700 text-white
-                        {% elif item.status == 'dusus' %}bg-gradient-to-br from-amber-400 to-orange-500 text-white
-                        {% else %}bg-ink-700 text-ink-200{% endif %}">
+                        {% if item.status == 'dusus' %}bg-gradient-to-br from-amber-400 to-orange-500 text-white
+                        {% else %}bg-gradient-to-br from-steel-500 to-steel-700 text-white{% endif %}">
               {{ item.initials }}
             </div>
             <div class="flex-1 min-w-0">
