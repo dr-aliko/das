@@ -866,12 +866,23 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
 
     chart_datasets = []
     for key, label, color, _klass, names in active_subs:
-        subj_map = {
-            e.tarih.isoformat(): round(float(e.net), 2)
-            for e in entries if e.ders.name in names
-        }
+        if coach_view:
+            day_groups = {}
+            for e in entries:
+                if e.ders.name in names:
+                    iso = e.tarih.isoformat()
+                    if iso not in day_groups:
+                        day_groups[iso] = []
+                    day_groups[iso].append(float(e.net))
+            subj_map = {iso: round(sum(nets) / len(nets), 2) for iso, nets in day_groups.items()}
+            count_map = {iso: len(nets) for iso, nets in day_groups.items()}
+        else:
+            subj_map = {
+                e.tarih.isoformat(): round(float(e.net), 2)
+                for e in entries if e.ders.name in names
+            }
         if subj_map:
-            chart_datasets.append({
+            ds = {
                 'label':              label,
                 'data':               [subj_map.get(iso, None) for iso in all_date_isos],
                 'borderColor':        color,
@@ -883,7 +894,10 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
                 'tension':            0.35,
                 'fill':               False,
                 'spanGaps':           True,
-            })
+            }
+            if coach_view:
+                ds['counts'] = [count_map.get(iso, None) for iso in all_date_isos]
+            chart_datasets.append(ds)
 
     brans_chart_json = safe_json({
         'labels':   all_date_labels,

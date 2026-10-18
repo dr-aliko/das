@@ -514,7 +514,10 @@ function buildBransChart(raw) {
             label: ctx => {
               const val = ctx.raw !== null && ctx.raw !== undefined
                 ? Number(ctx.raw).toFixed(2) : '—';
-              return `  ${ctx.dataset.label}: ${val}`;
+              const counts = ctx.dataset.counts;
+              const n = counts ? counts[ctx.dataIndex] : null;
+              const suffix = (n && n > 1) ? ` (${n} sınav ort.)` : '';
+              return `  ${ctx.dataset.label}: ${val}${suffix}`;
             },
           },
         },
