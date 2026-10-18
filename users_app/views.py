@@ -1655,6 +1655,57 @@ def panel_koc_davet_resend(request, coach_id):
     return redirect('panel_koc_ekle')
 
 
+def _coach_deletion_block(coach):
+    """Return a Turkish error string if the coach cannot be deleted, else None."""
+    if coach.has_usable_password():
+        return 'Bu koç şifresini belirlemiş; silinemez. Hesabı devre dışı bırakmayı düşünün.'
+    if CoachStudent.objects.filter(coach=coach).exists():
+        return 'Bu koçun öğrenci kayıtları var; silinemez. Hesabı devre dışı bırakmayı düşünün.'
+    if StudentInvite.objects.filter(coach=coach).exists():
+        return 'Bu koç öğrenci daveti göndermiş; silinemez. Hesabı devre dışı bırakmayı düşünün.'
+    try:
+        from purchase_app.models import Order
+        if Order.objects.filter(coach=coach).exists():
+            return 'Bu koçun satın alma kayıtları var; silinemez. Hesabı devre dışı bırakmayı düşünün.'
+    except Exception:
+        pass
+    return None
+
+
+@staff_required
+@require_http_methods(['POST'])
+@ratelimit(key='user', rate='20/h', block=True)
+def panel_koc_sil(request, coach_id):
+    coach = get_object_or_404(User, pk=coach_id, role='coach')
+    action = request.POST.get('action', '')
+
+    block = _coach_deletion_block(coach)
+
+    if action == 'check':
+        if block:
+            messages.error(request, block)
+            return redirect('panel_koc_ekle')
+        return render(request, 'panel/koc_sil_onayla.html', {
+            'coach': coach,
+            'active_tab': 'koc_ekle',
+        })
+
+    if action == 'delete':
+        if block:
+            messages.error(request, block)
+            return redirect('panel_koc_ekle')
+        _log.info(
+            'Staff %s (pk=%s) deleted coach %s (pk=%s, email=%s)',
+            request.user.full_name, request.user.pk,
+            coach.full_name, coach.pk, coach.email,
+        )
+        coach.delete()
+        messages.success(request, f'Koç hesabı silindi: {coach.full_name} ({coach.email})')
+        return redirect('panel_koc_ekle')
+
+    return redirect('panel_koc_ekle')
+
+
 # ── Coach profil — WordPress availability toggle ──────────────────────────────
 
 _WP_AVAIL_COOLDOWN = 2  # seconds between allowed WP syncs per coach

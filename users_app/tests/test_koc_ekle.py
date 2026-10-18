@@ -213,3 +213,82 @@ def test_new_coach_can_set_password_and_login(staff_client, client, mailoutbox):
     coach = User.objects.get(email='zeynep@example.com')
     assert coach.has_usable_password()
     assert coach.check_password('VagusTest123!')
+
+
+# ── coach deletion ────────────────────────────────────────────────────────────
+
+def _make_no_pw_coach(db, email='todel@example.com'):
+    coach = User.objects.create_user(email=email, full_name='Silinecek Koç', role='coach', password=None)
+    coach.is_active = True
+    coach.is_approved = True
+    coach.save(update_fields=['is_active', 'is_approved'])
+    return coach
+
+
+def _sil_check(client, coach_id):
+    return client.post(
+        reverse('panel_koc_sil', args=[coach_id]),
+        {'action': 'check'},
+    )
+
+
+def _sil_delete(client, coach_id):
+    return client.post(
+        reverse('panel_koc_sil', args=[coach_id]),
+        {'action': 'delete'},
+    )
+
+
+@pytest.mark.django_db
+def test_delete_allowed_case(staff_client, db):
+    coach = _make_no_pw_coach(db)
+    coach_pk = coach.pk
+
+    resp = _sil_check(staff_client, coach_pk)
+    assert resp.status_code == 200
+    assert 'koc_sil_onayla' in resp.templates[0].name
+
+    resp2 = _sil_delete(staff_client, coach_pk)
+    assert resp2.status_code == 302
+    assert not User.objects.filter(pk=coach_pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_refused_coach_has_student(staff_client, db):
+    from users_app.models import CoachStudent
+    coach = _make_no_pw_coach(db)
+    student = baker.make('users_app.User', role='student', is_active=True)
+    CoachStudent.objects.create(coach=coach, student=student, active=True)
+
+    resp = _sil_check(staff_client, coach.pk)
+    assert resp.status_code == 302
+    assert User.objects.filter(pk=coach.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_refused_coach_has_password(staff_client, db):
+    coach = User.objects.create_user(email='withpw@example.com', full_name='Koç', role='coach',
+                                     password='SomePassword1!')
+    coach.is_active = True
+    coach.is_approved = True
+    coach.save(update_fields=['is_active', 'is_approved'])
+
+    resp = _sil_check(staff_client, coach.pk)
+    assert resp.status_code == 302
+    assert User.objects.filter(pk=coach.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_non_staff_rejected(plain_client, db):
+    coach = _make_no_pw_coach(db)
+    resp = _sil_check(plain_client, coach.pk)
+    assert resp.status_code in (302, 301)
+    assert User.objects.filter(pk=coach.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_wrong_role_returns_404(staff_client, db):
+    student = baker.make('users_app.User', role='student', is_active=True)
+    resp = _sil_delete(staff_client, student.pk)
+    assert resp.status_code == 404
+    assert User.objects.filter(pk=student.pk).exists()
