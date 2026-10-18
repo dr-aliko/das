@@ -2424,6 +2424,11 @@ def coach_dashboard(request):
 
         trend = round(last_net - avg_30d, 2) if last_net is not None and avg_30d is not None else None
 
+        net_delta = None
+        if len(exams) >= 2 and last_net is not None:
+            prev_net = round(float(exams[1].total_net()), 2)
+            net_delta = round(last_net - prev_net, 2)
+
         student_data.append({
             'student': student,
             'cs': cs_map.get(student.id),
@@ -2433,6 +2438,7 @@ def coach_dashboard(request):
             'status': status_key,
             'initials': initials,
             'trend': trend,
+            'net_delta': net_delta,
         })
 
     # ── Inbox alerts for the slide-out drawer ─────────────────────────────────

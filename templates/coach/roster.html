@@ -192,6 +192,7 @@
                 <div class="flex items-center justify-between gap-2">
                   <h3 class="pii font-semibold text-ink-100 truncate">{{ item.student.full_name }}</h3>
                   <div class="flex items-center gap-1.5 shrink-0">
+                    {% if item.cs %}{% membership_badge item.cs %}{% endif %}
                     {% if item.status == 'iyi' %}
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
                                  bg-emerald-tint text-emerald-500 text-[11px] font-semibold">
@@ -201,11 +202,6 @@
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
                                  bg-amber-tint text-amber-500 text-[11px] font-semibold">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
-                    </span>
-                    {% else %}
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                                 bg-ruby-tint text-ruby-500 text-[11px] font-semibold">
-                      <span class="w-1.5 h-1.5 rounded-full bg-ruby-500"></span>Pasif
                     </span>
                     {% endif %}
                     {# Trash button — inside flex row, @click.stop prevents link navigation #}
@@ -224,7 +220,6 @@
                   </div>
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
-                {% if item.cs %}{% membership_badge item.cs %}{% endif %}
               </div>
             </div>
 
@@ -250,16 +245,14 @@
 
             <div class="mt-3 flex items-center justify-between">
               <span class="text-xs font-medium tnum">
-                {% if item.trend is not None %}
-                  {% if item.trend > 0 %}
-                    <span class="text-emerald-500">▲ +{{ item.trend|floatformat:1 }} vs 30g</span>
-                  {% elif item.trend < 0 %}
-                    <span class="text-ruby-500">▼ {{ item.trend|floatformat:1 }} vs 30g</span>
+                {% if item.net_delta is not None %}
+                  {% if item.net_delta > 0 %}
+                    <span class="text-emerald-500">▲ +{{ item.net_delta|floatformat:1 }}</span>
+                  {% elif item.net_delta < 0 %}
+                    <span class="text-ruby-500">▼ {{ item.net_delta|floatformat:1 }}</span>
                   {% else %}
-                    <span class="text-ink-500">— vs 30g</span>
+                    <span class="text-ink-500">—</span>
                   {% endif %}
-                {% elif item.status == 'pasif' %}
-                  <span class="text-ruby-500">Sınav kaydı bekleniyor</span>
                 {% else %}
                   <span class="text-ink-500">—</span>
                 {% endif %}
@@ -268,7 +261,7 @@
                            inline-flex items-center gap-1 transition-colors">
                 {% if item.status == 'iyi' %}Detayları gör
                 {% elif item.status == 'dusus' %}İncele
-                {% else %}Hatırlat{% endif %}
+                {% else %}Detayları gör{% endif %}
                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
                      viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
               </span>
@@ -312,12 +305,10 @@
                 <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İyi</span>
                 {% elif item.status == 'dusus' %}
                 <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-tint text-amber-500 font-semibold">Düşüş</span>
-                {% else %}
-                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-ruby-tint text-ruby-500 font-semibold">Pasif</span>
                 {% endif %}
+                {% if item.cs %}{% membership_badge item.cs %}{% endif %}
               </div>
               <p class="pii text-[11px] text-ink-500 mt-0.5">{{ item.student.grade|default:"—" }}</p>
-              {% if item.cs %}{% membership_badge item.cs %}{% endif %}
             </div>
             <div class="hidden sm:flex items-center gap-5 shrink-0">
               <div class="text-right">

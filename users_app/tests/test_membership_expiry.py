@@ -50,7 +50,7 @@ def test_expiry_info_more_than_7_days(vagus_link):
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
     assert info is not None
-    assert info['variant'] == 'normal'
+    assert info['variant'] == 'success'
     assert '30 gün kaldı' == info['label']
     assert info['expired'] is False
 
@@ -60,7 +60,7 @@ def test_expiry_info_warning_7_days(vagus_link):
     vagus_link.next_payment_due = date.today() + timedelta(days=7)
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
-    assert info['variant'] == 'warning'
+    assert info['variant'] == 'warn'
     assert '7 gün kaldı' == info['label']
     assert info['expired'] is False
 
@@ -70,7 +70,7 @@ def test_expiry_info_warning_1_day(vagus_link):
     vagus_link.next_payment_due = date.today() + timedelta(days=1)
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
-    assert info['variant'] == 'warning'
+    assert info['variant'] == 'danger'
     assert '1 gün kaldı' == info['label']
     assert info['expired'] is False
 
@@ -80,7 +80,7 @@ def test_expiry_info_today(vagus_link):
     vagus_link.next_payment_due = date.today()
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
-    assert info['variant'] == 'warning'
+    assert info['variant'] == 'danger'
     assert info['label'] == 'Bugün bitiyor'
     assert info['expired'] is False
 
@@ -90,7 +90,7 @@ def test_expiry_info_expired_yesterday(vagus_link):
     vagus_link.next_payment_due = date.today() - timedelta(days=1)
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
-    assert info['variant'] == 'expired'
+    assert info['variant'] == 'danger'
     assert 'Süre bitti (1 gün önce)' == info['label']
     assert info['expired'] is True
 
@@ -100,7 +100,7 @@ def test_expiry_info_expired_many_days(vagus_link):
     vagus_link.next_payment_due = date.today() - timedelta(days=15)
     vagus_link.save()
     info = membership_expiry_info(vagus_link)
-    assert info['variant'] == 'expired'
+    assert info['variant'] == 'danger'
     assert '15 gün önce' in info['label']
 
 

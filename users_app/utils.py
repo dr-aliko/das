@@ -18,7 +18,7 @@ def membership_expiry_info(cs):
         return {
             'days': days,
             'label': f'Süre bitti ({abs(days)} gün önce)',
-            'variant': 'expired',
+            'variant': 'danger',
             'title': title,
             'expired': True,
         }
@@ -26,22 +26,30 @@ def membership_expiry_info(cs):
         return {
             'days': 0,
             'label': 'Bugün bitiyor',
-            'variant': 'warning',
+            'variant': 'danger',
             'title': title,
             'expired': False,
         }
-    if days <= 7:
+    if days <= 3:
         return {
             'days': days,
             'label': f'{days} gün kaldı',
-            'variant': 'warning',
+            'variant': 'danger',
+            'title': title,
+            'expired': False,
+        }
+    if days <= 14:
+        return {
+            'days': days,
+            'label': f'{days} gün kaldı',
+            'variant': 'warn',
             'title': title,
             'expired': False,
         }
     return {
         'days': days,
         'label': f'{days} gün kaldı',
-        'variant': 'normal',
+        'variant': 'success',
         'title': title,
         'expired': False,
     }
