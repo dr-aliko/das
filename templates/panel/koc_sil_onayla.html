@@ -56,7 +56,6 @@
     <div class="flex gap-3">
       <form method="post" action="{% url 'panel_koc_sil' coach.pk %}">
         {% csrf_token %}
-        <input type="hidden" name="action" value="delete">
         <button type="submit"
                 class="px-4 py-2 rounded-lg bg-ruby-600 hover:bg-ruby-500 text-white text-sm font-semibold transition-colors">
           Evet, Sil

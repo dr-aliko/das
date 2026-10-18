@@ -225,18 +225,14 @@ def _make_no_pw_coach(db, email='todel@example.com'):
     return coach
 
 
-def _sil_check(client, coach_id):
-    return client.post(
-        reverse('panel_koc_sil', args=[coach_id]),
-        {'action': 'check'},
-    )
+def _sil_get(client, coach_id):
+    """GET the confirm page for deletion (PRG step 1)."""
+    return client.get(reverse('panel_koc_sil', args=[coach_id]))
 
 
-def _sil_delete(client, coach_id):
-    return client.post(
-        reverse('panel_koc_sil', args=[coach_id]),
-        {'action': 'delete'},
-    )
+def _sil_delete(client, coach_id, follow=False):
+    """POST to execute deletion (PRG step 2)."""
+    return client.post(reverse('panel_koc_sil', args=[coach_id]), follow=follow)
 
 
 @pytest.mark.django_db
@@ -244,7 +240,7 @@ def test_delete_allowed_case(staff_client, db):
     coach = _make_no_pw_coach(db)
     coach_pk = coach.pk
 
-    resp = _sil_check(staff_client, coach_pk)
+    resp = _sil_get(staff_client, coach_pk)
     assert resp.status_code == 200
     assert 'koc_sil_onayla' in resp.templates[0].name
 
@@ -260,7 +256,7 @@ def test_delete_refused_coach_has_student(staff_client, db):
     student = baker.make('users_app.User', role='student', is_active=True)
     CoachStudent.objects.create(coach=coach, student=student, active=True)
 
-    resp = _sil_check(staff_client, coach.pk)
+    resp = _sil_get(staff_client, coach.pk)
     assert resp.status_code == 302
     assert User.objects.filter(pk=coach.pk).exists()
 
@@ -273,7 +269,7 @@ def test_delete_refused_coach_has_password(staff_client, db):
     coach.is_approved = True
     coach.save(update_fields=['is_active', 'is_approved'])
 
-    resp = _sil_check(staff_client, coach.pk)
+    resp = _sil_get(staff_client, coach.pk)
     assert resp.status_code == 302
     assert User.objects.filter(pk=coach.pk).exists()
 
@@ -281,14 +277,54 @@ def test_delete_refused_coach_has_password(staff_client, db):
 @pytest.mark.django_db
 def test_delete_non_staff_rejected(plain_client, db):
     coach = _make_no_pw_coach(db)
-    resp = _sil_check(plain_client, coach.pk)
+    resp = _sil_get(plain_client, coach.pk)
     assert resp.status_code in (302, 301)
     assert User.objects.filter(pk=coach.pk).exists()
 
 
 @pytest.mark.django_db
-def test_delete_wrong_role_returns_404(staff_client, db):
+def test_delete_wrong_role_redirects_gracefully(staff_client, db):
+    """Attempting to delete a non-coach user must redirect, not 404."""
     student = baker.make('users_app.User', role='student', is_active=True)
     resp = _sil_delete(staff_client, student.pk)
-    assert resp.status_code == 404
+    assert resp.status_code == 302
     assert User.objects.filter(pk=student.pk).exists()
+
+
+# ── follow-redirect tests (assert final page is 200) ─────────────────────────
+
+@pytest.mark.django_db
+def test_delete_success_lands_on_list_page(staff_client, db):
+    coach = _make_no_pw_coach(db, email='followdel@example.com')
+    resp = _sil_delete(staff_client, coach.pk, follow=True)
+    assert resp.status_code == 200
+    assert resp.redirect_chain[-1][0].endswith('/panel/koc-ekle/')
+    assert not User.objects.filter(email='followdel@example.com').exists()
+
+
+@pytest.mark.django_db
+def test_delete_refused_lands_on_list_page(staff_client, db):
+    from users_app.models import CoachStudent
+    coach = _make_no_pw_coach(db, email='followref@example.com')
+    student = baker.make('users_app.User', role='student', is_active=True)
+    CoachStudent.objects.create(coach=coach, student=student, active=True)
+
+    resp = _sil_get(staff_client, coach.pk)
+    assert resp.status_code == 302
+    final = staff_client.get(resp['Location'])
+    assert final.status_code == 200
+    assert User.objects.filter(email='followref@example.com').exists()
+
+
+@pytest.mark.django_db
+def test_delete_already_deleted_id_harmless(staff_client, db):
+    """A second request for a coach that was already deleted must not 404."""
+    coach = _make_no_pw_coach(db, email='gone@example.com')
+    coach_pk = coach.pk
+    coach.delete()
+
+    resp = _sil_get(staff_client, coach_pk)
+    assert resp.status_code == 302
+
+    final = staff_client.get(resp['Location'], follow=True)
+    assert final.status_code == 200

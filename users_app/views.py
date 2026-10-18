@@ -1673,15 +1673,16 @@ def _coach_deletion_block(coach):
 
 
 @staff_required
-@require_http_methods(['POST'])
 @ratelimit(key='user', rate='20/h', block=True)
 def panel_koc_sil(request, coach_id):
-    coach = get_object_or_404(User, pk=coach_id, role='coach')
-    action = request.POST.get('action', '')
+    coach = User.objects.filter(pk=coach_id, role='coach').first()
+    if coach is None:
+        messages.info(request, 'Bu koç hesabı bulunamadı (zaten silinmiş olabilir).')
+        return redirect('panel_koc_ekle')
 
     block = _coach_deletion_block(coach)
 
-    if action == 'check':
+    if request.method == 'GET':
         if block:
             messages.error(request, block)
             return redirect('panel_koc_ekle')
@@ -1690,19 +1691,17 @@ def panel_koc_sil(request, coach_id):
             'active_tab': 'koc_ekle',
         })
 
-    if action == 'delete':
-        if block:
-            messages.error(request, block)
-            return redirect('panel_koc_ekle')
-        _log.info(
-            'Staff %s (pk=%s) deleted coach %s (pk=%s, email=%s)',
-            request.user.full_name, request.user.pk,
-            coach.full_name, coach.pk, coach.email,
-        )
-        coach.delete()
-        messages.success(request, f'Koç hesabı silindi: {coach.full_name} ({coach.email})')
+    # POST — execute deletion after re-validating
+    if block:
+        messages.error(request, block)
         return redirect('panel_koc_ekle')
-
+    _log.info(
+        'Staff %s (pk=%s) deleted coach %s (pk=%s, email=%s)',
+        request.user.full_name, request.user.pk,
+        coach.full_name, coach.pk, coach.email,
+    )
+    coach.delete()
+    messages.success(request, f'Koç hesabı silindi: {coach.full_name} ({coach.email})')
     return redirect('panel_koc_ekle')
 
 

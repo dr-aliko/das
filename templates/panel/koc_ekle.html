@@ -152,14 +152,10 @@
                   Daveti yeniden gönder
                 </button>
               </form>
-              <form method="post" action="{% url 'panel_koc_sil' coach.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="check">
-                <button type="submit"
-                        class="px-3 py-1.5 rounded-lg bg-ruby-900/50 hover:bg-ruby-800/60 text-ruby-400 text-xs font-medium transition-colors border border-ruby-700/40">
-                  Sil
-                </button>
-              </form>
+              <a href="{% url 'panel_koc_sil' coach.pk %}"
+                 class="px-3 py-1.5 rounded-lg bg-ruby-900/50 hover:bg-ruby-800/60 text-ruby-400 text-xs font-medium transition-colors border border-ruby-700/40">
+                Sil
+              </a>
             </div>
           </td>
         </tr>
