@@ -551,7 +551,37 @@ def test_delete_task_allowed_coach_source_past_date(coach, student):
     assert resp.status_code == 200
 
 
-# ── HaftaView page rendering — json_script regression ────────────────────────
+# ── HaftaView page rendering — wrong-variable and json_script regressions ──────
+
+@pytest.mark.django_db
+def test_hafta_page_no_selectedStudent_in_desktop_component(coach):
+    """
+    Regression for line 591: the bottom-sheet edit/delete div inside panel() (desktop)
+    had x-show referencing selectedStudent?.id.  selectedStudent is not in panel()'s
+    scope, so Alpine throws ReferenceError and hides the buttons for every student.
+
+    The test splits the rendered HTML at the x-data="panel()" boundary and asserts
+    that no _STUDENT_EXPIRY_MAP lookup in the desktop section references selectedStudent.
+    Fails on unpatched code, passes after the fix.
+    """
+    c = Client()
+    c.force_login(coach)
+    resp = c.get('/coach/tasks/')
+    assert resp.status_code == 200
+    html = resp.content.decode()
+
+    # Locate the boundary between mobile (coachMobilePanel) and desktop (panel) sections
+    desktop_start = html.find('x-data="panel()"')
+    assert desktop_start != -1, "Could not find x-data=\"panel()\" in rendered page"
+
+    desktop_html = html[desktop_start:]
+
+    # No expiry-map lookup in the desktop section may reference selectedStudent
+    assert 'window._STUDENT_EXPIRY_MAP[selectedStudent' not in desktop_html, (
+        "Found window._STUDENT_EXPIRY_MAP[selectedStudent...] inside panel() (desktop): "
+        "selectedStudent is not defined in panel()'s scope → ReferenceError → buttons hidden"
+    )
+
 
 @pytest.mark.django_db
 def test_hafta_page_expiry_data_not_html_escaped(coach):
