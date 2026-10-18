@@ -1575,7 +1575,7 @@ def _send_koc_invite_email_now(coach, request):
 
 
 @staff_required
-@ratelimit(key='ip', rate='20/h', block=True)
+@ratelimit(key='user', rate='20/h', block=True)
 def panel_koc_ekle_view(request):
     coaches_no_pw = [
         c for c in User.objects.filter(role='coach', is_active=True).order_by('full_name')
@@ -1641,7 +1641,7 @@ def panel_koc_ekle_view(request):
 
 @staff_required
 @require_http_methods(['POST'])
-@ratelimit(key='ip', rate='30/h', block=True)
+@ratelimit(key='user', rate='30/h', block=True)
 def panel_koc_davet_resend(request, coach_id):
     coach = get_object_or_404(User, pk=coach_id, role='coach', is_active=True)
     if coach.has_usable_password():
