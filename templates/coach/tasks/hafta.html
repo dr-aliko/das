@@ -441,7 +441,7 @@
 
         <div data-pdf-hide class="print:hidden px-2 pt-2 shrink-0">
           <button @click="openAddTask(gun.tarih)"
-                  :disabled="!studentId || (window._STUDENT_EXPIRY_MAP && window._STUDENT_EXPIRY_MAP[studentId])"
+                  :disabled="!studentId || window._STUDENT_EXPIRY_MAP?.[studentId] === true"
                   class="w-full py-2 text-xs text-[var(--muted-2)] hover:text-[var(--heading)] hover:bg-[var(--surface-2)]
                          rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--border-strong)]
                          disabled:opacity-30 disabled:cursor-not-allowed transition">
