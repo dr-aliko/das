@@ -364,6 +364,263 @@ def test_student_can_complete_task_when_expired(coach, student, vagus_link):
 
 # ── auto_deactivate_overdue_vagus_students gating ─────────────────────────────
 
+# ── Additional is_student_program_expired() coverage ─────────────────────────
+
+@pytest.mark.django_db
+def test_vagus_null_date_not_expired(coach, student):
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_VAGUS, active=True,
+        next_payment_due=None,
+    )
+    assert is_student_program_expired(coach, student.id) is False
+
+
+@pytest.mark.django_db
+def test_is_expired_fails_open_on_unexpected_exception(coach, student):
+    """An exception other than DoesNotExist must return False (fail open), not propagate."""
+    from unittest.mock import patch as _patch
+    from users_app.models import CoachStudent as _CS
+    with _patch.object(_CS.objects, 'get', side_effect=RuntimeError('simulated db failure')):
+        result = is_student_program_expired(coach, student.id)
+    assert result is False
+
+
+# ── Create endpoint — additional allowed cases ────────────────────────────────
+
+def _create_payload(student_id):
+    return {
+        'student_id': student_id,
+        'tarih': str(date.today()),
+        'aktivite_tipi': 'soru_cozumu',
+        'ders_title': 'Test',
+        'ozel_sure_dk': '',
+        'detaylar': json.dumps([{'aciklama': 'x', 'sure_bilgisi': ''}]),
+    }
+
+
+@pytest.mark.django_db
+def test_create_task_allowed_null_source_past_date(coach, student):
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=None, active=True,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+    resp = c.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(_create_payload(student.id)),
+        content_type='application/json',
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_task_allowed_vagus_null_date(coach, student):
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_VAGUS, active=True,
+        next_payment_due=None,
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+    resp = c.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(_create_payload(student.id)),
+        content_type='application/json',
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_task_allowed_inactive_vagus_link(coach, student):
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_VAGUS, active=False,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+    resp = c.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(_create_payload(student.id)),
+        content_type='application/json',
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_task_allowed_no_cs_record(coach, student):
+    """No CoachStudent row at all — only User.coach link."""
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+    resp = c.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(_create_payload(student.id)),
+        content_type='application/json',
+    )
+    assert resp.status_code == 201
+
+
+# ── Edit / delete endpoints — additional allowed cases ────────────────────────
+
+def _edit_payload():
+    return {
+        'tarih': str(date.today()),
+        'aktivite_tipi': 'soru_cozumu',
+        'ders_title': 'Updated',
+        'ozel_sure_dk': '',
+        'detaylar': json.dumps([{'aciklama': 'y', 'sure_bilgisi': ''}]),
+    }
+
+
+@pytest.mark.django_db
+def test_edit_task_allowed_coach_source_past_date(coach, student):
+    from tasks_app.models import GorevGrubu
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_COACH, active=True,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    grup = GorevGrubu.objects.create(
+        student=student, tarih=date.today(),
+        ders_title='Test', aktivite_tipi='soru_cozumu',
+    )
+    c = Client()
+    c.force_login(coach)
+    resp = c.put(
+        f'/coach/tasks/api/gorev/{grup.id}',
+        data=json.dumps(_edit_payload()),
+        content_type='application/json',
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_edit_task_allowed_vagus_null_date(coach, student):
+    from tasks_app.models import GorevGrubu
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_VAGUS, active=True,
+        next_payment_due=None,
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    grup = GorevGrubu.objects.create(
+        student=student, tarih=date.today(),
+        ders_title='Test', aktivite_tipi='soru_cozumu',
+    )
+    c = Client()
+    c.force_login(coach)
+    resp = c.put(
+        f'/coach/tasks/api/gorev/{grup.id}',
+        data=json.dumps(_edit_payload()),
+        content_type='application/json',
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_delete_task_allowed_coach_source_past_date(coach, student):
+    from tasks_app.models import GorevGrubu
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_COACH, active=True,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    grup = GorevGrubu.objects.create(
+        student=student, tarih=date.today(),
+        ders_title='Test', aktivite_tipi='soru_cozumu',
+    )
+    c = Client()
+    c.force_login(coach)
+    resp = c.delete(f'/coach/tasks/api/gorev/{grup.id}')
+    assert resp.status_code == 200
+
+
+# ── HaftaView page rendering — json_script regression ────────────────────────
+
+@pytest.mark.django_db
+def test_hafta_page_expiry_data_not_html_escaped(coach):
+    """
+    Regression for 9c42773: {{ student_expiry_map_json }} in a <script> tag causes
+    Django auto-escaping to turn every " into &quot;, producing a JS SyntaxError
+    ({&quot;5&quot;: false}) that leaves _STUDENT_EXPIRY_MAP undefined for every
+    student on the page.  Triggered by ANY vagus student with a non-null
+    next_payment_due — including paying students with a future date.
+    Fix: render the dict through json_script so quotes are never HTML-escaped.
+    """
+    import json as _json
+    import re
+
+    past = baker.make('users_app.User', role='student', is_active=True, coach=coach)
+    future = baker.make('users_app.User', role='student', is_active=True, coach=coach)
+    coach_src = baker.make('users_app.User', role='student', is_active=True, coach=coach)
+
+    CoachStudent.objects.create(
+        coach=coach, student=past,
+        source=CoachStudent.SOURCE_VAGUS, active=True,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    CoachStudent.objects.create(
+        coach=coach, student=future,
+        source=CoachStudent.SOURCE_VAGUS, active=True,
+        next_payment_due=date.today() + timedelta(days=30),
+    )
+    CoachStudent.objects.create(
+        coach=coach, student=coach_src,
+        source=CoachStudent.SOURCE_COACH, active=True,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+
+    c = Client()
+    c.force_login(coach)
+    resp = c.get('/coach/tasks/')
+    assert resp.status_code == 200
+    html = resp.content.decode()
+
+    # json_script element must be present — fails on 9c42773 which uses a raw <script> tag
+    assert 'id="_das_expiry_data"' in html, \
+        "json_script element missing — old code used {{ var }} which HTML-escapes the JSON"
+
+    # Extract the element text and confirm no HTML entities snuck in
+    m = re.search(
+        r'<script[^>]+id=["\']_das_expiry_data["\'][^>]*>(.*?)</script>',
+        html, re.DOTALL,
+    )
+    assert m is not None, "Could not locate <script id=_das_expiry_data> in rendered page"
+    body = m.group(1)
+    assert '&quot;' not in body, \
+        "HTML entity &quot; found inside json_script element — double-escaping bug"
+
+    # Content must be parseable JSON
+    data = _json.loads(body)
+
+    # Only the expired vagus student must be in the map, with value True
+    str_past = str(past.id)
+    assert str_past in data, "Expired vagus student must appear in expiry map"
+    assert data[str_past] is True
+
+    # Non-expired vagus and coach-source students must NOT be in the map at all
+    assert str(future.id) not in data, "Non-expired vagus student must not be in expiry map"
+    assert str(coach_src.id) not in data, "Coach-source student must not be in expiry map"
+
+
+# ── auto_deactivate_overdue_vagus_students gating ─────────────────────────────
+
 @pytest.mark.django_db
 def test_auto_deactivate_skipped_when_setting_false(coach, student, vagus_link):
     vagus_link.next_payment_due = date.today() - timedelta(days=5)

@@ -49,17 +49,24 @@ def membership_expiry_info(cs):
 
 def is_student_program_expired(coach, student_id):
     """
-    Returns True if this coach's Vagus-sourced student has an expired membership.
-    Returns False for coach-source, null-source, or missing CoachStudent records.
+    Returns True only when coach's active Vagus-sourced student has next_payment_due < today.
+    Returns False for every other case, including unexpected exceptions (fail open).
     """
-    from users_app.models import CoachStudent
+    import logging
     try:
-        cs = CoachStudent.objects.get(coach=coach, student_id=student_id, active=True)
-    except CoachStudent.DoesNotExist:
+        from users_app.models import CoachStudent
+        try:
+            cs = CoachStudent.objects.get(coach=coach, student_id=student_id, active=True)
+        except CoachStudent.DoesNotExist:
+            return False
+        if cs.source != CoachStudent.SOURCE_VAGUS:
+            return False
+        if cs.next_payment_due is None:
+            return False
+        return cs.next_payment_due < timezone.localdate()
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            'is_student_program_expired: unexpected error (coach=%s, student_id=%s): %s',
+            coach, student_id, exc,
+        )
         return False
-    if cs.source != CoachStudent.SOURCE_VAGUS:
-        return False
-    if cs.next_payment_due is None:
-        return False
-    today = timezone.localdate()
-    return cs.next_payment_due < today

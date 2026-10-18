@@ -67,12 +67,12 @@ class HaftaView(View):
         expiry_map = {}
         for s in coached_students:
             cs = cs_map.get(s.id)
-            if cs and cs.source == CoachStudent.SOURCE_VAGUS and cs.next_payment_due:
-                expiry_map[s.id] = cs.next_payment_due < today
-        import json as _json
+            if (cs and cs.source == CoachStudent.SOURCE_VAGUS
+                    and cs.next_payment_due and cs.next_payment_due < today):
+                expiry_map[s.id] = True
         return render(request, "coach/tasks/hafta.html", {
             "students": coached_students,
-            "student_expiry_map_json": _json.dumps(expiry_map),
+            "student_expiry_map": expiry_map,
         })
 
 

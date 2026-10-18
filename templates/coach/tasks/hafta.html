@@ -281,7 +281,8 @@
 
 <script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
 <script>const _STUDENT_ALAN_MAP = { {% for s in students %}{{ s.id }}: '{{ s.alan }}',{% endfor %} };</script>
-<script>window._STUDENT_EXPIRY_MAP = {{ student_expiry_map_json|default:"{}" }};</script>
+{{ student_expiry_map|json_script:"_das_expiry_data" }}
+<script>(function(){try{window._STUDENT_EXPIRY_MAP=JSON.parse(document.getElementById('_das_expiry_data').textContent);}catch(e){window._STUDENT_EXPIRY_MAP={};}})();</script>
 <div class="hidden md:block">
 <div x-data="panel()" x-init="init()" x-cloak
      @playlist-imported.window="onPlaylistImported($event.detail)">
