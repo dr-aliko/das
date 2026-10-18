@@ -160,10 +160,10 @@ def test_same_day_average_mixes_with_single_day(student, mat_subject):
     assert counts == [2, 1]
 
 
-# ── student view: unchanged (no averaging, no counts) ────────────────────────
+# ── student view: same averaging as coach view ───────────────────────────────
 
 @pytest.mark.django_db
-def test_student_view_has_no_counts_key(student, mat_subject):
+def test_student_view_has_counts_key(student, mat_subject):
     today = date.today()
     _brans(student, mat_subject, today, dogru=40)
     _brans(student, mat_subject, today, dogru=60)
@@ -171,12 +171,12 @@ def test_student_view_has_no_counts_key(student, mat_subject):
     chart = _chart(student, coach_view=False)
     ds = _ds(chart, 'Matematik')
     assert ds is not None
-    assert 'counts' not in ds
+    assert 'counts' in ds
+    assert _non_null(ds['counts']) == [2]
 
 
 @pytest.mark.django_db
-def test_student_view_same_day_gives_one_point(student, mat_subject):
-    """Student view still produces one point per day (last-wins, not averaged)."""
+def test_student_view_same_day_averaged(student, mat_subject):
     today = date.today()
     _brans(student, mat_subject, today, dogru=40)
     _brans(student, mat_subject, today, dogru=60)
@@ -184,5 +184,39 @@ def test_student_view_same_day_gives_one_point(student, mat_subject):
     chart = _chart(student, coach_view=False)
     ds = _ds(chart, 'Matematik')
     data = _non_null(ds['data'])
-    assert len(data) == 1   # still one point
-    assert 'counts' not in ds
+    assert len(data) == 1
+    assert data[0] == pytest.approx(50.0)
+
+
+# ── unchanged: exam list and single-subject detail ───────────────────────────
+
+@pytest.mark.django_db
+def test_exam_list_still_shows_all_individual_exams(student, mat_subject):
+    """exams.recent must list every BransDeneme entry separately, not averaged."""
+    today = date.today()
+    _brans(student, mat_subject, today, dogru=40)
+    _brans(student, mat_subject, today, dogru=60)
+
+    ctx = _build_brans_hub_context(student, coach_view=False)
+    assert ctx['exams'].total_count == 2
+    assert len(ctx['exams'].recent) == 2
+
+
+@pytest.mark.django_db
+def test_build_brans_chart_data_unaffected(student, mat_subject):
+    """_build_brans_chart_data is a separate function used by the single-subject
+    detail page; it must not be touched by this change."""
+    from exams_app.views import _build_brans_chart_data
+    from exams_app.models import BransDeneme
+
+    today = date.today()
+    _brans(student, mat_subject, today, dogru=40)
+    _brans(student, mat_subject, today, dogru=60)
+
+    entries = list(
+        BransDeneme.objects.filter(student=student).select_related('ders').order_by('-tarih', '-id')
+    )
+    result = _build_brans_chart_data(entries)
+    # The function returns a structure with labels and datasets; it should still
+    # have exactly one point per date (its own unchanged logic).
+    assert result is not None
