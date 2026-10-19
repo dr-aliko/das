@@ -88,9 +88,11 @@ class CoachStudent(models.Model):
 
     DEACTIVATION_MANUAL = 'manual'
     DEACTIVATION_PAYMENT_OVERDUE = 'payment_overdue'
+    DEACTIVATION_REASSIGN = 'reassign'
     DEACTIVATION_REASON_CHOICES = [
         ('manual', 'Koç tarafından kaldırıldı'),
         ('payment_overdue', 'Ödeme gecikmesi'),
+        ('reassign', 'Koç değiştirildi'),
     ]
 
     coach = models.ForeignKey(
@@ -130,6 +132,55 @@ class CoachStudent(models.Model):
             return None
         from datetime import date
         return (self.next_payment_due - date.today()).days
+
+
+class CoachStudentInterval(models.Model):
+    """Audit trail of every period a student was assigned to a coach (DAS-marketplace-1)."""
+    REASON_MANUAL = 'manual'
+    REASON_PAYMENT_OVERDUE = 'payment_overdue'
+    REASON_REASSIGN = 'reassign'
+    REASON_BACKFILL = 'backfill'
+    CLOSE_REASON_CHOICES = [
+        ('manual', 'Manuel kapatıldı'),
+        ('payment_overdue', 'Ödeme gecikmesi'),
+        ('reassign', 'Koç değiştirildi'),
+        ('backfill', 'Geriye dönük dolduruldu'),
+    ]
+
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='coach_intervals',
+        limit_choices_to={'role': 'coach'},
+    )
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='student_intervals',
+        limit_choices_to={'role': 'student'},
+    )
+    source = models.CharField(max_length=10, null=True, blank=True)
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    close_reason = models.CharField(
+        max_length=20,
+        choices=CLOSE_REASON_CHOICES,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['student', 'started_at']),
+            models.Index(fields=['coach', 'started_at']),
+        ]
+        verbose_name = 'Koç-Öğrenci Dönemi'
+        verbose_name_plural = 'Koç-Öğrenci Dönemleri'
+
+    def __str__(self):
+        end = self.ended_at.date() if self.ended_at else 'açık'
+        return f'{self.coach.full_name} → {self.student.full_name}: {self.started_at.date()} – {end}'
 
 
 class FeeTier(models.Model):

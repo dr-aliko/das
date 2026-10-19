@@ -137,6 +137,7 @@ def on_payment_success(order):
             return
 
         # Create or extend CoachStudent link
+        from users_app.services.coach_student import open_interval
         today = date.today()
         cs, created = CoachStudent.objects.get_or_create(
             coach=order.coach,
@@ -148,11 +149,16 @@ def on_payment_success(order):
             },
         )
         if not created:
+            was_inactive = not cs.active
             base = max(cs.next_payment_due or today, today)
             cs.next_payment_due = base + timedelta(days=order.plan.duration_days)
             cs.active = True
             cs.deactivation_reason = None
             cs.save(update_fields=['next_payment_due', 'active', 'deactivation_reason'])
+            if was_inactive:
+                open_interval(cs)
+        else:
+            open_interval(cs)
 
         # Mirror invite_register_view (users_app/views.py:512): set legacy User.coach FK.
         # Roster, task-create, GorevGrubu ownership all traverse this field.

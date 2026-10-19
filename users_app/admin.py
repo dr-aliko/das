@@ -46,16 +46,9 @@ class UserAdmin(BaseUserAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if obj.role == 'student' and obj.coach_id and 'coach' in form.changed_data:
-            link, created = CoachStudent.objects.get_or_create(
-                coach_id=obj.coach_id,
-                student=obj,
-                defaults={'active': True, 'source': CoachStudent.SOURCE_VAGUS},
-            )
-            # If the row was previously soft-deleted, reactivate it.
-            # Don't touch source — preserve whatever classification was already set.
-            if not created and not link.active:
-                link.active = True
-                link.save(update_fields=['active'])
+            from users_app.services.coach_student import ensure_active_link
+            coach = User.objects.get(pk=obj.coach_id)
+            ensure_active_link(coach, obj, CoachStudent.SOURCE_VAGUS)
 
 
 # ── StudentInvite admin ───────────────────────────────────────────────────────

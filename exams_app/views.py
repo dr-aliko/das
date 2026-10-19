@@ -2371,10 +2371,9 @@ def coach_dashboard(request):
     today = date.today()
 
     # Sync CoachStudent records for all linked students (lazy migration from User.coach FK)
+    from users_app.services.coach_student import ensure_active_link
     for student in students:
-        CoachStudent.objects.get_or_create(
-            coach=request.user, student=student, defaults={'active': True}
-        )
+        ensure_active_link(request.user, student, source=None)
 
     # Build CoachStudent lookup for expiry badges
     cs_map = {
@@ -2661,16 +2660,15 @@ def unlink_student(request, student_id):
         return JsonResponse({'ok': False}, status=405)
     if not coach_can_view_student(request.user, student_id):
         return HttpResponseForbidden()
-    from users_app.models import User as UserModel
+    from users_app.models import User as UserModel, CoachStudentInterval
+    from users_app.services.coach_student import deactivate_link
     student = get_object_or_404(UserModel, id=student_id, role='student')
-    # Sever both the legacy FK and the CoachStudent link table
     if student.coach_id == request.user.id:
         student.coach = None
         student.save(update_fields=['coach'])
-    from users_app.models import CoachStudent as _CS
-    CoachStudent.objects.filter(coach=request.user, student=student).update(
-        active=False, deactivation_reason=_CS.DEACTIVATION_MANUAL
-    )
+    link = CoachStudent.objects.filter(coach=request.user, student=student, active=True).first()
+    if link:
+        deactivate_link(link, CoachStudentInterval.REASON_MANUAL)
     return JsonResponse({'ok': True})
 
 

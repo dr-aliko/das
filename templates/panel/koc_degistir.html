@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Koçu Değiştir — {{ student.full_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <div class="flex items-center gap-2 mb-0.5">
+      <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+      <h1 class="text-lg font-semibold text-white">Koçu Değiştir</h1>
+    </div>
+    <p class="text-sm text-ink-400">Öğrenciyi mevcut koçundan ayırıp yeni bir koça atar. İşlem geri alınamaz.</p>
+  </div>
+
+  {# ── Student card ──────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 space-y-4">
+    <h2 class="text-sm font-semibold text-ink-300 uppercase tracking-wider">Öğrenci</h2>
+    <div class="flex items-center gap-3">
+      <span class="w-9 h-9 rounded-full bg-violet-500/15 border border-violet-500/25
+                   flex items-center justify-center text-violet-400 text-sm font-bold shrink-0">
+        {{ student.full_name|first|upper }}
+      </span>
+      <div>
+        <p class="text-sm font-semibold text-ink-100 pii">{{ student.full_name }}</p>
+        <p class="text-xs text-ink-500 pii">{{ student.email }}</p>
+      </div>
+    </div>
+
+    {# Current coach #}
+    {% if current_link %}
+    <div class="border-t border-ink-800 pt-4">
+      <p class="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-2">Mevcut Koç</p>
+      <div class="flex items-center gap-3">
+        <span class="w-7 h-7 rounded-full bg-steel-500/15 border border-steel-500/25
+                     flex items-center justify-center text-steel-400 text-xs font-bold shrink-0">
+          {{ current_link.coach.full_name|first|upper }}
+        </span>
+        <div>
+          <p class="text-sm font-medium text-ink-200">{{ current_link.coach.full_name }}</p>
+          <p class="text-xs text-ink-500">{{ current_link.coach.email }}</p>
+        </div>
+        <div class="ml-auto text-right">
+          {% if current_link.source == 'vagus' %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                         bg-steel-500/10 border border-steel-500/20 text-steel-400">Vagus</span>
+          {% elif current_link.source == 'coach' %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                         bg-ink-700/50 border border-ink-600/30 text-ink-400">Koç</span>
+          {% endif %}
+          {% if current_link.next_payment_due %}
+            <p class="text-xs text-ink-500 mt-0.5">Ödeme: {{ current_link.next_payment_due }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="border-t border-ink-800 pt-4">
+      <p class="text-sm text-amber-400">Bu öğrencinin aktif bir koç bağlantısı yok.</p>
+    </div>
+    {% endif %}
+
+    {# What stays / follows #}
+    <div class="border-t border-ink-800 pt-4 grid grid-cols-2 gap-4 text-xs text-ink-400">
+      <div>
+        <p class="font-semibold text-ink-300 mb-1">Eski koçta kalır</p>
+        <ul class="space-y-0.5 list-disc list-inside">
+          <li>YouTube oynatma listeleri</li>
+          <li>Koç uyarıları (CoachAlert)</li>
+          <li>Erişim geçmişi (audit log)</li>
+        </ul>
+      </div>
+      <div>
+        <p class="font-semibold text-ink-300 mb-1">Öğrenciyle taşınır</p>
+        <ul class="space-y-0.5 list-disc list-inside">
+          <li>Denemeler ve branş sınavları</li>
+          <li>Görevler (tüm geçmiş)</li>
+          <li>Kaynak kitaplar ve odak soruları</li>
+          <li>İlerleme ve başarı rozetleri</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# ── Coach selection form ──────────────────────────────────────────────── #}
+  {% if current_link %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-5">
+    <h2 class="text-sm font-semibold text-ink-300 uppercase tracking-wider mb-4">Yeni Koç Seç</h2>
+
+    {% if error %}
+    <div class="mb-4 rounded-lg border border-ruby-500/30 bg-ruby-500/10 px-4 py-2.5 text-sm text-ruby-300">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="">
+      {% csrf_token %}
+      <div class="space-y-4">
+        <div>
+          <label for="new_coach_id" class="block text-xs font-medium text-ink-400 mb-1.5">Koç</label>
+          <select id="new_coach_id" name="new_coach_id" required
+                  class="w-full rounded-lg border border-ink-700 bg-ink-900 text-ink-100
+                         px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-steel-500">
+            <option value="">— Koç seçin —</option>
+            {% for coach in eligible_coaches %}
+            <option value="{{ coach.pk }}">{{ coach.full_name }} ({{ coach.email }})</option>
+            {% empty %}
+            <option disabled>Uygun koç bulunamadı</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <a href="{% url 'panel_ogrenciler' %}"
+             class="text-sm text-ink-500 hover:text-ink-300 transition-colors">
+            ← İptal
+          </a>
+          <button type="submit"
+                  class="h-9 px-5 rounded-lg text-sm font-semibold bg-steel-600 hover:bg-steel-500
+                         text-white transition-colors {% if not eligible_coaches %}opacity-40 pointer-events-none{% endif %}">
+            Koçu Değiştir
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% else %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-5 text-center">
+    <p class="text-sm text-ink-500">Aktif koç bağlantısı olmadığı için işlem yapılamaz.</p>
+    <a href="{% url 'panel_ogrenciler' %}" class="mt-3 inline-block text-sm text-steel-400 hover:text-steel-300">← Geri dön</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -103,12 +103,19 @@
               {% membership_badge link %}
             </td>
             <td class="px-5 py-3 text-right">
-              <button type="button"
-                      onclick="unlinkStudent({{ coach.pk }}, {{ link.student.pk }}, {{ link.pk }}, this)"
-                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
-                             text-ruby-400 hover:bg-ruby-500/10 transition-colors">
-                Kaldır
-              </button>
+              <div class="flex items-center justify-end gap-2">
+                <a href="{% url 'panel_koc_degistir' link.student.pk %}"
+                   class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-steel-500/30
+                          text-steel-400 hover:bg-steel-500/10 transition-colors inline-flex items-center">
+                  Koçu Değiştir
+                </a>
+                <button type="button"
+                        onclick="unlinkStudent({{ coach.pk }}, {{ link.student.pk }}, {{ link.pk }}, this)"
+                        class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
+                               text-ruby-400 hover:bg-ruby-500/10 transition-colors">
+                  Kaldır
+                </button>
+              </div>
             </td>
           </tr>
           {% endfor %}

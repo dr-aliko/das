@@ -27,7 +27,7 @@ from django_ratelimit.decorators import ratelimit
 
 from .decorators import staff_required
 from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
-from .models import CoachAlert, CoachStudent, EmailVerificationCode, FeeTier, StudentAchievement, StudentInvite, User
+from .models import CoachAlert, CoachStudent, CoachStudentInterval, EmailVerificationCode, FeeTier, Notification, StudentAchievement, StudentInvite, User
 from .services.billing import coach_billing_summary
 
 
@@ -528,15 +528,8 @@ def invite_register_view(request, token):
             next_payment_due = None
             if invite.start_date:
                 next_payment_due = invite.start_date + timedelta(days=30)
-            CoachStudent.objects.get_or_create(
-                coach=invite.coach,
-                student=user,
-                defaults={
-                    'active': True,
-                    'source': source,
-                    'next_payment_due': next_payment_due,
-                },
-            )
+            from .services.coach_student import ensure_active_link
+            ensure_active_link(invite.coach, user, source, next_payment_due)
 
             invite.is_used = True
             invite.save(update_fields=['is_used'])
@@ -1282,6 +1275,9 @@ def panel_billing_update(request, pk):
             reactivated = True
 
         link.save(update_fields=update_fields)
+        if reactivated:
+            from .services.coach_student import open_interval
+            open_interval(link)
         return JsonResponse({'ok': True, 'reactivated': reactivated})
     except CoachStudent.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
@@ -1401,15 +1397,63 @@ def panel_ogrenciler_view(request):
 @staff_required
 @require_http_methods(['POST'])
 def panel_student_unlink(request, coach_id, student_id):
+    from .services.coach_student import deactivate_link
+    from .models import CoachStudentInterval
     coach   = get_object_or_404(User, pk=coach_id, role='coach')
     student = get_object_or_404(User, pk=student_id, role='student')
-    CoachStudent.objects.filter(coach=coach, student=student).update(
-        active=False, deactivation_reason=CoachStudent.DEACTIVATION_MANUAL
-    )
+    link = CoachStudent.objects.filter(coach=coach, student=student, active=True).first()
+    if link:
+        deactivate_link(link, CoachStudentInterval.REASON_MANUAL)
     if student.coach_id == coach.id:
         student.coach = None
         student.save(update_fields=['coach'])
     return JsonResponse({'ok': True})
+
+
+# ── Staff panel — change student's coach ─────────────────────────────────────
+
+@staff_required
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
+def panel_koc_degistir_view(request, student_id):
+    from .models import Notification
+    from .services.coach_student import reassign_student
+
+    student = get_object_or_404(User, pk=student_id, role='student')
+    current_link = (
+        CoachStudent.objects
+        .filter(student=student, active=True)
+        .select_related('coach')
+        .first()
+    )
+    eligible_coaches = (
+        User.objects
+        .filter(role='coach', is_active=True, is_approved=True)
+        .exclude(pk=current_link.coach_id if current_link else None)
+        .order_by('full_name')
+    )
+
+    error = None
+    if request.method == 'POST':
+        new_coach_id = request.POST.get('new_coach_id', '').strip()
+        try:
+            new_coach = User.objects.get(pk=new_coach_id, role='coach', is_active=True, is_approved=True)
+        except (User.DoesNotExist, ValueError):
+            error = 'Geçersiz koç seçimi.'
+        else:
+            try:
+                reassign_student(student, new_coach, request.user)
+            except ValueError as exc:
+                error = str(exc)
+            else:
+                return redirect('panel_ogrenciler')
+
+    return render(request, 'panel/koc_degistir.html', {
+        'student': student,
+        'current_link': current_link,
+        'eligible_coaches': eligible_coaches,
+        'error': error,
+        'active_tab': 'students',
+    })
 
 
 # ── Staff panel — fee tier CRUD ───────────────────────────────────────────────

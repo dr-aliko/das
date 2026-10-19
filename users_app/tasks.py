@@ -196,11 +196,12 @@ def auto_deactivate_overdue_vagus_students():
         .select_related('coach', 'student')
     )
 
+    from users_app.services.coach_student import deactivate_link
+    from users_app.models import CoachStudentInterval
+
     count = 0
     for link in overdue:
-        link.active = False
-        link.deactivation_reason = CoachStudent.DEACTIVATION_PAYMENT_OVERDUE
-        link.save(update_fields=['active', 'deactivation_reason'])
+        deactivate_link(link, CoachStudentInterval.REASON_PAYMENT_OVERDUE)
         send_push_notification(
             user=link.coach,
             title='Öğrenci Panelinizden Kaldırıldı',

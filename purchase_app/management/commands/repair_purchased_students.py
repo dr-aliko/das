@@ -81,11 +81,9 @@ class Command(BaseCommand):
                 )
                 if apply:
                     from datetime import date, timedelta
-                    CoachStudent.objects.create(
-                        coach=coach,
-                        student=student,
-                        source=CoachStudent.SOURCE_VAGUS,
-                        active=True,
+                    from users_app.services.coach_student import ensure_active_link
+                    ensure_active_link(
+                        coach, student, CoachStudent.SOURCE_VAGUS,
                         next_payment_due=date.today() + timedelta(days=order.plan.duration_days),
                     )
                 fixed_cs_missing += 1
@@ -94,9 +92,8 @@ class Command(BaseCommand):
                     f'  Order #{order.pk}: CoachStudent pk={cs.pk} is inactive → reactivate'
                 )
                 if apply:
-                    cs.active = True
-                    cs.deactivation_reason = None
-                    cs.save(update_fields=['active', 'deactivation_reason'])
+                    from users_app.services.coach_student import ensure_active_link
+                    ensure_active_link(coach, student, cs.source or CoachStudent.SOURCE_VAGUS)
                 fixed_cs_inactive += 1
 
         self.stdout.write('')
