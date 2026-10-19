@@ -1,12 +1,17 @@
+import logging
 from functools import wraps
+
 from django.shortcuts import redirect
+
+_log = logging.getLogger(__name__)
 
 
 def coach_can_view_student(coach, student_id):
     """Returns True if coach is authorised to view this student's data (DAS-412).
 
     Primary check: CoachStudent table (active=True).
-    Fallback: User.coach FK — auto-creates CoachStudent on first access for seamless migration.
+    Fallback: User.coach FK (legacy) — grants access but logs a warning; run
+    check_coach_consistency --fix to create the missing CoachStudent row.
     """
     from users_app.models import CoachStudent, User
     try:
@@ -17,9 +22,12 @@ def coach_can_view_student(coach, student_id):
     if CoachStudent.objects.filter(coach=coach, student=student, active=True).exists():
         return True
 
-    # Backward-compat: honour legacy User.coach FK and promote to CoachStudent
     if student.coach_id == coach.id:
-        CoachStudent.objects.get_or_create(coach=coach, student=student, defaults={'active': True})
+        _log.warning(
+            'coach_can_view_student: gap — student pk=%s has User.coach but no active '
+            'CoachStudent row; run check_coach_consistency --fix',
+            student.pk,
+        )
         return True
 
     return False

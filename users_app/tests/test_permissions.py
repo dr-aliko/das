@@ -18,13 +18,13 @@ def test_inactive_link_denies_access(coach_user, student_user):
 
 
 @pytest.mark.django_db
-def test_legacy_fk_grants_access_and_creates_link(coach_user, student_user):
+def test_legacy_fk_grants_access_without_creating_link(coach_user, student_user):
     # Backward-compat path: student.coach FK is set but no CoachStudent row yet.
+    # Access is still granted; no write is performed (run check_coach_consistency --fix instead).
     student_user.coach = coach_user
     student_user.save(update_fields=['coach'])
     assert coach_can_view_student(coach_user, student_user.id) is True
-    # Side effect: function must auto-create the CoachStudent row.
-    assert CoachStudent.objects.filter(coach=coach_user, student=student_user).exists()
+    assert not CoachStudent.objects.filter(coach=coach_user, student=student_user).exists()
 
 
 @pytest.mark.django_db
