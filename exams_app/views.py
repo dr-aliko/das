@@ -1,8 +1,11 @@
 import json
+import logging
 from datetime import date, timedelta
 from .utils import safe_json
 from types import SimpleNamespace
 from urllib.parse import urlencode
+
+_log = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib import messages
@@ -2370,9 +2373,6 @@ def coach_dashboard(request):
     )
     today = date.today()
 
-    # Lazy migration: ensure CoachStudent rows exist for any students linked only via User.coach FK.
-    # One query to find gaps; only the missing students pay the per-row cost.
-    from users_app.services.coach_student import ensure_active_link
     linked_ids = set(
         CoachStudent.objects
         .filter(coach=request.user, student_id__in=[s.id for s in students])
@@ -2380,7 +2380,11 @@ def coach_dashboard(request):
     )
     for student in students:
         if student.id not in linked_ids:
-            ensure_active_link(request.user, student, source=None)
+            _log.warning(
+                'coach_dashboard: student pk=%s has User.coach but no CoachStudent row; '
+                'run check_coach_consistency --fix',
+                student.id,
+            )
 
     # Build CoachStudent lookup for expiry badges
     cs_map = {

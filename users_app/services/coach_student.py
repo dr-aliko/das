@@ -13,8 +13,18 @@ _log = logging.getLogger(__name__)
 
 
 def open_interval(link):
-    """Open a new CoachStudentInterval for an active link."""
+    """
+    Open a new CoachStudentInterval for an active link.
+    Idempotent: if an open interval already exists for this (coach, student) pair,
+    returns without creating a second one.
+    """
     from users_app.models import CoachStudentInterval
+    if CoachStudentInterval.objects.filter(
+        coach_id=link.coach_id,
+        student_id=link.student_id,
+        ended_at__isnull=True,
+    ).exists():
+        return
     CoachStudentInterval.objects.create(
         coach_id=link.coach_id,
         student_id=link.student_id,

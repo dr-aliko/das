@@ -655,3 +655,240 @@ def test_coach_dashboard_get_creates_no_links_or_intervals_when_all_linked():
     assert CoachStudentInterval.objects.count() == ci_before, (
         'GET /coach/ created unexpected CoachStudentInterval rows even though all students were already linked'
     )
+
+
+# ── regression: open_interval idempotency ────────────────────────────────────
+
+@pytest.mark.django_db
+def test_open_interval_idempotent_same_coach():
+    """Calling open_interval twice for the same (coach, student) creates only one row."""
+    coach = make_coach()
+    student = make_student()
+    link = make_link(coach, student)
+
+    open_interval(link)
+    open_interval(link)
+
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 1
+
+
+# ── regression: billing-update reactivation ──────────────────────────────────
+
+@pytest.mark.django_db
+def test_billing_update_reactivation_on_active_link_creates_no_second_interval():
+    """
+    POST panel_billing_update on a link that is already active must not open a
+    second interval (ensure_active_link is idempotent for active links).
+    """
+    from django.test import Client as _Client
+
+    staff = baker.make(User, role='coach', is_active=True, is_staff=True)
+    coach = make_coach()
+    student = make_student(coach=coach)
+    link = make_link(coach, student, active=True)
+    open_interval(link)
+
+    c = _Client()
+    c.force_login(staff)
+
+    import json
+    from django.urls import reverse as _reverse
+    url = _reverse('panel_billing_update', args=[link.pk])
+    payload = {
+        'source': 'vagus',
+        'next_payment_due': (date.today() + timedelta(days=30)).isoformat(),
+    }
+    response = c.post(
+        url,
+        data=json.dumps(payload),
+        content_type='application/json',
+    )
+
+    assert response.status_code == 200
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 1, 'billing-update on already-active link must not open a second interval'
+
+
+# ── regression: GET student page writes nothing ───────────────────────────────
+
+@pytest.mark.django_db
+def test_coach_student_detail_get_creates_no_links_or_intervals():
+    """
+    GET /coach/student/<id>/ must not write CoachStudent or CoachStudentInterval
+    rows when the student is already properly linked.
+    (CoachAuditLog IS written intentionally and is not counted.)
+    """
+    coach = make_coach()
+    student = make_student(coach=coach)
+    link = make_link(coach, student, active=True)
+    open_interval(link)
+
+    c = Client()
+    c.force_login(coach)
+
+    cs_before = CoachStudent.objects.count()
+    ci_before = CoachStudentInterval.objects.count()
+
+    url = reverse('coach:student_detail', args=[student.pk])
+    response = c.get(url)
+
+    assert response.status_code == 200
+    assert CoachStudent.objects.count() == cs_before
+    assert CoachStudentInterval.objects.count() == ci_before
+
+
+# ── consistency command ───────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_consistency_command_finds_active_no_interval():
+    """Kind A: active link without an open interval is detected."""
+    from django.core.management import call_command
+    from io import StringIO
+
+    coach = make_coach()
+    student = make_student()
+    make_link(coach, student, active=True)  # no open_interval call
+
+    out = StringIO()
+    call_command('check_coach_consistency', stdout=out)
+    assert '[A]' in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_consistency_command_finds_interval_no_active():
+    """Kind B: open interval without an active link is detected."""
+    from django.core.management import call_command
+    from io import StringIO
+
+    coach = make_coach()
+    student = make_student()
+    link = make_link(coach, student, active=False)
+    open_interval(link)  # open but link is inactive
+
+    out = StringIO()
+    call_command('check_coach_consistency', stdout=out)
+    assert '[B]' in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_consistency_command_finds_duplicate_open():
+    """Kind C: two open intervals for one student is detected."""
+    from django.core.management import call_command
+    from django.utils import timezone
+    from io import StringIO
+
+    coach = make_coach()
+    student = make_student()
+    make_link(coach, student, active=True)
+    # Force two open intervals directly (bypasses idempotency guard to simulate drift)
+    now = timezone.now()
+    CoachStudentInterval.objects.create(
+        coach_id=coach.pk, student_id=student.pk, source='vagus', started_at=now,
+    )
+    CoachStudentInterval.objects.create(
+        coach_id=coach.pk, student_id=student.pk, source='vagus', started_at=now,
+    )
+
+    out = StringIO()
+    call_command('check_coach_consistency', stdout=out)
+    assert '[C]' in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_consistency_command_finds_coach_fk_no_link():
+    """Kind D: User.coach set but no active CoachStudent row."""
+    from django.core.management import call_command
+    from io import StringIO
+
+    coach = make_coach()
+    student = make_student(coach=coach)  # User.coach set, no CoachStudent row
+
+    out = StringIO()
+    call_command('check_coach_consistency', stdout=out)
+    assert '[D]' in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_consistency_command_finds_coach_fk_mismatch():
+    """Kind E: active CoachStudent coach differs from User.coach."""
+    from django.core.management import call_command
+    from io import StringIO
+
+    coach_a = make_coach()
+    coach_b = make_coach()
+    student = make_student(coach=coach_a)  # User.coach = coach_a
+    link = make_link(coach_b, student, active=True)  # but active link is coach_b
+    open_interval(link)
+
+    out = StringIO()
+    call_command('check_coach_consistency', stdout=out)
+    assert '[E]' in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_consistency_command_fix_repairs_active_no_interval():
+    """Kind A --fix: opens the missing interval."""
+    from django.core.management import call_command
+
+    coach = make_coach()
+    student = make_student()
+    make_link(coach, student, active=True)  # no interval
+
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 0
+
+    call_command('check_coach_consistency', fix=True)
+
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 1
+
+
+@pytest.mark.django_db
+def test_consistency_command_fix_repairs_coach_fk_no_link():
+    """Kind D --fix: creates the missing CoachStudent row via ensure_active_link."""
+    from django.core.management import call_command
+
+    coach = make_coach()
+    student = make_student(coach=coach)
+
+    assert not CoachStudent.objects.filter(coach=coach, student=student).exists()
+
+    call_command('check_coach_consistency', fix=True)
+
+    assert CoachStudent.objects.filter(coach=coach, student=student, active=True).exists()
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 1
+
+
+# ── unlinked student not viewable by old coach ────────────────────────────────
+
+@pytest.mark.django_db
+def test_unlinked_student_not_viewable_by_old_coach():
+    """After unlink_student, coach_can_view_student returns False for the old coach."""
+    from users_app.decorators import coach_can_view_student
+
+    coach = make_coach()
+    student = make_student(coach=coach)
+    link = make_link(coach, student, active=True)
+    open_interval(link)
+
+    # Unlink via the coach view (POST)
+    c = Client()
+    c.force_login(coach)
+    url = reverse('coach:unlink_student', args=[student.pk])
+    response = c.post(url)
+    assert response.status_code == 200
+
+    # Both CoachStudent and User.coach must be cleared
+    link.refresh_from_db()
+    assert link.active is False
+    student.refresh_from_db()
+    assert student.coach_id is None
+
+    assert coach_can_view_student(coach, student.pk) is False

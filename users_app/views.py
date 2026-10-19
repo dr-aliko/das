@@ -1259,25 +1259,19 @@ def panel_billing_update(request, pk):
         else:
             link.next_payment_due = None
 
-        update_fields = ['source', 'next_payment_due']
-
         # Auto-reactivate when staff extends the due date on a payment_overdue row
-        reactivated = False
-        if (
+        should_reactivate = (
             not link.active
             and link.deactivation_reason == CoachStudent.DEACTIVATION_PAYMENT_OVERDUE
             and link.next_payment_due is not None
             and link.next_payment_due > date.today()
-        ):
-            link.active = True
-            link.deactivation_reason = None
-            update_fields += ['active', 'deactivation_reason']
-            reactivated = True
+        )
+        link.save(update_fields=['source', 'next_payment_due'])
 
-        link.save(update_fields=update_fields)
-        if reactivated:
-            from .services.coach_student import open_interval
-            open_interval(link)
+        reactivated = False
+        if should_reactivate:
+            from .services.coach_student import ensure_active_link
+            _, _, reactivated = ensure_active_link(link.coach, link.student, link.source)
         return JsonResponse({'ok': True, 'reactivated': reactivated})
     except CoachStudent.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
