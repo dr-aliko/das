@@ -50,17 +50,11 @@ def compute_split(student_id, coverage_start, coverage_end, pool_kurus):
         if link is None:
             return []
         return [{'coach_id': link.coach_id, 'days': period_days,
-                 'amount_kurus': pool_kurus, 'gap_fallback': True}]
+                 'amount_kurus': (pool_kurus // 100) * 100, 'gap_fallback': True}]
 
-    total_coach_days = sum(s['days'] for s in segments)
     for s in segments:
-        s['amount_kurus'] = (pool_kurus * s['days']) // period_days
+        s['amount_kurus'] = (pool_kurus * s['days'] // period_days // 100) * 100
         s['gap_fallback'] = False
-
-    if total_coach_days == period_days:
-        remainder = pool_kurus - sum(s['amount_kurus'] for s in segments)
-        if remainder > 0:
-            segments[-1]['amount_kurus'] += remainder
 
     return segments
 

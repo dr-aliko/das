@@ -137,8 +137,8 @@ def panel_manuel_odeme_create(request):
 
     student_id     = request.POST.get('student_id', '').strip()
     coach_id       = request.POST.get('coach_id', '').strip()
-    amount_str     = request.POST.get('amount_kurus', '').strip()
-    pool_str       = request.POST.get('coach_pool_kurus', '').strip()
+    amount_str     = request.POST.get('amount_tl', '').strip()
+    pool_str       = request.POST.get('coach_pool_tl', '').strip()
     date_str       = request.POST.get('date', '').strip()
     days_str       = request.POST.get('days', '').strip()
     note           = request.POST.get('note', '').strip()
@@ -157,19 +157,19 @@ def panel_manuel_odeme_create(request):
         errors.append('Geçerli bir koç seçin.')
 
     try:
-        amount_kurus = int(amount_str)
+        amount_kurus = int(amount_str) * 100
         if amount_kurus <= 0:
             raise ValueError
     except (ValueError, TypeError):
-        errors.append('Geçerli bir ödeme tutarı girin (kuruş, pozitif tam sayı).')
+        errors.append('Geçerli bir ödeme tutarı girin (₺, pozitif tam sayı).')
         amount_kurus = None
 
     try:
-        pool_kurus = int(pool_str)
+        pool_kurus = int(pool_str) * 100
         if pool_kurus <= 0:
             raise ValueError
     except (ValueError, TypeError):
-        errors.append('Geçerli bir koç havuzu tutarı girin.')
+        errors.append('Geçerli bir koç havuzu tutarı girin (₺, pozitif tam sayı).')
         pool_kurus = None
 
     try:
@@ -226,8 +226,8 @@ def panel_kazanclar_export_csv(request):
     writer = csv.writer(response)
     writer.writerow([
         'ID', 'Koç', 'Öğrenci', 'Sipariş', 'Kapsam Başlangıç', 'Kapsam Bitiş',
-        'Dönem Gün', 'Koç Gün', 'Havuz (kr)', 'Tutar (kr)', 'Tür', 'Durum',
-        'Boşluk Fallback', 'Ödeme Ref', 'Onay Tarihi', 'Ödeme Tarihi',
+        'Dönem Gün', 'Koç Gün', 'Havuz (kr)', 'Havuz (TL)', 'Tutar (kr)', 'Tutar (TL)',
+        'Tür', 'Durum', 'Boşluk Fallback', 'Ödeme Ref', 'Onay Tarihi', 'Ödeme Tarihi',
     ])
 
     rows = (
@@ -262,7 +262,9 @@ def panel_kazanclar_export_csv(request):
             r.period_days,
             r.coach_days,
             r.pool_kurus,
+            r.pool_kurus // 100,
             r.amount_kurus,
+            r.amount_kurus // 100,
             r.get_kind_display(),
             r.get_status_display(),
             'Evet' if r.gap_fallback else 'Hayır',

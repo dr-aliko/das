@@ -1,8 +1,7 @@
 """
 Tests for release_held_earnings:
 - single coach full period release
-- multi-coach split on release
-- remainder rule applied at release
+- multi-coach split on release (whole-TL floor, no remainder to last coach)
 - gap fallback at release
 - idempotency (running twice)
 - refund voids held earnings
@@ -129,8 +128,10 @@ def test_multi_coach_split_on_release():
     rows = EarningRow.objects.filter(order=order).order_by('coach_days')
     assert rows.count() == 2
     by_coach = {r.coach_id: r for r in rows}
-    assert by_coach[coach_a.pk].amount_kurus == 83_333
-    assert by_coach[coach_b.pk].amount_kurus == 166_667
+    # floor(250000*10/30)=83333 → floor to TL → 83300
+    assert by_coach[coach_a.pk].amount_kurus == 83_300
+    # floor(250000*20/30)=166666 → floor to TL → 166600
+    assert by_coach[coach_b.pk].amount_kurus == 166_600
     assert all(r.status == EarningRow.STATUS_RELEASED for r in rows)
 
 

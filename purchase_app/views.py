@@ -730,7 +730,7 @@ def panel_plan_create(request):
         errors.append('Geçerli bir süre girin (pozitif tam sayı gün).')
         duration_days_int = None
     try:
-        coach_share_int = round(float(coach_share_tl) * 100)
+        coach_share_int = int(float(coach_share_tl)) * 100
         if coach_share_int < 0:
             raise ValueError
     except (ValueError, TypeError):
@@ -782,7 +782,7 @@ def panel_plan_update(request, pk):
         errors.append('Geçerli bir süre girin.')
         duration_days_int = None
     try:
-        coach_share_int = round(float(coach_share_tl) * 100)
+        coach_share_int = int(float(coach_share_tl)) * 100
         if coach_share_int < 0:
             raise ValueError
     except (ValueError, TypeError):

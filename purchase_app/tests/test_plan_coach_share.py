@@ -1,5 +1,5 @@
 """
-Tests that plan create/update correctly accept coach_share_tl (float ₺)
+Tests that plan create/update correctly accept coach_share_tl (whole ₺ integer)
 and store it as integer kuruş.
 """
 import pytest
@@ -27,7 +27,7 @@ def test_plan_create_stores_coach_share_as_kurus():
         'name':           'Test Plan',
         'kind':           'one_time',
         'price_kurus':    319900,
-        'coach_share_tl': '2500.00',
+        'coach_share_tl': '2500',
         'duration_days':  30,
         'active':         'on',
     })
@@ -50,7 +50,7 @@ def test_plan_update_stores_coach_share_as_kurus():
         'name':           'Update Me',
         'kind':           plan.kind,
         'price_kurus':    319900,
-        'coach_share_tl': '2500.00',
+        'coach_share_tl': '2500',
         'duration_days':  30,
         'active':         'on',
     })
@@ -72,4 +72,4 @@ def test_plan_list_contains_coach_share_input():
     assert resp.status_code == 200
     content = resp.content.decode()
     assert 'coach_share_tl' in content
-    assert '2500.00' in content
+    assert '2500' in content
