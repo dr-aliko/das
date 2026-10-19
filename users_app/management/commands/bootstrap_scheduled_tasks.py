@@ -90,3 +90,17 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'{action} schedule: {schedule.name}'
         ))
+
+        schedule, created = Schedule.objects.update_or_create(
+            func='earnings_app.tasks.release_held_earnings_task',
+            defaults={
+                'name': 'Release held coach earnings (daily 02:00 Istanbul)',
+                'schedule_type': Schedule.CRON,
+                'cron': '0 2 * * *',
+                'repeats': -1,
+            },
+        )
+        action = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(
+            f'{action} schedule: {schedule.name}'
+        ))

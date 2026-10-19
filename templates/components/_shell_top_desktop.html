@@ -194,6 +194,12 @@
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         <span class="das-nav-label">Ödeme takibi</span>
       </a>
+      <a href="{% if user.is_staff %}{% url 'earnings_panel:list' %}{% else %}{% url 'coach_kazanclar' %}{% endif %}" title="Kazançlarım"
+         class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
+                {% if '/coach/kazanclar' in request.path or '/panel/kazanclar' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span class="das-nav-label">Kazançlarım</span>
+      </a>
       {% endif %}
 
       <a href="/profil/" title="Profil"

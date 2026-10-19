@@ -709,6 +709,7 @@ def panel_plan_create(request):
     kind          = request.POST.get('kind', Plan.KIND_ONE_TIME)
     price_kurus   = request.POST.get('price_kurus', '').strip()
     duration_days = request.POST.get('duration_days', '').strip()
+    coach_share_tl = request.POST.get('coach_share_tl', '0').strip()
     active        = request.POST.get('active') == 'on'
 
     errors = []
@@ -728,6 +729,12 @@ def panel_plan_create(request):
     except (ValueError, TypeError):
         errors.append('Geçerli bir süre girin (pozitif tam sayı gün).')
         duration_days_int = None
+    try:
+        coach_share_int = round(float(coach_share_tl) * 100)
+        if coach_share_int < 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        coach_share_int = 0
 
     if not errors:
         Plan.objects.create(
@@ -735,6 +742,7 @@ def panel_plan_create(request):
             kind=kind,
             price_kurus=price_kurus_int,
             duration_days=duration_days_int,
+            coach_share_kurus=coach_share_int,
             active=active,
         )
 
@@ -749,11 +757,12 @@ def panel_plan_create(request):
 @require_POST
 def panel_plan_update(request, pk):
     plan = get_object_or_404(Plan, pk=pk)
-    name          = request.POST.get('name', '').strip()
-    kind          = request.POST.get('kind', plan.kind)
-    price_kurus   = request.POST.get('price_kurus', '').strip()
-    duration_days = request.POST.get('duration_days', '').strip()
-    active        = request.POST.get('active') == 'on'
+    name           = request.POST.get('name', '').strip()
+    kind           = request.POST.get('kind', plan.kind)
+    price_kurus    = request.POST.get('price_kurus', '').strip()
+    duration_days  = request.POST.get('duration_days', '').strip()
+    coach_share_tl = request.POST.get('coach_share_tl', '').strip()
+    active         = request.POST.get('active') == 'on'
 
     errors = []
     if not name:
@@ -772,13 +781,20 @@ def panel_plan_update(request, pk):
     except (ValueError, TypeError):
         errors.append('Geçerli bir süre girin.')
         duration_days_int = None
+    try:
+        coach_share_int = round(float(coach_share_tl) * 100)
+        if coach_share_int < 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        coach_share_int = plan.coach_share_kurus
 
     if not errors:
-        plan.name          = name
-        plan.kind          = kind
-        plan.price_kurus   = price_kurus_int
-        plan.duration_days = duration_days_int
-        plan.active        = active
+        plan.name              = name
+        plan.kind              = kind
+        plan.price_kurus       = price_kurus_int
+        plan.duration_days     = duration_days_int
+        plan.coach_share_kurus = coach_share_int
+        plan.active            = active
         plan.save()
 
     plans = Plan.objects.order_by('kind', 'price_kurus')

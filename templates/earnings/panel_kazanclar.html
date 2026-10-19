@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load static %}
+{% load earnings_filters %}
+
+{% block title %}Panel — Koç Kazançları{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% comment %}
+    Page header
+  {% endcomment %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Koç Kazançları</h1>
+      </div>
+      <p class="text-sm text-ink-400">Koç kazançlarını listeleyin, onaylayın ve ödeyin.</p>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <a href="{% url 'purchase_panel:orders' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Siparişler</a>
+      <a href="{% url 'purchase_panel:plans' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Planlar</a>
+      <a href="{% url 'earnings_panel:export_csv' %}?status={{ status_filter }}&coach={{ coach_filter }}&month={{ month_filter }}"
+         class="text-xs bg-ink-800 border border-ink-700 text-ink-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors">
+        CSV İndir
+      </a>
+    </div>
+  </div>
+
+  {% comment %}
+    Totals cards
+  {% endcomment %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Brüt Tahsilat</p>
+      <p class="text-xl font-bold text-white tabular-nums">{{ totals.gross_collected|kurus_tl }}</p>
+      {% if config.provider_commission_pct or config.tax_pct %}
+      <p class="text-[10px] text-ink-500 mt-1">Komisyon %{{ config.provider_commission_pct }} / Vergi %{{ config.tax_pct }} hariç</p>
+      {% endif %}
+    </div>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Koç Havuzu</p>
+      <p class="text-xl font-bold text-white tabular-nums">{{ totals.coach_share_pool|kurus_tl }}</p>
+    </div>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Vagus Payı (BRÜT)</p>
+      <p class="text-xl font-bold text-white tabular-nums">{{ totals.vagus_share|kurus_tl }}</p>
+      {% if config.provider_commission_pct or config.tax_pct %}
+      <p class="text-[10px] text-ink-500 mt-1">%{{ config.provider_commission_pct }} komisyon / %{{ config.tax_pct }} vergi düşülecek</p>
+      {% endif %}
+    </div>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Bekleyen Kayıt</p>
+      <p class="text-xl font-bold {% if totals.held_count %}text-amber-400{% else %}text-white{% endif %} tabular-nums">
+        {{ totals.held_count }}
+      </p>
+      {% if totals.held_pool %}<p class="text-[10px] text-ink-500 mt-1">Havuz: {{ totals.held_pool|kurus_tl }}</p>{% endif %}
+    </div>
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Serbest Bırakılan</p>
+      <p class="text-xl font-bold text-blue-400 tabular-nums">{{ totals.released_amount|kurus_tl }}</p>
+    </div>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Onaylanan</p>
+      <p class="text-xl font-bold text-amber-400 tabular-nums">{{ totals.approved_amount|kurus_tl }}</p>
+    </div>
+    <div class="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <p class="text-[10px] text-ink-500 font-semibold uppercase tracking-wider mb-1.5">Ödenen</p>
+      <p class="text-xl font-bold text-emerald-400 tabular-nums">{{ totals.paid_amount|kurus_tl }}</p>
+    </div>
+  </div>
+
+  {% comment %}
+    Filters
+  {% endcomment %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-3 flex-wrap">
+      <form method="get" class="flex items-center gap-2 flex-wrap">
+        <select name="status" onchange="this.form.submit()"
+                class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+          <option value="">Tüm Durumlar</option>
+          {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="coach" onchange="this.form.submit()"
+                class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+          <option value="">Tüm Koçlar</option>
+          {% for c in coaches %}
+            <option value="{{ c.pk }}" {% if coach_filter == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.full_name }}</option>
+          {% endfor %}
+        </select>
+        <input type="month" name="month" value="{{ month_filter }}"
+               onchange="this.form.submit()"
+               class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+        {% if status_filter or coach_filter or month_filter %}
+          <a href="{% url 'earnings_panel:list' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>
+        {% endif %}
+      </form>
+      <span class="ml-auto text-xs text-ink-500">{{ rows|length }} kayıt</span>
+    </div>
+
+    {% comment %}
+      Earnings table
+    {% endcomment %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider w-12">#</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Öğrenci</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Sipariş</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Kapsam</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Gün</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Havuz</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Tutar</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wider">Durum</th>
+            <th class="px-4 py-2.5 w-32"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800">
+          {% for row in rows %}
+          <tr class="hover:bg-ink-900/30 transition-colors {% if row.gap_fallback %}bg-amber-950/10{% endif %}">
+            <td class="px-4 py-3 text-ink-500 text-xs">{{ row.pk }}</td>
+            <td class="px-4 py-3 text-ink-200 text-sm">{{ row.coach.full_name }}</td>
+            <td class="px-4 py-3 text-ink-300 text-sm">{{ row.student.full_name }}</td>
+            <td class="px-4 py-3 text-xs text-ink-500">
+              {% if row.order_id %}
+                <a href="{% url 'purchase_panel:order_detail' row.order_id %}" class="text-steel-400 hover:underline">#{{ row.order_id }}</a>
+              {% elif row.manual_record_id %}
+                <span class="text-amber-400">Manuel</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs text-ink-400 whitespace-nowrap">
+              {{ row.coverage_start }} – {{ row.coverage_end }}
+              {% if row.gap_fallback %}
+                <span class="ml-1 text-amber-500" title="Aralık günlüğü boşluğu">⚠</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-xs tabular-nums text-ink-300">
+              {{ row.coach_days }}/{{ row.period_days }}
+            </td>
+            <td class="px-4 py-3 text-right text-xs tabular-nums text-ink-500">
+              {{ row.pool_kurus|kurus_tl }}
+            </td>
+            <td class="px-4 py-3 text-right tabular-nums font-semibold
+              {% if row.status == 'paid' %}text-emerald-400
+              {% elif row.status == 'void' %}text-ink-600 line-through
+              {% elif row.status == 'held' %}text-ink-500
+              {% else %}text-white{% endif %}">
+              {% if row.status == 'held' %}
+                <span class="text-ink-500">—</span>
+              {% else %}
+                {{ row.amount_kurus|kurus_tl }}
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if row.status == 'held' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-ink-800 text-ink-400">Beklemede</span>
+              {% elif row.status == 'released' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-400">Serbest</span>
+              {% elif row.status == 'approved' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 border border-amber-500/20 text-amber-400">Onaylandı</span>
+              {% elif row.status == 'paid' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">Ödendi</span>
+              {% elif row.status == 'void' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-ink-800 text-ink-600">İptal</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                {% if row.status == 'released' %}
+                  <form method="post" action="{% url 'earnings_panel:approve' row.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 transition-colors">
+                      Onayla
+                    </button>
+                  </form>
+                {% endif %}
+                {% if row.status == 'approved' %}
+                  <form method="post" action="{% url 'earnings_panel:mark_paid' row.pk %}" class="flex items-center gap-1">
+                    {% csrf_token %}
+                    <input type="text" name="payout_ref" placeholder="Ref…"
+                           class="h-7 w-24 px-2 text-xs rounded bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <button type="submit" class="text-xs px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors">
+                      Ödendi
+                    </button>
+                  </form>
+                {% endif %}
+                {% if row.status != 'paid' and row.status != 'void' %}
+                  <form method="post" action="{% url 'earnings_panel:void' row.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs px-2 py-1 rounded bg-red-600/10 hover:bg-red-600/20 text-red-500 transition-colors"
+                            onclick="return confirm('Bu kazancı iptal etmek istediğinizden emin misiniz?')">
+                      İptal
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="px-4 py-8 text-center text-ink-500 text-sm">Kayıt bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% comment %}
+    Manuel Ödeme Formu
+  {% endcomment %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-white">Manuel Ödeme Kaydı</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Sipariş olmaksızın Vagus öğrencisi için ödeme tanımlar.</p>
+    </div>
+    <div class="px-5 py-4">
+      {% if form_errors %}
+      <div class="mb-4 rounded-lg bg-red-950/30 border border-red-500/20 px-4 py-3">
+        {% for err in form_errors %}
+          <p class="text-sm text-red-400">{{ err }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form method="post" action="{% url 'earnings_panel:manuel_odeme' %}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {% csrf_token %}
+
+        <div class="col-span-2 sm:col-span-1 lg:col-span-1">
+          <label class="block text-xs text-ink-500 mb-1">Öğrenci ID</label>
+          <input type="number" name="student_id" required placeholder="öğrenci pk"
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Koç</label>
+          <select name="coach_id" required
+                  class="w-full h-9 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+            <option value="">Seçin</option>
+            {% for c in coaches %}
+              <option value="{{ c.pk }}">{{ c.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Toplam Tutar (kr)</label>
+          <input type="number" name="amount_kurus" required min="1" placeholder="319900"
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Koç Havuzu (kr)</label>
+          <input type="number" name="coach_pool_kurus" required min="1" placeholder="250000"
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Kapsam Başlangıcı</label>
+          <input type="date" name="date" required
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-ink-500 mb-1">Süre (gün)</label>
+          <input type="number" name="days" required min="1" placeholder="30"
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none focus:ring-1 focus:ring-steel-500">
+        </div>
+
+        <div class="col-span-2 sm:col-span-3 lg:col-span-4">
+          <label class="block text-xs text-ink-500 mb-1">Not (isteğe bağlı)</label>
+          <input type="text" name="note" placeholder="Açıklama…"
+                 class="w-full h-9 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+        </div>
+
+        <div class="col-span-2 sm:col-span-3 lg:col-span-2 flex items-end">
+          <button type="submit"
+                  class="w-full h-9 rounded-lg text-xs font-semibold bg-steel-600 hover:bg-steel-500 text-white transition-colors">
+            Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

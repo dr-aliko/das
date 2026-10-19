@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'struggle_app',
     'marketing_app',
     'purchase_app',
+    'earnings_app',
 ]
 
 MIDDLEWARE = [
@@ -255,6 +256,7 @@ PURCHASE_STAFF_NOTIFICATION_EMAIL = config('PURCHASE_STAFF_NOTIFICATION_EMAIL', 
 BANK_TRANSFER_EXPIRY_DAYS         = config('BANK_TRANSFER_EXPIRY_DAYS',         default=7, cast=int)
 PURCHASE_WHATSAPP_NUMBER          = config('PURCHASE_WHATSAPP_NUMBER',          default='')
 AUTO_DEACTIVATE_VAGUS_OVERDUE     = config('AUTO_DEACTIVATE_VAGUS_OVERDUE',     default=True, cast=bool)
+COACH_EARNING_AUTO_RELEASE        = config('COACH_EARNING_AUTO_RELEASE',        default=True, cast=bool)
 
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)

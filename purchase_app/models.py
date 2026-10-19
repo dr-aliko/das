@@ -12,10 +12,14 @@ class Plan(models.Model):
         (KIND_SUBSCRIPTION, 'Abonelik'),
     ]
 
-    name          = models.CharField(max_length=255)
-    kind          = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_ONE_TIME)
-    price_kurus   = models.PositiveIntegerField(help_text='Kuruş cinsinden (örn. 319900 = 3199,00 ₺)')
-    duration_days = models.PositiveIntegerField()
+    name              = models.CharField(max_length=255)
+    kind              = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_ONE_TIME)
+    price_kurus       = models.PositiveIntegerField(help_text='Kuruş cinsinden (örn. 319900 = 3199,00 ₺)')
+    duration_days     = models.PositiveIntegerField()
+    coach_share_kurus = models.PositiveIntegerField(
+        default=0,
+        help_text='Koça ödenecek havuz (kuruş). Ör. 250000 = 2.500,00 ₺',
+    )
     active        = models.BooleanField(default=True)
     created_at    = models.DateTimeField(auto_now_add=True)
 

@@ -179,6 +179,15 @@ def on_payment_success(order):
         order.status = Order.STATUS_PAID
         order.save(update_fields=['student', 'status', 'updated_at'])
 
+        # Wrap in a savepoint: a DB error here must not roll back the outer
+        # transaction that already marked the order as PAID.
+        try:
+            with transaction.atomic():
+                from earnings_app.services import create_holding_earning
+                create_holding_earning(order)
+        except Exception:
+            _log.exception('earnings: create_holding_earning failed for order %s', order.pk)
+
         order_pk = order.pk
         transaction.on_commit(
             lambda: async_task('purchase_app.tasks.send_purchase_emails', order_pk)
