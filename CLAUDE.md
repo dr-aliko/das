@@ -28,3 +28,15 @@ Vagus (Deneme Analiz Sistemi - DAS) is a Django and Tailwind-based platform desi
 - Be concise and focus directly on the solution.
 - Propose a brief plan before executing complex architectural changes.
 - When an error occurs, provide the fix along with the diagnosis.
+
+## Kurallar (production'da yaşanan hatalardan)
+- Every setting read in code must be declared in `core_config/settings.py` with `decouple config()`; reading an undeclared setting with `getattr` caused a production 404.
+- When finishing a task, list every NEW file (migrations, templates, tests); a forgotten new file caused a production 500. Add files to git by name, never `git add -A`.
+- Pass data to JS only with `json_script`; never dump JSON with `{{ }}` inside `<script>` (HTML escaping breaks the script). Alpine expressions may only use variables defined in their own `x-data` component (the coach task page has `panel()` and `coachMobilePanel()` with different variables); `:disabled` must evaluate to a real boolean.
+- No Tailwind arbitrary-value or opacity classes (not in the compiled CSS bundle): use inline styles or component CSS. Use `{% comment %}` for multi-line template comments (`{# #}` is single-line only).
+- `django_ratelimit key='ip'` crashes behind the Unix socket (`REMOTE_ADDR` empty): use `key='user'` on authenticated views or the project's `DatabaseCache` helpers.
+- Student–coach links live in `CoachStudent` AND `User.coach`: keep both consistent; queryset `.update()` bypasses model code.
+- Restrictions (blocks, locks) fail open on unexpected errors and never restrict the student side unless the task says so.
+- Money actions: POST + CSRF, staff-only, idempotent (`select_for_update`), unguessable tokens in public URLs, amounts in kuruş, never trust a price from the request.
+- Deploy: no `deploy.sh` on the server (manual steps), `pg_dump` before migrations, restart gunicorn AND `vagus-qcluster` after task or model changes, `bootstrap_scheduled_tasks` must not reset existing `next_run`, check `/var/log/das/gunicorn-*.log` ownership (`ubuntu`/`www-data`) after restarts.
+- Playwright is blocked in the sandbox: state what could not be verified in a browser instead of claiming it works.
