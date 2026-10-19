@@ -36,7 +36,6 @@ def close_interval(link, reason, when=None):
 
 def deactivate_link(link, reason, when=None):
     """Deactivate a CoachStudent and close its open interval."""
-    from users_app.models import CoachStudent
     close_interval(link, reason, when=when)
     link.active = False
     link.deactivation_reason = reason
@@ -93,10 +92,10 @@ def reassign_student(student, new_coach, acting_staff):
         )
         if old_link is None:
             raise ValueError('Öğrencinin aktif bir koç bağlantısı yok.')
-        if old_link.coach_id == new_coach.pk:
-            raise ValueError('Öğrenci zaten bu koçta.')
 
         new_coach = User.objects.select_for_update().get(pk=new_coach.pk)
+        if old_link.coach_id == new_coach.pk:
+            raise ValueError('Öğrenci zaten bu koçta.')
         if new_coach.role != 'coach':
             raise ValueError('Hedef kullanıcı koç değil.')
         if not new_coach.is_active:
@@ -185,5 +184,5 @@ def rebuild_intervals():
                 ended_at=now,
                 close_reason=CoachStudentInterval.REASON_BACKFILL,
             ))
-    CoachStudentInterval.objects.bulk_create(rows)
+    CoachStudentInterval.objects.bulk_create(rows, batch_size=1000)
     return len(rows)

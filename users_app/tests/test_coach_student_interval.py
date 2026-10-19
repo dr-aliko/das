@@ -524,3 +524,134 @@ def test_koc_degistir_requires_staff(db):
     response = c.get(url)
 
     assert response.status_code in (302, 403)
+
+
+# ── regression: renewal interval ─────────────────────────────────────────────
+
+@pytest.mark.django_db(transaction=True)
+def test_renewal_order_does_not_create_second_open_interval():
+    """
+    Paying for an already-active CoachStudent link must not open a second
+    interval. Only 1 open interval should exist after two payments.
+    """
+    import uuid
+    from unittest.mock import patch
+
+    from purchase_app.models import Order, Plan
+    from purchase_app.services import on_payment_success
+    from users_app.models import CoachStudentInterval
+
+    coach = make_coach()
+    student = make_student(email='renewal@example.com', full_name='Renewal Student')
+    plan = baker.make(Plan, duration_days=30, active=True, price_kurus=100_00)
+
+    # First order activates the link and opens an interval
+    order1 = baker.make(
+        Order,
+        email=student.email,
+        full_name=student.full_name,
+        coach=coach,
+        plan=plan,
+        amount_kurus=plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        provider_ref=f'sandbox-{uuid.uuid4()}',
+    )
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order1)
+
+    assert CoachStudentInterval.objects.filter(
+        coach=coach, student=student, ended_at__isnull=True
+    ).count() == 1, 'Expected exactly 1 open interval after first payment'
+
+    # Second order is a renewal — student already active, same coach
+    order2 = baker.make(
+        Order,
+        email=student.email,
+        full_name=student.full_name,
+        coach=coach,
+        plan=plan,
+        amount_kurus=plan.price_kurus,
+        status=Order.STATUS_PENDING,
+        provider='sandbox',
+        provider_ref=f'sandbox-{uuid.uuid4()}',
+    )
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order2)
+
+    open_count = CoachStudentInterval.objects.filter(
+        student=student, ended_at__isnull=True
+    ).count()
+    assert open_count == 1, (
+        f'Renewal opened a second interval (found {open_count}). '
+        'The `was_inactive` guard in on_payment_success is broken.'
+    )
+
+
+# ── regression: reassign bad target ──────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_reassign_bad_target_shows_friendly_error(staff_client):
+    """
+    Submitting a nonexistent, inactive, unapproved, or non-coach target pk
+    must return HTTP 200 with an error message, never a 500.
+    """
+    client, _ = staff_client
+    old_coach = make_coach()
+    student = make_student(coach=old_coach)
+    link = make_link(old_coach, student)
+    open_interval(link)
+    url = reverse('panel_koc_degistir', args=[student.pk])
+
+    cases = [
+        ('999999999',),  # nonexistent pk
+        (str(baker.make(User, role='coach', is_active=False, is_approved=True).pk),),  # inactive
+        (str(baker.make(User, role='coach', is_active=True, is_approved=False).pk),),  # unapproved
+        (str(baker.make(User, role='student', is_active=True, is_approved=True).pk),),  # not a coach
+    ]
+    for (target_id,) in cases:
+        response = client.post(url, {'new_coach_id': target_id})
+        assert response.status_code == 200, (
+            f'Expected 200 for bad target {target_id!r}, got {response.status_code}'
+        )
+        assert response.context.get('error'), (
+            f'Expected error message in context for target {target_id!r}'
+        )
+
+
+# ── regression: coach dashboard no writes when all linked ────────────────────
+
+@pytest.mark.django_db
+def test_coach_dashboard_get_creates_no_links_or_intervals_when_all_linked():
+    """
+    When every student on the coach's roster already has an active CoachStudent
+    row with an open interval, a plain GET of /coach/ must not create new
+    CoachStudent or CoachStudentInterval rows.
+
+    NOTE: CoachAuditLog IS written on every GET (line 2394 in exams_app/views.py
+    — `CoachAuditLog.objects.create(coach=..., action='viewed_roster')`). That is
+    intentional roster-access logging and is NOT counted here.
+    """
+    coach = make_coach()
+    s1 = make_student(coach=coach)
+    s2 = make_student(coach=coach)
+    for s in (s1, s2):
+        link = make_link(coach, s, active=True)
+        open_interval(link)
+
+    c = Client()
+    c.force_login(coach)
+
+    cs_before = CoachStudent.objects.count()
+    ci_before = CoachStudentInterval.objects.count()
+
+    url = reverse('coach:dashboard')
+    response = c.get(url)
+
+    assert response.status_code == 200
+    assert CoachStudent.objects.count() == cs_before, (
+        'GET /coach/ created unexpected CoachStudent rows even though all students were already linked'
+    )
+    assert CoachStudentInterval.objects.count() == ci_before, (
+        'GET /coach/ created unexpected CoachStudentInterval rows even though all students were already linked'
+    )

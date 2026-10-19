@@ -155,9 +155,10 @@ def on_payment_success(order):
             cs.active = True
             cs.deactivation_reason = None
             cs.save(update_fields=['next_payment_due', 'active', 'deactivation_reason'])
-            if was_inactive:
-                open_interval(cs)
         else:
+            was_inactive = True
+
+        if created or was_inactive:
             open_interval(cs)
 
         # Mirror invite_register_view (users_app/views.py:512): set legacy User.coach FK.

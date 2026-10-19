@@ -2370,10 +2370,17 @@ def coach_dashboard(request):
     )
     today = date.today()
 
-    # Sync CoachStudent records for all linked students (lazy migration from User.coach FK)
+    # Lazy migration: ensure CoachStudent rows exist for any students linked only via User.coach FK.
+    # One query to find gaps; only the missing students pay the per-row cost.
     from users_app.services.coach_student import ensure_active_link
+    linked_ids = set(
+        CoachStudent.objects
+        .filter(coach=request.user, student_id__in=[s.id for s in students])
+        .values_list('student_id', flat=True)
+    )
     for student in students:
-        ensure_active_link(request.user, student, source=None)
+        if student.id not in linked_ids:
+            ensure_active_link(request.user, student, source=None)
 
     # Build CoachStudent lookup for expiry badges
     cs_map = {
@@ -2650,7 +2657,6 @@ def self_assign_task(request):
 # COACH — TÜM ÖĞRENCİLERİN SON DENEMELERİ
 # ──────────────────────────────────────────────
 
-@coach_required
 @coach_required
 def unlink_student(request, student_id):
     """AJAX: severs the coach-student relationship without deleting any student data."""

@@ -1398,7 +1398,6 @@ def panel_ogrenciler_view(request):
 @require_http_methods(['POST'])
 def panel_student_unlink(request, coach_id, student_id):
     from .services.coach_student import deactivate_link
-    from .models import CoachStudentInterval
     coach   = get_object_or_404(User, pk=coach_id, role='coach')
     student = get_object_or_404(User, pk=student_id, role='student')
     link = CoachStudent.objects.filter(coach=coach, student=student, active=True).first()
@@ -1415,7 +1414,6 @@ def panel_student_unlink(request, coach_id, student_id):
 @staff_required
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def panel_koc_degistir_view(request, student_id):
-    from .models import Notification
     from .services.coach_student import reassign_student
 
     student = get_object_or_404(User, pk=student_id, role='student')
@@ -1425,18 +1423,15 @@ def panel_koc_degistir_view(request, student_id):
         .select_related('coach')
         .first()
     )
-    eligible_coaches = (
-        User.objects
-        .filter(role='coach', is_active=True, is_approved=True)
-        .exclude(pk=current_link.coach_id if current_link else None)
-        .order_by('full_name')
-    )
+    eligible_coaches = User.objects.filter(role='coach', is_active=True, is_approved=True).order_by('full_name')
+    if current_link:
+        eligible_coaches = eligible_coaches.exclude(pk=current_link.coach_id)
 
     error = None
     if request.method == 'POST':
         new_coach_id = request.POST.get('new_coach_id', '').strip()
         try:
-            new_coach = User.objects.get(pk=new_coach_id, role='coach', is_active=True, is_approved=True)
+            new_coach = User.objects.get(pk=new_coach_id)
         except (User.DoesNotExist, ValueError):
             error = 'Geçersiz koç seçimi.'
         else:
