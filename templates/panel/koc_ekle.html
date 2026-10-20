@@ -128,6 +128,16 @@
   </div>
 
   {# ── Coaches awaiting password set ──────────────────────────────────────── #}
+  <form method="get" class="flex items-center gap-2">
+    <input type="search" name="q" value="{{ q }}"
+           placeholder="Koç ismi veya email..."
+           class="h-8 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200
+                  placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+    <button type="submit"
+            class="h-8 px-3 rounded-lg bg-ink-700 hover:bg-ink-600 text-xs text-ink-200 transition-colors">Ara</button>
+    {% if q %}<a href="{% url 'panel_koc_ekle' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>{% endif %}
+  </form>
+
   {% if coaches_no_pw %}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-800">

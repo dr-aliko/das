@@ -100,16 +100,32 @@
       <div class="space-y-4">
         <div>
           <label for="new_coach_id" class="block text-xs font-medium text-ink-400 mb-1.5">Koç</label>
+          <input type="search" id="koc_deg_search"
+                 placeholder="İsim veya email..."
+                 autocomplete="off"
+                 class="w-full mb-1 rounded-lg border border-ink-700 bg-ink-900 text-ink-100
+                        px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-steel-500">
           <select id="new_coach_id" name="new_coach_id" required
                   class="w-full rounded-lg border border-ink-700 bg-ink-900 text-ink-100
                          px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-steel-500">
             <option value="">— Koç seçin —</option>
             {% for coach in eligible_coaches %}
-            <option value="{{ coach.pk }}">{{ coach.full_name }} ({{ coach.email }})</option>
+            <option value="{{ coach.pk }}">{{ coach.full_name }} — {{ coach.email }}</option>
             {% empty %}
             <option disabled>Uygun koç bulunamadı</option>
             {% endfor %}
           </select>
+          <script>
+          (function(){
+            var i=document.getElementById('koc_deg_search'),s=document.getElementById('new_coach_id');
+            if(!i||!s)return;
+            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
+            i.addEventListener('input',function(){
+              var q=t(i.value);
+              for(var n=1;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
+            });
+          })();
+          </script>
         </div>
 
         <div class="flex items-center justify-between pt-2">

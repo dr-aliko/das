@@ -1310,7 +1310,11 @@ def panel_billing_update(request, pk):
 
 @staff_required
 def panel_odemeler_view(request):
-    coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    from .utils import filter_coaches_by_q
+    q = request.GET.get('q', '').strip()
+    coaches = list(User.objects.filter(role='coach', is_active=True).order_by('full_name'))
+    if q:
+        coaches = filter_coaches_by_q(coaches, q)
     rows = []
     for coach in coaches:
         s = coach_billing_summary(coach)
@@ -1331,6 +1335,7 @@ def panel_odemeler_view(request):
         'rows': rows,
         'grand_total': grand_total,
         'active_tab': 'payments',
+        'q': q,
     })
 
 
@@ -1398,6 +1403,8 @@ def panel_davetler_view(request):
 @staff_required
 def panel_ogrenciler_view(request):
     from django.db.models import Prefetch
+    from .utils import filter_coaches_by_q
+    q = request.GET.get('q', '').strip()
     coaches = (
         User.objects.filter(role='coach', is_active=True)
         .prefetch_related(
@@ -1411,9 +1418,12 @@ def panel_ogrenciler_view(request):
         )
         .order_by('full_name')
     )
+    if q:
+        coaches = filter_coaches_by_q(list(coaches), q)
     return render(request, 'panel/ogrenciler.html', {
         'coaches': coaches,
         'active_tab': 'students',
+        'q': q,
     })
 
 
@@ -1558,16 +1568,23 @@ def panel_fee_tier_delete(request, pk):
 @staff_required
 def panel_wp_koclar_view(request):
     from .services.wordpress import suggest_wp_matches
+    from .utils import filter_coaches_by_q
+    q = request.GET.get('q', '').strip()
     coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
     linked = coaches.filter(wordpress_post_id__isnull=False)
 
     matches = suggest_wp_matches(coaches)
+    if q:
+        linked = filter_coaches_by_q(list(linked), q)
+        matches['unmatched_coaches'] = filter_coaches_by_q(list(matches['unmatched_coaches']), q)
+        matches['suggested'] = [m for m in matches['suggested'] if filter_coaches_by_q([m['coach']], q)]
     return render(request, 'panel/wp_koclar.html', {
         'suggested':         matches['suggested'],
         'unmatched_coaches': matches['unmatched_coaches'],
         'unmatched_wp':      matches['unmatched_wp'],
         'linked_coaches':    linked,
         'active_tab':        'wp_koclar',
+        'q':                 q,
     })
 
 
@@ -1648,10 +1665,14 @@ def _send_koc_invite_email_now(coach, request):
 @staff_required
 @ratelimit(key='user', rate='20/h', block=True)
 def panel_koc_ekle_view(request):
+    from .utils import filter_coaches_by_q
+    q = request.GET.get('q', '').strip()
     coaches_no_pw = [
         c for c in User.objects.filter(role='coach', is_active=True).order_by('full_name')
         if not c.has_usable_password()
     ]
+    if q:
+        coaches_no_pw = filter_coaches_by_q(coaches_no_pw, q)
     step = None
     form_data = {}
     error = None
@@ -1707,6 +1728,7 @@ def panel_koc_ekle_view(request):
         'coaches_no_pw': coaches_no_pw,
         'get_full_name': request.GET.get('full_name', ''),
         'get_email': request.GET.get('email', ''),
+        'q': q,
     })
 
 

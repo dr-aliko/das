@@ -1,6 +1,19 @@
 from django.utils import timezone
 
 
+def tr_lower(s):
+    """Turkish-aware lowercase: İ→i, I→ı before Python .lower()."""
+    return s.replace('İ', 'i').replace('I', 'ı').lower()
+
+
+def filter_coaches_by_q(coaches, q):
+    """Return coaches whose full_name or email contains q (Turkish-case-insensitive)."""
+    if not q:
+        return coaches
+    q_lc = tr_lower(q)
+    return [c for c in coaches if q_lc in tr_lower(c.full_name) or q_lc in tr_lower(c.email)]
+
+
 def membership_expiry_info(cs):
     """
     Returns expiry display info for a CoachStudent, or None if no badge should show.

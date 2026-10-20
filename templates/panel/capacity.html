@@ -82,13 +82,29 @@
         {% csrf_token %}
         <div>
           <label class="block text-xs text-ink-400 font-medium mb-1.5">Koç</label>
-          <select name="coach_id"
+          <input type="search" id="cap_grant_coach_search"
+                 placeholder="İsim veya email..."
+                 autocomplete="off"
+                 class="w-full mb-1 h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                        placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+          <select id="cap_grant_coach_sel" name="coach_id"
                   class="h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
                          focus:outline-none focus:border-steel-500 transition-colors">
             {% for coach in coaches_all %}
-            <option value="{{ coach.pk }}">{{ coach.full_name }}</option>
+            <option value="{{ coach.pk }}">{{ coach.full_name }} — {{ coach.email }}</option>
             {% endfor %}
           </select>
+          <script>
+          (function(){
+            var i=document.getElementById('cap_grant_coach_search'),s=document.getElementById('cap_grant_coach_sel');
+            if(!i||!s)return;
+            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
+            i.addEventListener('input',function(){
+              var q=t(i.value);
+              for(var n=0;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
+            });
+          })();
+          </script>
         </div>
         <div>
           <label class="block text-xs text-ink-400 font-medium mb-1.5">Slot (30 gün)</label>
@@ -106,8 +122,17 @@
 
   {# ── Coach overview table ──────────────────────────────────────────────────── #}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
-    <div class="px-5 py-3.5 border-b border-ink-700">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between gap-4">
       <h2 class="text-sm font-semibold text-ink-200">Koç Özeti</h2>
+      <form method="get" class="flex items-center gap-2">
+        <input type="search" name="q" value="{{ q }}"
+               placeholder="Koç ismi veya email..."
+               class="h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200
+                      placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+        <button type="submit"
+                class="h-7 px-2 rounded-lg bg-ink-700 hover:bg-ink-600 text-xs text-ink-200 transition-colors">Ara</button>
+        {% if q %}<a href="{% url 'capacity_panel:overview' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>{% endif %}
+      </form>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">

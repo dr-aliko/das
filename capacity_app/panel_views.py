@@ -22,10 +22,14 @@ def _tab_ctx():
 
 @staff_required
 def panel_capacity(request):
-    coaches = (
+    from users_app.utils import filter_coaches_by_q
+    q = request.GET.get('q', '').strip()
+    coaches = list(
         User.objects.filter(role='coach', is_active=True)
         .order_by('full_name')
     )
+    if q:
+        coaches = filter_coaches_by_q(coaches, q)
     today = date.today()
     rows = []
     for coach in coaches:
@@ -62,6 +66,7 @@ def panel_capacity(request):
         'cfg':          cfg,
         'orders':       CoachCapacityOrder.objects.select_related('coach').order_by('-created_at')[:100],
         'coaches_all':  User.objects.filter(role='coach', is_active=True).order_by('full_name'),
+        'q':            q,
     })
 
 
