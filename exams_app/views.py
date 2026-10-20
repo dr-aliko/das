@@ -2498,6 +2498,10 @@ def coach_dashboard(request):
         'has_next': _notif_count > 50,
     }
 
+    from capacity_app.services import get_capacity_status
+    from django.conf import settings as _settings
+    cap_status = get_capacity_status(request.user)
+
     return render(request, 'coach/roster.html', {
         'student_data':   student_data,
         'status_counts':  status_counts,
@@ -2509,6 +2513,8 @@ def coach_dashboard(request):
         'notif_unread':   notif_unread,
         'inbox_students': inbox_students,
         'first_run':      request.session.pop('first_run', False),
+        'cap_status':     cap_status,
+        'enforcement_on': getattr(_settings, 'COACH_CAPACITY_ENFORCED', False),
     })
 
 

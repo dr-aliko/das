@@ -16,6 +16,14 @@
       <p class="text-sm text-indigo-600 font-medium mt-2">{{ invite.email }}</p>
     </div>
 
+    {% if capacity_full_error %}
+    <div class="mb-6 rounded-xl bg-red-50 border border-red-200 px-4 py-4 text-sm text-red-700">
+      <p class="font-semibold mb-1">Bu koçun kontenjanı dolu</p>
+      <p>{{ capacity_full_error }}</p>
+      <p class="mt-2 text-xs text-red-500">Kaydolmak için lütfen koçunuzla iletişime geçin.</p>
+    </div>
+    {% endif %}
+
     <form method="post" class="space-y-5">
       {% csrf_token %}
 

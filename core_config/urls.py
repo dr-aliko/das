@@ -84,6 +84,8 @@ urlpatterns = [
     path('panel/satin-al/', include('purchase_app.panel_urls', namespace='purchase_panel')),
     path('panel/kazanclar/', include('earnings_app.panel_urls', namespace='earnings_panel')),
     path('coach/kazanclar/', coach_kazanclar, name='coach_kazanclar'),
+    path('coach/kontenjan/', include('capacity_app.urls', namespace='capacity')),
+    path('panel/kontenjan/', include('capacity_app.panel_urls', namespace='capacity_panel')),
 ]
 
 if settings.DEBUG:

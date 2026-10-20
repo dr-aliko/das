@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load earnings_filters %}
+
+{% block title %}Kontenjan Fiyat Ayarı — Panel{% endblock %}
+
+{% block content %}
+<div class="max-w-lg space-y-5">
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>
+    <h1 class="text-lg font-semibold text-white mt-2">Fiyat Ayarı</h1>
+  </div>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Slot Başına Fiyat</h2>
+    </div>
+    <div class="px-5 py-4">
+      {% if error %}
+      <p class="text-sm text-ruby-400 mb-3">{{ error }}</p>
+      {% endif %}
+      <form method="post" class="flex items-end gap-3">
+        {% csrf_token %}
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Fiyat (TL)</label>
+          <input type="number" name="per_slot_price_tl" min="0"
+                 value="{{ cfg.per_slot_price_kurus|kurus_to_tl_input }}"
+                 class="w-32 h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <button type="submit"
+                class="h-10 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium transition-colors">
+          Kaydet
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

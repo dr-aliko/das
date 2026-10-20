@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load earnings_filters %}
+
+{% block title %}Kontenjan — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-2xl">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <h1 class="text-lg font-semibold text-white">Kontenjan</h1>
+    <p class="text-sm text-ink-400 mt-0.5">Kendi öğrenci slotlarınızı satın alın ve takip edin.</p>
+  </div>
+
+  {% comment %}Status card{% endcomment %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Mevcut Kontenjan</h2>
+    </div>
+    <div class="px-5 py-4 grid grid-cols-3 gap-4 text-center">
+      <div>
+        <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Toplam</p>
+        <p class="text-2xl font-bold text-white tnum mt-1">{{ status.granted }}</p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Kullanılan</p>
+        <p class="text-2xl font-bold {% if status.free <= 0 and status.granted > 0 %}text-ruby-400{% else %}text-amber-400{% endif %} tnum mt-1">{{ status.in_use }}</p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-wider text-ink-500 font-semibold">Boş</p>
+        <p class="text-2xl font-bold {% if status.free <= 0 %}text-ink-500{% else %}text-emerald-400{% endif %} tnum mt-1">{{ status.free }}</p>
+      </div>
+    </div>
+    {% if status.period_end %}
+    <div class="px-5 pb-4 text-sm text-ink-400">
+      Aktif grant bitiş: <span class="text-ink-200 font-medium">{{ status.period_end|date:"d.m.Y" }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% comment %}Purchase form{% endcomment %}
+  {% if cfg.per_slot_price_kurus > 0 %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Kontenjan Satın Al</h2>
+    </div>
+    <div class="px-5 py-4 space-y-4">
+      <p class="text-sm text-ink-400">
+        Slot başına fiyat:
+        <span class="text-white font-semibold">{{ cfg.per_slot_price_kurus|kurus_tl }}</span>
+        · Her slot 30 gün geçerlidir.
+      </p>
+
+      {% if capacity_error %}
+      <div class="rounded-xl bg-ruby-tint border border-ruby-500/30 px-4 py-3 text-sm text-ruby-400">
+        {{ capacity_error }}
+      </div>
+      {% endif %}
+
+      <form method="post" class="flex items-end gap-3">
+        {% csrf_token %}
+        <div class="flex-1">
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Slot Sayısı</label>
+          <input type="number" name="slots" min="1" max="50" value="1"
+                 class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700
+                        text-sm text-ink-100 focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <button type="submit"
+                class="h-10 px-5 rounded-lg bg-steel-500 hover:bg-steel-400 text-white font-medium text-sm transition-colors shrink-0">
+          Satın Al
+        </button>
+      </form>
+      {% if error %}
+      <p class="text-xs text-ruby-400">{{ error }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <p class="text-sm text-ink-400">Kontenjan satışı henüz aktif değil. Lütfen yöneticinizle iletişime geçin.</p>
+  </div>
+  {% endif %}
+
+  {% comment %}Order history{% endcomment %}
+  {% if orders %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Sipariş Geçmişi</h2>
+    </div>
+    <div class="divide-y divide-ink-800">
+      {% for order in orders %}
+      <a href="{% url 'capacity:order_instructions' order_token=order.token %}"
+         class="flex items-center justify-between px-5 py-3 hover:bg-ink-900 transition-colors">
+        <div>
+          <span class="text-sm text-ink-200 font-medium">{{ order.slots }} slot</span>
+          <span class="text-xs text-ink-500 ml-2">{{ order.created_at|date:"d.m.Y" }}</span>
+          {% if order.ref_code %}
+          <span class="text-xs text-ink-500 ml-2 font-mono">{{ order.ref_code }}</span>
+          {% endif %}
+        </div>
+        <span class="text-xs font-medium
+          {% if order.status == 'paid' %}text-emerald-400
+          {% elif order.status == 'cancelled' %}text-ink-500
+          {% else %}text-amber-400{% endif %}">
+          {{ order.get_status_display }}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

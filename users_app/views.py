@@ -460,27 +460,39 @@ def coach_invite_view(request):
     invites = StudentInvite.objects.filter(coach=request.user).order_by('-created_at')
     form = InviteStudentForm()
 
+    capacity_error = None
     if request.method == 'POST':
         form = InviteStudentForm(request.POST)
         if form.is_valid():
-            invite = StudentInvite.objects.create(
-                coach=request.user,
-                email=form.cleaned_data['email'],
-                full_name=form.cleaned_data.get('full_name', ''),
-                token=StudentInvite.generate_token(),
-            )
-            _send_invite_email(invite, request)
-            messages.success(request, f'{invite.email} adresine davet gönderildi.')
-            return redirect('users_app:coach_invites')
+            from capacity_app.services import can_add_own_student
+            allowed, cap_msg = can_add_own_student(request.user)
+            if not allowed:
+                capacity_error = cap_msg
+            else:
+                invite = StudentInvite.objects.create(
+                    coach=request.user,
+                    email=form.cleaned_data['email'],
+                    full_name=form.cleaned_data.get('full_name', ''),
+                    token=StudentInvite.generate_token(),
+                )
+                _send_invite_email(invite, request)
+                messages.success(request, f'{invite.email} adresine davet gönderildi.')
+                return redirect('users_app:coach_invites')
 
     invite_accepted = invites.filter(is_used=True).count()
     invite_pending  = invites.filter(is_used=False).count()
+
+    from capacity_app.services import get_capacity_status
+    cap_status = get_capacity_status(request.user)
+
     return render(request, 'coach/invites.html', {
         'form': form,
         'invites': invites,
         'invite_accepted': invite_accepted,
         'invite_pending':  invite_pending,
         'invite_total':    invite_accepted + invite_pending,
+        'cap_status':      cap_status,
+        'capacity_error':  capacity_error,
     })
 
 
@@ -507,9 +519,22 @@ def invite_register_view(request, token):
         from django.http import Http404
         raise Http404
 
+    capacity_full_error = None
     if request.method == 'POST':
         form = InviteAcceptForm(request.POST)
         if form.is_valid():
+            # FINAL GUARD: check capacity before any account is created
+            if not invite.initiated_by_staff:
+                from capacity_app.services import can_add_own_student
+                allowed, cap_msg = can_add_own_student(invite.coach)
+                if not allowed:
+                    capacity_full_error = cap_msg
+                    return render(request, 'auth/invite_register.html', {
+                        'form': form,
+                        'invite': invite,
+                        'capacity_full_error': capacity_full_error,
+                    })
+
             user = User.objects.create_user(
                 email=invite.email,
                 full_name=form.cleaned_data['full_name'],
@@ -541,7 +566,11 @@ def invite_register_view(request, token):
     else:
         form = InviteAcceptForm(initial={'full_name': invite.full_name})
 
-    return render(request, 'auth/invite_register.html', {'form': form, 'invite': invite})
+    return render(request, 'auth/invite_register.html', {
+        'form': form,
+        'invite': invite,
+        'capacity_full_error': capacity_full_error,
+    })
 
 
 def logout_view(request):
@@ -1429,12 +1458,21 @@ def panel_koc_degistir_view(request, student_id):
         except (User.DoesNotExist, ValueError):
             error = 'Geçersiz koç seçimi.'
         else:
-            try:
-                reassign_student(student, new_coach, request.user)
-            except ValueError as exc:
-                error = str(exc)
-            else:
-                return redirect('panel_ogrenciler')
+            # Capacity guard: if moving a coach-source student, check new coach's capacity
+            if current_link is not None:
+                from capacity_app.services import can_add_own_student, is_own_student_source
+                if is_own_student_source(current_link.source, current_link.student):
+                    allowed, cap_msg = can_add_own_student(new_coach)
+                    if not allowed:
+                        error = f'Hedef koç kontenjanı dolu: {cap_msg}'
+
+            if not error:
+                try:
+                    reassign_student(student, new_coach, request.user)
+                except ValueError as exc:
+                    error = str(exc)
+                else:
+                    return redirect('panel_ogrenciler')
 
     return render(request, 'panel/koc_degistir.html', {
         'student': student,

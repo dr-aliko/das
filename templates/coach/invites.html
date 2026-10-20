@@ -19,6 +19,24 @@
 
           <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider mb-4">Yeni Davet</h3>
 
+          {% if cap_status.granted > 0 %}
+          <div class="flex items-center justify-between text-xs mb-3">
+            <span class="text-ink-500">Kontenjan</span>
+            <a href="{% url 'capacity:page' %}"
+               class="font-medium {% if cap_status.free <= 0 %}text-ruby-400{% else %}text-emerald-400{% endif %} hover:underline">
+              {{ cap_status.in_use }}/{{ cap_status.granted }}
+              {% if cap_status.period_end %}· {{ cap_status.period_end|date:"d.m.Y" }}{% endif %}
+            </a>
+          </div>
+          {% endif %}
+
+          {% if capacity_error %}
+          <div class="rounded-xl bg-ruby-tint border border-ruby-500/30 px-4 py-3 text-sm text-ruby-400 mb-3">
+            {{ capacity_error }}
+            <a href="{% url 'capacity:page' %}" class="underline ml-1">Kontenjan satın al</a>
+          </div>
+          {% endif %}
+
           <form method="post" class="space-y-3">
             {% csrf_token %}
             {% for field in form %}
