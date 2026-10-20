@@ -5,10 +5,13 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from users_app.decorators import staff_required
-from .models import CapacitySettings, CoachCapacityGrant, CoachCapacityOrder
-from .services import create_manual_grant, get_capacity_status, mark_capacity_order_paid
+from .models import CapacitySettings, CoachCapacityGrant, CoachCapacityOrder, GrantAdjustmentLog
+from .services import (
+    adjust_grant, create_manual_grant, get_capacity_status, mark_capacity_order_paid,
+)
 
 _log = logging.getLogger(__name__)
 User = get_user_model()
@@ -154,4 +157,97 @@ def panel_capacity_settings(request):
         **_tab_ctx(),
         'cfg': cfg,
         'error': error,
+    })
+
+
+@staff_required
+def panel_coach_grants(request, coach_pk):
+    """Per-coach grant list and adjustment history."""
+    coach = get_object_or_404(User, pk=coach_pk, role='coach')
+    grants = (
+        CoachCapacityGrant.objects
+        .filter(coach=coach)
+        .select_related('order')
+        .order_by('-period_start', '-pk')
+    )
+    logs = (
+        GrantAdjustmentLog.objects
+        .filter(grant__coach=coach)
+        .select_related('grant', 'adjusted_by')
+        .order_by('-adjusted_at')
+    )
+    return render(request, 'panel/coach_grants.html', {
+        **_tab_ctx(),
+        'coach':      coach,
+        'grants':     grants,
+        'logs':       logs,
+        'cap_status': get_capacity_status(coach),
+        'today':      date.today(),
+    })
+
+
+@staff_required
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
+def panel_grant_adjust(request, pk):
+    """
+    GET  ?action=reduce|end  — confirmation / entry form
+    POST action=reduce|end   — execute the adjustment
+    """
+    grant = get_object_or_404(
+        CoachCapacityGrant.objects.select_related('coach', 'order'), pk=pk
+    )
+    today = date.today()
+
+    action = (
+        request.GET.get('action') if request.method == 'GET'
+        else request.POST.get('action', '')
+    )
+    if action not in ('reduce', 'end'):
+        return redirect('capacity_panel:coach_grants', coach_pk=grant.coach_id)
+
+    cap_status = get_capacity_status(grant.coach)
+    error = None
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+        notify = request.POST.get('notify') == 'on'
+
+        if not reason:
+            error = 'Neden belirtilmesi zorunludur.'
+        elif action == 'reduce':
+            try:
+                new_slots = int(request.POST.get('new_slots', ''))
+                if new_slots < 0 or new_slots >= grant.slots:
+                    raise ValueError
+            except (ValueError, TypeError):
+                error = f'Yeni slot sayısı 0 ile {grant.slots - 1} arasında olmalıdır.'
+            if not error:
+                adjust_grant(grant.pk, 'reduce', new_slots, grant.period_end,
+                             request.user, reason, notify)
+                return redirect('capacity_panel:coach_grants', coach_pk=grant.coach_id)
+        else:  # end
+            adjust_grant(grant.pk, 'end', grant.slots, today,
+                         request.user, reason, notify)
+            return redirect('capacity_panel:coach_grants', coach_pk=grant.coach_id)
+
+    # For preview: estimate free slots after change
+    grant_active_slots = grant.slots if grant.is_active else 0
+    if action == 'reduce':
+        new_slots_default = max(0, grant.slots - 1)
+        preview_delta = new_slots_default - grant_active_slots
+    else:
+        new_slots_default = None
+        preview_delta = -grant_active_slots
+
+    return render(request, 'panel/grant_adjust.html', {
+        **_tab_ctx(),
+        'grant':            grant,
+        'action':           action,
+        'cap_status':       cap_status,
+        'today':            today,
+        'error':            error,
+        'is_paid_order':    grant.order is not None,
+        'new_slots_default': new_slots_default,
+        'preview_free':     cap_status['free'] + preview_delta,
+        'post_action':      request.POST if request.method == 'POST' else None,
     })

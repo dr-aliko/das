@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Kontenjan Düzenle — {{ coach.full_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# ── Page header ───────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Kontenjan Düzenle</h1>
+      </div>
+      <p class="text-sm text-ink-400">{{ coach.full_name }} <span class="text-ink-600">— {{ coach.email }}</span></p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider">Kullanılan / Toplam</p>
+        <p class="text-xl font-bold {% if cap_status.free < 0 %}text-ruby-400{% elif cap_status.free == 0 %}text-amber-400{% else %}text-emerald-400{% endif %} tabular-nums">
+          {{ cap_status.in_use }}&thinsp;/&thinsp;{{ cap_status.granted }}
+        </p>
+      </div>
+      <a href="{% url 'capacity_panel:overview' %}"
+         class="text-sm text-ink-400 hover:text-ink-200 transition-colors">← Geri</a>
+    </div>
+  </div>
+
+  {# ── Active grants with actions ────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Aktif ve Geçmiş Haklar</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Slot</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Başlangıç</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Bitiş</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28">Kaynak</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-44"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for grant in grants %}
+          <tr class="hover:bg-ink-900/40 transition-colors {% if not grant.is_active %}opacity-50{% endif %}">
+            <td class="px-5 py-3">
+              <span class="font-semibold text-ink-100">{{ grant.slots }}</span>
+              {% if grant.adjustments.all %}
+                <span class="ml-1 text-[10px] text-amber-400/80" title="Düzeltme geçmişi var">✎</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-400 tabular-nums">{{ grant.period_start|date:"d.m.Y" }}</td>
+            <td class="px-4 py-3 text-ink-400 tabular-nums">
+              {{ grant.period_end|date:"d.m.Y" }}
+              {% if grant.period_end == today %}
+                <span class="ml-1 text-xs text-amber-400">(bugün)</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if grant.order %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  Satın Alma
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                             bg-steel-500/10 border border-steel-500/20 text-steel-400">
+                  Manuel
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-right">
+              {% if grant.is_active %}
+              <div class="flex items-center justify-end gap-2">
+                {% if grant.slots > 0 %}
+                <a href="{% url 'capacity_panel:grant_adjust' pk=grant.pk %}?action=reduce"
+                   class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-amber-500/30
+                          text-amber-400 hover:bg-amber-500/10 transition-colors">
+                  Azalt
+                </a>
+                {% endif %}
+                {% if grant.period_end != today %}
+                <a href="{% url 'capacity_panel:grant_adjust' pk=grant.pk %}?action=end"
+                   class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
+                          text-ruby-400 hover:bg-ruby-500/10 transition-colors">
+                  Sonlandır
+                </a>
+                {% endif %}
+              </div>
+              {% else %}
+              <span class="text-xs text-ink-600">Sona erdi</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="px-5 py-8 text-center text-ink-600 text-sm">Bu koça ait hak bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Adjustment history ────────────────────────────────────────────────── #}
+  {% if logs %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Düzeltme Geçmişi</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Tarih</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">İşlem</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Eski → Yeni Slot</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Bitiş Değişimi</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Yapan</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Neden</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for log in logs %}
+          <tr class="hover:bg-ink-900/40 transition-colors">
+            <td class="px-5 py-3 text-ink-400 tabular-nums text-xs">{{ log.adjusted_at|date:"d.m.Y H:i" }}</td>
+            <td class="px-4 py-3">
+              {% if log.action == 'reduce' %}
+                <span class="text-amber-400 text-xs font-semibold">Azalt</span>
+              {% else %}
+                <span class="text-ruby-400 text-xs font-semibold">Sonlandır</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-300 tabular-nums text-xs">
+              {{ log.old_slots }} → {{ log.new_slots }}
+            </td>
+            <td class="px-4 py-3 text-ink-300 tabular-nums text-xs">
+              {% if log.old_period_end != log.new_period_end %}
+                {{ log.old_period_end|date:"d.m.Y" }} → {{ log.new_period_end|date:"d.m.Y" }}
+              {% else %}
+                <span class="text-ink-600">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-300 text-xs">{{ log.adjusted_by.full_name }}</td>
+            <td class="px-4 py-3 text-ink-400 text-xs">{{ log.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

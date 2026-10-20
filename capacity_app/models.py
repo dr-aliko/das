@@ -100,3 +100,48 @@ class CoachCapacityGrant(models.Model):
 
     def __str__(self):
         return f'{self.coach.full_name}: {self.slots} slot ({self.period_start} – {self.period_end})'
+
+    @property
+    def is_active(self):
+        from datetime import date
+        today = date.today()
+        return self.period_start <= today <= self.period_end
+
+
+class GrantAdjustmentLog(models.Model):
+    """Audit trail for every staff-initiated grant reduction or early termination."""
+    ACTION_REDUCE = 'reduce'
+    ACTION_END    = 'end'
+    ACTION_CHOICES = [
+        (ACTION_REDUCE, 'Azalt'),
+        (ACTION_END,    'Sonlandır'),
+    ]
+
+    grant          = models.ForeignKey(
+        CoachCapacityGrant,
+        on_delete=models.PROTECT,
+        related_name='adjustments',
+    )
+    adjusted_by    = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='+',
+    )
+    adjusted_at    = models.DateTimeField(auto_now_add=True)
+    action         = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    reason         = models.TextField()
+    old_slots      = models.PositiveIntegerField()
+    new_slots      = models.PositiveIntegerField()
+    old_period_end = models.DateField()
+    new_period_end = models.DateField()
+
+    class Meta:
+        ordering            = ['-adjusted_at']
+        verbose_name        = 'Kontenjan Düzeltme Kaydı'
+        verbose_name_plural = 'Kontenjan Düzeltme Kayıtları'
+
+    def __str__(self):
+        return (
+            f'Grant#{self.grant_id} {self.get_action_display()} '
+            f'by {self.adjusted_by_id} at {self.adjusted_at}'
+        )

@@ -220,3 +220,51 @@ def notify_expiring_grants():
     if count:
         _log.info('capacity: sent %d expiry notifications (5 days ahead)', count)
     return count
+
+
+def adjust_grant(grant_pk, action, new_slots, new_period_end, staff, reason, notify=True):
+    """
+    Atomically reduce a grant's slots or bring forward its end date.
+    Idempotent: if the grant is already at (new_slots, new_period_end), returns None.
+    Returns the GrantAdjustmentLog created, or None on no-op.
+    """
+    from .models import CoachCapacityGrant, GrantAdjustmentLog
+    with transaction.atomic():
+        grant = CoachCapacityGrant.objects.select_for_update().get(pk=grant_pk)
+
+        if grant.slots == new_slots and grant.period_end == new_period_end:
+            return None  # already at target — idempotent no-op
+
+        old_slots      = grant.slots
+        old_period_end = grant.period_end
+
+        grant.slots      = new_slots
+        grant.period_end = new_period_end
+        grant.save(update_fields=['slots', 'period_end'])
+
+        log = GrantAdjustmentLog.objects.create(
+            grant=grant,
+            adjusted_by=staff,
+            action=action,
+            reason=reason,
+            old_slots=old_slots,
+            new_slots=new_slots,
+            old_period_end=old_period_end,
+            new_period_end=new_period_end,
+        )
+
+        if notify:
+            from users_app.models import Notification
+            Notification.objects.create(
+                user=grant.coach,
+                title='Kontenjanınız güncellendi',
+                body='Kontenjanınız personel tarafından güncellendi. Detaylar için kontenjan sayfanızı ziyaret edin.',
+                url='/coach/kontenjan/',
+            )
+
+        _log.info(
+            'capacity: grant pk=%s adjusted by staff pk=%s — action=%s '
+            'old_slots=%s new_slots=%s old_end=%s new_end=%s',
+            grant.pk, staff.pk, action, old_slots, new_slots, old_period_end, new_period_end,
+        )
+        return log

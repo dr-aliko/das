@@ -137,6 +137,7 @@
             <th class="px-4 py-2.5 text-center text-xs font-semibold text-ink-500 uppercase tracking-wide">Boş</th>
             <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Bitiş</th>
             <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Bekleyen Sipariş</th>
+            <th class="px-4 py-2.5 text-xs font-semibold text-ink-500 uppercase tracking-wide w-24"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-ink-800">
@@ -163,9 +164,15 @@
               <span class="text-ink-600">—</span>
               {% endif %}
             </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{% url 'capacity_panel:coach_grants' coach_pk=row.coach.pk %}"
+                 class="text-xs text-steel-400 hover:text-steel-300 transition-colors">
+                Düzenle →
+              </a>
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="px-5 py-6 text-center text-ink-500">Koç bulunamadı.</td></tr>
+          <tr><td colspan="7" class="px-5 py-6 text-center text-ink-500">Koç bulunamadı.</td></tr>
           {% endfor %}
         </tbody>
       </table>
