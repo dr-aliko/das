@@ -12,6 +12,7 @@
     </svg>
     <span x-show="unread > 0" x-cloak
           x-text="unread > 9 ? '9+' : unread"
+          data-unread-badge
           style="position:absolute; top:-6px; right:-6px; min-width:1.25rem; height:1.25rem; border-radius:9999px; background:#ef4444; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; line-height:1; user-select:none;">
     </span>
   </button>
@@ -76,31 +77,49 @@ if (typeof notifBell === 'undefined') {
       notifications: [],
       unread: 0,
       loading: true,
-      init() {
+      init: function() {
+        var self = this;
         if (!_notifPromise) {
           _notifPromise = fetch('/student/notifications/').then(function(r) { return r.json(); });
         }
-        var self = this;
         _notifPromise.then(function(d) {
           self.notifications = d.notifications || [];
           self.unread = d.unread_count || 0;
           self.loading = false;
         }).catch(function() { self.loading = false; });
+
+        window.addEventListener('das:notif-update', function(e) {
+          if (e && e.detail && e.detail.unread !== undefined) {
+            self.unread = Math.max(0, Number(e.detail.unread));
+          }
+        });
+
+        window.addEventListener('pageshow', function(e) {
+          if (!e.persisted) return;
+          _notifPromise = null;
+          fetch('/student/notifications/')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { self.unread = d.unread_count || 0; })
+            .catch(function() {});
+        });
       },
       _csrf: function() {
         return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
       },
       tap: function(n) {
+        var self = this;
         if (!n.is_read) {
           n.is_read = true;
-          this.unread = Math.max(0, this.unread - 1);
+          self.unread = Math.max(0, self.unread - 1);
           fetch('/student/notifications/' + n.id + '/read/', {
             method: 'POST',
-            headers: { 'X-CSRFToken': this._csrf() },
-          });
+            headers: { 'X-CSRFToken': self._csrf() },
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.unread_count !== undefined) self.unread = d.unread_count;
+          }).catch(function() {});
         }
         if (n.url) {
-          this.open = false;
+          self.open = false;
           window.location.href = n.url;
         }
       },
@@ -108,8 +127,11 @@ if (typeof notifBell === 'undefined') {
         var self = this;
         fetch('/student/notifications/mark-all-read/', {
           method: 'POST',
-          headers: { 'X-CSRFToken': this._csrf() },
-        }).then(function() {
+          headers: { 'X-CSRFToken': self._csrf() },
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          self.notifications.forEach(function(n) { n.is_read = true; });
+          self.unread = d.unread_count !== undefined ? d.unread_count : 0;
+        }).catch(function() {
           self.notifications.forEach(function(n) { n.is_read = true; });
           self.unread = 0;
         });

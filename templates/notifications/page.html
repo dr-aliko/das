@@ -148,16 +148,38 @@ function notifPage() {
       return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
     },
 
+    _broadcast: function(n) {
+      window.dispatchEvent(new CustomEvent('das:notif-update', { detail: { unread: n } }));
+    },
+
+    init: function() {
+      var self = this;
+      window.addEventListener('pageshow', function(e) {
+        if (!e.persisted) return;
+        fetch('/student/notifications/', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            self.unread = d.unread_count || 0;
+            self._broadcast(self.unread);
+          })
+          .catch(function() {});
+      });
+    },
+
     tap: function(item) {
+      var self = this;
       var url = item.url;
       if (!item.is_read) {
         item.is_read = true;
-        this.unread = Math.max(0, this.unread - 1);
+        self.unread = Math.max(0, self.unread - 1);
         fetch('/student/notifications/' + item.id + '/read/', {
           method: 'POST',
-          headers: { 'X-CSRFToken': this.csrf() },
+          headers: { 'X-CSRFToken': self.csrf() },
           credentials: 'same-origin',
-        });
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.unread_count !== undefined) self.unread = d.unread_count;
+          self._broadcast(self.unread);
+        }).catch(function() { self._broadcast(self.unread); });
       }
       if (url) window.location.href = url;
     },
@@ -169,8 +191,11 @@ function notifPage() {
         credentials: 'same-origin',
       });
       if (r.ok) {
-        if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
+        var d = await r.json();
+        if (d.unread_count !== undefined) this.unread = d.unread_count;
+        else if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
         item._hidden = true;
+        this._broadcast(this.unread);
       }
     },
 
@@ -184,6 +209,7 @@ function notifPage() {
       if (r.ok) {
         self.items.forEach(function(i) { i.is_read = true; });
         self.unread = 0;
+        self._broadcast(0);
       }
     },
 
@@ -198,6 +224,7 @@ function notifPage() {
       if (r.ok) {
         self.items.forEach(function(i) { i._hidden = true; });
         self.unread = 0;
+        self._broadcast(0);
       }
     },
 

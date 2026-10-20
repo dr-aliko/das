@@ -599,6 +599,22 @@ def logout_view(request):
 # Coaching Inbox — Alert API endpoints
 # ──────────────────────────────────────────────
 
+def _alert_unread_count(user):
+    from datetime import date as _date
+    return CoachAlert.objects.filter(
+        coach=user, is_read=False, is_dismissed=False,
+    ).filter(
+        models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=_date.today())
+    ).count()
+
+
+def _inbox_unread_total(user):
+    from .models import Notification
+    return _alert_unread_count(user) + Notification.objects.filter(
+        user=user, is_read=False, hidden_by_user=False,
+    ).count()
+
+
 def _coach_inbox_context(coach):
     """Alerts visible in the inbox: not dismissed, not expired, sorted severity-first."""
     from datetime import date as _date
@@ -643,13 +659,24 @@ def coach_inbox_api(request):
     return JsonResponse({'ok': True, 'alerts': alerts, 'unread': unread})
 
 
+def inbox_unread_total(request):
+    if not (request.user.is_authenticated and request.user.is_coach):
+        return JsonResponse({'ok': False}, status=403)
+    return JsonResponse({'ok': True, 'unread_total': _inbox_unread_total(request.user)})
+
+
 def alert_mark_read(request, alert_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     if not (request.user.is_authenticated and request.user.is_coach):
         return JsonResponse({'ok': False}, status=403)
     CoachAlert.objects.filter(id=alert_id, coach=request.user).update(is_read=True)
-    return JsonResponse({'ok': True})
+    alert_unread = _alert_unread_count(request.user)
+    return JsonResponse({
+        'ok': True,
+        'unread_total': _inbox_unread_total(request.user),
+        'alert_unread': alert_unread,
+    })
 
 
 def alert_dismiss(request, alert_id):
@@ -658,7 +685,12 @@ def alert_dismiss(request, alert_id):
     if not (request.user.is_authenticated and request.user.is_coach):
         return JsonResponse({'ok': False}, status=403)
     CoachAlert.objects.filter(id=alert_id, coach=request.user).update(is_dismissed=True, is_read=True)
-    return JsonResponse({'ok': True})
+    alert_unread = _alert_unread_count(request.user)
+    return JsonResponse({
+        'ok': True,
+        'unread_total': _inbox_unread_total(request.user),
+        'alert_unread': alert_unread,
+    })
 
 
 def alert_mark_all_read(request):
@@ -667,7 +699,11 @@ def alert_mark_all_read(request):
     if not (request.user.is_authenticated and request.user.is_coach):
         return JsonResponse({'ok': False}, status=403)
     CoachAlert.objects.filter(coach=request.user, is_read=False).update(is_read=True)
-    return JsonResponse({'ok': True})
+    return JsonResponse({
+        'ok': True,
+        'unread_total': _inbox_unread_total(request.user),
+        'alert_unread': 0,
+    })
 
 
 # ──────────────────────────────────────────────
@@ -1127,7 +1163,10 @@ def student_notifications_api(request):
 def student_notification_read(request, pk):
     from .models import Notification
     Notification.objects.filter(user=request.user, pk=pk).update(is_read=True)
-    return JsonResponse({'ok': True})
+    unread_count = Notification.objects.filter(
+        user=request.user, is_read=False, hidden_by_user=False,
+    ).count()
+    return JsonResponse({'ok': True, 'unread_count': unread_count})
 
 
 @login_required
@@ -1135,7 +1174,7 @@ def student_notification_read(request, pk):
 def student_notification_mark_all_read(request):
     from .models import Notification
     Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).update(is_read=True)
-    return JsonResponse({'ok': True})
+    return JsonResponse({'ok': True, 'unread_count': 0})
 
 
 # ── Shared notifications page + delete endpoints (both roles) ─────────────────
@@ -1189,7 +1228,7 @@ def notification_delete(request, pk):
 def notification_delete_all(request):
     from .models import Notification
     Notification.objects.filter(user=request.user, hidden_by_user=False).update(hidden_by_user=True)
-    return JsonResponse({'ok': True})
+    return JsonResponse({'ok': True, 'unread_count': 0})
 
 
 @login_required
@@ -1197,7 +1236,7 @@ def notification_delete_all(request):
 def notification_mark_all_read(request):
     from .models import Notification
     Notification.objects.filter(user=request.user, is_read=False, hidden_by_user=False).update(is_read=True)
-    return JsonResponse({'ok': True})
+    return JsonResponse({'ok': True, 'unread_count': 0})
 
 
 # ── Coach billing view ────────────────────────────────────────────────────────

@@ -22,21 +22,21 @@
           <button @click="inboxOpen = true"
                   class="relative h-9 px-3 rounded-lg text-sm font-medium
                          inline-flex items-center gap-1.5 transition-colors
-                         {% if inbox_unread %}bg-ruby-tint border border-ruby-500/40 text-ruby-400
-                         {% elif inbox_alerts %}bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800
-                         {% else %}bg-ink-850 border border-ink-700 text-ink-500 hover:bg-ink-800{% endif %}">
+                         {% if inbox_alerts %}bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800
+                         {% else %}bg-ink-850 border border-ink-700 text-ink-500 hover:bg-ink-800{% endif %}"
+                  :class="inboxUnread > 0 ? 'bg-ruby-tint border-ruby-500/40 text-ruby-400' : ''">
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75"
                  stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>
             </svg>
             <span class="hidden sm:inline">Gelen Kutusu</span>
-            {% if inbox_unread %}
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full
+            <span x-show="inboxUnread > 0"
+                  x-text="inboxUnread > 9 ? '9+' : inboxUnread"
+                  data-unread-badge
+                  class="inline-flex items-center justify-center w-5 h-5 rounded-full
                          bg-ruby-500 text-white font-bold leading-none"
                   style="font-size:10px;">
-              {{ inbox_unread }}
             </span>
-            {% endif %}
           </button>
           <div class="flex items-center gap-0.5 bg-ink-900 rounded-lg p-0.5 shrink-0">
             <button @click="setViewMode('card')"
@@ -415,25 +415,17 @@
       <div class="flex items-center justify-between pb-3">
         <div class="flex items-center gap-2">
           <h2 class="text-sm font-semibold text-ink-100">Gelen Kutusu</h2>
-          {% if inbox_unread %}
-          <span class="px-1.5 py-0.5 rounded-full bg-ruby-tint text-ruby-500 text-xs font-bold">
-            {{ inbox_unread }} okunmadı
+          <span x-show="inboxUnread > 0" x-cloak
+                x-text="inboxUnread + ' okunmadı'"
+                class="px-1.5 py-0.5 rounded-full bg-ruby-tint text-ruby-500 text-xs font-bold">
           </span>
-          {% endif %}
         </div>
         <div class="flex items-center gap-1">
-          {% if alert_unread %}
-          <button x-show="inboxTab === 'alerts'"
-                  onclick="
-                    fetch('{% url 'users_app:alert_mark_all_read' %}', {
-                      method:'POST', headers:{'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1]??''}
-                    });
-                    document.querySelectorAll('.unread-dot').forEach(el=>el.remove());
-                    document.querySelectorAll('[id^=alert-]').forEach(el=>el.classList.remove('bg-ink-800'));"
+          <button x-show="inboxTab === 'alerts' && alertUnread > 0" x-cloak
+                  @click="markAllAlertsRead()"
                   class="text-xs text-steel-400 hover:text-steel-300 transition-colors font-medium">
             Tümünü oku
           </button>
-          {% endif %}
           <button @click="inboxOpen = false"
                   class="w-11 h-11 flex items-center justify-center rounded-lg
                          text-ink-400 hover:text-ink-200 hover:bg-ink-800 transition-colors">
@@ -450,9 +442,10 @@
                   : 'border-b-2 border-transparent text-ink-500 hover:text-ink-300'"
                 class="pb-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5">
           Uyarılar
-          {% if alert_unread %}
-          <span style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">{{ alert_unread }}</span>
-          {% endif %}
+          <span x-show="alertUnread > 0" x-cloak
+                x-text="alertUnread"
+                style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">
+          </span>
         </button>
         <button @click="inboxTab = 'notifs'"
                 :class="inboxTab === 'notifs'
@@ -460,9 +453,10 @@
                   : 'border-b-2 border-transparent text-ink-500 hover:text-ink-300'"
                 class="pb-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5">
           Bildirimler
-          {% if notif_unread %}
-          <span style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">{{ notif_unread }}</span>
-          {% endif %}
+          <span x-show="notifUnread > 0" x-cloak
+                x-text="notifUnread"
+                style="min-width:1rem;height:1rem;padding:0 3px;border-radius:9999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1;">
+          </span>
         </button>
       </div>
     </div>
@@ -498,10 +492,15 @@
         {# Content #}
         <a href="{% url 'coach:student_detail' alert.student.id %}"
            onclick="
+             var _row = document.getElementById('alert-{{ alert.id }}');
+             if (_row) _row.classList.remove('bg-ink-800');
              fetch('{% url 'users_app:alert_read' alert.id %}', {
                method:'POST', headers:{'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1]??''}
-             });
-             document.getElementById('alert-{{ alert.id }}').classList.remove('bg-ink-800');"
+             }).then(function(r){return r.json();}).then(function(d){
+               if(d.ok && d.unread_total!==undefined){
+                 document.dispatchEvent(new CustomEvent('das:inbox-update',{detail:{total:d.unread_total,alertUnread:d.alert_unread}}));
+               }
+             }).catch(function(){});"
            class="flex-1 flex items-start gap-3 px-4 py-3 hover:bg-ink-800 transition-colors">
           {# Student avatar #}
           <div class="w-7 h-7 rounded-full bg-gradient-to-br from-steel-500 to-steel-700
@@ -522,13 +521,24 @@
         </a>
         {# Dismiss button #}
         <button onclick="
-            const row = document.getElementById('alert-{{ alert.id }}');
+            var row = document.getElementById('alert-{{ alert.id }}');
             fetch('{% url 'users_app:alert_dismiss' alert.id %}', {
               method:'POST', headers:{'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1]??''}
-            }).then(() => { row.style.height=row.offsetHeight+'px'; row.style.overflow='hidden';
-              requestAnimationFrame(()=>{ row.style.transition='height .2s,opacity .2s';
-                row.style.height='0'; row.style.opacity='0';
-                setTimeout(()=>row.remove(), 220); }); });"
+            }).then(function(r){return r.json();}).then(function(d){
+              if(d.ok){
+                if(d.unread_total!==undefined){
+                  document.dispatchEvent(new CustomEvent('das:inbox-update',{detail:{total:d.unread_total,alertUnread:d.alert_unread}}));
+                }
+                if(row){
+                  row.style.height=row.offsetHeight+'px'; row.style.overflow='hidden';
+                  requestAnimationFrame(function(){
+                    row.style.transition='height .2s,opacity .2s';
+                    row.style.height='0'; row.style.opacity='0';
+                    setTimeout(function(){row.remove();},220);
+                  });
+                }
+              }
+            }).catch(function(){});"
                 class="w-8 shrink-0 flex items-center justify-center self-stretch
                        text-ink-600 hover:text-ink-300 hover:bg-ink-750
                        opacity-0 group-hover:opacity-100 transition-all"
@@ -678,10 +688,52 @@ function rosterApp() {
     selectedStudent: '',
     viewMode: localStorage.getItem('coach_view_mode') || 'card',
     statusBySource: raw,
+    inboxUnread: {{ inbox_unread|default:0 }},
+    alertUnread: {{ alert_unread|default:0 }},
+    notifUnread: {{ notif_unread|default:0 }},
+
+    init: function() {
+      var self = this;
+      document.addEventListener('das:inbox-update', function(e) {
+        if (!e || !e.detail) return;
+        var d = e.detail;
+        if (d.alertUnread !== undefined) self.alertUnread = Math.max(0, Number(d.alertUnread));
+        if (d.notifUnread !== undefined) self.notifUnread = Math.max(0, Number(d.notifUnread));
+        if (d.total !== undefined) {
+          self.inboxUnread = Math.max(0, Number(d.total));
+        } else {
+          self.inboxUnread = self.alertUnread + self.notifUnread;
+        }
+      });
+      window.addEventListener('pageshow', function(e) {
+        if (!e.persisted) return;
+        fetch('{% url "users_app:inbox_unread_total" %}', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) { if (d.ok) self.inboxUnread = d.unread_total; })
+          .catch(function() {});
+      });
+    },
+
     setViewMode: function(m) {
       this.viewMode = m;
       localStorage.setItem('coach_view_mode', m);
     },
+
+    markAllAlertsRead: function() {
+      var self = this;
+      var _c = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+      fetch('{% url "users_app:alert_mark_all_read" %}', {
+        method: 'POST', headers: { 'X-CSRFToken': _c },
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+          document.querySelectorAll('.unread-dot').forEach(function(el) { el.remove(); });
+          document.querySelectorAll('[id^=alert-]').forEach(function(el) { el.classList.remove('bg-ink-800'); });
+          self.alertUnread = 0;
+          self.inboxUnread = self.notifUnread;
+        }
+      }).catch(function() {});
+    },
+
     get kpiTotal() {
       var s = this.statusBySource[this.sourceFilter];
       return s ? s.total : 0;
@@ -715,16 +767,24 @@ function coachNotifDrawer() {
       return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
     },
 
+    _dispatch: function(n) {
+      document.dispatchEvent(new CustomEvent('das:inbox-update', { detail: { notifUnread: n } }));
+    },
+
     tap: function(item) {
+      var self = this;
       var url = item.url;
       if (!item.is_read) {
         item.is_read = true;
-        this.unread = Math.max(0, this.unread - 1);
+        self.unread = Math.max(0, self.unread - 1);
         fetch('/student/notifications/' + item.id + '/read/', {
           method: 'POST',
-          headers: { 'X-CSRFToken': this._csrf() },
+          headers: { 'X-CSRFToken': self._csrf() },
           credentials: 'same-origin',
-        });
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.unread_count !== undefined) self.unread = d.unread_count;
+          self._dispatch(self.unread);
+        }).catch(function() { self._dispatch(self.unread); });
       }
       if (url) window.location.href = url;
     },
@@ -736,8 +796,11 @@ function coachNotifDrawer() {
         credentials: 'same-origin',
       });
       if (r.ok) {
-        if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
+        var d = await r.json();
+        if (d.unread_count !== undefined) this.unread = d.unread_count;
+        else if (!item.is_read) this.unread = Math.max(0, this.unread - 1);
         item._hidden = true;
+        this._dispatch(this.unread);
       }
     },
 
@@ -751,6 +814,7 @@ function coachNotifDrawer() {
       if (r.ok) {
         self.items.forEach(function(i) { i.is_read = true; });
         self.unread = 0;
+        self._dispatch(0);
       }
     },
 
@@ -765,6 +829,7 @@ function coachNotifDrawer() {
       if (r.ok) {
         self.items.forEach(function(i) { i._hidden = true; });
         self.unread = 0;
+        self._dispatch(0);
       }
     },
 
