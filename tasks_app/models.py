@@ -87,8 +87,9 @@ class YouTubePlaylist(models.Model):
         null=True, blank=True,
         related_name='imported_playlists',
     )
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'YouTube Playlist'
@@ -117,6 +118,36 @@ class YouTubeVideo(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class YouTubeImportJob(models.Model):
+    STATUS_QUEUED  = 'queued'
+    STATUS_RUNNING = 'running'
+    STATUS_DONE    = 'done'
+    STATUS_FAILED  = 'failed'
+
+    playlist_id  = models.CharField(max_length=64)
+    coach        = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='yt_import_jobs',
+    )
+    status       = models.CharField(max_length=16, default='queued')
+    progress_msg = models.CharField(max_length=255, blank=True)
+    result_msg   = models.CharField(max_length=255, blank=True)
+    error_msg    = models.CharField(max_length=500, blank=True)
+    playlist_pk  = models.IntegerField(null=True, blank=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'YouTube Import Job'
+        verbose_name_plural = 'YouTube Import Jobs'
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['coach', 'playlist_id', 'status'], name='yt_import_job_idx')]
+
+    def __str__(self):
+        return f'{self.coach} / {self.playlist_id} / {self.status}'
 
 
 class KaynakKitap(models.Model):

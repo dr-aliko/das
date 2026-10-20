@@ -288,7 +288,7 @@ class YoutubePlaylistPreviewView(View):
         from tasks_app.models import YouTubePlaylist
         from tasks_app.services.youtube_playlist_importer import (
             extract_playlist_id, fetch_playlist_meta, detect_subject_and_exam_type,
-            InvalidPlaylistURL, PlaylistNotFound, YouTubeAPIError,
+            PlaylistNotFound, YouTubeAPIError,
         )
         body = _body(request)
         url = (body.get("url") or "").strip()
@@ -299,7 +299,7 @@ class YoutubePlaylistPreviewView(View):
         try:
             meta = fetch_playlist_meta(pid)
         except PlaylistNotFound:
-            return JsonResponse({"error": "Bu playlist bulunamadı veya gizli."}, status=404)
+            return JsonResponse({"error": "Liste bulunamadı veya gizli."}, status=404)
         except YouTubeAPIError as exc:
             return JsonResponse({"error": str(exc)}, status=502)
 
@@ -332,11 +332,15 @@ class YoutubePlaylistPreviewView(View):
 @method_decorator(coach_required, name='dispatch')
 class YoutubePlaylistImportView(View):
     def post(self, request):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from django_q.tasks import async_task
+
         from exams_app.models import Subject
-        from tasks_app.services.youtube_playlist_importer import (
-            extract_playlist_id, import_playlist,
-            PlaylistNotFound, YouTubeAPIError,
-        )
+        from tasks_app.models import YouTubeImportJob
+        from tasks_app.services.youtube_playlist_importer import extract_playlist_id
+
         body = _body(request)
         url = (body.get("url") or "").strip()
         pid = extract_playlist_id(url)
@@ -344,42 +348,114 @@ class YoutubePlaylistImportView(View):
             return JsonResponse({"error": "Geçerli bir YouTube oynatma listesi URL'si girin."}, status=400)
 
         subject_id = body.get("subject_id")
-        exam_type  = body.get("exam_type", "").upper()
+        exam_type  = (body.get("exam_type") or "").upper()
 
         if exam_type not in ("TYT", "AYT"):
             return JsonResponse({"error": "Sınav tipi TYT veya AYT olmalı."}, status=400)
 
-        subject = None
+        subject_pk = None
         if subject_id:
             try:
-                subject = Subject.objects.get(pk=int(subject_id))
+                subject_pk = Subject.objects.get(pk=int(subject_id)).pk
             except (Subject.DoesNotExist, ValueError):
                 return JsonResponse({"error": "Seçilen ders bulunamadı."}, status=400)
 
-        from tasks_app.models import YouTubePlaylist
-        was_update = YouTubePlaylist.objects.filter(playlist_id=pid, imported_by=request.user).exists()
+        running = YouTubeImportJob.objects.filter(
+            coach=request.user,
+            playlist_id=pid,
+            status__in=[YouTubeImportJob.STATUS_QUEUED, YouTubeImportJob.STATUS_RUNNING],
+            created_at__gte=timezone.now() - timedelta(minutes=10),
+        ).exists()
+        if running:
+            return JsonResponse({"error": "Bu playlist için zaten bir işlem devam ediyor."}, status=409)
+
+        job = YouTubeImportJob.objects.create(
+            playlist_id=pid,
+            coach=request.user,
+            status=YouTubeImportJob.STATUS_QUEUED,
+        )
+        async_task(
+            'tasks_app.tasks.run_yt_import',
+            job.pk, pid, subject_pk, exam_type, request.user.pk,
+            timeout=300,
+        )
+        return JsonResponse({"job_id": job.pk}, status=202)
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubePlaylistRefreshView(View):
+    def post(self, request, pk: int):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from django_q.tasks import async_task
+
+        from tasks_app.models import YouTubeImportJob, YouTubePlaylist
 
         try:
-            playlist = import_playlist(pid, subject, exam_type, request.user)
-        except PlaylistNotFound:
-            return JsonResponse({"error": "Bu playlist bulunamadı veya gizli."}, status=404)
-        except YouTubeAPIError as exc:
-            return JsonResponse({"error": str(exc)}, status=502)
+            playlist = YouTubePlaylist.objects.select_related('subject').get(pk=pk)
+        except YouTubePlaylist.DoesNotExist:
+            return JsonResponse({"error": "Playlist bulunamadı."}, status=404)
+        if playlist.imported_by_id != request.user.pk:
+            return JsonResponse({"error": "Bu playlist'i güncelleme yetkiniz yok."}, status=403)
 
-        videos = [
-            {"id": v.pk, "title": v.title, "duration": v.duration_min}
-            for v in playlist.videos.order_by('position')
-        ]
-        return JsonResponse({
-            "playlist_pk":      playlist.pk,
-            "title":            playlist.title,
-            "subject_id":       playlist.subject_id,
-            "subject_display":  playlist.subject.display_name if playlist.subject else exam_type,
-            "exam_type":        playlist.exam_type,
-            "was_update":       was_update,
-            "video_count":      len(videos),
-            "videos":           videos,
-        }, status=201)
+        pid = playlist.playlist_id
+        running = YouTubeImportJob.objects.filter(
+            coach=request.user,
+            playlist_id=pid,
+            status__in=[YouTubeImportJob.STATUS_QUEUED, YouTubeImportJob.STATUS_RUNNING],
+            created_at__gte=timezone.now() - timedelta(minutes=10),
+        ).exists()
+        if running:
+            return JsonResponse({"error": "Bu playlist için zaten bir güncelleme devam ediyor."}, status=409)
+
+        job = YouTubeImportJob.objects.create(
+            playlist_id=pid,
+            coach=request.user,
+            status=YouTubeImportJob.STATUS_QUEUED,
+        )
+        subject_pk = playlist.subject_id
+        exam_type  = playlist.exam_type
+        async_task(
+            'tasks_app.tasks.run_yt_import',
+            job.pk, pid, subject_pk, exam_type, request.user.pk,
+            timeout=300,
+        )
+        return JsonResponse({"job_id": job.pk}, status=202)
+
+
+@method_decorator(coach_required, name='dispatch')
+class YoutubeImportJobStatusView(View):
+    def get(self, request, job_id: int):
+        from tasks_app.models import YouTubeImportJob, YouTubePlaylist
+
+        try:
+            job = YouTubeImportJob.objects.get(pk=job_id, coach=request.user)
+        except YouTubeImportJob.DoesNotExist:
+            return JsonResponse({"error": "İş bulunamadı."}, status=404)
+
+        data: dict = {
+            "status":       job.status,
+            "progress_msg": job.progress_msg,
+            "result_msg":   job.result_msg,
+            "error_msg":    job.error_msg,
+            "playlist_pk":  job.playlist_pk,
+        }
+        if job.status == YouTubeImportJob.STATUS_DONE and job.playlist_pk:
+            try:
+                p = YouTubePlaylist.objects.select_related('subject').get(pk=job.playlist_pk)
+                data["playlist"] = {
+                    "pk":             p.pk,
+                    "title":          p.title,
+                    "exam_type":      p.exam_type,
+                    "subject_display": p.subject.display_name if p.subject else "",
+                    "video_count":    p.videos.count(),
+                    "last_synced_at": p.last_synced_at.isoformat() if p.last_synced_at else None,
+                    "result_msg":     job.result_msg,
+                }
+            except YouTubePlaylist.DoesNotExist:
+                pass
+        return JsonResponse(data)
 
 
 @method_decorator(coach_required, name='dispatch')
@@ -394,12 +470,14 @@ class YoutubePlaylistListView(View):
         playlists = [
             {
                 "pk":              p.pk,
+                "playlist_id":     p.playlist_id,
                 "title":           p.title,
                 "channel_title":   p.channel_title,
                 "exam_type":       p.exam_type,
                 "subject_display": p.subject.display_name if p.subject else "",
                 "video_count":     p.videos.count(),
                 "is_mine":         p.imported_by_id == request.user.pk,
+                "last_synced_at":  p.last_synced_at.isoformat() if p.last_synced_at else None,
             }
             for p in qs
         ]

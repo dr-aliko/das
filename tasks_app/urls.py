@@ -31,6 +31,8 @@ urlpatterns = [
     path('api/youtube/preview', views.YoutubePlaylistPreviewView.as_view(), name='api-youtube-preview'),
     path('api/youtube/import', views.YoutubePlaylistImportView.as_view(), name='api-youtube-import'),
     path('api/youtube/list', views.YoutubePlaylistListView.as_view(), name='api-youtube-list'),
+    path('api/youtube/jobs/<int:job_id>', views.YoutubeImportJobStatusView.as_view(), name='api-youtube-job-status'),
     path('api/youtube/<int:pk>/videos', views.YoutubePlaylistVideosView.as_view(), name='api-youtube-videos'),
+    path('api/youtube/<int:pk>/refresh', views.YoutubePlaylistRefreshView.as_view(), name='api-youtube-refresh'),
     path('api/youtube/<int:pk>', views.YoutubePlaylistDeleteView.as_view(), name='api-youtube-delete'),
 ]

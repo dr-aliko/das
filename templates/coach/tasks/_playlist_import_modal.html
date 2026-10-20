@@ -1,109 +1,181 @@
-{# YouTube Playlist Import Modal — rendered inside panel() scope; controlled by playlistImporter() from tasks_panel.js #}
-<div x-data="playlistImporter()"
-     @open-playlist-importer.window="open()"
-     x-show="show" x-cloak
-     class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
-     @keydown.escape.window="close()">
-  <div class="rounded-2xl shadow-card-lg w-full max-w-md bg-[var(--surface-1)] border border-[var(--border)]"
-       @click.stop>
+{# YouTube Playlist Import Modal — controlled by playlistImporter() from tasks_panel.js #}
+{# Component styles: var()-based Tailwind utilities are not in the compiled bundle #}
+<style>
+.yt-imp-panel   { background:var(--surface-1); border:1px solid var(--border); }
+.yt-imp-hdr     { border-bottom:1px solid var(--border); }
+.yt-imp-close   { color:var(--muted); border-radius:.5rem; }
+.yt-imp-close:hover { color:var(--heading); background:var(--surface-2); }
+.yt-imp-label   { color:var(--muted); }
+.yt-imp-input   { background:var(--surface-2); color:var(--heading); border:1px solid var(--border); }
+.yt-imp-card    { background:var(--surface-2); border:1px solid var(--border); }
+.yt-imp-row     { background:var(--surface-2); border:1px solid var(--border); }
+.yt-imp-sub-lbl { color:var(--muted-2); }
+.yt-imp-heading { color:var(--heading); }
+.yt-imp-muted   { color:var(--muted); }
+.yt-imp-muted2  { color:var(--muted-2); }
+.yt-imp-back    { color:var(--body); border:1px solid var(--border); }
+.yt-imp-back:hover { background:var(--surface-2); }
+.yt-imp-exam-off { background:var(--surface-2); color:var(--muted); border-color:var(--border); }
+.yt-imp-exam-off:hover { background:var(--surface-3); }
+.yt-imp-del-off { color:var(--muted-2); }
+.yt-imp-sel-lbl { background:var(--surface-2); color:var(--heading); border:1px solid var(--border); }
+</style>
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-      <h2 class="text-base font-semibold text-[var(--heading)]">YouTube Playlist Ekle</h2>
-      <button @click="close()"
-              class="w-7 h-7 flex items-center justify-center text-[var(--muted)] hover:text-[var(--heading)]
-                     hover:bg-[var(--surface-2)] rounded-lg transition text-lg leading-none">&times;</button>
-    </div>
+<div x-data="playlistImporter()" @open-playlist-importer.window="open()">
+  <div x-teleport="body"
+       x-show="show"
+       x-cloak
+       class="print:hidden fixed inset-0 flex items-center justify-center p-4"
+       style="z-index:9999"
+       @keydown.escape.window="show && close()">
 
-    <div class="p-6 space-y-4">
+    {# Backdrop #}
+    <div class="fixed inset-0 bg-black/60" @click="close()"></div>
 
-      {# ── Input / Error ── #}
+    {# Dialog — flex column, scrollable body #}
+    <div class="yt-imp-panel relative w-full flex flex-col rounded-2xl shadow-xl"
+         style="max-width:28rem;max-height:90dvh;overflow:hidden"
+         @click.stop>
+
+      {# ── Header (always visible) ── #}
+      <div class="yt-imp-hdr flex items-center justify-between px-6 py-4" style="flex:none">
+        <h2 class="yt-imp-heading text-base font-semibold">YouTube Playlist Ekle</h2>
+        <button @click="close()"
+                class="yt-imp-close w-7 h-7 flex items-center justify-center transition text-xl leading-none">
+          &times;
+        </button>
+      </div>
+
+      {# ── INPUT / ERROR STEP ── #}
       <template x-if="step === 'input' || step === 'error'">
-        <div class="space-y-4">
+        <div class="flex flex-col flex-1" style="min-height:0">
 
-          {# ── My Playlists list ── #}
-          <template x-if="loadingPlaylists && myPlaylists.length === 0">
-            <p class="text-xs text-[var(--muted-2)] text-center py-1">Yükleniyor…</p>
-          </template>
-          <template x-if="myPlaylists.length > 0">
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Playlistlerim</p>
-                <span class="text-[10px] text-[var(--muted-2)]" x-text="myPlaylists.length + ' playlist'"></span>
-              </div>
-              <div class="space-y-1 max-h-44 overflow-y-auto rounded-xl">
-                <template x-for="p in myPlaylists" :key="p.pk">
-                  <div class="flex items-center gap-2 px-3 py-2 rounded-lg
-                              bg-[var(--surface-2)] border border-[var(--border)]">
-                    <div class="flex-1 min-w-0">
-                      <p class="text-xs font-medium text-[var(--heading)] truncate" x-text="p.title"></p>
-                      <p class="text-[10px] text-[var(--muted-2)]"
-                         x-text="p.exam_type + (p.subject_display ? ' · ' + p.subject_display : '') + ' · ' + p.video_count + ' video'"></p>
-                    </div>
-                    <template x-if="p.is_mine">
-                      <button @click="deletePl(p.pk)"
-                              :title="pendingDeletePk === p.pk ? 'Onaylamak için tekrar tıkla' : 'Sil'"
-                              :class="pendingDeletePk === p.pk
-                                ? 'text-ruby-500 bg-ruby-tint border-ruby-500/30'
-                                : 'text-[var(--muted-2)] hover:text-ruby-400 hover:bg-ruby-500/10 border-transparent'"
-                              class="shrink-0 h-7 flex items-center justify-center rounded-lg border
-                                     transition px-1.5 gap-1 text-[10px] font-bold">
-                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        <template x-if="pendingDeletePk === p.pk">
-                          <span>Emin misin?</span>
-                        </template>
-                      </button>
-                    </template>
-                  </div>
-                </template>
-              </div>
-              <p x-show="deleteError" x-text="deleteError"
-                 class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"></p>
+          {# URL input + Önizle — fixed above the scrollable list #}
+          <div class="px-6 pt-5 space-y-3" style="flex:none">
+            <div>
+              <label class="yt-imp-label block font-semibold uppercase tracking-wide mb-1.5"
+                     style="font-size:10px">
+                Playlist URL
+              </label>
+              <input x-model="url" type="text"
+                     placeholder="https://youtube.com/playlist?list=…"
+                     @keydown.enter="doPreview()"
+                     class="yt-imp-input w-full rounded-lg px-3 py-2 text-sm
+                            focus:outline-none focus:border-steel-500 transition placeholder:text-[var(--muted-2)]">
             </div>
-          </template>
-
-          {# ── URL input ── #}
-          <div>
-            <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Yeni Playlist URL</label>
-            <input x-model="url" type="text"
-                   placeholder="https://youtube.com/playlist?list=…"
-                   @keydown.enter="doPreview()"
-                   class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
-                          text-[var(--heading)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-steel-500 transition">
+            <template x-if="step === 'error'">
+              <p class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
+                 x-text="errorMsg"></p>
+            </template>
+            <button @click="doPreview()"
+                    :disabled="!url.trim()"
+                    class="w-full py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
+                           hover:bg-steel-400 active:bg-steel-600 transition
+                           disabled:opacity-50 disabled:cursor-not-allowed">
+              Önizle
+            </button>
           </div>
-          <p x-show="step === 'error'"
-             class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
-             x-text="errorMsg"></p>
-          <button @click="doPreview()" :disabled="!url.trim()"
-                  class="w-full py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
-                         hover:bg-steel-400 active:bg-steel-600 transition
-                         disabled:opacity-50 disabled:cursor-not-allowed">
-            Önizle
-          </button>
+
+          {# Existing playlists — scrollable area #}
+          <div class="flex-1 overflow-y-auto px-6 pb-5 pt-4" style="min-height:0">
+            <template x-if="loadingPlaylists && myPlaylists.length === 0">
+              <p class="yt-imp-muted2 text-xs text-center py-2">Yükleniyor…</p>
+            </template>
+            <template x-if="myPlaylists.length > 0">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="yt-imp-label font-semibold uppercase tracking-wide shrink-0"
+                     style="font-size:10px"
+                     x-text="'Mevcut listeler (' + myPlaylists.length + ')'"></p>
+                  <template x-if="myPlaylists.length > 6">
+                    <input x-model="search" type="text" placeholder="Ara…"
+                           class="yt-imp-input h-6 flex-1 min-w-0 px-2 text-xs rounded-lg
+                                  focus:outline-none focus:border-steel-500 transition placeholder:text-[var(--muted-2)]">
+                  </template>
+                </div>
+                <div class="space-y-1 rounded-xl" style="max-height:40dvh;overflow-y:auto">
+                  <template x-for="p in filteredPlaylists" :key="p.pk">
+                    <div>
+                      <div class="yt-imp-row flex items-center gap-2 px-3 py-2 rounded-lg">
+                        <div class="flex-1 min-w-0">
+                          <p class="yt-imp-heading text-xs font-medium truncate" x-text="p.title"></p>
+                          <p class="yt-imp-muted2 truncate" style="font-size:10px"
+                             x-text="(p.channel_title ? p.channel_title + ' · ' : '') + p.video_count + ' video' + (p.last_synced_at ? ' · Son güncelleme: ' + _fmtDate(p.last_synced_at) : '')"></p>
+                        </div>
+                        <template x-if="p.is_mine">
+                          <div class="flex items-center gap-1 shrink-0">
+                            <button @click="doRefresh(p.pk)"
+                                    :disabled="!!(refreshJobs[p.pk] && refreshJobs[p.pk].running)"
+                                    class="h-7 px-2 font-semibold text-steel-400
+                                           border border-steel-500/30 bg-steel-500/10
+                                           hover:bg-steel-500/20 rounded-lg transition
+                                           disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style="font-size:10px">
+                              <template x-if="refreshJobs[p.pk] && refreshJobs[p.pk].running">
+                                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                              </template>
+                              <template x-if="!(refreshJobs[p.pk] && refreshJobs[p.pk].running)">
+                                <span>Güncelle</span>
+                              </template>
+                            </button>
+                            <button @click="deletePl(p.pk)"
+                                    :title="pendingDeletePk === p.pk ? 'Onaylamak için tekrar tıkla' : 'Sil'"
+                                    :class="pendingDeletePk === p.pk
+                                      ? 'text-ruby-500 bg-ruby-tint border-ruby-500/30'
+                                      : 'yt-imp-del-off hover:bg-ruby-500/10 border-transparent'"
+                                    class="h-7 w-7 flex items-center justify-center rounded-lg border transition">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </div>
+                      <template x-if="refreshJobs[p.pk] && refreshJobs[p.pk].msg">
+                        <p class="mt-0.5 px-3 py-1 rounded-lg" style="font-size:10px"
+                           :class="refreshJobs[p.pk].failed
+                             ? 'text-ruby-500 bg-ruby-tint border border-ruby-500/30'
+                             : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'"
+                           x-text="refreshJobs[p.pk].msg"></p>
+                      </template>
+                      <template x-if="deleteErrorPk === p.pk && deleteError">
+                        <p class="mt-0.5 px-3 py-1 text-ruby-500 bg-ruby-tint border border-ruby-500/30 rounded-lg"
+                           style="font-size:10px"
+                           x-text="deleteError"></p>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+
         </div>
       </template>
 
-      {# ── Importing (preview + import both show this spinner) ── #}
+      {# ── IMPORTING / POLLING STEP ── #}
       <template x-if="step === 'importing'">
-        <div class="flex flex-col items-center gap-4 py-8">
+        <div class="flex-1 flex flex-col items-center justify-center gap-3 py-10 px-6">
           <svg class="animate-spin w-8 h-8 text-steel-400" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <p class="text-sm text-[var(--muted)]">İşleniyor…</p>
+          <p class="yt-imp-muted text-sm text-center" x-text="progressMsg || 'İşleniyor…'"></p>
         </div>
       </template>
 
-      {# ── Preview ── #}
+      {# ── PREVIEW STEP ── #}
       <template x-if="step === 'preview'">
-        <div class="space-y-4">
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
-          <div class="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4 space-y-2">
-            <p class="text-sm font-semibold text-[var(--heading)] leading-snug" x-text="preview.title"></p>
-            <p class="text-xs text-[var(--muted)]" x-text="preview.channel_title"></p>
-            <div class="flex items-center gap-2 flex-wrap pt-1">
+          <div class="yt-imp-card rounded-xl p-4 space-y-2">
+            <p class="yt-imp-heading text-sm font-semibold leading-snug" x-text="preview.title"></p>
+            <p class="yt-imp-muted text-xs" x-text="preview.channel_title"></p>
+            <div class="flex flex-wrap gap-2 pt-1">
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
                            bg-steel-500/20 text-steel-400 border border-steel-500/30"
                     x-text="preview.video_count + ' video'"></span>
@@ -126,32 +198,32 @@
             </div>
           </div>
 
-          {# Exam type picker — only when not auto-detected #}
           <template x-if="!preview.detected_exam_type">
             <div>
-              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">Sınav Tipi</label>
+              <label class="yt-imp-label block font-semibold uppercase tracking-wide mb-1.5"
+                     style="font-size:10px">
+                Sınav Tipi
+              </label>
               <div class="flex gap-2">
                 <template x-for="tip in ['TYT', 'AYT']" :key="tip">
                   <button type="button" @click="selectedExamType = tip"
                           class="flex-1 py-2 rounded-xl text-sm font-bold border transition"
-                          :class="selectedExamType === tip
-                            ? 'bg-steel-500/20 border-steel-500 text-steel-400'
-                            : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-3)]'"
+                          :class="selectedExamType === tip ? 'bg-steel-500/20 border-steel-500 text-steel-400' : 'yt-imp-exam-off'"
                           x-text="tip"></button>
                 </template>
               </div>
             </div>
           </template>
 
-          {# Subject picker — only when not auto-detected #}
           <template x-if="!preview.detected_subject_id">
             <div>
-              <label class="block text-xs font-semibold text-[var(--muted)] mb-1.5 uppercase tracking-wide">
-                Ders <span class="font-normal normal-case text-[var(--muted-2)]">(isteğe bağlı)</span>
+              <label class="yt-imp-label block font-semibold uppercase tracking-wide mb-1.5"
+                     style="font-size:10px">
+                Ders <span class="yt-imp-sub-lbl font-normal normal-case">(isteğe bağlı)</span>
               </label>
               <select x-model="selectedSubjectId"
-                      class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
-                             text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
+                      class="yt-imp-sel-lbl w-full rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:border-steel-500 transition">
                 <option value="">Diğer</option>
                 <template x-for="s in subjects.filter(s => !selectedExamType || s.exam_type === selectedExamType)"
                           :key="s.id">
@@ -161,28 +233,30 @@
             </div>
           </template>
 
-          <p x-show="errorMsg"
-             class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
-             x-text="errorMsg"></p>
+          <template x-if="errorMsg">
+            <p class="text-ruby-500 text-xs bg-ruby-tint border border-ruby-500/30 rounded-lg px-3 py-2"
+               x-text="errorMsg"></p>
+          </template>
 
-          <div class="flex gap-2">
+          <div class="flex gap-2 pb-1">
             <button @click="reset()"
-                    class="flex-1 py-2.5 border border-[var(--border)] text-sm font-medium rounded-xl
-                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
+                    class="yt-imp-back flex-1 py-2.5 text-sm font-medium rounded-xl transition">
               Geri
             </button>
             <button @click="doImport()"
+                    :disabled="selectedExamType === ''"
                     class="flex-1 py-2.5 bg-steel-500 text-white rounded-xl text-sm font-semibold
-                           hover:bg-steel-400 active:bg-steel-600 transition">
-              Playlisti Ekle
+                           hover:bg-steel-400 active:bg-steel-600 transition
+                           disabled:opacity-50 disabled:cursor-not-allowed">
+              İçe Aktar
             </button>
           </div>
         </div>
       </template>
 
-      {# ── Success ── #}
+      {# ── SUCCESS STEP ── #}
       <template x-if="step === 'success'">
-        <div class="space-y-4">
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div class="flex flex-col items-center gap-3 py-4">
             <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,10 +264,12 @@
               </svg>
             </div>
             <div class="text-center space-y-1">
-              <p class="text-sm font-semibold text-[var(--heading)]" x-text="importResult.title"></p>
-              <p class="text-xs text-[var(--muted)]"
+              <p class="yt-imp-heading text-sm font-semibold" x-text="importResult.title"></p>
+              <p class="yt-imp-muted text-xs"
                  x-text="importResult.video_count + ' video · ' + importResult.exam_type + (importResult.subject_display ? ' · ' + importResult.subject_display : '')"></p>
-              <p x-show="importResult.was_update" class="text-xs text-amber-400">Playlist güncellendi.</p>
+              <template x-if="importResult.result_msg">
+                <p class="text-xs text-steel-400" x-text="importResult.result_msg"></p>
+              </template>
             </div>
           </div>
           <button @click="useNow()"
@@ -203,13 +279,11 @@
           </button>
           <div class="flex gap-2">
             <button @click="reset()"
-                    class="flex-1 py-2 border border-[var(--border)] text-xs font-medium rounded-xl
-                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
+                    class="yt-imp-back flex-1 py-2 text-xs font-medium rounded-xl transition">
               Başka Playlist Ekle
             </button>
             <button @click="close()"
-                    class="flex-1 py-2 border border-[var(--border)] text-xs font-medium rounded-xl
-                           text-[var(--body)] hover:bg-[var(--surface-2)] transition">
+                    class="yt-imp-back flex-1 py-2 text-xs font-medium rounded-xl transition">
               Kapat
             </button>
           </div>

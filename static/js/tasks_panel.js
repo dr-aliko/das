@@ -154,9 +154,10 @@ function playlistImporter() {
   const _csrf = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
   return {
     show: false,
-    step: 'input',       // 'input' | 'preview' | 'importing' | 'success' | 'error'
+    step: 'input',   // 'input' | 'error' | 'importing' | 'preview' | 'success'
     url: '',
     errorMsg: '',
+    progressMsg: '',
     preview: null,
     subjects: [],
     selectedSubjectId: '',
@@ -164,16 +165,48 @@ function playlistImporter() {
     importResult: null,
     myPlaylists: [],
     loadingPlaylists: false,
+    search: '',
     pendingDeletePk: null,
     deleteError: '',
+    deleteErrorPk: null,
+    refreshJobs: {},   // {[pk]: {running, msg, failed}}
+    _activeJobId: null,
+    _pollTimer: null,
 
-    open() { this.reset(); this.show = true; this.loadMyPlaylists(); },
-    close() { this.show = false; },
+    get filteredPlaylists() {
+      const q = this.search.trim().toLowerCase();
+      if (!q) return this.myPlaylists;
+      return this.myPlaylists.filter(p =>
+        p.title.toLowerCase().includes(q) || (p.channel_title || '').toLowerCase().includes(q)
+      );
+    },
+
+    _fmtDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+    },
+
+    open() {
+      this.show = true;
+      document.body.style.overflow = 'hidden';
+      this.loadMyPlaylists();
+      if (this._activeJobId && this.step === 'importing') {
+        this._startPoll(this._activeJobId);
+      }
+    },
+
+    close() {
+      this.show = false;
+      document.body.style.overflow = '';
+    },
+
     reset() {
-      this.step = 'input'; this.url = ''; this.errorMsg = '';
-      this.preview = null; this.importResult = null;
+      this._stopPoll();
+      this.step = 'input'; this.url = ''; this.errorMsg = ''; this.progressMsg = '';
+      this.preview = null; this.importResult = null; this._activeJobId = null;
       this.selectedSubjectId = ''; this.selectedExamType = 'TYT';
-      this.pendingDeletePk = null; this.deleteError = '';
+      this.pendingDeletePk = null; this.deleteError = ''; this.deleteErrorPk = null;
     },
 
     async loadMyPlaylists() {
@@ -194,6 +227,7 @@ function playlistImporter() {
       }
       this.pendingDeletePk = null;
       this.deleteError = '';
+      this.deleteErrorPk = null;
       try {
         const r = await fetch(`/coach/tasks/api/youtube/${pk}`, {
           method: 'DELETE', headers: { 'X-CSRFToken': _csrf() },
@@ -204,13 +238,69 @@ function playlistImporter() {
         } else {
           const d = await r.json().catch(() => ({}));
           this.deleteError = d.error || 'Silme işlemi başarısız.';
+          this.deleteErrorPk = pk;
         }
-      } catch (_) { this.deleteError = 'Bağlantı hatası.'; }
+      } catch (_) {
+        this.deleteError = 'Bağlantı hatası.';
+        this.deleteErrorPk = pk;
+      }
+    },
+
+    async doRefresh(pk) {
+      const jobs = Object.assign({}, this.refreshJobs);
+      jobs[pk] = { running: true, msg: '', failed: false };
+      this.refreshJobs = jobs;
+      try {
+        const r = await fetch(`/coach/tasks/api/youtube/${pk}/refresh`, {
+          method: 'POST', headers: { 'X-CSRFToken': _csrf() },
+        });
+        const d = await r.json();
+        if (!r.ok) {
+          const j = Object.assign({}, this.refreshJobs);
+          j[pk] = { running: false, msg: d.error || 'Güncelleme başarısız.', failed: true };
+          this.refreshJobs = j;
+          return;
+        }
+        this._pollRefresh(pk, d.job_id);
+      } catch (_) {
+        const j = Object.assign({}, this.refreshJobs);
+        j[pk] = { running: false, msg: 'Bağlantı hatası.', failed: true };
+        this.refreshJobs = j;
+      }
+    },
+
+    _pollRefresh(pk, jobId) {
+      const poll = async () => {
+        try {
+          const r = await fetch(`/coach/tasks/api/youtube/jobs/${jobId}`);
+          const d = await r.json();
+          if (d.status === 'done') {
+            const j = Object.assign({}, this.refreshJobs);
+            j[pk] = { running: false, msg: d.result_msg || 'Güncellendi.', failed: false };
+            this.refreshJobs = j;
+            if (d.playlist) {
+              this.myPlaylists = this.myPlaylists.map(p =>
+                p.pk === pk ? Object.assign({}, p, d.playlist, { pk }) : p
+              );
+            }
+          } else if (d.status === 'failed') {
+            const j = Object.assign({}, this.refreshJobs);
+            j[pk] = { running: false, msg: d.error_msg || 'Güncelleme başarısız.', failed: true };
+            this.refreshJobs = j;
+          } else {
+            const j = Object.assign({}, this.refreshJobs);
+            j[pk] = { running: true, msg: d.progress_msg || '', failed: false };
+            this.refreshJobs = j;
+            setTimeout(poll, 2000);
+          }
+        } catch (_) { setTimeout(poll, 2000); }
+      };
+      poll();
     },
 
     async doPreview() {
       if (!this.url.trim()) return;
-      this.step = 'importing'; this.errorMsg = '';
+      this.step = 'importing'; this.errorMsg = ''; this.progressMsg = 'Önizleniyor…';
       try {
         const r = await fetch('/coach/tasks/api/youtube/preview', {
           method: 'POST',
@@ -218,22 +308,19 @@ function playlistImporter() {
           body: JSON.stringify({ url: this.url }),
         });
         const data = await r.json();
-        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'Bir hata olustu.'; return; }
+        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'Bir hata oluştu.'; return; }
         this.preview = data;
         this.subjects = data.subjects || [];
         this.selectedSubjectId = data.detected_subject_id ? String(data.detected_subject_id) : '';
         this.selectedExamType  = data.detected_exam_type || 'TYT';
         this.step = 'preview';
-      } catch (e) {
-        this.step = 'error'; this.errorMsg = 'Baglanti hatasi.';
+      } catch (_) {
+        this.step = 'error'; this.errorMsg = 'Bağlantı hatası.';
       }
     },
 
-    get needsSubject() { return this.preview && !this.preview.detected_subject_id && !this.selectedSubjectId; },
-    get needsExamType() { return this.preview && !this.preview.detected_exam_type; },
-
     async doImport() {
-      this.step = 'importing';
+      this.step = 'importing'; this.errorMsg = ''; this.progressMsg = 'Kuyruğa ekleniyor…';
       try {
         const r = await fetch('/coach/tasks/api/youtube/import', {
           method: 'POST',
@@ -245,12 +332,48 @@ function playlistImporter() {
           }),
         });
         const data = await r.json();
-        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'Import basarisiz.'; return; }
-        this.importResult = data;
-        this.step = 'success';
-      } catch (e) {
-        this.step = 'error'; this.errorMsg = 'Baglanti hatasi.';
+        if (!r.ok) { this.step = 'error'; this.errorMsg = data.error || 'İşlem başarısız.'; return; }
+        this._activeJobId = data.job_id;
+        this.progressMsg = 'Sıraya eklendi…';
+        this._startPoll(data.job_id);
+      } catch (_) {
+        this.step = 'error'; this.errorMsg = 'Bağlantı hatası.';
       }
+    },
+
+    _startPoll(jobId) {
+      this._stopPoll();
+      const poll = async () => {
+        try {
+          const r = await fetch(`/coach/tasks/api/youtube/jobs/${jobId}`);
+          const d = await r.json();
+          if (d.status === 'done') {
+            this._stopPoll();
+            const pl = d.playlist || {};
+            pl.playlist_pk = pl.pk;  // alias expected by onPlaylistImported in panel()
+            try {
+              const vr = await fetch(`/coach/tasks/api/youtube/${pl.pk}/videos`);
+              const vd = await vr.json();
+              pl.videos = vd.videos ?? [];
+            } catch (_) { pl.videos = []; }
+            this.importResult = pl;
+            this.step = 'success';
+            this.loadMyPlaylists();
+          } else if (d.status === 'failed') {
+            this._stopPoll();
+            this.step = 'error';
+            this.errorMsg = d.error_msg || 'İşlem başarısız.';
+          } else {
+            if (d.progress_msg) this.progressMsg = d.progress_msg;
+            this._pollTimer = setTimeout(poll, 2000);
+          }
+        } catch (_) { this._pollTimer = setTimeout(poll, 2000); }
+      };
+      poll();
+    },
+
+    _stopPoll() {
+      if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
     },
 
     useNow() {
