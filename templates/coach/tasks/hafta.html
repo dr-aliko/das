@@ -843,10 +843,9 @@
   </div>
 
 
+  {% include "coach/tasks/_playlist_import_modal.html" %}
+
 </div>
-{# playlist import modal: must be OUTSIDE panel() so playlistImporter() is not a child
-   component of panel(). Alpine v3 x-teleport loses scope when x-data is nested. #}
-{% include "coach/tasks/_playlist_import_modal.html" %}
 </div>
 {% endblock %}
 

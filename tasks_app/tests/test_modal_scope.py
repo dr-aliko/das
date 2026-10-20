@@ -1,8 +1,12 @@
 """
-Structural guard: the playlist import modal's x-data component must NOT be nested
-inside the panel() component.  Alpine v3 x-teleport loses scope for child elements
-when the x-data that owns the teleported element is itself a child x-data of another
-component — x-if conditions and @click handlers evaluate in the wrong scope.
+Structural guards for the playlist import modal.
+
+The proven working pattern (39e905a) is:
+  x-data="playlistImporter()" + x-show="show" + x-cloak on ONE overlay div.
+  NO x-teleport. Include inside panel().
+
+x-teleport inside a nested child x-data component breaks Alpine scope for
+all elements INSIDE the teleported tree — x-if never fires, @click does nothing.
 """
 import re
 from pathlib import Path
@@ -24,7 +28,6 @@ PLAYLISTIMPORTER_MEMBERS = {
     'useNow',
 }
 
-# Identifiers that are fine in any Alpine expression context
 _ALLOWED = {
     # JS keywords / operators
     'true', 'false', 'null', 'undefined', 'void', 'in', 'of', 'new',
@@ -33,32 +36,28 @@ _ALLOWED = {
     'window', 'document', 'this', 'Object', 'String', 'Number', 'Boolean',
     'Array', 'Math', 'JSON', 'CustomEvent', 'setTimeout', 'clearTimeout',
     'parseInt', 'parseFloat', 'Promise', 'console', 'fetch', 'localStorage',
-    # common array/string prototype methods (appear after a dot, fine)
+    # array/string prototype methods
     'length', 'filter', 'map', 'find', 'includes', 'startsWith', 'trim',
     'toLowerCase', 'join', 'replace', 'slice', 'split', 'push', 'some', 'every',
-    # Alpine magic ($el, $event, $nextTick — $-prefixed, captured as just the word)
+    # Alpine magic tokens ($el etc. captured as bare words)
     'el', 'event', 'refs', 'nextTick', 'watch', 'dispatch', 'store',
-    # x-for loop variables used in the modal
+    # x-for loop variables in the modal
     'p', 's', 'tip',
-    # property names on loop objects (not component-level variables)
+    # object property names on loop items (not component state)
     'pk', 'title', 'channel_title', 'video_count', 'last_synced_at', 'is_mine',
     'running', 'msg', 'failed', 'detected_exam_type', 'detected_subject_name',
     'already_imported', 'detected_subject_id', 'exam_type', 'subject_display',
     'result_msg', 'display_name', 'id', 'ad',
-    # misc
     'Infinity', 'NaN',
 }
 
 
 def _strip_string_literals(expr: str) -> str:
-    """Replace quoted string content with empty quotes so only code tokens remain."""
-    # Replace single-quoted strings (Alpine expressions use single quotes inside double-quoted attrs)
     return re.sub(r"'[^']*'", "''", expr)
 
 
-def _extract_alpine_expressions(html: str) -> list[tuple[str, str]]:
-    """Return [(directive, code_tokens), …] for all Alpine directives in the HTML.
-    String literal content is stripped so identifier extraction only sees JS code."""
+def _extract_alpine_expressions(html: str) -> list[tuple[str, str, str]]:
+    """Return [(directive, code_without_string_literals, raw_expr), …]."""
     pattern = re.compile(
         r'(?:'
         r'(?:x-(?:show|if|text|model|for|cloak|data|teleport|ref))'
@@ -75,50 +74,59 @@ def _extract_alpine_expressions(html: str) -> list[tuple[str, str]]:
     return results
 
 
-def test_modal_not_nested_in_panel():
+def test_modal_has_no_x_teleport():
     """
-    The playlist import modal include must appear OUTSIDE the x-data="panel()" element
-    in hafta.html.  Nesting breaks Alpine v3 x-teleport scope.
+    The modal must NOT use x-teleport. The proven shell (39e905a) works without it.
+    x-teleport inside a nested x-data component silently breaks Alpine scope on
+    the teleported subtree, making x-if never render and @click do nothing.
     """
-    text = HAFTA.read_text(encoding='utf-8')
+    text = MODAL.read_text(encoding='utf-8')
+    assert 'x-teleport=' not in text, (
+        "Modal template contains x-teleport. Remove it: the overlay is a plain "
+        "fixed-position element inside panel() and works without teleport. "
+        "See 39e905a for the proven pattern."
+    )
 
-    panel_attr_pos = text.find('x-data="panel()"')
-    include_pos    = text.find('_playlist_import_modal.html')
-    assert panel_attr_pos != -1, "panel() x-data not found in hafta.html"
-    assert include_pos    != -1, "modal include not found in hafta.html"
 
-    # Start the segment at the <div that opens the panel() component
-    panel_div_start = text.rfind('<div', 0, panel_attr_pos)
-    segment = text[panel_div_start:include_pos]
+def test_modal_xdata_and_xshow_on_same_element():
+    """
+    x-data='playlistImporter()' and x-show='show' must be on the SAME element —
+    exactly as the working 39e905a pattern. Splitting them (wrapper div + teleported
+    child) is what causes the component to silently fail.
+    """
+    text = MODAL.read_text(encoding='utf-8')
+    # Find the line that has x-data="playlistImporter()"
+    for line in text.splitlines():
+        if 'x-data="playlistImporter()"' in line:
+            # x-show doesn't have to be on the exact same line (attributes can span lines)
+            break
+    else:
+        raise AssertionError("x-data=\"playlistImporter()\" not found in modal template")
 
-    opens  = len(re.findall(r'<div\b', segment))
-    closes = len(re.findall(r'</div>', segment))
-    net    = opens - closes
-
-    assert net == 0, (
-        f"The modal include is still nested inside x-data=\"panel()\" "
-        f"(net unclosed divs between panel() opening and include: {net}). "
-        "Alpine v3 x-teleport loses its scope chain when the owning x-data is a child "
-        "component — move the include to after the panel() closing </div>."
+    # Find the opening tag that contains x-data="playlistImporter()"
+    # It should be a <div that also has x-show
+    xdata_pos = text.find('x-data="playlistImporter()"')
+    tag_start = text.rfind('<', 0, xdata_pos)
+    tag_end = text.find('>', xdata_pos)
+    opening_tag = text[tag_start:tag_end + 1]
+    assert 'x-show' in opening_tag, (
+        "x-show is not on the same opening tag as x-data=\"playlistImporter()\". "
+        "Both must be on the single overlay div (not on a wrapper + child)."
     )
 
 
 def test_modal_alpine_variables_self_contained():
     """
-    Every identifier referenced in Alpine directives inside the modal template
-    must be either declared in playlistImporter() or be a well-known external.
-    An undeclared identifier means Alpine will silently fall back to a parent scope
-    (panel()) or the window — causing the exact bug: x-if never renders, @click does nothing.
+    Every identifier referenced in Alpine directive expressions in the modal
+    must be declared in playlistImporter() or be a known global/loop variable.
     """
     html = MODAL.read_text(encoding='utf-8')
     pairs = _extract_alpine_expressions(html)
 
     unknown: list[str] = []
     for directive, code_tokens, raw_expr in pairs:
-        # Skip the x-data declaration itself and x-teleport target
         if directive in ('x-data', 'x-teleport', 'x-cloak', 'x-ref'):
             continue
-        # Extract bare word identifiers from the code (string literals already stripped)
         for ident in re.findall(r'\b([A-Za-z_]\w*)\b', code_tokens):
             if ident in PLAYLISTIMPORTER_MEMBERS:
                 continue
