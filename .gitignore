@@ -11,3 +11,12 @@ media/
 Thumbs.db
 test_out.txt
 .claude/settings.local.json
+
+.claude/worktrees/
+backups/
+*.sql
+.env.bak*
+.claude/worktrees/
+backups/
+*.sql
+.env.bak*
