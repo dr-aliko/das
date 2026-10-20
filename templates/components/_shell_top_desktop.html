@@ -188,12 +188,14 @@
     <div class="space-y-0.5">
 
       {% if not user.is_student %}
-      <a href="{% if user.is_staff %}/panel/odeme/{% else %}/coach/odeme/{% endif %}" title="Ödeme takibi"
+      {% if user.is_staff %}
+      <a href="/panel/odeme/" title="Ödeme takibi"
          class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
-                {% if '/coach/odeme' in request.path or '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
+                {% if '/panel/odeme' in request.path or '/panel/odemeler' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         <span class="das-nav-label">Ödeme takibi</span>
       </a>
+      {% endif %}
       <a href="{% if user.is_staff %}{% url 'earnings_panel:list' %}{% else %}{% url 'coach_kazanclar' %}{% endif %}" title="Kazançlarım"
          class="das-nav-link flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400
                 {% if '/coach/kazanclar' in request.path or '/panel/kazanclar' in request.path %}bg-steel-tint text-steel-300{% else %}text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--heading)]{% endif %}">

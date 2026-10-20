@@ -1202,10 +1202,7 @@ def notification_mark_all_read(request):
 
 @login_required
 def coach_billing_view(request):
-    if not request.user.is_coach:
-        return redirect('/')
-    summary = coach_billing_summary(request.user)
-    return render(request, 'coach/odeme.html', {'summary': summary})
+    return redirect('coach_kazanclar')
 
 
 def _tier_add_defaults(tiers):
