@@ -457,17 +457,26 @@ def coach_invite_view(request):
     if not request.user.is_approved:
         return redirect('users_app:awaiting_approval')
 
+    from django.conf import settings as _settings
+    from capacity_app.services import can_add_own_student, get_capacity_status
+
     invites = StudentInvite.objects.filter(coach=request.user).order_by('-created_at')
     form = InviteStudentForm()
 
+    cap_status = get_capacity_status(request.user)
+    enforcement_on = getattr(_settings, 'COACH_CAPACITY_ENFORCED', False)
+    capacity_blocked = enforcement_on and cap_status['free'] <= 0
     capacity_error = None
+    if capacity_blocked:
+        _, capacity_error = can_add_own_student(request.user)
+
     if request.method == 'POST':
         form = InviteStudentForm(request.POST)
         if form.is_valid():
-            from capacity_app.services import can_add_own_student
             allowed, cap_msg = can_add_own_student(request.user)
             if not allowed:
                 capacity_error = cap_msg
+                capacity_blocked = True
             else:
                 invite = StudentInvite.objects.create(
                     coach=request.user,
@@ -482,17 +491,16 @@ def coach_invite_view(request):
     invite_accepted = invites.filter(is_used=True).count()
     invite_pending  = invites.filter(is_used=False).count()
 
-    from capacity_app.services import get_capacity_status
-    cap_status = get_capacity_status(request.user)
-
     return render(request, 'coach/invites.html', {
-        'form': form,
-        'invites': invites,
-        'invite_accepted': invite_accepted,
-        'invite_pending':  invite_pending,
-        'invite_total':    invite_accepted + invite_pending,
-        'cap_status':      cap_status,
-        'capacity_error':  capacity_error,
+        'form':              form,
+        'invites':           invites,
+        'invite_accepted':   invite_accepted,
+        'invite_pending':    invite_pending,
+        'invite_total':      invite_accepted + invite_pending,
+        'cap_status':        cap_status,
+        'capacity_error':    capacity_error,
+        'capacity_blocked':  capacity_blocked,
+        'enforcement_on':    enforcement_on,
     })
 
 

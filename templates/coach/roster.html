@@ -58,42 +58,15 @@
               </svg>
             </button>
           </div>
-          <a href="{% url 'capacity:page' %}"
-             class="hidden md:inline-flex h-9 px-3 rounded-lg border border-ink-700 bg-ink-900 hover:bg-ink-800 text-sm
-                    font-medium items-center gap-1.5 transition-colors
-                    {% if cap_status.free <= 0 and cap_status.granted > 0 %}text-ruby-400 border-ruby-500/40{% else %}text-ink-400{% endif %}">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            </svg>
-            Kontenjan: {{ cap_status.in_use }}/{{ cap_status.granted }}{% if cap_status.period_end %} · {{ cap_status.period_end|date:"d.m" }}{% endif %}
-          </a>
-          {% if enforcement_on and cap_status.free <= 0 %}
-          <span class="hidden md:inline-flex h-9 px-3 rounded-lg border border-ink-700 bg-ink-800 text-ink-500 text-sm
-                       font-medium items-center gap-1.5 cursor-not-allowed select-none"
-                title="{% if cap_status.granted == 0 %}Kontenjanınız yok — önce kontenjan satın alın{% else %}Kontenjan dolu — yeni davet gönderilemez{% endif %}"
-                aria-disabled="true">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"
-                 stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Davet Gönder
-          </span>
-          <a href="{% url 'capacity:page' %}"
-             class="hidden md:inline-flex h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm
-                    font-medium items-center gap-1.5 transition-colors">
-            Kontenjan satın al
-          </a>
-          {% else %}
           <a href="{% url 'users_app:coach_invites' %}"
-             class="hidden md:inline-flex h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm
+             class="inline-flex h-9 px-3 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm
                     font-medium items-center gap-1.5 transition-colors">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"
                  stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14"/>
             </svg>
-            Davet Gönder
+            <span class="hidden sm:inline">Davet Gönder</span>
           </a>
-          {% endif %}
         </div>
       </div>
 
