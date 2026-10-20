@@ -10,4 +10,18 @@ Tarih: {{ order.created_at|date:"d.m.Y" }}
 
 Bu bir sipariş onayıdır.
 
+{% if consents %}
+Onaylarınız ve belgeler
+-----------------------
+Süre: {{ order.plan.duration_days }} gün | {{ purchase_price_tax_label }}: {{ order.plan.price_display }}
+
+{% for c in consents %}{{ c.accepted_at|date:"d.m.Y H:i" }}  {% if c.accepted %}Onaylandı{% else %}—{% endif %}  {{ c.text }}
+{% endfor %}
+Belge versiyonu: {{ consents.0.doc_version }}
+Ön Bilgilendirme Formu: {{ legal_prelim_info_url }}
+Mesafeli Satış Sözleşmesi: {{ legal_distance_sales_url }}
+İptal & İade Koşulları: {{ legal_refund_url }}
+KVKK: {{ legal_kvkk_url }}
+Kullanım Koşulları: {{ legal_terms_url }}
+{% endif %}
 Vagus Ekibi

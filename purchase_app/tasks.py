@@ -100,9 +100,17 @@ def send_purchase_emails(order_id):
         else:
             valid_until = date.today() + timedelta(days=order.plan.duration_days)
 
+        from django.conf import settings as _s
         ctx = {
-            'order':       order,
-            'valid_until': valid_until,
+            'order':                    order,
+            'valid_until':              valid_until,
+            'consents':                 list(order.consents.order_by('accepted_at')),
+            'legal_prelim_info_url':    _s.LEGAL_PRELIM_INFO_URL,
+            'legal_distance_sales_url': _s.LEGAL_DISTANCE_SALES_URL,
+            'legal_refund_url':         _s.LEGAL_REFUND_URL,
+            'legal_kvkk_url':           _s.LEGAL_KVKK_URL,
+            'legal_terms_url':          _s.LEGAL_TERMS_URL,
+            'purchase_price_tax_label': _s.PURCHASE_PRICE_TAX_LABEL,
         }
         text_body = render_to_string('emails/purchase_order_confirm.txt', ctx)
         html_body = render_to_string('emails/purchase_order_confirm.html', ctx)

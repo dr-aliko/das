@@ -636,19 +636,6 @@ def test_alan_optional_for_lower_grades(active_plan, sinif):
     assert form.is_valid(), f'Expected valid (alan optional) for sinif={sinif}: {form.errors}'
 
 
-@pytest.mark.django_db
-def test_consent_still_required(active_plan):
-    from purchase_app.forms import PurchaseForm
-    data = {
-        'full_name': 'T', 'email': 'x@x.com', 'phone': '05321234567',
-        'sinif': '10', 'alan': '', 'plan': active_plan.pk,
-        # consents missing
-    }
-    form = PurchaseForm(data)
-    assert not form.is_valid()
-    assert 'consent_terms' in form.errors or 'consent_distance' in form.errors or 'consent_kvkk' in form.errors
-
-
 # ── Sinif/Alan snapshot on Order + student ────────────────────────────────────
 
 @pytest.mark.django_db(transaction=True)
@@ -729,4 +716,165 @@ def test_payment_success_does_not_overwrite_existing_sinif_alan(db, active_plan)
     existing.refresh_from_db()
     assert existing.sinif == '12', 'sinif must not be overwritten'
     assert existing.alan == 'EA',  'alan must not be overwritten'
+
+
+# ── Legal consent step 3 ──────────────────────────────────────────────────────
+
+def _step3_session(client_obj, plan_pk, email='step3buyer@example.com'):
+    session = client_obj.session
+    session['purchase_step1'] = {
+        'email': email, 'full_name': 'Step3 Buyer',
+        'phone': '05321234567', 'sinif': '10', 'alan': '',
+        'plan_id': str(plan_pk), 'guardian_name': '', 'guardian_phone': '',
+    }
+    session['purchase_verified_email'] = email
+    session.save()
+
+
+@pytest.mark.django_db
+def test_consent_server_rejects_missing_required(coach, active_plan, settings):
+    settings.LEGAL_DOCS_VERSION = '2026-10-20'
+    settings.PURCHASE_PRICE_TAX_LABEL = 'KDV dahil'
+
+    client_obj = Client()
+    _step3_session(client_obj, active_plan.pk, 'norequired@example.com')
+
+    with patch('purchase_app.views._purchase_enabled', return_value=True):
+        resp = client_obj.post(
+            f'/satin-al/{coach.wordpress_post_id}/odeme/',
+            {},
+        )
+
+    assert resp.status_code == 200
+    assert Order.objects.filter(email='norequired@example.com').count() == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_consent_rows_written_on_valid_order(coach, active_plan, settings):
+    from purchase_app.models import PurchaseConsent
+
+    settings.LEGAL_DOCS_VERSION = '2026-10-20'
+    settings.PURCHASE_PRICE_TAX_LABEL = 'KDV dahil'
+
+    client_obj = Client()
+    _step3_session(client_obj, active_plan.pk, 'consentbuyer@example.com')
+
+    with patch('purchase_app.views._purchase_enabled', return_value=True), \
+         patch('purchase_app.views.get_provider') as mock_prov:
+        mock_prov.return_value.name = 'sandbox'
+        mock_prov.return_value.create_checkout.return_value = '/fake/'
+
+        resp = client_obj.post(
+            f'/satin-al/{coach.wordpress_post_id}/odeme/',
+            {
+                'consent_age': 'on',
+                'consent_prelim': 'on',
+                'consent_distance_refund': 'on',
+                'consent_service_start': 'on',
+                # consent_marketing intentionally absent
+            },
+            HTTP_X_FORWARDED_FOR='203.0.113.5',
+            REMOTE_ADDR='',
+        )
+
+    assert resp.status_code == 302
+    order = Order.objects.filter(email='consentbuyer@example.com').first()
+    assert order is not None
+
+    consents = {c.key: c for c in PurchaseConsent.objects.filter(order=order)}
+    assert len(consents) == 6
+
+    assert consents['age_declaration'].accepted is True
+    assert consents['prelim_info'].accepted is True
+    assert consents['distance_sale_refund'].accepted is True
+    assert consents['service_start'].accepted is True
+    assert consents['marketing'].accepted is False
+    assert consents['kvkk_shown'].accepted is True
+
+    for c in consents.values():
+        assert c.doc_version == '2026-10-20'
+        assert c.client_ip == '203.0.113.5'
+
+
+@pytest.mark.django_db
+def test_step3_renders_consent_ui(coach, active_plan, settings):
+    settings.LEGAL_DOCS_VERSION = '2026-10-20'
+    settings.PURCHASE_PRICE_TAX_LABEL = 'KDV dahil'
+
+    client_obj = Client()
+    _step3_session(client_obj, active_plan.pk, 'rendertest@example.com')
+
+    with patch('purchase_app.views._purchase_enabled', return_value=True):
+        resp = client_obj.get(f'/satin-al/{coach.wordpress_post_id}/odeme/')
+
+    assert resp.status_code == 200
+    content = resp.content.decode('utf-8')
+
+    assert 'Siparişi onayla ve öde' in content
+    assert 'disabled' in content
+    assert 'KVKK Aydınlatma Metni' in content
+    assert 'KDV dahil' in content
+    assert '30 gün' in content
+
+    for cb_id in ['id_consent_age', 'id_consent_prelim', 'id_consent_distance_refund', 'id_consent_service_start']:
+        idx = content.find(f'id="{cb_id}"')
+        assert idx != -1, f'Missing checkbox {cb_id}'
+        assert 'checked' not in content[idx:idx+80], f'{cb_id} must not be pre-ticked'
+
+
+@pytest.mark.django_db
+def test_order_confirm_email_contains_consent_list(coach, active_plan, settings):
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    from purchase_app.models import PurchaseConsent
+
+    settings.LEGAL_PRELIM_INFO_URL    = 'https://vagus.tr/on-bilgilendirme-formu/'
+    settings.LEGAL_DISTANCE_SALES_URL = 'https://vagus.tr/mesafeli-satis-sozlesmesi/'
+    settings.LEGAL_REFUND_URL         = 'https://vagus.tr/iptal-iade-ve-cayma-kosullari/'
+    settings.LEGAL_KVKK_URL           = 'https://vagus.tr/kvkk/'
+    settings.LEGAL_TERMS_URL          = 'https://vagus.tr/kullanim-kosullari/'
+    settings.PURCHASE_PRICE_TAX_LABEL = 'KDV dahil'
+
+    student = baker.make('users_app.User', role='student', is_active=True,
+                         email='emailtest@example.com', full_name='Email Test')
+    order = baker.make(
+        'purchase_app.Order',
+        email=student.email, coach=coach, plan=active_plan,
+        amount_kurus=active_plan.price_kurus, status=Order.STATUS_PAID,
+        student=student, full_name=student.full_name, provider='sandbox',
+        provider_ref=None,
+    )
+    now = timezone.now()
+    for key, accepted in [
+        ('age_declaration', True), ('prelim_info', True),
+        ('distance_sale_refund', True), ('service_start', True),
+        ('marketing', False), ('kvkk_shown', True),
+    ]:
+        baker.make(
+            'purchase_app.PurchaseConsent',
+            order=order, key=key, text=f'Text for {key}',
+            accepted=accepted, doc_version='2026-10-20',
+            doc_urls=[], accepted_at=now, client_ip='127.0.0.1', user_agent='test',
+        )
+
+    consents = list(order.consents.order_by('accepted_at'))
+    ctx = {
+        'order':                    order,
+        'valid_until':              None,
+        'consents':                 consents,
+        'legal_prelim_info_url':    settings.LEGAL_PRELIM_INFO_URL,
+        'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
+        'legal_refund_url':         settings.LEGAL_REFUND_URL,
+        'legal_kvkk_url':           settings.LEGAL_KVKK_URL,
+        'legal_terms_url':          settings.LEGAL_TERMS_URL,
+        'purchase_price_tax_label': settings.PURCHASE_PRICE_TAX_LABEL,
+    }
+    html = render_to_string('emails/purchase_order_confirm.html', ctx)
+    txt  = render_to_string('emails/purchase_order_confirm.txt', ctx)
+
+    assert 'Onaylarınız' in html
+    assert '2026-10-20' in html
+    assert 'vagus.tr/on-bilgilendirme-formu' in html
+    assert 'Onaylarınız' in txt
+    assert 'vagus.tr/on-bilgilendirme-formu' in txt
 

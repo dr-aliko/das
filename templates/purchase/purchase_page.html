@@ -235,47 +235,6 @@
       </div>
     </div>
 
-    <!-- Consents -->
-    <div class="form-card">
-      <p class="section-label">Onaylar</p>
-
-      <div class="check-row">
-        <input type="checkbox" name="consent_terms" id="id_consent_terms"
-          {% if form.consent_terms.value %}checked{% endif %}>
-        <label for="id_consent_terms">
-          <a href="{{ legal_terms_url }}" target="_blank" rel="noopener">Kullanım Koşullarını</a>
-          okudum ve kabul ediyorum.
-        </label>
-      </div>
-      {% if form.consent_terms.errors %}
-        <p class="field-error" style="margin-left:26px;">{{ form.consent_terms.errors.0 }}</p>
-      {% endif %}
-
-      <div class="check-row">
-        <input type="checkbox" name="consent_distance" id="id_consent_distance"
-          {% if form.consent_distance.value %}checked{% endif %}>
-        <label for="id_consent_distance">
-          <a href="{{ legal_distance_sales_url }}" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesini</a>
-          okudum ve kabul ediyorum.
-        </label>
-      </div>
-      {% if form.consent_distance.errors %}
-        <p class="field-error" style="margin-left:26px;">{{ form.consent_distance.errors.0 }}</p>
-      {% endif %}
-
-      <div class="check-row">
-        <input type="checkbox" name="consent_kvkk" id="id_consent_kvkk"
-          {% if form.consent_kvkk.value %}checked{% endif %}>
-        <label for="id_consent_kvkk">
-          <a href="{{ legal_privacy_url }}" target="_blank" rel="noopener">Kişisel Verilerin Korunması Politikasını</a>
-          okudum ve kabul ediyorum.
-        </label>
-      </div>
-      {% if form.consent_kvkk.errors %}
-        <p class="field-error" style="margin-left:26px;">{{ form.consent_kvkk.errors.0 }}</p>
-      {% endif %}
-    </div>
-
     <button type="submit" class="btn-submit">Devam et →</button>
 
   </form>

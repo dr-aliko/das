@@ -36,6 +36,71 @@ _PURCHASE_STEPS = ['Bilgiler', 'Doğrulama', 'Ödeme']
 _CLAIM_WINDOW = 600   # 10-minute window
 _CLAIM_MAX    = 5     # max claim attempts per token per window
 
+_CONSENT_ITEMS = [
+    {
+        'key':      'age_declaration',
+        'post_key': 'consent_age',
+        'text':     '18 yaşını doldurduğumu beyan ederim. 18 yaşından küçük bir öğrenci adına satın alıyorsam, öğrencinin velisi veya yasal temsilcisi olduğumu ve bu işlemi onaylamaya yetkili olduğumu beyan ederim.',
+        'doc_url_attrs': [],
+    },
+    {
+        'key':      'prelim_info',
+        'post_key': 'consent_prelim',
+        'text':     "Ön Bilgilendirme Formu'nu okudum ve elektronik ortamda onaylıyorum.",
+        'doc_url_attrs': ['LEGAL_PRELIM_INFO_URL'],
+    },
+    {
+        'key':      'distance_sale_refund',
+        'post_key': 'consent_distance_refund',
+        'text':     "Mesafeli Satış Sözleşmesi ile İptal, İade ve Cayma Koşulları'nı okudum, kabul ediyorum.",
+        'doc_url_attrs': ['LEGAL_DISTANCE_SALES_URL', 'LEGAL_REFUND_URL'],
+    },
+    {
+        'key':      'service_start',
+        'post_key': 'consent_service_start',
+        'text':     'Hizmetin, cayma süresi dolmadan, ödemem tamamlanır tamamlanmaz başlamasını onaylıyorum.',
+        'doc_url_attrs': [],
+    },
+    {
+        'key':      'marketing',
+        'post_key': 'consent_marketing',
+        'text':     "(İsteğe bağlı) Vagus'un kampanya, duyuru ve yeni hizmet bilgilendirmelerini e-posta veya SMS ile almak istiyorum.",
+        'doc_url_attrs': [],
+    },
+]
+
+_KVKK_SHOWN_TEXT = "Kişisel verilerin KVKK Aydınlatma Metni'ne göre işlenir."
+
+
+def _save_consents(order, post_data, ip, ua, now, doc_version):
+    from .models import PurchaseConsent
+
+    rows = []
+    for item in _CONSENT_ITEMS:
+        rows.append(PurchaseConsent(
+            order=order,
+            key=item['key'],
+            text=item['text'],
+            accepted=bool(post_data.get(item['post_key'])),
+            doc_version=doc_version,
+            doc_urls=[getattr(settings, attr, '') for attr in item['doc_url_attrs']],
+            accepted_at=now,
+            client_ip=ip or None,
+            user_agent=ua,
+        ))
+    rows.append(PurchaseConsent(
+        order=order,
+        key='kvkk_shown',
+        text=_KVKK_SHOWN_TEXT,
+        accepted=True,
+        doc_version=doc_version,
+        doc_urls=[settings.LEGAL_KVKK_URL],
+        accepted_at=now,
+        client_ip=ip or None,
+        user_agent=ua,
+    ))
+    PurchaseConsent.objects.bulk_create(rows)
+
 
 def _group_iban(iban):
     s = iban.replace(' ', '')
@@ -55,12 +120,14 @@ def _claim_rate_limited(order_token):
 
 
 def _purchase_enabled():
-    if not getattr(settings, 'SELF_PURCHASE_ENABLED', False):
+    if not settings.SELF_PURCHASE_ENABLED:
         return False
     if not all([
-        getattr(settings, 'LEGAL_TERMS_URL', ''),
-        getattr(settings, 'LEGAL_DISTANCE_SALES_URL', ''),
-        getattr(settings, 'LEGAL_PRIVACY_URL', ''),
+        settings.LEGAL_TERMS_URL,
+        settings.LEGAL_DISTANCE_SALES_URL,
+        settings.LEGAL_PRELIM_INFO_URL,
+        settings.LEGAL_REFUND_URL,
+        settings.LEGAL_KVKK_URL,
     ]):
         return False
     # Sandbox bypasses IBAN check; otherwise all three IBAN vars must be set
@@ -104,21 +171,18 @@ def _base_ctx(coach, plans, selected_plan_id='', purchase_step=1,
               is_logged_in_student=False, mod='', login_error='',
               login_email_hint='', skip_verify=False):
     return {
-        'coach':                    coach,
-        'plans':                    plans,
-        'coach_initials':           _coach_initials(coach.full_name),
-        'selected_plan_id':         str(selected_plan_id),
-        'alan_required_grades':     sorted(ALAN_REQUIRED_GRADES),
-        'legal_terms_url':          getattr(settings, 'LEGAL_TERMS_URL', ''),
-        'legal_distance_sales_url': getattr(settings, 'LEGAL_DISTANCE_SALES_URL', ''),
-        'legal_privacy_url':        getattr(settings, 'LEGAL_PRIVACY_URL', ''),
-        'purchase_step':            purchase_step,
-        'purchase_steps':           _PURCHASE_STEPS,
-        'is_logged_in_student':     is_logged_in_student,
-        'mod':                      mod,
-        'login_error':              login_error,
-        'login_email_hint':         login_email_hint,
-        'skip_verify':              skip_verify,
+        'coach':                coach,
+        'plans':                plans,
+        'coach_initials':       _coach_initials(coach.full_name),
+        'selected_plan_id':     str(selected_plan_id),
+        'alan_required_grades': sorted(ALAN_REQUIRED_GRADES),
+        'purchase_step':        purchase_step,
+        'purchase_steps':       _PURCHASE_STEPS,
+        'is_logged_in_student': is_logged_in_student,
+        'mod':                  mod,
+        'login_error':          login_error,
+        'login_email_hint':     login_email_hint,
+        'skip_verify':          skip_verify,
     }
 
 
@@ -484,7 +548,6 @@ def step3_payment(request, wp_id):
     if coach is None:
         return render(request, 'purchase/unavailable.html', status=200)
 
-    # Session guards
     step1_data     = request.session.get('purchase_step1')
     verified_email = request.session.get('purchase_verified_email', '')
 
@@ -507,46 +570,76 @@ def step3_payment(request, wp_id):
     except (Plan.DoesNotExist, KeyError):
         return redirect('purchase:page', wp_id=wp_id)
 
-    email     = step1_data['email']
-    full_name = step1_data['full_name']
-    skip_verify = is_logged_in_student
+    email          = step1_data['email']
+    full_name      = step1_data['full_name']
+    phone          = step1_data.get('phone', '')
+    guardian_name  = step1_data.get('guardian_name', '')
+    guardian_phone = step1_data.get('guardian_phone', '')
+    skip_verify    = is_logged_in_student
+
+    def _step3_ctx(extra=None):
+        ctx = {
+            'coach':                    coach,
+            'coach_initials':           _coach_initials(coach.full_name),
+            'plan':                     plan,
+            'amount_display':           plan.price_display,
+            'email':                    email,
+            'full_name':                full_name,
+            'phone':                    phone,
+            'guardian_name':            guardian_name,
+            'duration_days':            plan.duration_days,
+            'purchase_step':            3,
+            'purchase_steps':           _PURCHASE_STEPS,
+            'skip_verify':              skip_verify,
+            'wp_id':                    wp_id,
+            'legal_prelim_info_url':    settings.LEGAL_PRELIM_INFO_URL,
+            'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
+            'legal_refund_url':         settings.LEGAL_REFUND_URL,
+            'legal_kvkk_url':           settings.LEGAL_KVKK_URL,
+            'legal_terms_url':          settings.LEGAL_TERMS_URL,
+            'purchase_price_tax_label': settings.PURCHASE_PRICE_TAX_LABEL,
+        }
+        if extra:
+            ctx.update(extra)
+        return ctx
 
     if request.method == 'GET':
-        valid_until = date.today() + timedelta(days=plan.duration_days)
-        return render(request, 'purchase/step3_payment.html', {
-            'coach':          coach,
-            'coach_initials': _coach_initials(coach.full_name),
-            'plan':           plan,
-            'amount_display': plan.price_display,
-            'email':          email,
-            'full_name':      full_name,
-            'duration_days':  plan.duration_days,
-            'valid_until':    valid_until,
-            'purchase_step':  3,
-            'purchase_steps': _PURCHASE_STEPS,
-            'skip_verify':    skip_verify,
-            'wp_id':          wp_id,
-        })
+        return render(request, 'purchase/step3_payment.html', _step3_ctx())
 
-    # POST — create order and redirect to payment provider
-    provider = get_provider()
+    # POST — validate required consents server-side
+    required_keys = ['consent_age', 'consent_prelim', 'consent_distance_refund', 'consent_service_start']
+    if any(not request.POST.get(k) for k in required_keys):
+        return render(request, 'purchase/step3_payment.html', _step3_ctx({
+            'consent_error': 'Ödemeye devam etmek için zorunlu onayları işaretleyin.',
+        }))
 
-    order = Order(
-        email=email,
-        coach=coach,
-        plan=plan,
-        amount_kurus=plan.price_kurus,
-        full_name=full_name,
-        phone=step1_data.get('phone', ''),
-        sinif=step1_data.get('sinif', ''),
-        alan=step1_data.get('alan', ''),
-        guardian_name=step1_data.get('guardian_name', ''),
-        guardian_phone=step1_data.get('guardian_phone', ''),
-        provider=provider.name,
-    )
-    if is_logged_in_student:
-        order.student = user
-    order.save()
+    from django.db import transaction
+    from django.utils import timezone
+
+    provider   = get_provider()
+    ip         = _checkout_get_ip(request)
+    ua         = request.META.get('HTTP_USER_AGENT', '')[:512]
+    now        = timezone.now()
+    doc_version = settings.LEGAL_DOCS_VERSION
+
+    with transaction.atomic():
+        order = Order(
+            email=email,
+            coach=coach,
+            plan=plan,
+            amount_kurus=plan.price_kurus,
+            full_name=full_name,
+            phone=phone,
+            sinif=step1_data.get('sinif', ''),
+            alan=step1_data.get('alan', ''),
+            guardian_name=guardian_name,
+            guardian_phone=guardian_phone,
+            provider=provider.name,
+        )
+        if is_logged_in_student:
+            order.student = user
+        order.save()
+        _save_consents(order, request.POST, ip, ua, now, doc_version)
 
     try:
         checkout_url = provider.create_checkout(order, request)
@@ -693,7 +786,11 @@ def panel_order_detail(request, pk):
         Order.objects.select_related('coach', 'student', 'plan'),
         pk=pk,
     )
-    return render(request, 'panel/purchase_order_detail.html', {'order': order})
+    consents = order.consents.order_by('accepted_at')
+    return render(request, 'panel/purchase_order_detail.html', {
+        'order':    order,
+        'consents': consents,
+    })
 
 
 @staff_required

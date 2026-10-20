@@ -148,5 +148,28 @@
   </div>
   {% endif %}
 
+  {% if consents %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Onaylar</h2>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      {% for c in consents %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0 font-mono text-xs">{{ c.key }}</span>
+        <span>
+          <span class="{% if c.accepted %}text-emerald-400{% else %}text-ink-500{% endif %} font-semibold">
+            {% if c.accepted %}Onaylandı{% else %}Onaylanmadı{% endif %}
+          </span>
+          <span class="text-ink-500 text-xs ml-2">v{{ c.doc_version }} · {{ c.accepted_at|date:"d.m.Y H:i" }}</span>
+          <br>
+          <span class="text-ink-400 text-xs leading-relaxed">{{ c.text }}</span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

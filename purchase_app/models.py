@@ -103,3 +103,23 @@ class Order(models.Model):
 
     def __str__(self):
         return f'#{self.pk} [{self.get_status_display()}] {self.email}'
+
+
+class PurchaseConsent(models.Model):
+    order       = models.ForeignKey(
+        'Order',
+        on_delete=models.PROTECT,
+        related_name='consents',
+    )
+    key         = models.CharField(max_length=64)
+    text        = models.TextField()
+    accepted    = models.BooleanField()
+    doc_version = models.CharField(max_length=32)
+    doc_urls    = models.JSONField(default=list)
+    accepted_at = models.DateTimeField()
+    client_ip   = models.GenericIPAddressField(null=True, blank=True)
+    user_agent  = models.CharField(max_length=512, blank=True, default='')
+
+    class Meta:
+        verbose_name        = 'Satın Alma Onayı'
+        verbose_name_plural = 'Satın Alma Onayları'

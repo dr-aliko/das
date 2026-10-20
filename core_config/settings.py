@@ -244,9 +244,14 @@ VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='info@vagus.tr')
 
 # ── Self-purchase feature ──────────────────────────────────────────────────────
 SELF_PURCHASE_ENABLED    = config('SELF_PURCHASE_ENABLED',    default=False, cast=bool)
-LEGAL_TERMS_URL          = config('LEGAL_TERMS_URL',          default='')
-LEGAL_DISTANCE_SALES_URL = config('LEGAL_DISTANCE_SALES_URL', default='')
+LEGAL_TERMS_URL          = config('LEGAL_TERMS_URL',          default='https://vagus.tr/kullanim-kosullari/')
+LEGAL_DISTANCE_SALES_URL = config('LEGAL_DISTANCE_SALES_URL', default='https://vagus.tr/mesafeli-satis-sozlesmesi/')
+LEGAL_PRELIM_INFO_URL    = config('LEGAL_PRELIM_INFO_URL',    default='https://vagus.tr/on-bilgilendirme-formu/')
+LEGAL_REFUND_URL         = config('LEGAL_REFUND_URL',         default='https://vagus.tr/iptal-iade-ve-cayma-kosullari/')
+LEGAL_KVKK_URL           = config('LEGAL_KVKK_URL',           default='https://vagus.tr/kvkk/')
 LEGAL_PRIVACY_URL        = config('LEGAL_PRIVACY_URL',        default='')
+LEGAL_DOCS_VERSION       = config('LEGAL_DOCS_VERSION',       default='2026-10-20')
+PURCHASE_PRICE_TAX_LABEL = config('PURCHASE_PRICE_TAX_LABEL', default='KDV dahil')
 PAYMENT_SANDBOX          = config('PAYMENT_SANDBOX',          default=False, cast=bool)
 
 # Bank-transfer provider

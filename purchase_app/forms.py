@@ -71,9 +71,6 @@ class PurchaseForm(forms.Form):
     is_under_18    = forms.BooleanField(required=False, label='18 yaşından küçüğüm')
     guardian_name  = forms.CharField(max_length=255, label='Veli Adı Soyadı', required=False)
     guardian_phone = forms.CharField(max_length=32,  label='Veli Telefonu',   required=False)
-    consent_terms    = forms.BooleanField(label='Kullanım Koşullarını okudum ve kabul ediyorum')
-    consent_distance = forms.BooleanField(label='Mesafeli Satış Sözleşmesini okudum ve kabul ediyorum')
-    consent_kvkk     = forms.BooleanField(label='Kişisel Verilerin Korunması Politikasını okudum ve kabul ediyorum')
 
     def clean_phone(self):
         raw = (self.cleaned_data.get('phone') or '').strip()
