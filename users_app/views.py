@@ -461,7 +461,9 @@ def coach_invite_view(request):
     from capacity_app.models import CapacitySettings
     from capacity_app.services import can_add_own_student, get_capacity_status, parse_explanation_body
 
-    invites = StudentInvite.objects.filter(coach=request.user).order_by('-created_at')
+    invites = StudentInvite.objects.filter(
+        coach=request.user, initiated_by_staff=False
+    ).order_by('-created_at')
     form = InviteStudentForm()
 
     cap_status = get_capacity_status(request.user)

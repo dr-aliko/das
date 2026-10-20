@@ -2386,7 +2386,7 @@ def coach_dashboard(request):
                 student.id,
             )
 
-    # Build CoachStudent lookup for expiry badges
+    # Build CoachStudent lookup for expiry badges and source classification
     cs_map = {
         cs.student_id: cs
         for cs in CoachStudent.objects.filter(
@@ -2394,6 +2394,15 @@ def coach_dashboard(request):
             student_id__in=[s.id for s in students],
         )
     }
+
+    # Pre-fetch students who have a paid purchase_app Order (needed for NULL-source rule)
+    from purchase_app.models import Order as _PurchaseOrder
+    _paid_student_ids = set(
+        _PurchaseOrder.objects.filter(
+            student_id__in=[s.id for s in students],
+            status=_PurchaseOrder.STATUS_PAID,
+        ).values_list('student_id', flat=True)
+    )
 
     CoachAuditLog.objects.create(coach=request.user, student=None, action='viewed_roster')
 
@@ -2445,6 +2454,16 @@ def coach_dashboard(request):
         status_key = 'dusus' if (net_delta is not None and net_delta < 0) else 'iyi'
         status_counts[status_key] += 1
 
+        # Determine whether this student is 'vagus' or 'coach' (own) using shared rule
+        _cs = cs_map.get(student.id)
+        _src = _cs.source if _cs else None
+        if _src == 'vagus':
+            item_source = 'vagus'
+        elif _src == 'coach':
+            item_source = 'coach'
+        else:  # NULL: own unless student has a paid Order
+            item_source = 'vagus' if student.id in _paid_student_ids else 'coach'
+
         student_data.append({
             'student': student,
             'cs': cs_map.get(student.id),
@@ -2452,10 +2471,14 @@ def coach_dashboard(request):
             'avg_30d': avg_30d,
             'last_exam_ago': last_exam_ago or '—',
             'status': status_key,
+            'source': item_source,
             'initials': initials,
             'trend': trend,
             'net_delta': net_delta,
         })
+
+    total_vagus = sum(1 for item in student_data if item['source'] == 'vagus')
+    total_own   = sum(1 for item in student_data if item['source'] == 'coach')
 
     # ── Inbox alerts for the slide-out drawer ─────────────────────────────────
     from users_app.models import CoachAlert
@@ -2506,6 +2529,8 @@ def coach_dashboard(request):
         'student_data':   student_data,
         'status_counts':  status_counts,
         'total':          len(student_data),
+        'total_vagus':    total_vagus,
+        'total_own':      total_own,
         'inbox_alerts':   inbox_alerts,
         'alert_unread':   alert_unread,
         'inbox_unread':   alert_unread + notif_unread,

@@ -5,7 +5,7 @@
 
 {% block content %}
 {% include "coach/partials/_first_run_coach.html" %}
-<div x-data="{ activeFilter: 'tumu', inboxOpen: false, inboxTab: 'alerts', selectedStudent: '',
+<div x-data="{ activeFilter: 'tumu', sourceFilter: 'tumu', inboxOpen: false, inboxTab: 'alerts', selectedStudent: '',
               viewMode: localStorage.getItem('coach_view_mode') || 'card',
               setViewMode(m) { this.viewMode = m; localStorage.setItem('coach_view_mode', m); } }"
      @keydown.escape.window="inboxOpen = false; selectedStudent = ''">
@@ -140,12 +140,44 @@
         </button>
       </div>
 
+      {# ── Source (Vagus / Kendi) segmented filter ─────────────────────────── #}
+      <div class="flex overflow-x-auto md:overflow-x-visible md:flex-wrap
+                  items-center gap-2 mb-5 -mx-4 md:mx-0 px-4 md:px-0 pb-1 md:pb-0">
+        <button @click="sourceFilter = 'tumu'"
+                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs
+                       font-medium transition-colors whitespace-nowrap"
+                :class="sourceFilter === 'tumu'
+                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
+                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+          Tümü <span class="ml-1 tnum"
+                     :class="sourceFilter === 'tumu' ? 'text-steel-400' : 'text-ink-500'">{{ total }}</span>
+        </button>
+        <button @click="sourceFilter = 'vagus'"
+                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs font-medium
+                       transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+                :class="sourceFilter === 'vagus'
+                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
+                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+          Vagus öğrencilerim <span class="ml-1 tnum"
+                                   :class="sourceFilter === 'vagus' ? 'text-steel-400' : 'text-ink-500'">{{ total_vagus }}</span>
+        </button>
+        <button @click="sourceFilter = 'coach'"
+                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs font-medium
+                       transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+                :class="sourceFilter === 'coach'
+                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
+                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
+          Kendi öğrencilerim <span class="ml-1 tnum"
+                                   :class="sourceFilter === 'coach' ? 'text-steel-400' : 'text-ink-500'">{{ total_own }}</span>
+        </button>
+      </div>
+
       {% if student_data %}
       <div :class="viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3'">
         {% for item in student_data %}
         <div class="relative group"
              x-data="{ confirm: false }" data-removable
-             x-show="activeFilter === 'tumu' || activeFilter === '{{ item.status }}'"
+             x-show="(activeFilter === 'tumu' || activeFilter === '{{ item.status }}') && (sourceFilter === 'tumu' || sourceFilter === '{{ item.source }}')"
              x-transition>
 
           {# CARD VIEW #}
@@ -180,6 +212,13 @@
                                  bg-amber-tint text-amber-500 text-[11px] font-semibold">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
                     </span>
+                    {% endif %}
+                    {% if item.source == 'vagus' %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                          style="background:rgba(139,92,246,0.12);color:#a78bfa">Vagus</span>
+                    {% else %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                          style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
                     {% endif %}
                     {# Trash button — inside flex row, @click.stop prevents link navigation #}
                     <button @click.prevent.stop="confirm = true" x-show="!confirm"
@@ -281,6 +320,13 @@
                 <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-tint text-amber-500 font-semibold">Düşüş</span>
                 {% endif %}
                 {% if item.cs %}{% membership_badge item.cs %}{% endif %}
+                {% if item.source == 'vagus' %}
+                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                      style="background:rgba(139,92,246,0.12);color:#a78bfa">Vagus</span>
+                {% else %}
+                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                      style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
+                {% endif %}
               </div>
               <p class="pii text-[11px] text-ink-500 mt-0.5">{{ item.student.grade|default:"—" }}</p>
             </div>
