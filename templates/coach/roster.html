@@ -5,9 +5,8 @@
 
 {% block content %}
 {% include "coach/partials/_first_run_coach.html" %}
-<div x-data="{ activeFilter: 'tumu', sourceFilter: 'tumu', inboxOpen: false, inboxTab: 'alerts', selectedStudent: '',
-              viewMode: localStorage.getItem('coach_view_mode') || 'card',
-              setViewMode(m) { this.viewMode = m; localStorage.setItem('coach_view_mode', m); } }"
+{{ status_by_source|json_script:"roster-status-counts" }}
+<div x-data="rosterApp()"
      @keydown.escape.window="inboxOpen = false; selectedStudent = ''">
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
@@ -72,16 +71,19 @@
 
       <div class="grid grid-cols-3 gap-2 md:gap-3 mt-4">
         <button @click="activeFilter = 'tumu'"
-                class="rounded-xl border p-3 text-left transition-colors
+                :aria-pressed="activeFilter === 'tumu'"
+                class="rounded-xl border p-2 md:p-3 text-left transition-colors
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
                 :class="activeFilter === 'tumu'
                   ? 'bg-steel-tint border-steel-500'
                   : 'bg-ink-900 border-ink-700 hover:bg-ink-850'">
           <span class="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Toplam</span>
-          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ total }}</span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50"
+                x-text="kpiTotal">{{ total }}</span>
         </button>
         <button @click="activeFilter = 'iyi'"
-                class="rounded-xl border p-3 text-left transition-colors
+                :aria-pressed="activeFilter === 'iyi'"
+                class="rounded-xl border p-2 md:p-3 text-left transition-colors
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
                 :class="activeFilter === 'iyi'
                   ? 'bg-steel-tint border-steel-500'
@@ -89,10 +91,12 @@
           <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>İyi
           </span>
-          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.iyi }}</span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50"
+                x-text="kpiIyi">{{ status_counts.iyi }}</span>
         </button>
         <button @click="activeFilter = 'dusus'"
-                class="rounded-xl border p-3 text-left transition-colors
+                :aria-pressed="activeFilter === 'dusus'"
+                class="rounded-xl border p-2 md:p-3 text-left transition-colors
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel-400"
                 :class="activeFilter === 'dusus'
                   ? 'bg-steel-tint border-steel-500'
@@ -100,45 +104,13 @@
           <span class="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
           </span>
-          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50">{{ status_counts.dusus }}</span>
+          <span class="block mt-1 text-xl md:text-2xl font-semibold tnum text-ink-50"
+                x-text="kpiDusus">{{ status_counts.dusus }}</span>
         </button>
       </div>
     </div>
 
     <div class="p-4 md:p-6">
-
-      <div class="flex overflow-x-auto md:overflow-x-visible md:flex-wrap
-                  items-center gap-2 mb-5 -mx-4 md:mx-0 px-4 md:px-0 pb-1 md:pb-0">
-        <button @click="activeFilter = 'tumu'"
-                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs
-                       font-medium transition-colors whitespace-nowrap"
-                :class="activeFilter === 'tumu'
-                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
-                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
-          Tümü <span class="ml-1 tnum"
-                     :class="activeFilter === 'tumu' ? 'text-steel-400' : 'text-ink-500'">{{ total }}</span>
-        </button>
-        <button @click="activeFilter = 'iyi'"
-                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs font-medium
-                       transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
-                :class="activeFilter === 'iyi'
-                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
-                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          İyi <span class="ml-0.5 tnum"
-                    :class="activeFilter === 'iyi' ? 'text-steel-400' : 'text-ink-500'">{{ status_counts.iyi }}</span>
-        </button>
-        <button @click="activeFilter = 'dusus'"
-                class="flex-shrink-0 md:flex-shrink px-3 py-1.5 rounded-full text-xs font-medium
-                       transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
-                :class="activeFilter === 'dusus'
-                  ? 'bg-steel-tint border border-steel-500 text-steel-300'
-                  : 'bg-ink-850 border border-ink-700 text-ink-300 hover:bg-ink-800'">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          Düşüş <span class="ml-0.5 tnum"
-                      :class="activeFilter === 'dusus' ? 'text-steel-400' : 'text-ink-500'">{{ status_counts.dusus }}</span>
-        </button>
-      </div>
 
       {# ── Source (Vagus / Kendi) segmented filter ─────────────────────────── #}
       <div class="flex overflow-x-auto md:overflow-x-visible md:flex-wrap
@@ -696,6 +668,34 @@
 </div>
 
 <script>
+function rosterApp() {
+  var raw = JSON.parse(document.getElementById('roster-status-counts').textContent || '{}');
+  return {
+    activeFilter: 'tumu',
+    sourceFilter: 'tumu',
+    inboxOpen: false,
+    inboxTab: 'alerts',
+    selectedStudent: '',
+    viewMode: localStorage.getItem('coach_view_mode') || 'card',
+    statusBySource: raw,
+    setViewMode: function(m) {
+      this.viewMode = m;
+      localStorage.setItem('coach_view_mode', m);
+    },
+    get kpiTotal() {
+      var s = this.statusBySource[this.sourceFilter];
+      return s ? s.total : 0;
+    },
+    get kpiIyi() {
+      var s = this.statusBySource[this.sourceFilter];
+      return s ? s.iyi : 0;
+    },
+    get kpiDusus() {
+      var s = this.statusBySource[this.sourceFilter];
+      return s ? s.dusus : 0;
+    },
+  };
+}
 function coachNotifDrawer() {
   var raw = JSON.parse(document.getElementById('coach-notif-data').textContent || '{}');
   return {

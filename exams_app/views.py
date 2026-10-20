@@ -2479,6 +2479,23 @@ def coach_dashboard(request):
 
     total_vagus = sum(1 for item in student_data if item['source'] == 'vagus')
     total_own   = sum(1 for item in student_data if item['source'] == 'coach')
+    status_by_source = {
+        'tumu':  {
+            'total': len(student_data),
+            'iyi':   status_counts['iyi'],
+            'dusus': status_counts['dusus'],
+        },
+        'vagus': {
+            'total': total_vagus,
+            'iyi':   sum(1 for item in student_data if item['source'] == 'vagus' and item['status'] == 'iyi'),
+            'dusus': sum(1 for item in student_data if item['source'] == 'vagus' and item['status'] == 'dusus'),
+        },
+        'coach': {
+            'total': total_own,
+            'iyi':   sum(1 for item in student_data if item['source'] == 'coach' and item['status'] == 'iyi'),
+            'dusus': sum(1 for item in student_data if item['source'] == 'coach' and item['status'] == 'dusus'),
+        },
+    }
 
     # ── Inbox alerts for the slide-out drawer ─────────────────────────────────
     from users_app.models import CoachAlert
@@ -2529,8 +2546,9 @@ def coach_dashboard(request):
         'student_data':   student_data,
         'status_counts':  status_counts,
         'total':          len(student_data),
-        'total_vagus':    total_vagus,
-        'total_own':      total_own,
+        'total_vagus':      total_vagus,
+        'total_own':        total_own,
+        'status_by_source': status_by_source,
         'inbox_alerts':   inbox_alerts,
         'alert_unread':   alert_unread,
         'inbox_unread':   alert_unread + notif_unread,
