@@ -6,6 +6,16 @@ def tr_lower(s):
     return s.replace('İ', 'i').replace('I', 'ı').lower()
 
 
+def all_coaches_for_json():
+    """Return [{id, name, email}] list of all active coaches for json_script."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    return [
+        {'id': c.pk, 'name': c.full_name, 'email': c.email}
+        for c in User.objects.filter(role='coach', is_active=True).order_by('full_name')
+    ]
+
+
 def filter_coaches_by_q(coaches, q):
     """Return coaches whose full_name or email contains q (Turkish-case-insensitive)."""
     if not q:

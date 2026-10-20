@@ -198,3 +198,31 @@ def test_no_coach_email_on_student_dashboard(db, coach_ibrahim):
     c.login(username=student.email, password='pass')
     resp = c.get('/dashboard/')
     assert coach_ibrahim.email not in resp.content.decode()
+
+
+# ── 6. Email visible in staff tables ──────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_odemeler_shows_coach_email(staff_client, coach_ibrahim):
+    resp = staff_client.get('/panel/odemeler/')
+    assert resp.status_code == 200
+    assert coach_ibrahim.email in resp.content.decode()
+
+
+@pytest.mark.django_db
+def test_ogrenciler_shows_coach_email(staff_client, coach_ibrahim):
+    from model_bakery import baker
+    from users_app.models import CoachStudent
+    student = baker.make(User, role='student', is_active=True)
+    baker.make(CoachStudent, coach=coach_ibrahim, student=student, active=True, source='vagus')
+    resp = staff_client.get('/panel/ogrenciler/')
+    assert resp.status_code == 200
+    assert coach_ibrahim.email in resp.content.decode()
+
+
+@pytest.mark.django_db
+def test_data_coach_attrs_in_odemeler(staff_client, coach_ibrahim):
+    resp = staff_client.get('/panel/odemeler/')
+    content = resp.content.decode()
+    assert 'data-coach-row' in content
+    assert coach_ibrahim.email in content

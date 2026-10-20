@@ -86,12 +86,12 @@
             <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
-        <span class="relative">
+        <div class="relative">
           <input type="search" id="kaz_coach_search"
                  placeholder="Koç filtrele..."
                  autocomplete="off"
-                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none
-                        block mb-0.5">
+                 data-coach-search data-mode="select" data-select-id="kaz_coach_sel"
+                 class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none block">
           <select id="kaz_coach_sel" name="coach" onchange="this.form.submit()"
                   class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
             <option value="">Tüm Koçlar</option>
@@ -99,18 +99,7 @@
               <option value="{{ c.pk }}" {% if coach_filter == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.full_name }} — {{ c.email }}</option>
             {% endfor %}
           </select>
-          <script>
-          (function(){
-            var i=document.getElementById('kaz_coach_search'),s=document.getElementById('kaz_coach_sel');
-            if(!i||!s)return;
-            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
-            i.addEventListener('input',function(){
-              var q=t(i.value);
-              for(var n=1;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
-            });
-          })();
-          </script>
-        </span>
+        </div>
         <input type="month" name="month" value="{{ month_filter }}"
                onchange="this.form.submit()"
                class="h-8 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
@@ -144,7 +133,10 @@
           {% for row in rows %}
           <tr class="hover:bg-ink-900/30 transition-colors {% if row.gap_fallback %}bg-amber-950/10{% endif %}">
             <td class="px-4 py-3 text-ink-500 text-xs">{{ row.pk }}</td>
-            <td class="px-4 py-3 text-ink-200 text-sm">{{ row.coach.full_name }}</td>
+            <td class="px-4 py-3">
+              <p class="text-ink-200 text-sm leading-tight">{{ row.coach.full_name }}</p>
+              <p class="text-xs text-ink-500 mt-0.5">{{ row.coach.email }}</p>
+            </td>
             <td class="px-4 py-3 text-ink-300 text-sm">{{ row.student.full_name }}</td>
             <td class="px-4 py-3 text-xs text-ink-500">
               {% if row.order_id %}
@@ -258,28 +250,20 @@
 
         <div>
           <label class="block text-xs text-ink-500 mb-1">Koç</label>
-          <input type="search" id="kaz_man_coach_search"
-                 placeholder="İsim veya email..."
-                 autocomplete="off"
-                 class="w-full mb-0.5 h-9 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none block">
-          <select id="kaz_man_coach_sel" name="coach_id" required
-                  class="w-full h-9 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
-            <option value="">Seçin</option>
-            {% for c in coaches %}
-              <option value="{{ c.pk }}">{{ c.full_name }} — {{ c.email }}</option>
-            {% endfor %}
-          </select>
-          <script>
-          (function(){
-            var i=document.getElementById('kaz_man_coach_search'),s=document.getElementById('kaz_man_coach_sel');
-            if(!i||!s)return;
-            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
-            i.addEventListener('input',function(){
-              var q=t(i.value);
-              for(var n=1;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
-            });
-          })();
-          </script>
+          <div class="relative">
+            <input type="search" id="kaz_man_coach_search"
+                   placeholder="İsim veya email..."
+                   autocomplete="off"
+                   data-coach-search data-mode="select" data-select-id="kaz_man_coach_sel"
+                   class="w-full h-9 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none block">
+            <select id="kaz_man_coach_sel" name="coach_id" required
+                    class="w-full h-9 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200 focus:outline-none">
+              <option value="">Seçin</option>
+              {% for c in coaches %}
+                <option value="{{ c.pk }}">{{ c.full_name }} — {{ c.email }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
 
         <div>

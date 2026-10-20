@@ -82,29 +82,21 @@
         {% csrf_token %}
         <div>
           <label class="block text-xs text-ink-400 font-medium mb-1.5">Koç</label>
-          <input type="search" id="cap_grant_coach_search"
-                 placeholder="İsim veya email..."
-                 autocomplete="off"
-                 class="w-full mb-1 h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
-                        placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
-          <select id="cap_grant_coach_sel" name="coach_id"
-                  class="h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
-                         focus:outline-none focus:border-steel-500 transition-colors">
-            {% for coach in coaches_all %}
-            <option value="{{ coach.pk }}">{{ coach.full_name }} — {{ coach.email }}</option>
-            {% endfor %}
-          </select>
-          <script>
-          (function(){
-            var i=document.getElementById('cap_grant_coach_search'),s=document.getElementById('cap_grant_coach_sel');
-            if(!i||!s)return;
-            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
-            i.addEventListener('input',function(){
-              var q=t(i.value);
-              for(var n=0;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
-            });
-          })();
-          </script>
+          <div class="relative">
+            <input type="search" id="cap_grant_coach_search"
+                   placeholder="İsim veya email..."
+                   autocomplete="off"
+                   data-coach-search data-mode="select" data-select-id="cap_grant_coach_sel"
+                   class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                          placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+            <select id="cap_grant_coach_sel" name="coach_id"
+                    class="h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                           focus:outline-none focus:border-steel-500 transition-colors">
+              {% for coach in coaches_all %}
+              <option value="{{ coach.pk }}">{{ coach.full_name }} — {{ coach.email }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
         <div>
           <label class="block text-xs text-ink-400 font-medium mb-1.5">Slot (30 gün)</label>
@@ -127,9 +119,10 @@
       <form method="get" class="flex items-center gap-2">
         <input type="search" name="q" value="{{ q }}"
                placeholder="Koç ismi veya email..."
+               data-coach-search data-mode="list"
                class="h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200
                       placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
-        <button type="submit"
+        <button type="submit" data-ara-btn
                 class="h-7 px-2 rounded-lg bg-ink-700 hover:bg-ink-600 text-xs text-ink-200 transition-colors">Ara</button>
         {% if q %}<a href="{% url 'capacity_panel:overview' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>{% endif %}
       </form>
@@ -148,8 +141,12 @@
         </thead>
         <tbody class="divide-y divide-ink-800">
           {% for row in rows %}
-          <tr class="hover:bg-ink-900 transition-colors">
-            <td class="px-5 py-3 text-ink-200 font-medium">{{ row.coach.full_name }}</td>
+          <tr class="hover:bg-ink-900 transition-colors"
+              data-coach-row data-coach-name="{{ row.coach.full_name }}" data-coach-email="{{ row.coach.email }}">
+            <td class="px-5 py-3">
+              <p class="text-ink-200 font-medium leading-tight">{{ row.coach.full_name }}</p>
+              <p class="text-xs text-ink-500 mt-0.5">{{ row.coach.email }}</p>
+            </td>
             <td class="px-4 py-3 text-center text-ink-300 tnum">{{ row.granted }}</td>
             <td class="px-4 py-3 text-center tnum
                        {% if row.free < 0 %}text-ruby-400 font-semibold{% else %}text-amber-400{% endif %}">{{ row.in_use }}</td>
@@ -197,7 +194,8 @@
           <tr class="hover:bg-ink-900 transition-colors">
             <td class="px-5 py-3">
               <a href="{% url 'capacity_panel:order_detail' pk=order.pk %}"
-                 class="text-ink-200 hover:text-white font-medium">{{ order.coach.full_name }}</a>
+                 class="text-ink-200 hover:text-white font-medium leading-tight block">{{ order.coach.full_name }}</a>
+              <span class="text-xs text-ink-500">{{ order.coach.email }}</span>
             </td>
             <td class="px-4 py-3 font-mono text-ink-300 text-xs">{{ order.ref_code|default:"—" }}</td>
             <td class="px-4 py-3 text-center text-ink-300 tnum">{{ order.slots }}</td>

@@ -96,32 +96,24 @@
 
         <div class="space-y-1.5">
           <label class="block text-xs font-medium text-ink-400 uppercase tracking-wider">Koç *</label>
-          <input type="search" id="davetler_coach_search"
-                 placeholder="İsim veya email..."
-                 autocomplete="off"
-                 class="w-full mb-1 h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
-                        placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
-          <select id="davetler_coach_sel" name="coach_id" required
-                  class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
-                         focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
-            <option value="">— Seç —</option>
-            {% for coach in coaches %}
-            <option value="{{ coach.pk }}" {% if request.POST.coach_id == coach.pk|stringformat:'s' %}selected{% endif %}>
-              {{ coach.full_name }} — {{ coach.email }}
-            </option>
-            {% endfor %}
-          </select>
-          <script>
-          (function(){
-            var i=document.getElementById('davetler_coach_search'),s=document.getElementById('davetler_coach_sel');
-            if(!i||!s)return;
-            function t(v){return v.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();}
-            i.addEventListener('input',function(){
-              var q=t(i.value);
-              for(var n=1;n<s.options.length;n++)s.options[n].hidden=!!q&&t(s.options[n].text).indexOf(q)<0;
-            });
-          })();
-          </script>
+          <div class="relative">
+            <input type="search" id="davetler_coach_search"
+                   placeholder="İsim veya email..."
+                   autocomplete="off"
+                   data-coach-search data-mode="select" data-select-id="davetler_coach_sel"
+                   class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                          placeholder:text-ink-600 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+            <select id="davetler_coach_sel" name="coach_id" required
+                    class="w-full h-9 px-3 rounded-lg text-sm border bg-ink-800 border-ink-700 text-ink-200
+                           focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+              <option value="">— Seç —</option>
+              {% for coach in coaches %}
+              <option value="{{ coach.pk }}" {% if request.POST.coach_id == coach.pk|stringformat:'s' %}selected{% endif %}>
+                {{ coach.full_name }} — {{ coach.email }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
 
         <div class="space-y-1.5">

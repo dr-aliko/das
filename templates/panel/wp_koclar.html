@@ -53,9 +53,10 @@
   <form method="get" class="flex items-center gap-2">
     <input type="search" name="q" value="{{ q }}"
            placeholder="Koç ismi veya email..."
+           data-coach-search data-mode="list"
            class="h-8 px-3 rounded-lg text-xs bg-ink-800 border border-ink-700 text-ink-200
                   placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
-    <button type="submit"
+    <button type="submit" data-ara-btn
             class="h-8 px-3 rounded-lg bg-ink-700 hover:bg-ink-600 text-xs text-ink-200 transition-colors">Ara</button>
     {% if q %}<a href="{% url 'panel_wp_koclar' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>{% endif %}
   </form>
@@ -80,7 +81,8 @@
         </thead>
         <tbody class="divide-y divide-ink-800/60">
           {% for match in suggested %}
-          <tr class="hover:bg-ink-900/40 transition-colors" id="srow-{{ match.coach.pk }}">
+          <tr class="hover:bg-ink-900/40 transition-colors" id="srow-{{ match.coach.pk }}"
+              data-coach-row data-coach-name="{{ match.coach.full_name }}" data-coach-email="{{ match.coach.email }}">
             <td class="px-5 py-3">
               <p class="font-medium text-ink-100">{{ match.coach.full_name }}</p>
               <p class="text-xs text-ink-500">{{ match.coach.email }}</p>
@@ -131,7 +133,8 @@
         </thead>
         <tbody class="divide-y divide-ink-800/60">
           {% for coach in linked_coaches %}
-          <tr class="hover:bg-ink-900/40 transition-colors" id="lrow-{{ coach.pk }}">
+          <tr class="hover:bg-ink-900/40 transition-colors" id="lrow-{{ coach.pk }}"
+              data-coach-row data-coach-name="{{ coach.full_name }}" data-coach-email="{{ coach.email }}">
             <td class="px-5 py-3">
               <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
               <p class="text-xs text-ink-500">{{ coach.email }}</p>
@@ -182,7 +185,8 @@
         </thead>
         <tbody class="divide-y divide-ink-800/60">
           {% for coach in unmatched_coaches %}
-          <tr class="hover:bg-ink-900/40 transition-colors" id="urow-{{ coach.pk }}">
+          <tr class="hover:bg-ink-900/40 transition-colors" id="urow-{{ coach.pk }}"
+              data-coach-row data-coach-name="{{ coach.full_name }}" data-coach-email="{{ coach.email }}">
             <td class="px-5 py-3">
               <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
               <p class="text-xs text-ink-500">{{ coach.email }}</p>
