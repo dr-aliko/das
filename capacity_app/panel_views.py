@@ -137,26 +137,75 @@ def panel_capacity_grant_create(request):
 
 
 @staff_required
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
 def panel_capacity_settings(request):
+    from .services import EXPLANATION_DEFAULT_TITLE, EXPLANATION_DEFAULT_BODY, parse_explanation_body
     cfg = CapacitySettings.get()
     error = None
+    expl_error = None
+    action = request.POST.get('action', 'save_price') if request.method == 'POST' else ''
+
     if request.method == 'POST':
-        tl_str = request.POST.get('per_slot_price_tl', '').strip()
-        try:
-            tl = int(tl_str)
-            if tl < 0:
-                raise ValueError
-        except (ValueError, TypeError):
-            error = 'Geçerli bir tutar girin (0 veya pozitif tam sayı TL).'
-        else:
-            cfg.per_slot_price_kurus = tl * 100
+        if action == 'save_price':
+            tl_str = request.POST.get('per_slot_price_tl', '').strip()
+            try:
+                tl = int(tl_str)
+                if tl < 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                error = 'Geçerli bir tutar girin (0 veya pozitif tam sayı TL).'
+            else:
+                cfg.per_slot_price_kurus = tl * 100
+                cfg.save()
+                return redirect('capacity_panel:overview')
+
+        elif action == 'save_explanation':
+            title = request.POST.get('explanation_title', '').strip()
+            body  = request.POST.get('explanation_body', '').strip()
+            if not title:
+                expl_error = 'Başlık boş bırakılamaz.'
+            elif len(title) > 200:
+                expl_error = f'Başlık en fazla 200 karakter olabilir (şu an {len(title)}).'
+            elif len(body) > 1500:
+                expl_error = f'Açıklama en fazla 1500 karakter olabilir (şu an {len(body)}).'
+            else:
+                raw_item_count = sum(
+                    1 for line in body.splitlines()
+                    if line.strip() and not line.strip().startswith('! ')
+                )
+                if raw_item_count > 8:
+                    expl_error = f'En fazla 8 madde eklenebilir (şu an {raw_item_count}).'
+                else:
+                    cfg.explanation_title = title
+                    cfg.explanation_body  = body
+                    cfg.updated_by        = request.user
+                    cfg.save()
+                    return redirect('capacity_panel:settings')
+
+        elif action == 'reset_explanation':
+            cfg.explanation_title = EXPLANATION_DEFAULT_TITLE
+            cfg.explanation_body  = EXPLANATION_DEFAULT_BODY
+            cfg.updated_by        = request.user
             cfg.save()
-            return redirect('capacity_panel:overview')
+            return redirect('capacity_panel:settings')
+
+    form_expl_title = (
+        request.POST.get('explanation_title', cfg.explanation_title)
+        if expl_error else cfg.explanation_title
+    )
+    form_expl_body = (
+        request.POST.get('explanation_body', cfg.explanation_body)
+        if expl_error else cfg.explanation_body
+    )
 
     return render(request, 'panel/capacity_settings.html', {
         **_tab_ctx(),
-        'cfg': cfg,
-        'error': error,
+        'cfg':              cfg,
+        'error':            error,
+        'expl_error':       expl_error,
+        'form_expl_title':  form_expl_title,
+        'form_expl_body':   form_expl_body,
+        'EXPLANATION_DEFAULT_BODY': EXPLANATION_DEFAULT_BODY,
     })
 
 

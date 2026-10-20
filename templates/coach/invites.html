@@ -14,32 +14,65 @@
   {# ── Kontenjan card ─────────────────────────────────────────────────────── #}
   {% if enforcement_on or cap_status.granted > 0 %}
   <div class="border-b border-ink-700 px-4 md:px-6 py-4">
-    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-      <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-2">Kontenjan</p>
-        <div class="flex items-baseline gap-5 mb-2">
-          <div>
-            <span class="text-2xl font-bold text-ink-100 tnum">{{ cap_status.in_use }}</span>
-            <span class="text-sm text-ink-500"> / {{ cap_status.granted }}</span>
-            <span class="ml-0.5 text-xs text-ink-600">kullanılan</span>
-          </div>
-          <div>
-            <span class="text-xl font-semibold tnum {% if cap_status.free <= 0 %}text-ruby-400{% else %}text-emerald-400{% endif %}">{{ cap_status.free }}</span>
-            <span class="ml-0.5 text-xs text-ink-600">boş</span>
+
+    {# Three stat tiles #}
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <div class="rounded-lg border border-ink-700 bg-ink-900 px-2 py-2.5 text-center">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Kullanılan</p>
+        <p class="text-xl font-bold text-ink-100 tnum">{{ cap_status.in_use }}</p>
+      </div>
+      <div class="rounded-lg border border-ink-700 bg-ink-900 px-2 py-2.5 text-center">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Toplam</p>
+        <p class="text-xl font-bold text-ink-100 tnum">{{ cap_status.granted }}</p>
+      </div>
+      <div class="rounded-lg border border-ink-700 bg-ink-900 px-2 py-2.5 text-center">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Boş</p>
+        <p class="text-xl font-bold tnum {% if cap_status.free <= 0 %}text-ruby-400{% else %}text-emerald-400{% endif %}">{{ cap_status.free }}</p>
+      </div>
+    </div>
+
+    {# How-it-works explanation (collapsible) #}
+    {% if explanation.items or explanation.note %}
+    <details class="rounded-xl border border-ink-700 bg-ink-900 mb-4 overflow-hidden"
+             {% if cap_status.granted == 0 or cap_status.free <= 0 %}open{% endif %}>
+      <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer select-none
+                      text-sm font-medium text-ink-300 hover:text-ink-100 hover:bg-ink-850 transition-colors">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75"
+             viewBox="0 0 24 24" class="shrink-0 text-steel-400" aria-hidden="true"
+             style="flex-shrink:0">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>{{ cfg.explanation_title }}</span>
+      </summary>
+      <div class="px-4 pb-4 pt-1 space-y-2.5 border-t border-ink-700">
+        {% for item in explanation.items %}
+        <div class="flex items-start gap-3 pt-2">
+          <span class="shrink-0 w-5 h-5 rounded-full text-[10px] font-bold inline-flex items-center justify-center
+                       bg-ink-800 border border-ink-700 text-steel-400" style="flex-shrink:0;margin-top:1px">{{ forloop.counter }}</span>
+          <div class="flex-1 min-w-0">
+            {% if item.title %}<span class="text-xs font-semibold text-ink-200">{{ item.title }}</span> {% endif %}<span class="text-xs text-ink-500">{{ item.text }}</span>
           </div>
         </div>
-        <p class="text-xs text-ink-500 leading-relaxed" style="max-width:52ch">
-          Kontenjan, Vagus'ta aynı anda takip edebileceğiniz <em>kendi</em> öğrenci sayınızdır — yani kendiniz davet ettiğiniz öğrenciler.
-          30 günlük dönemler halinde satın alınır; ayrılan öğrencinin slotu serbest kalır ve yeniden kullanılabilir.
-          Vagus'un size atadığı öğrenciler kontenjanınızdan sayılmaz.
-          Dönem sona erdiğinde mevcut öğrencileriniz etkilenmez; yenileme yapana kadar yalnızca yeni öğrenci ekleme kısıtlanır.
-        </p>
+        {% endfor %}
+        {% if explanation.note %}
+        <div class="mt-1 rounded-lg border border-steel-500 px-3 py-2 flex items-start gap-2 bg-steel-tint">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75"
+               viewBox="0 0 24 24" class="shrink-0 text-steel-400" aria-hidden="true"
+               style="flex-shrink:0;margin-top:1px">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p class="text-xs text-steel-300">{{ explanation.note }}</p>
+        </div>
+        {% endif %}
       </div>
-      <a href="{% url 'capacity:page' %}"
-         class="shrink-0 inline-flex items-center h-9 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold transition-colors">
-        Kontenjan satın al
-      </a>
-    </div>
+    </details>
+    {% endif %}
+
+    {# Buy button #}
+    <a href="{% url 'capacity:page' %}"
+       class="inline-flex items-center h-9 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-semibold transition-colors">
+      Kontenjan satın al
+    </a>
   </div>
   {% endif %}
 

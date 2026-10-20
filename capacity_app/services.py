@@ -7,6 +7,44 @@ from django.db import transaction
 
 _log = logging.getLogger(__name__)
 
+EXPLANATION_DEFAULT_TITLE = 'Kontenjan nasıl çalışır?'
+
+EXPLANATION_DEFAULT_BODY = (
+    "Kendi öğrencileriniz: Kontenjan, Vagus'ta aynı anda takip edebileceğiniz kendi "
+    "öğrenci sayınızdır — yani kendiniz davet ettiğiniz öğrenciler.\n"
+    "30 günlük dönem: Dönemler 30 gün sürer; ayrılan öğrencinin slotu serbest kalır "
+    "ve yeniden kullanılabilir.\n"
+    "Vagus öğrencileri: Vagus'un size atadığı öğrenciler kontenjanınızdan sayılmaz.\n"
+    "Dönem sonu: Dönem sona erdiğinde mevcut öğrencileriniz etkilenmez; yenileme "
+    "yapana kadar yalnızca yeni öğrenci ekleme kısıtlanır."
+)
+
+
+def parse_explanation_body(body):
+    """
+    Parse explanation body text into structured items.
+    Returns {'items': [{'title': str, 'text': str}], 'note': str|None}
+    Line formats:
+      "Title: text"  → {'title': 'Title', 'text': 'text'}
+      "plain"        → {'title': '', 'text': 'plain'}
+      "! note text"  → note field (last occurrence wins)
+    At most 8 items returned (note lines don't count).
+    """
+    items = []
+    note = None
+    for raw in (body or '').splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith('! '):
+            note = line[2:].strip()
+        elif ':' in line:
+            idx = line.index(':')
+            items.append({'title': line[:idx].strip(), 'text': line[idx + 1:].strip()})
+        else:
+            items.append({'title': '', 'text': line})
+    return {'items': items[:8], 'note': note}
+
 # Unambiguous alphabet (same as purchase_app bank_transfer provider)
 _REF_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 

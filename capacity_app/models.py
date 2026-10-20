@@ -5,16 +5,36 @@ from django.db import models
 
 
 class CapacitySettings(models.Model):
-    """Singleton price table for coach capacity slots (whole TL input stored in kuruş)."""
+    """Singleton: slot price + editable how-it-works explanation card for coaches."""
     per_slot_price_kurus = models.PositiveIntegerField(
         default=0,
         help_text='Slot başına fiyat (kuruş). 100 = 1 ₺.',
     )
+    explanation_title = models.CharField(
+        max_length=200,
+        default='Kontenjan nasıl çalışır?',
+        blank=True,
+    )
+    explanation_body = models.TextField(
+        default='',
+        blank=True,
+        help_text=(
+            'Her satır bir madde. '
+            '"Başlık: açıklama" → başlık kalın gösterilir. '
+            '"! not" satırı vurgulu kutu olur. En fazla 8 madde, 1500 karakter.'
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
 
     class Meta:
-        verbose_name = 'Kontenjan Fiyat Ayarı'
-        verbose_name_plural = 'Kontenjan Fiyat Ayarları'
+        verbose_name = 'Kontenjan Ayarları'
+        verbose_name_plural = 'Kontenjan Ayarları'
 
     def save(self, *args, **kwargs):
         self.pk = 1

@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% load earnings_filters %}
 
-{% block title %}Kontenjan Fiyat Ayarı — Panel{% endblock %}
+{% block title %}Kontenjan Ayarları — Panel{% endblock %}
 
 {% block content %}
-<div class="max-w-lg space-y-5">
+<div class="max-w-2xl space-y-5">
+
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
     <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>
-    <h1 class="text-lg font-semibold text-white mt-2">Fiyat Ayarı</h1>
+    <h1 class="text-lg font-semibold text-white mt-2">Kontenjan Ayarları</h1>
   </div>
 
+  {# ── Slot fiyatı ──────────────────────────────────────────────────────────── #}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3.5 border-b border-ink-700">
       <h2 class="text-sm font-semibold text-ink-200">Slot Başına Fiyat</h2>
@@ -20,6 +22,7 @@
       {% endif %}
       <form method="post" class="flex items-end gap-3">
         {% csrf_token %}
+        <input type="hidden" name="action" value="save_price">
         <div>
           <label class="block text-xs text-ink-400 font-medium mb-1.5">Fiyat (TL)</label>
           <input type="number" name="per_slot_price_tl" min="0"
@@ -34,5 +37,180 @@
       </form>
     </div>
   </div>
+
+  {# ── Açıklama düzenleyici ─────────────────────────────────────────────────── #}
+  {{ form_expl_title|json_script:"expl-title-data" }}
+  {{ form_expl_body|json_script:"expl-body-data" }}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden"
+       x-data="explanationEditor()">
+
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Kontenjan Açıklaması</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Koçların davet sayfasındaki kontenjan bilgi kutusunun içeriği.</p>
+    </div>
+
+    <div class="p-5 space-y-4">
+      {% if expl_error %}
+      <p class="text-sm text-ruby-400">{{ expl_error }}</p>
+      {% endif %}
+
+      {# Hidden reset form — button below links to it via form= attribute #}
+      <form method="post" id="expl-reset-form"
+            onsubmit="return confirm('Açıklama varsayılan metne sıfırlansın mı?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reset_explanation">
+      </form>
+
+      <form method="post" id="expl-save-form" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_explanation">
+
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Başlık</label>
+          <input type="text" name="explanation_title" maxlength="200"
+                 value="{{ form_expl_title }}"
+                 x-model="title"
+                 class="w-full h-10 px-3 rounded-lg bg-ink-800 border text-sm text-ink-100
+                        focus:outline-none focus:border-steel-500 transition-colors
+                        {% if expl_error %}border-ruby-500{% else %}border-ink-700{% endif %}">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs text-ink-400 font-medium">Açıklama Metni</label>
+            <span class="text-[11px] tnum"
+                  :class="body.length > 1400 ? 'text-amber-500' : 'text-ink-600'"
+                  x-text="body.length + ' / 1500'"></span>
+          </div>
+          <textarea name="explanation_body" rows="8" maxlength="1500"
+                    x-model="body"
+                    class="w-full px-3 py-2.5 rounded-lg bg-ink-800 border text-sm text-ink-100
+                           placeholder:text-ink-500 focus:outline-none focus:border-steel-500
+                           transition-colors resize-y
+                           {% if expl_error %}border-ruby-500{% else %}border-ink-700{% endif %}">{{ form_expl_body }}</textarea>
+          <div class="mt-2 rounded-lg bg-ink-900 border border-ink-700 px-3 py-2.5 text-[11px] text-ink-500 space-y-1">
+            <p><span class="text-ink-300 font-medium">Başlık: metin</span> → Başlık kalın, metin normal.</p>
+            <p><span class="text-ink-300 font-medium">sade metin</span> → Başlıksız madde.</p>
+            <p><span class="text-ink-300 font-medium">! not metni</span> → Altta vurgulu not kutusu.</p>
+            <p class="text-ink-600">Her satır bir madde. En fazla 8 madde, 1500 karakter.</p>
+          </div>
+        </div>
+      </form>
+
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit" form="expl-save-form"
+                class="h-9 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium transition-colors">
+          Kaydet
+        </button>
+        <button type="submit" form="expl-reset-form"
+                class="h-9 px-4 rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-ink-300 text-sm font-medium transition-colors">
+          Varsayılana dön
+        </button>
+      </div>
+    </div>
+
+    {# ── Canlı önizleme ──────────────────────────────────────────────────────── #}
+    <div class="border-t border-ink-700 px-5 py-5">
+      <p class="text-xs text-ink-500 uppercase tracking-wider font-medium mb-4">Canlı Önizleme</p>
+
+      <div class="rounded-xl border border-ink-700 bg-ink-900 overflow-hidden max-w-sm">
+        <div class="px-4 py-4">
+
+          {# Placeholder stat tiles #}
+          <div class="grid grid-cols-3 gap-2 mb-4">
+            <div class="rounded-lg border border-ink-700 bg-ink-850 px-2 py-2 text-center">
+              <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Kullanılan</p>
+              <p class="text-lg font-bold text-ink-100 tnum">3</p>
+            </div>
+            <div class="rounded-lg border border-ink-700 bg-ink-850 px-2 py-2 text-center">
+              <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Toplam</p>
+              <p class="text-lg font-bold text-ink-100 tnum">5</p>
+            </div>
+            <div class="rounded-lg border border-ink-700 bg-ink-850 px-2 py-2 text-center">
+              <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Boş</p>
+              <p class="text-lg font-bold text-emerald-400 tnum">2</p>
+            </div>
+          </div>
+
+          {# Collapsible — always open in preview #}
+          <details open class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden">
+            <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer select-none
+                            text-sm font-medium text-ink-300 hover:text-ink-100 hover:bg-ink-800 transition-colors">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75"
+                   viewBox="0 0 24 24" class="shrink-0 text-steel-400" aria-hidden="true"
+                   style="flex-shrink:0">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <span x-text="title || '(başlıksız)'"></span>
+            </summary>
+            <div class="px-4 pb-4 pt-1 space-y-2.5 border-t border-ink-700">
+              <template x-for="(item, idx) in parsed.items" :key="idx">
+                <div class="flex items-start gap-3 pt-2">
+                  <span class="shrink-0 w-5 h-5 rounded-full text-[10px] font-bold inline-flex items-center justify-center
+                               bg-ink-800 border border-ink-700 text-steel-400"
+                        style="flex-shrink:0;margin-top:1px"
+                        x-text="idx + 1"></span>
+                  <div class="flex-1 min-w-0">
+                    <span class="text-xs font-semibold text-ink-200" x-show="item.title" x-text="item.title + ' '"></span><span class="text-xs text-ink-500" x-text="item.text"></span>
+                  </div>
+                </div>
+              </template>
+              <template x-if="parsed.note">
+                <div class="mt-1 rounded-lg border border-steel-500 px-3 py-2 flex items-start gap-2 bg-steel-tint">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75"
+                       viewBox="0 0 24 24" class="shrink-0 text-steel-400" aria-hidden="true"
+                       style="flex-shrink:0;margin-top:1px">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <p class="text-xs text-steel-300" x-text="parsed.note"></p>
+                </div>
+              </template>
+              <p x-show="parsed.items.length === 0 && !parsed.note"
+                 class="text-xs text-ink-600 italic pt-2">Henüz içerik yok.</p>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+
+  </div>{# x-data #}
+
 </div>
+
+<script>
+function explanationEditor() {
+  const title = JSON.parse(document.getElementById('expl-title-data').textContent);
+  const body  = JSON.parse(document.getElementById('expl-body-data').textContent);
+  return {
+    title: title,
+    body:  body,
+    get parsed() {
+      return _parseExplBody(this.body);
+    },
+  };
+}
+
+function _parseExplBody(text) {
+  const items = [];
+  let note = null;
+  for (const raw of (text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('! ')) {
+      note = line.slice(2).trim();
+    } else if (line.includes(':')) {
+      const idx = line.indexOf(':');
+      items.push({ title: line.slice(0, idx).trim(), text: line.slice(idx + 1).trim() });
+    } else {
+      items.push({ title: '', text: line });
+    }
+  }
+  return { items: items.slice(0, 8), note };
+}
+</script>
 {% endblock %}

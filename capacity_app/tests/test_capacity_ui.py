@@ -18,7 +18,8 @@ from django.test import Client
 from django.urls import reverse
 from model_bakery import baker
 
-from capacity_app.models import CoachCapacityGrant
+from capacity_app.models import CapacitySettings, CoachCapacityGrant
+from capacity_app.services import EXPLANATION_DEFAULT_BODY, EXPLANATION_DEFAULT_TITLE
 
 User = get_user_model()
 
@@ -98,8 +99,8 @@ def test_invites_card_shown_when_enforcement_on(coach_client, settings):
     resp = coach_client.get(reverse('users_app:coach_invites'))
     body = resp.content.decode('utf-8')
     assert 'Kontenjan' in body
-    assert 'kullanılan' in body
-    assert 'boş' in body
+    assert 'Kullanılan' in body
+    assert 'Boş' in body
 
 
 @pytest.mark.django_db
@@ -108,7 +109,7 @@ def test_invites_card_shown_when_has_grants(coach_client, active_grant, settings
     resp = coach_client.get(reverse('users_app:coach_invites'))
     body = resp.content.decode('utf-8')
     assert 'Kontenjan' in body
-    assert 'kullanılan' in body
+    assert 'Kullanılan' in body
 
 
 @pytest.mark.django_db
@@ -117,12 +118,16 @@ def test_invites_card_hidden_when_flag_off_and_no_grants(coach_client, settings)
     resp = coach_client.get(reverse('users_app:coach_invites'))
     body = resp.content.decode('utf-8')
     # Card should not appear with zero grants and enforcement off
-    assert 'kullanılan' not in body
+    assert 'Kullanılan' not in body
 
 
 @pytest.mark.django_db
-def test_invites_card_has_explanation_text(coach_client, settings):
+def test_invites_card_has_explanation_text(db, coach_client, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    cfg = CapacitySettings.get()
+    cfg.explanation_title = EXPLANATION_DEFAULT_TITLE
+    cfg.explanation_body = EXPLANATION_DEFAULT_BODY
+    cfg.save()
     resp = coach_client.get(reverse('users_app:coach_invites'))
     body = resp.content.decode('utf-8')
     assert '30 günlük' in body

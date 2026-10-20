@@ -458,7 +458,8 @@ def coach_invite_view(request):
         return redirect('users_app:awaiting_approval')
 
     from django.conf import settings as _settings
-    from capacity_app.services import can_add_own_student, get_capacity_status
+    from capacity_app.models import CapacitySettings
+    from capacity_app.services import can_add_own_student, get_capacity_status, parse_explanation_body
 
     invites = StudentInvite.objects.filter(coach=request.user).order_by('-created_at')
     form = InviteStudentForm()
@@ -491,6 +492,9 @@ def coach_invite_view(request):
     invite_accepted = invites.filter(is_used=True).count()
     invite_pending  = invites.filter(is_used=False).count()
 
+    cfg = CapacitySettings.get()
+    explanation = parse_explanation_body(cfg.explanation_body)
+
     return render(request, 'coach/invites.html', {
         'form':              form,
         'invites':           invites,
@@ -501,6 +505,8 @@ def coach_invite_view(request):
         'capacity_error':    capacity_error,
         'capacity_blocked':  capacity_blocked,
         'enforcement_on':    enforcement_on,
+        'cfg':               cfg,
+        'explanation':       explanation,
     })
 
 
