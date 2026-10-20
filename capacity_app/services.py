@@ -99,10 +99,11 @@ def can_add_own_student(coach):
     status = get_capacity_status(coach)
     if status['free'] > 0:
         return True, None
-    return False, (
-        'Kontenjanınız doldu. Yeni öğrenci ekleyebilmek için '
-        '/coach/kontenjan/ adresinden kontenjan satın alabilirsiniz.'
-    )
+    if status['granted'] == 0:
+        msg = 'Kontenjanınız yok. Yeni öğrenci ekleyebilmek için kontenjan satın alın.'
+    else:
+        msg = 'Kontenjanınız doldu. Yeni öğrenci ekleyebilmek için kontenjan satın alın.'
+    return False, msg
 
 
 def create_capacity_order(coach, slots):

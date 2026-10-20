@@ -32,8 +32,11 @@
 
           {% if capacity_error %}
           <div class="rounded-xl bg-ruby-tint border border-ruby-500/30 px-4 py-3 text-sm text-ruby-400 mb-3">
-            {{ capacity_error }}
-            <a href="{% url 'capacity:page' %}" class="underline ml-1">Kontenjan satın al</a>
+            <p>{{ capacity_error }}</p>
+            <a href="{% url 'capacity:page' %}"
+               class="mt-2 inline-flex items-center h-8 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-xs font-semibold transition-colors">
+              Kontenjan satın al
+            </a>
           </div>
           {% endif %}
 
