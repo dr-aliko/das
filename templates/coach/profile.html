@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Profilim — Vagus{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-2xl mx-auto">
+
+  <div>
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Profil Ayarları</h1>
+    <p class="text-gray-500 text-sm mt-0.5">Ad soyad, telefon, ödeme ve kimlik bilgileriniz.</p>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div class="rounded-xl border px-4 py-3 text-sm
+      {% if msg.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700
+      {% else %}bg-red-50 border-red-200 text-red-700{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  {% comment %} ── Temel bilgiler ── {% endcomment %}
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Temel Bilgiler</h2>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
+          <input type="text" name="full_name" value="{{ user.full_name }}" maxlength="150"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+          <input type="email" value="{{ user.email }}" disabled
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed">
+          <p class="text-xs text-gray-400 mt-1">E-posta değiştirmek için destek ekibiyle iletişime geçin.</p>
+        </div>
+
+        {% comment %} ── Ödeme ve kimlik bilgileri ── {% endcomment %}
+        <hr class="border-gray-100">
+        <h2 class="text-base font-semibold text-gray-800 pt-1">Ödeme ve Kimlik Bilgileri</h2>
+        <p class="text-xs text-gray-500 -mt-2">
+          Bu bilgiler yalnızca Vagus ekibi ve ödeme işlemleri için kullanılır. Öğrencilerinize veya
+          WordPress profilinize yansıtılmaz.
+        </p>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+          <input type="tel" name="phone" value="{{ profile.phone }}" maxlength="32"
+                 placeholder="0505 123 45 67" autocomplete="tel" inputmode="tel"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          {% if form.phone.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ form.phone.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
+          {% if has_iban %}
+            <p class="text-sm font-mono text-gray-700 mb-1">{{ iban_masked }}</p>
+            <p class="text-xs text-gray-400 mb-2">Değiştirmek için aşağıya yeni IBAN girin.</p>
+          {% endif %}
+          <input type="text" name="iban" placeholder="TR12 3456 7890 1234 5678 9012"
+                 maxlength="40" autocomplete="off" spellcheck="false"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          {% if form.iban.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ form.iban.errors.0 }}</p>
+          {% endif %}
+          <p class="text-xs text-gray-400 mt-1">Yalnızca Türk IBAN (TR ile başlayan 26 karakter). Her değişiklik kayıt altına alınır ve e-posta ile bildirilir.</p>
+        </div>
+
+        {% comment %} Soft reminder: IBAN veya belge eksik {% endcomment %}
+        {% if not has_iban or not has_document %}
+        <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+          <p class="text-sm font-medium text-amber-800">Ödeme bilgileriniz eksik</p>
+          <ul class="text-xs text-amber-700 mt-1 space-y-0.5 list-disc list-inside">
+            {% if not has_iban %}<li>IBAN numaranızı henüz girmediniz.</li>{% endif %}
+            {% if not has_document %}<li>Kimlik/sözleşme belgenizi henüz yüklemediniz.</li>{% endif %}
+          </ul>
+          <p class="text-xs text-amber-600 mt-1">Bu bilgiler olmadan ödeme yapılamamaktadır.</p>
+        </div>
+        {% endif %}
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kimlik / Sözleşme Belgesi</label>
+          {% if has_document %}
+            <p class="text-sm text-gray-600 mb-2">
+              Belge durumu:
+              {% if profile.document_status == 'approved' %}
+                <span class="font-medium text-emerald-600">Onaylandı</span>
+              {% elif profile.document_status == 'rejected' %}
+                <span class="font-medium text-red-600">Reddedildi</span>
+                {% if profile.document_rejection_reason %}
+                  — <span class="text-gray-500">{{ profile.document_rejection_reason }}</span>
+                {% endif %}
+              {% else %}
+                <span class="font-medium text-amber-600">İnceleniyor</span>
+              {% endif %}
+            </p>
+          {% endif %}
+          <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"
+                 class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+          {% if form.document.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ form.document.errors.0 }}</p>
+          {% endif %}
+          <p class="text-xs text-gray-400 mt-1">PDF, JPG veya PNG — maks. 5 MB. Dosya içeriği doğrulanır.</p>
+        </div>
+
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button type="submit"
+                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
+          Kaydet
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% if iban_logs %}
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="text-base font-semibold text-gray-800 mb-3">IBAN Değişiklik Geçmişi</h2>
+    <div class="space-y-2">
+      {% for log in iban_logs %}
+      <div class="text-xs text-gray-500 flex gap-3">
+        <span class="font-mono text-gray-400">{{ log.changed_at|date:"d.m.Y H:i" }}</span>
+        <span>{{ log.old_iban_masked|default:"(boş)" }} → {{ log.new_iban_masked }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

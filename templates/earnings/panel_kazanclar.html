@@ -136,6 +136,11 @@
             <td class="px-4 py-3">
               <p class="text-ink-200 text-sm leading-tight">{{ row.coach.full_name }}</p>
               <p class="text-xs text-ink-500 mt-0.5">{{ row.coach.email }}</p>
+              {% if coach_iban_map|has_key:row.coach_id %}
+                <p class="text-xs font-mono text-ink-400 mt-0.5">{{ coach_iban_map|get_item:row.coach_id }}</p>
+              {% else %}
+                <span class="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 border border-red-500/20 text-red-400">IBAN eksik</span>
+              {% endif %}
             </td>
             <td class="px-4 py-3 text-ink-300 text-sm">{{ row.student.full_name }}</td>
             <td class="px-4 py-3 text-xs text-ink-500">

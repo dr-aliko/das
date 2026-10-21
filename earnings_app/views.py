@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from users_app.decorators import staff_required
+from users_app.models import CoachProfile
 
 from .models import EarningConfig, EarningRow, ManualPaymentRecord
 from .services import (
@@ -53,15 +54,22 @@ def panel_kazanclar_list(request):
     config = EarningConfig.get()
     coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
 
+    # IBAN lookup: {coach_id: iban_string} — only for coaches who have an IBAN set.
+    # Coaches absent from this map should get the "IBAN eksik" badge.
+    coach_ids = {r.coach_id for r in rows if r.coach_id}
+    profiles = CoachProfile.objects.filter(user_id__in=coach_ids, iban__gt='').values('user_id', 'iban')
+    coach_iban_map = {p['user_id']: p['iban'] for p in profiles}
+
     return render(request, 'earnings/panel_kazanclar.html', {
-        'rows':          rows,
-        'totals':        totals,
-        'config':        config,
-        'coaches':       coaches,
-        'status_filter': status_filter,
-        'coach_filter':  coach_filter,
-        'month_filter':  month_filter,
+        'rows':           rows,
+        'totals':         totals,
+        'config':         config,
+        'coaches':        coaches,
+        'status_filter':  status_filter,
+        'coach_filter':   coach_filter,
+        'month_filter':   month_filter,
         'status_choices': EarningRow.STATUS_CHOICES,
+        'coach_iban_map': coach_iban_map,
     })
 
 
@@ -404,6 +412,15 @@ def coach_kazanclar(request):
             'payout_ref':     r.payout_ref,
         })
 
+    # Soft reminder for missing IBAN / document
+    try:
+        cp = request.user.coach_profile
+        profile_has_iban = bool(cp.iban)
+        profile_has_document = bool(cp.document)
+    except Exception:
+        profile_has_iban = False
+        profile_has_document = False
+
     return render(request, 'earnings/coach_kazanclar.html', {
         'rows':            row_dicts,
         'tile_held_pool':  _fmt_tl(held_pool),
@@ -415,6 +432,8 @@ def coach_kazanclar(request):
         'count_hazir':     count_hazir,
         'count_odenen':    count_odenen,
         'has_rows':        bool(rows),
+        'profile_has_iban': profile_has_iban,
+        'profile_has_document': profile_has_document,
     })
 
 

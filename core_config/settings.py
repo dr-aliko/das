@@ -64,6 +64,7 @@ TEMPLATES = [
                 'core_config.context_processors.v2_shell',
                 'core_config.context_processors.desktop_v2',
                 'core_config.context_processors.site_urls',
+                'core_config.context_processors.coach_profile_popup',
                 'marketing_app.context_processors.site_settings',
             ],
         },
@@ -269,6 +270,18 @@ COACH_EARNING_AUTO_RELEASE        = config('COACH_EARNING_AUTO_RELEASE',        
 # When True, coaches cannot create invites or accept students beyond their granted slots.
 # Default False: enforcement disabled (safe rollout gate).
 COACH_CAPACITY_ENFORCED = config('COACH_CAPACITY_ENFORCED', default=False, cast=bool)
+
+# ── Coach profile / payment identity ──────────────────────────────────────────
+# Files stored here are NEVER served by nginx or whitenoise; always via a Django
+# view that checks ownership + staff permission.
+# Production: set PRIVATE_MEDIA_ROOT=/srv/das/private_media in .env and make
+# sure the backup routine covers this directory (same rsync/pg_dump run).
+PRIVATE_MEDIA_ROOT = Path(config('PRIVATE_MEDIA_ROOT', default=str(BASE_DIR / 'private_media')))
+
+# When True, coaches without a full_name or phone see a non-dismissible overlay
+# on every page until they fill in the missing fields.
+# Default False: gate is off; turn on after existing coaches have been notified.
+COACH_PROFILE_REQUIRED = config('COACH_PROFILE_REQUIRED', default=False, cast=bool)
 
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)

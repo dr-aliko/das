@@ -1,4 +1,6 @@
+import os
 import secrets
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -446,3 +448,93 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'{self.user.full_name} — {self.title}'
+
+
+def _coach_doc_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return f'{uuid.uuid4().hex}{ext}'
+
+
+class CoachProfile(models.Model):
+    """Payment identity for a coach: phone, IBAN, and a verification document."""
+    DOC_PENDING  = 'pending'
+    DOC_APPROVED = 'approved'
+    DOC_REJECTED = 'rejected'
+    DOC_STATUS_CHOICES = [
+        ('pending',  'Bekliyor'),
+        ('approved', 'Onaylandı'),
+        ('rejected', 'Reddedildi'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='coach_profile',
+        limit_choices_to={'role': 'coach'},
+    )
+    phone = models.CharField(max_length=20, blank=True, default='')
+    iban  = models.CharField(max_length=34, blank=True, default='')
+    document = models.FileField(
+        upload_to=_coach_doc_path,
+        storage='core_config.private_storage.PrivateFileSystemStorage',
+        blank=True,
+        null=True,
+    )
+    document_status = models.CharField(
+        max_length=10,
+        choices=DOC_STATUS_CHOICES,
+        default=DOC_PENDING,
+    )
+    document_rejection_reason = models.CharField(max_length=500, blank=True, default='')
+    document_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    document_reviewed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Koç Profili'
+        verbose_name_plural = 'Koç Profilleri'
+
+    def __str__(self):
+        return f'Profil — {self.user.full_name}'
+
+    def iban_masked(self):
+        """Return masked IBAN: show first 4 chars and last 4 chars."""
+        raw = self.iban
+        if not raw or len(raw) < 8:
+            return raw or ''
+        head = raw[:4]
+        tail = raw[-4:]
+        middle_len = len(raw) - 8
+        star_groups = ['****'] * ((middle_len + 3) // 4)
+        return ' '.join([head] + star_groups + [tail])
+
+
+class CoachIbanLog(models.Model):
+    """Audit trail of every IBAN change for a coach."""
+    coach = models.ForeignKey(
+        CoachProfile,
+        on_delete=models.CASCADE,
+        related_name='iban_logs',
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    old_iban_masked = models.CharField(max_length=60, blank=True, default='')
+    new_iban_masked = models.CharField(max_length=60, blank=True, default='')
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name = 'IBAN Değişiklik Kaydı'
+        verbose_name_plural = 'IBAN Değişiklik Kayıtları'
+
+    def __str__(self):
+        return f'{self.coach.user.full_name} — {self.changed_at:%Y-%m-%d %H:%M}'

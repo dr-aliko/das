@@ -363,5 +363,40 @@
 <script defer src="{% static 'js/a2hs.js' %}"></script>
 {% if user.is_authenticated and v2_shell %}{% include "components/_shell_bottom.html" %}{% if not shell_hide_fab %}{% include "components/_shell_fab.html" %}{% endif %}{% endif %}
 {% if user.is_staff %}<script src="{% static 'js/coach_search.js' %}"></script>{% endif %}
+
+{% if show_coach_popup %}
+<div id="coach-required-overlay"
+     style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <p style="font-size:18px;font-weight:700;color:#1a1a2e;margin:0 0 6px;">Profil bilgileri eksik</p>
+    <p style="font-size:13px;color:#64748b;margin:0 0 20px;line-height:1.5;">
+      Devam etmek için ad soyad ve telefon numaranızı girin.
+      Bu bilgiler ödeme işlemleri için gereklidir.
+    </p>
+    <form method="post" action="{% url 'coach_profile_quick_update' %}">
+      {% csrf_token %}
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;">Ad Soyad</label>
+        <input type="text" name="full_name" value="{{ user.full_name }}" maxlength="150" required
+               style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:14px;box-sizing:border-box;outline:none;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;">Telefon</label>
+        <input type="tel" name="phone" placeholder="0505 123 45 67" maxlength="32" required
+               autocomplete="tel" inputmode="tel"
+               style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:14px;box-sizing:border-box;outline:none;">
+      </div>
+      <button type="submit"
+              style="width:100%;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;">
+        Kaydet ve devam et
+      </button>
+    </form>
+    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0;text-align:center;">
+      IBAN ve belge yükleme için
+      <a href="{% url 'coach_profile' %}" style="color:#4f46e5;text-decoration:none;">profil sayfanıza</a> gidin.
+    </p>
+  </div>
+</div>
+{% endif %}
 </body>
 </html>

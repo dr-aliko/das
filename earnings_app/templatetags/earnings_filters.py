@@ -30,3 +30,21 @@ def kurus_to_tl_input(value):
         return str(int(value) // 100)
     except (TypeError, ValueError):
         return '0'
+
+
+@register.filter
+def get_item(mapping, key):
+    """Return mapping[key] safely, or ''."""
+    try:
+        return mapping.get(key, '')
+    except (AttributeError, TypeError):
+        return ''
+
+
+@register.filter
+def has_key(mapping, key):
+    """Return True if key is in mapping."""
+    try:
+        return key in mapping
+    except (TypeError, AttributeError):
+        return False

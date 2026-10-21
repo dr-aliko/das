@@ -73,6 +73,7 @@
     <div class="rounded-lg bg-ink-900 border border-ink-700 px-4 py-3 mb-5 space-y-1 text-sm">
       <div><span class="text-ink-500">Ad Soyad:</span> <span class="text-white font-medium">{{ form_data.full_name }}</span></div>
       <div><span class="text-ink-500">E-posta:</span> <span class="text-white font-medium">{{ form_data.email }}</span></div>
+      <div><span class="text-ink-500">Telefon:</span> <span class="text-white font-medium">{{ form_data.phone }}</span></div>
     </div>
     <p class="text-xs text-ink-500 mb-5">Hesap oluşturulduktan sonra koça şifre belirleme e-postası gönderilecek.</p>
     <div class="flex gap-3">
@@ -81,12 +82,13 @@
         <input type="hidden" name="action" value="create">
         <input type="hidden" name="full_name" value="{{ form_data.full_name }}">
         <input type="hidden" name="email" value="{{ form_data.email }}">
+        <input type="hidden" name="phone" value="{{ form_data.phone }}">
         <button type="submit"
                 class="px-4 py-2 rounded-lg bg-steel-600 hover:bg-steel-500 text-white text-sm font-semibold transition-colors">
           Oluştur
         </button>
       </form>
-      <a href="{% url 'panel_koc_ekle' %}?full_name={{ form_data.full_name|urlencode }}&email={{ form_data.email|urlencode }}"
+      <a href="{% url 'panel_koc_ekle' %}?full_name={{ form_data.full_name|urlencode }}&email={{ form_data.email|urlencode }}&phone={{ form_data.phone|urlencode }}"
          class="px-4 py-2 rounded-lg bg-ink-800 hover:bg-ink-700 text-ink-300 text-sm font-medium transition-colors">
         Düzenle
       </a>
@@ -115,6 +117,15 @@
         <label class="block text-xs text-ink-400 mb-1.5" for="email">E-posta</label>
         <input id="email" name="email" type="email" autocomplete="email"
                value="{{ form_data.email|default:get_email }}"
+               required
+               class="w-full h-9 px-3 rounded-lg text-sm bg-ink-900 border border-ink-700 text-ink-100
+                      focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">
+      </div>
+      <div>
+        <label class="block text-xs text-ink-400 mb-1.5" for="phone">Telefon</label>
+        <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel"
+               value="{{ form_data.phone|default:get_phone }}"
+               placeholder="0505 123 45 67"
                required
                class="w-full h-9 px-3 rounded-lg text-sm bg-ink-900 border border-ink-700 text-ink-100
                       focus:outline-none focus:ring-1 focus:ring-steel-500 transition-colors">

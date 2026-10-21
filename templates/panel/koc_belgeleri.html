@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel — Koç Belgeleri{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Koç Belgeleri</h1>
+      </div>
+      <p class="text-sm text-ink-400">Koç kimlik ve sözleşme belgelerini inceleyin, onaylayın veya reddedin.</p>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <a href="{% url 'panel_koc_ekle' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Koç Ekle</a>
+      <a href="{% url 'earnings_panel:list' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Kazançlar</a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm
+      {% if msg.tags == 'success' %}bg-emerald-900/20 border border-emerald-700 text-emerald-300
+      {% else %}bg-red-900/20 border border-red-700 text-red-300{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
+      <span class="text-sm text-ink-300 font-medium">{{ profiles|length }} belge yüklü koç</span>
+    </div>
+
+    {% if profiles %}
+    <div class="divide-y divide-ink-800">
+      {% for profile in profiles %}
+      <div class="px-5 py-4">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p class="text-sm font-medium text-ink-100">{{ profile.user.full_name }}</p>
+            <p class="text-xs text-ink-500 mt-0.5">{{ profile.user.email }}</p>
+            {% if profile.iban %}
+            <p class="text-xs font-mono text-ink-400 mt-1">IBAN: {{ profile.iban }}</p>
+            {% else %}
+            <p class="text-xs text-amber-500 mt-1">IBAN girilmemiş</p>
+            {% endif %}
+            <p class="text-xs text-ink-500 mt-0.5">
+              Belge:
+              <a href="{% url 'private_document' profile.document.name %}" target="_blank"
+                 class="text-steel-400 hover:underline">Görüntüle / İndir</a>
+            </p>
+            {% if profile.document_reviewed_by %}
+            <p class="text-xs text-ink-600 mt-0.5">
+              İnceleyen: {{ profile.document_reviewed_by.full_name }}
+              — {{ profile.document_reviewed_at|date:"d.m.Y H:i" }}
+            </p>
+            {% endif %}
+            {% if profile.document_rejection_reason %}
+            <p class="text-xs text-red-400 mt-0.5">Red sebebi: {{ profile.document_rejection_reason }}</p>
+            {% endif %}
+          </div>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            {% if profile.document_status == DOC_PENDING %}
+              <span class="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded">Bekliyor</span>
+            {% elif profile.document_status == DOC_APPROVED %}
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">Onaylandı</span>
+            {% elif profile.document_status == DOC_REJECTED %}
+              <span class="text-xs bg-red-500/10 border border-red-500/20 text-red-400 px-2 py-0.5 rounded">Reddedildi</span>
+            {% endif %}
+
+            {% if profile.document_status != DOC_APPROVED %}
+            <form method="post" action="{% url 'staff_coach_document_action' profile.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <button type="submit"
+                      class="text-xs px-3 py-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors">
+                Onayla
+              </button>
+            </form>
+            {% endif %}
+
+            {% if profile.document_status != DOC_REJECTED %}
+            <form method="post" action="{% url 'staff_coach_document_action' profile.pk %}"
+                  onsubmit="
+                    var r = prompt('Red sebebi (isteğe bağlı):');
+                    if(r===null){return false;}
+                    this.querySelector('[name=reason]').value=r;
+                  ">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <input type="hidden" name="reason" value="">
+              <button type="submit"
+                      class="text-xs px-3 py-1.5 rounded bg-red-600/10 hover:bg-red-600/20 text-red-400 transition-colors">
+                Reddet
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-10 text-center text-ink-500 text-sm">
+      Henüz belge yükleyen koç yok.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

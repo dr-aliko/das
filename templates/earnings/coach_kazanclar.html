@@ -43,6 +43,23 @@
     </a>
   </div>
 
+  {% if not profile_has_iban or not profile_has_document %}
+  <div class="rounded-xl border border-amber-700/40 bg-amber-500/5 px-4 py-3 flex items-start gap-3">
+    <div>
+      <p class="text-sm font-medium text-amber-300">Ödeme bilgileriniz eksik</p>
+      <p class="text-xs text-amber-500/80 mt-0.5">
+        {% if not profile_has_iban %}IBAN girilmemiş.{% endif %}
+        {% if not profile_has_document %}Kimlik/sözleşme belgesi yüklenmemiş.{% endif %}
+        Ödeme yapılabilmesi için bu bilgilerin tamamlanması gerekir.
+      </p>
+      <a href="{% url 'coach_profile' %}"
+         class="inline-block mt-2 text-xs text-amber-400 hover:text-amber-200 underline">
+        Profil sayfasına git →
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {% comment %}
   ── Summary tiles (2×2 mobile / 4-in-a-row desktop) ─────────────────────────
   {% endcomment %}

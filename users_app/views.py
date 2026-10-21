@@ -25,9 +25,16 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import EmailMultiAlternatives
 from django_ratelimit.decorators import ratelimit
 
-from .decorators import staff_required
-from .forms import CoachRegistrationForm, EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm, UserRegistrationForm
-from .models import CoachAlert, CoachStudent, CoachStudentInterval, EmailVerificationCode, FeeTier, Notification, StudentAchievement, StudentInvite, User
+from .decorators import coach_required, staff_required
+from .forms import (
+    CoachProfileForm, CoachProfileQuickForm, CoachRegistrationForm,
+    EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm,
+    UserRegistrationForm, mask_iban,
+)
+from .models import (
+    CoachAlert, CoachIbanLog, CoachProfile, CoachStudent, CoachStudentInterval,
+    EmailVerificationCode, FeeTier, Notification, StudentAchievement, StudentInvite, User,
+)
 from .services.billing import coach_billing_summary
 
 
@@ -294,6 +301,7 @@ def register_view(request):
             user.is_approved = False
             user.is_active = False   # blocked until admin approves
             user.save(update_fields=['is_approved', 'is_active'])
+            CoachProfile.objects.create(user=user, phone=form.cleaned_data.get('phone', ''))
             code = _create_verification_code(user)
             _send_verification_email(user, code)
             request.session['pending_verification_uid'] = user.id
@@ -1733,11 +1741,26 @@ def panel_koc_ekle_view(request):
         action = request.POST.get('action', '')
         full_name = request.POST.get('full_name', '').strip()
         email_raw = request.POST.get('email', '').strip().lower()
-        form_data = {'full_name': full_name, 'email': email_raw}
+        phone_raw = request.POST.get('phone', '').strip()
+        form_data = {'full_name': full_name, 'email': email_raw, 'phone': phone_raw}
+
+        def _norm_phone(raw):
+            if not raw:
+                return ''
+            from purchase_app.forms import _normalize_tr_mobile
+            try:
+                return _normalize_tr_mobile(raw)
+            except ValueError:
+                return None  # signals invalid
 
         if action == 'preview':
+            phone_check = _norm_phone(phone_raw) if phone_raw else None
             if not full_name:
                 error = 'Ad Soyad boş bırakılamaz.'
+            elif not phone_raw:
+                error = 'Telefon numarası zorunludur.'
+            elif phone_check is None:
+                error = 'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
             elif not email_raw or '@' not in email_raw:
                 error = 'Geçerli bir e-posta adresi girin.'
             elif User.objects.filter(email__iexact=email_raw).exists():
@@ -1760,6 +1783,7 @@ def panel_koc_ekle_view(request):
                 coach.is_active = True
                 coach.is_approved = True
                 coach.save(update_fields=['is_active', 'is_approved'])
+                CoachProfile.objects.create(user=coach, phone=_norm_phone(phone_raw) or '')
 
                 ok = _send_koc_invite_email_now(coach, request)
                 if ok:
@@ -1780,6 +1804,7 @@ def panel_koc_ekle_view(request):
         'coaches_no_pw': coaches_no_pw,
         'get_full_name': request.GET.get('full_name', ''),
         'get_email': request.GET.get('email', ''),
+        'get_phone': request.GET.get('phone', ''),
         'q': q,
     })
 
@@ -1892,3 +1917,242 @@ def profil_wp_availability(request):
     user.wp_is_available = is_available
     user.save(update_fields=['wp_is_available'])
     return JsonResponse({'ok': True, 'is_available': is_available})
+
+
+# ── Coach profile (payment identity) ─────────────────────────────────────────
+
+def _send_iban_change_email(coach_user, old_masked, new_masked):
+    try:
+        from django.core.mail import send_mail
+        body = (
+            f'Sayın {coach_user.full_name},\n\n'
+            f'IBAN bilginiz güncellenmiştir.\n'
+            f'Eski: {old_masked or "(boş)"}\n'
+            f'Yeni: {new_masked}\n\n'
+            f'Bu değişikliği siz yapmadıysanız lütfen bizimle iletişime geçin.\n'
+        )
+        send_mail(
+            subject='IBAN bilginiz güncellendi — Vagus',
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[coach_user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        _log.warning('IBAN change email failed for coach pk=%s', coach_user.pk, exc_info=True)
+
+
+@coach_required
+def coach_profile_view(request):
+    user = request.user
+    profile, _ = CoachProfile.objects.get_or_create(user=user)
+
+    old_iban = profile.iban  # capture before form.is_valid() mutates the instance
+
+    if request.method == 'POST':
+        form = CoachProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            new_iban = form.cleaned_data.get('iban', '')
+            iban_changed = new_iban and new_iban != old_iban
+            old_masked = mask_iban(old_iban) if (iban_changed and old_iban) else ''
+
+            # Reset document status when a new document is uploaded
+            if form.cleaned_data.get('document'):
+                form.instance.document_status = CoachProfile.DOC_PENDING
+                form.instance.document_rejection_reason = ''
+                form.instance.document_reviewed_by = None
+                form.instance.document_reviewed_at = None
+
+            # Only update full_name if provided (keep User.full_name in sync)
+            full_name_new = request.POST.get('full_name', '').strip()
+            if full_name_new:
+                user.full_name = full_name_new
+                user.save(update_fields=['full_name'])
+
+            form.save()
+
+            if iban_changed:
+                new_masked = profile.iban_masked()
+                CoachIbanLog.objects.create(
+                    coach=profile,
+                    changed_by=user,
+                    old_iban_masked=old_masked,
+                    new_iban_masked=new_masked,
+                )
+                _send_iban_change_email(user, old_masked, new_masked)
+
+            messages.success(request, 'Profil bilgileriniz kaydedildi.')
+            return redirect('coach_profile')
+    else:
+        form = CoachProfileForm(instance=profile, initial={'full_name': user.full_name})
+
+    return render(request, 'coach/profile.html', {
+        'form': form,
+        'profile': profile,
+        'iban_masked': profile.iban_masked(),
+        'has_iban': bool(profile.iban),
+        'has_document': bool(profile.document),
+        'iban_logs': profile.iban_logs.all()[:10],
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def coach_profile_quick_update(request):
+    """Popup form endpoint — updates name and phone. Fail-open: never 500."""
+    try:
+        if not request.user.is_coach or request.user.is_staff:
+            return redirect('/')
+        form = CoachProfileQuickForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            user.full_name = form.cleaned_data['full_name']
+            user.save(update_fields=['full_name'])
+            profile, _ = CoachProfile.objects.get_or_create(user=user)
+            profile.phone = form.cleaned_data['phone']
+            profile.save(update_fields=['phone', 'updated_at'])
+        # success or invalid: redirect back (fail-open)
+    except Exception:
+        pass
+    return redirect(request.META.get('HTTP_REFERER') or '/')
+
+
+# ── Private document serving ──────────────────────────────────────────────────
+
+def serve_private_document(request, path):
+    """Serve a private coach document. Only the owner or staff may access it."""
+    import mimetypes
+    import os
+    from pathlib import Path, PurePosixPath
+    from django.http import FileResponse, Http404, HttpResponseForbidden
+
+    if not request.user.is_authenticated:
+        return redirect(f'{settings.LOGIN_URL}?next={request.path}')
+
+    # Path-traversal guard — reject before any DB or filesystem access.
+    # PurePosixPath normalises slash direction; .parts exposes each segment.
+    try:
+        parts = PurePosixPath(path).parts
+    except Exception:
+        parts = ()
+    if '..' in parts or path.startswith('/') or (parts and parts[0] == '/'):
+        return HttpResponseForbidden('Geçersiz dosya yolu.')
+
+    try:
+        profile = CoachProfile.objects.select_related('user').get(document=path)
+    except CoachProfile.DoesNotExist:
+        raise Http404
+
+    if not (request.user.is_staff or request.user.pk == profile.user_id):
+        return HttpResponseForbidden('Bu dosyaya erişim yetkiniz yok.')
+
+    private_root = Path(settings.PRIVATE_MEDIA_ROOT).resolve()
+    file_path = (private_root / path).resolve()
+
+    # Confinement check: resolved path must sit inside PRIVATE_MEDIA_ROOT.
+    try:
+        file_path.relative_to(private_root)
+    except ValueError:
+        return HttpResponseForbidden('Geçersiz dosya yolu.')
+
+    if not file_path.exists():
+        raise Http404
+
+    ext = os.path.splitext(path)[1].lower()
+    content_type, _ = mimetypes.guess_type(f'file{ext}')
+    content_type = content_type or 'application/octet-stream'
+
+    # Inline for images; attachment (force-download) for everything else.
+    if content_type.startswith('image/'):
+        disposition = f'inline; filename="belge{ext}"'
+    else:
+        disposition = f'attachment; filename="belge{ext}"'
+
+    response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+    response['Content-Disposition'] = disposition
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
+# ── Staff: coach document review ──────────────────────────────────────────────
+
+@staff_required
+@ratelimit(key='user', rate='30/h', block=True)
+def staff_coach_documents_view(request):
+    profiles = (
+        CoachProfile.objects
+        .select_related('user', 'document_reviewed_by')
+        .filter(document__gt='')
+        .order_by('document_status', '-updated_at')
+    )
+    return render(request, 'panel/koc_belgeleri.html', {
+        'active_tab': 'koc_belgeleri',
+        'profiles': profiles,
+        'DOC_PENDING':  CoachProfile.DOC_PENDING,
+        'DOC_APPROVED': CoachProfile.DOC_APPROVED,
+        'DOC_REJECTED': CoachProfile.DOC_REJECTED,
+    })
+
+
+@staff_required
+@require_http_methods(['POST'])
+@ratelimit(key='user', rate='30/h', block=True)
+def staff_coach_document_action(request, pk):
+    profile = get_object_or_404(CoachProfile, pk=pk)
+    action = request.POST.get('action', '')
+    reason = request.POST.get('reason', '').strip()
+
+    from django.utils import timezone
+    if action == 'approve':
+        profile.document_status = CoachProfile.DOC_APPROVED
+        profile.document_rejection_reason = ''
+        profile.document_reviewed_by = request.user
+        profile.document_reviewed_at = timezone.now()
+        profile.save(update_fields=[
+            'document_status', 'document_rejection_reason',
+            'document_reviewed_by', 'document_reviewed_at', 'updated_at',
+        ])
+        _notify_coach_document_decision(profile, approved=True, reason='')
+        messages.success(request, f'{profile.user.full_name} belgesi onaylandı.')
+    elif action == 'reject':
+        profile.document_status = CoachProfile.DOC_REJECTED
+        profile.document_rejection_reason = reason
+        profile.document_reviewed_by = request.user
+        profile.document_reviewed_at = timezone.now()
+        profile.save(update_fields=[
+            'document_status', 'document_rejection_reason',
+            'document_reviewed_by', 'document_reviewed_at', 'updated_at',
+        ])
+        _notify_coach_document_decision(profile, approved=False, reason=reason)
+        messages.success(request, f'{profile.user.full_name} belgesi reddedildi.')
+    else:
+        messages.error(request, 'Geçersiz işlem.')
+
+    return redirect('staff_coach_documents')
+
+
+def _notify_coach_document_decision(profile, approved, reason):
+    try:
+        subject = 'Belgeniz onaylandı — Vagus' if approved else 'Belgeniz reddedildi — Vagus'
+        if approved:
+            body = (
+                f'Sayın {profile.user.full_name},\n\n'
+                'Yüklediğiniz kimlik/sözleşme belgesi onaylanmıştır.\n'
+            )
+        else:
+            body = (
+                f'Sayın {profile.user.full_name},\n\n'
+                'Yüklediğiniz kimlik/sözleşme belgesi reddedilmiştir.\n'
+                f'Sebep: {reason or "Belirtilmedi"}\n\n'
+                'Lütfen geçerli bir belge yükleyin.\n'
+            )
+        from django.core.mail import send_mail
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[profile.user.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
