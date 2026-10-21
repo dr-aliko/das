@@ -219,6 +219,19 @@
                   </div>
                 </template>
 
+                <!-- No-playlist nudge: flag off, ders selected, no matching YT playlists, not loading -->
+                <template x-if="typeof _LEGACY_ENABLED !== 'undefined' && !_LEGACY_ENABLED && taskForm.konu_ders_id && filteredYtListeler.length === 0 && !loadingListeler">
+                  <div class="px-1 space-y-2">
+                    <p class="text-xs" style="color:var(--muted)">Bu ders için henüz oynatma listesi eklemediniz.</p>
+                    <button type="button"
+                            @click="window.dispatchEvent(new CustomEvent('open-playlist-importer', { detail: { examType: taskForm.sinav_tipi } }))"
+                            class="h-8 px-3 text-xs font-bold rounded-xl border transition-colors"
+                            style="color:var(--primary);background:var(--primary-tint);border-color:var(--primary)">
+                      Playlist ekle
+                    </button>
+                  </div>
+                </template>
+
                 <!-- Listeyi yenile — coach-only, shown when a YT playlist the coach owns is selected -->
                 <template x-if="String(taskForm.liste_id).startsWith('yt:') && !!(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).is_mine">
                   <div class="space-y-1.5 px-1">

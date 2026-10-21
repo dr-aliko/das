@@ -117,12 +117,12 @@ def test_legacy_task_meta_videos_intact_when_flag_off(client):
     assert grup.meta['videos'] == saved_videos, 'meta.videos must survive a re-save'
 
 
-# ── Test 4: flag off — DerslerView builds list from own playlists ─────────────
+# ── Test 4: flag off — DerslerView builds list from Subject table ─────────────
 
 @pytest.mark.django_db
 @override_settings(LEGACY_PLAYLISTS_ENABLED=False)
 def test_dersler_own_playlists_flag_off(client):
-    """DerslerView returns subjects from the coach's own playlists + unspecified entry."""
+    """DerslerView returns all non-excluded Subject rows + unspecified entry; playlist_count annotated."""
     from exams_app.models import Subject
     coach = baker.make('users_app.User', role='coach', is_approved=True)
     # name includes exam_type prefix so display_name strips it → 'Matematik', 'Fizik'
@@ -425,3 +425,64 @@ def test_dersler_ayt_alan_filter_returns_only_ayt_subject(client):
     assert ayt_visible[1]['id'] == 'sub_0'
     # TYT Matematik never visible in AYT mode
     assert not any(d['exam_type'] == 'TYT' for d in ayt_visible)
+
+
+# ── Test 14: TYT subject without playlist is returned with playlist_count 0 ───
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_subject_without_playlist_returned_with_count_zero(client):
+    """A TYT subject that has no playlist is still returned, with playlist_count=0."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    geo = baker.make(Subject, name='TYT Geometri', exam_type='TYT', excluded_from_planning=False)
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    assert len(dersler) == 1
+    assert dersler[0]['id'] == f'sub_{geo.pk}'
+    assert dersler[0]['ad'] == 'Geometri'
+    assert dersler[0]['exam_type'] == 'TYT'
+    assert dersler[0]['playlist_count'] == 0
+
+    # TYT tip filter shows it
+    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
+    assert len(tyt_visible) == 1
+
+
+# ── Test 15: AYT + alan — subjects without playlists included, TYT subjects not ─
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_ayt_alan_includes_subjects_without_playlists(client):
+    """AYT choice with SAY alan: AYT subjects are returned even without playlists;
+    TYT subjects are never returned for AYT; playlist_count reflects actual counts."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    ayt_fiz = baker.make(Subject, name='AYT Fizik', exam_type='AYT', excluded_from_planning=False)
+    # only ayt_mat has a playlist; ayt_fiz has none
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    by_id = {d['id']: d for d in dersler}
+
+    # All three subjects present regardless of playlist count
+    assert f'sub_{tyt_mat.pk}' in by_id
+    assert f'sub_{ayt_mat.pk}' in by_id
+    assert f'sub_{ayt_fiz.pk}' in by_id
+
+    # playlist_count correct
+    assert by_id[f'sub_{ayt_mat.pk}']['playlist_count'] == 1
+    assert by_id[f'sub_{ayt_fiz.pk}']['playlist_count'] == 0
+
+    # AYT exam_type filter: AYT subjects visible, TYT subject not
+    ayt_base = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+    ayt_ids = {d['id'] for d in ayt_base}
+    assert f'sub_{ayt_mat.pk}' in ayt_ids
+    assert f'sub_{ayt_fiz.pk}' in ayt_ids
+    assert f'sub_{tyt_mat.pk}' not in ayt_ids

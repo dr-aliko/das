@@ -189,9 +189,12 @@ function playlistImporter() {
       return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
     },
 
-    open() {
+    open(detail) {
       this.show = true;
       document.body.style.overflow = 'hidden';
+      if (detail?.examType && this.step !== 'importing') {
+        this.selectedExamType = detail.examType;
+      }
       this.loadMyPlaylists();
       if (this._activeJobId && this.step === 'importing') {
         this._startPoll(this._activeJobId);
@@ -902,7 +905,7 @@ function panel() {
       } catch (e) { console.error('[deleteYtPlaylist]', e); }
     },
 
-    onPlaylistImported(payload) {
+    async onPlaylistImported(payload) {
       // Called when the import modal fires 'playlist-imported'.
       // Pre-fill the create-task form with the imported playlist.
       this.taskForm.aktivite_tipi   = 'konu_anlatimi';
@@ -917,6 +920,7 @@ function panel() {
       }));
       this.taskForm.selectedVideos = [];
       this.updateSure();
+      await this.loadYtListeler();
       this.showTaskModal = true;
     },
 

@@ -20,7 +20,7 @@ on the same overlay div, exactly as the settings modal on this page.
 </style>
 
 <div x-data="playlistImporter()"
-     @open-playlist-importer.window="open()"
+     @open-playlist-importer.window="open($event.detail)"
      x-show="show" x-cloak
      class="print:hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4"
      style="z-index:60"

@@ -267,25 +267,38 @@ class KaynakKitapListView(View):
 class DerslerView(View):
     def get(self, request):
         if not settings.LEGACY_PLAYLISTS_ENABLED:
+            from django.db.models import Count, Q
+            from exams_app.models import Subject
             from tasks_app.models import YouTubePlaylist
-            qs = (YouTubePlaylist.objects
-                  .filter(imported_by=request.user, subject__isnull=False)
-                  .select_related('subject')
-                  .order_by('subject__name'))
-            seen_pks: set[int] = set()
-            dersler = []
-            for p in qs:
-                if p.subject_id not in seen_pks:
-                    seen_pks.add(p.subject_id)
-                    dersler.append({
-                        "id": f"sub_{p.subject_id}",
-                        "ad": p.subject.display_name,
-                        "display_name": p.subject.display_name,
-                        "exam_type": p.subject.exam_type,
-                    })
-            dersler.sort(key=lambda d: d["ad"])
-            if YouTubePlaylist.objects.filter(imported_by=request.user, subject__isnull=True).exists():
-                dersler.append({"id": "sub_0", "ad": "Ders belirtilmemiş", "display_name": "", "exam_type": ""})
+            qs = (Subject.objects
+                  .filter(excluded_from_planning=False)
+                  .annotate(
+                      playlist_count=Count(
+                          'youtube_playlists',
+                          filter=Q(youtube_playlists__imported_by=request.user),
+                      )
+                  ))
+            dersler = sorted(
+                [
+                    {
+                        "id": f"sub_{s.pk}",
+                        "ad": s.display_name,
+                        "display_name": s.display_name,
+                        "exam_type": s.exam_type,
+                        "playlist_count": s.playlist_count,
+                    }
+                    for s in qs
+                ],
+                key=lambda d: d["ad"],
+            )
+            unspec_count = YouTubePlaylist.objects.filter(
+                imported_by=request.user, subject__isnull=True
+            ).count()
+            if unspec_count > 0:
+                dersler.append({
+                    "id": "sub_0", "ad": "Ders belirtilmemiş", "display_name": "",
+                    "exam_type": "", "playlist_count": unspec_count,
+                })
             return JsonResponse({"dersler": dersler})
         return JsonResponse({"dersler": api_client.get_dersler()})
 

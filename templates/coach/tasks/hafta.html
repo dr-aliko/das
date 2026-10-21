@@ -705,7 +705,19 @@
                 + Playlist Ekle
               </button>
             </div>
-            <div class="flex items-center gap-1.5">
+            <template x-if="!_LEGACY_ENABLED && taskForm.konu_ders_id && filteredYtListeler.length === 0 && !loadingListeler">
+              <div class="flex items-center gap-2 flex-wrap" style="margin-bottom:4px">
+                <span class="text-xs" style="color:var(--muted)">Bu ders için henüz oynatma listesi eklemediniz.</span>
+                <button type="button"
+                        @click="window.dispatchEvent(new CustomEvent('open-playlist-importer', { detail: { examType: taskForm.sinav_tipi } }))"
+                        class="h-7 px-2 rounded-lg border transition"
+                        style="font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-tint);border-color:var(--primary)">
+                  Playlist ekle
+                </button>
+              </div>
+            </template>
+            <div class="flex items-center gap-1.5"
+                 x-show="!(!_LEGACY_ENABLED && taskForm.konu_ders_id && filteredYtListeler.length === 0 && !loadingListeler)">
               <select x-model="taskForm.liste_id" @change="handleListeChange()"
                       class="flex-1 min-w-0 border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
                              text-[var(--heading)] focus:outline-none focus:border-steel-500 transition">
@@ -1162,7 +1174,7 @@ function coachMobilePanel() {
       }catch(e){ console.error('[coach mobile] ytVideolar',e); }
       finally{ this.loadingVideolar=false; }
     },
-    onPlaylistImported(payload){
+    async onPlaylistImported(payload){
       if(!this.selectedStudent)return;
       this.listeler=[];
       this.taskForm.aktivite_tipi='konu_anlatimi';
@@ -1174,6 +1186,7 @@ function coachMobilePanel() {
       this.videolar=(payload.videos??[]).map(v=>({id:v.id,baslik:v.title,sure_dk:v.duration}));
       this.taskForm.selectedVideos=[];
       this.updateSure();
+      await this.loadYtListeler();
       this.showAddSheet=true;
     },
     async deleteYtPlaylist(pk){
