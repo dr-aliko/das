@@ -174,18 +174,17 @@ def test_dersler_ad_matches_playlist_subject_display(client):
     assert pl_unspc['subject_display'] == ''
 
 
-# ── Test 6: same display_name for TYT and AYT → no duplicates, disambiguated ──
+# ── Test 6: same display_name for TYT and AYT → plain names, differentiated by exam_type ─
 
 @pytest.mark.django_db
 @override_settings(LEGACY_PLAYLISTS_ENABLED=False)
-def test_dersler_no_duplicates_for_same_display_name(client):
-    """Two subjects with the same display_name (e.g. TYT vs AYT Matematik) must
-    appear as 'Matematik (AYT)' and 'Matematik (TYT)', never as two plain 'Matematik' entries."""
+def test_dersler_same_display_name_plain_names_with_exam_type(client):
+    """TYT Matematik and AYT Matematik both appear as plain 'Matematik' in the server
+    response; exam_type differentiates them so the client can show only one at a time."""
     from exams_app.models import Subject
     coach = baker.make('users_app.User', role='coach', is_approved=True)
     tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
     ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
-    # Unique subject, no name collision
     tyt_bio = baker.make(Subject, name='TYT Biyoloji', exam_type='TYT', excluded_from_planning=False)
     baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_mat, exam_type='TYT')
     baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
@@ -196,18 +195,18 @@ def test_dersler_no_duplicates_for_same_display_name(client):
     assert r.status_code == 200
     dersler = r.json()['dersler']
 
+    # No suffix in any name
+    assert not any('(' in d['ad'] for d in dersler)
+    # Both Matematik entries present with plain name and correct exam_type
+    mat_entries = [d for d in dersler if d['ad'] == 'Matematik']
+    assert len(mat_entries) == 2
+    exam_types = {d['exam_type'] for d in mat_entries}
+    assert exam_types == {'TYT', 'AYT'}
+    # Biyoloji present
+    assert any(d['ad'] == 'Biyoloji' for d in dersler)
+    # Alphabetical order (Biyoloji before Matematik)
     names = [d['ad'] for d in dersler]
-    # No plain 'Matematik' — must be disambiguated
-    assert 'Matematik' not in names
-    assert 'Matematik (TYT)' in names
-    assert 'Matematik (AYT)' in names
-    # Unique subject keeps its short name
-    assert 'Biyoloji' in names
-    # Alphabetical order: Biyoloji < Matematik (AYT) < Matematik (TYT)
-    assert names.index('Biyoloji') < names.index('Matematik (AYT)')
-    assert names.index('Matematik (AYT)') < names.index('Matematik (TYT)')
-    # No duplicates
-    assert len(names) == len(set(names))
+    assert names.index('Biyoloji') < names.index('Matematik')
 
 
 # ── Test 7: empty coach → empty dersler list, no error ────────────────────────
@@ -248,23 +247,25 @@ def test_dersler_exam_type_field_and_tip_filter(client):
     assert tyt_entry['exam_type'] == 'TYT'
     assert ayt_entry['exam_type'] == 'AYT'
 
-    # display_name matches subject_display (used by filteredYtListeler)
+    # plain name — no suffix
+    assert tyt_entry['ad'] == 'Matematik'
+    assert ayt_entry['ad'] == 'Matematik'
     assert tyt_entry['display_name'] == 'Matematik'
     assert ayt_entry['display_name'] == 'Matematik'
-
-    # ad carries the disambiguating suffix shown in the selector
-    assert tyt_entry['ad'] == 'Matematik (TYT)'
-    assert ayt_entry['ad'] == 'Matematik (AYT)'
 
     # sub_0 has empty exam_type and is last
     assert dersler[-1]['id'] == 'sub_0'
     assert dersler[-1]['exam_type'] == ''
     assert dersler[-1]['display_name'] == ''
 
-    # flag=off → filteredDersler returns all entries unfiltered
+    # client filters by exam_type: TYT tip sees only TYT entry; AYT tip sees only AYT entry
     assert len(dersler) == 3  # TYT Matematik, AYT Matematik, sub_0
-    assert any(d['ad'] == 'Matematik (TYT)' for d in dersler)
-    assert any(d['ad'] == 'Matematik (AYT)' for d in dersler)
+    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
+    ayt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+    assert len(tyt_visible) == 2  # TYT Matematik + sub_0
+    assert len(ayt_visible) == 2  # AYT Matematik + sub_0
+    assert not any(d['exam_type'] == 'AYT' for d in tyt_visible if d['exam_type'])
+    assert not any(d['exam_type'] == 'TYT' for d in ayt_visible if d['exam_type'])
 
 
 # ── Test 9: single exam_type coach — entry returned unfiltered ────────────────
@@ -355,3 +356,72 @@ def test_tyt_ders_exam_type_enables_playlist_filter_for_ayt_student(client):
     assert geo_pl[0]['exam_type'] == 'TYT'
     # ders.display_name == playlist.subject_display → filteredYtListeler match is guaranteed
     assert geo_entry['display_name'] == geo_pl[0]['subject_display']
+
+
+# ── Test 12: plain names + TYT tip returns Matematik (TYT) once + sub_0 ──────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_tyt_tip_returns_plain_name_once(client):
+    """Fixture: TYT Matematik, AYT Matematik (same display_name), one unspecified playlist.
+    Server emits plain 'Matematik' for both; client TYT filter returns exactly the TYT entry
+    plus sub_0 — never a duplicate, never a suffix."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_mat, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=None, exam_type='TYT')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    # Server: all three entries with plain names
+    assert not any('(' in d['ad'] for d in dersler)
+    assert dersler[-1]['id'] == 'sub_0'
+
+    # Client TYT filter simulation
+    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
+    assert len(tyt_visible) == 2
+    assert tyt_visible[0]['ad'] == 'Matematik'
+    assert tyt_visible[0]['exam_type'] == 'TYT'
+    assert tyt_visible[1]['id'] == 'sub_0'
+
+
+# ── Test 13: AYT + alan SAY returns AYT Matematik, never TYT Matematik ───────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_ayt_alan_filter_returns_only_ayt_subject(client):
+    """Fixture: TYT Matematik, AYT Matematik, one unspecified playlist.
+    Client AYT filter returns only the AYT entry (+ sub_0); TYT entry never visible."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_mat, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=None, exam_type='TYT')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    # Client AYT+SAY filter simulation (Matematik is in _PLAYLIST_AYT_MAP['SAY'])
+    ayt_base = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+    # SAY allowed: {'Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri'}
+    ayt_say_allowed = {'matematik', 'fizik', 'kimya', 'biyoloji', 'geometri'}
+    all_known_ayt = ayt_say_allowed | {'türk dili ve edebiyatı', 'tarih 2', 'coğrafya 2',
+                                       'felsefe grubu', 'yabancı dil'}
+    ayt_visible = [
+        d for d in ayt_base
+        if not d['exam_type']  # sub_0 always shown
+        or (d.get('display_name') or d['ad']).strip().lower() in ayt_say_allowed
+        or (d.get('display_name') or d['ad']).strip().lower() not in all_known_ayt
+    ]
+    assert len(ayt_visible) == 2
+    assert ayt_visible[0]['ad'] == 'Matematik'
+    assert ayt_visible[0]['exam_type'] == 'AYT'
+    assert ayt_visible[1]['id'] == 'sub_0'
+    # TYT Matematik never visible in AYT mode
+    assert not any(d['exam_type'] == 'TYT' for d in ayt_visible)

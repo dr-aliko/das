@@ -583,7 +583,22 @@ function panel() {
     get filteredDersler() {
       const sinav = this.taskForm.sinav_tipi;
       if (!_LEGACY_ENABLED) {
-        return this.dersler;
+        const base = this.dersler.filter(d => !d.exam_type || d.exam_type === sinav);
+        if (sinav !== 'AYT') return base;
+        const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
+          ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
+        const allowed = _PLAYLIST_AYT_MAP[alan];
+        if (!allowed) return base;
+        const norm = s => s.trim().toLowerCase();
+        const normAllowed = new Set([...allowed].map(norm));
+        const allKnown = new Set(
+          Object.values(_PLAYLIST_AYT_MAP).flatMap(s => [...s]).map(norm)
+        );
+        return base.filter(d => {
+          if (!d.exam_type) return true;
+          const n = norm(d.display_name || d.ad);
+          return normAllowed.has(n) || !allKnown.has(n);
+        });
       }
       if (sinav === 'TYT') return this.dersler.filter(d => _DERS_TYT_ALLOW.has(d.ad));
       if (sinav === 'AYT') {
