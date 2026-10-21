@@ -216,6 +216,37 @@
                   </div>
                 </template>
 
+                <!-- Listeyi yenile — coach-only, shown when a YT playlist the coach owns is selected -->
+                <template x-if="String(taskForm.liste_id).startsWith('yt:') && !!(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).is_mine">
+                  <div class="space-y-1.5 px-1">
+                    <div class="flex items-center gap-2">
+                      <button type="button" @click="doYtPlaylistRefresh()"
+                              :disabled="ytRefreshJob.running"
+                              class="h-8 px-3 text-xs font-bold rounded-xl border transition-colors disabled:opacity-40"
+                              style="color:var(--primary);background:var(--primary-tint);border-color:var(--primary)">
+                        <template x-if="ytRefreshJob.running">
+                          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:.25"/>
+                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style="opacity:.75"/>
+                          </svg>
+                        </template>
+                        <template x-if="!ytRefreshJob.running">
+                          <span>Listeyi yenile</span>
+                        </template>
+                      </button>
+                      <span class="text-xs" style="color:var(--muted-2)"
+                            x-text="(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).last_synced_at
+                              ? 'Son güncelleme: ' + _fmtDate((ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).last_synced_at)
+                              : ''"></span>
+                    </div>
+                    <p x-show="ytRefreshJob.msg" class="text-xs rounded-xl px-3 py-2"
+                       :class="ytRefreshJob.failed
+                         ? 'text-red-500 bg-red-50 border border-red-200'
+                         : 'text-emerald-600 bg-emerald-50 border border-emerald-200'"
+                       x-text="ytRefreshJob.msg"></p>
+                  </div>
+                </template>
+
                 <!-- Step 3: Playlist picker — appears after ders selection -->
                 <div x-show="taskForm.konu_ders_id" class="space-y-2">
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider px-1">OYNATMA LİSTESİ</label>

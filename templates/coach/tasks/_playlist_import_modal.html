@@ -47,18 +47,20 @@ on the same overlay div, exactly as the settings modal on this page.
             <p class="text-xs text-center py-1" style="color:var(--muted-2)">Yükleniyor…</p>
           </template>
           <template x-if="myPlaylists.length > 0">
-            <div class="space-y-2">
-              <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold uppercase tracking-wide shrink-0"
-                   style="color:var(--muted)"
-                   x-text="'Mevcut listeler (' + myPlaylists.length + ')'"></p>
-                <template x-if="myPlaylists.length > 6">
-                  <input x-model="search" type="text" placeholder="Ara…"
-                         class="yt-imp-input h-6 flex-1 min-w-0 px-2 text-xs rounded-lg
-                                focus:outline-none focus:border-steel-500 transition placeholder:text-[var(--muted-2)]">
-                </template>
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2">
+                <button type="button" @click="playlistsExpanded = !playlistsExpanded"
+                        class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide shrink-0 transition"
+                        style="color:var(--muted)">
+                  <span x-text="'Mevcut listeler (' + myPlaylists.length + ')'"></span>
+                  <span style="font-size:9px" x-text="playlistsExpanded ? '▴' : '▾'"></span>
+                </button>
+                <input x-model="search" type="text" placeholder="Ara…"
+                       @input="if($event.target.value.trim()) playlistsExpanded = true"
+                       class="yt-imp-input h-6 flex-1 min-w-0 px-2 text-xs rounded-lg
+                              focus:outline-none focus:border-steel-500 transition placeholder:text-[var(--muted-2)]">
               </div>
-              <div class="space-y-1 max-h-44 overflow-y-auto rounded-xl">
+              <div x-show="playlistsExpanded" class="space-y-1 overflow-y-auto rounded-xl" style="max-height:220px">
                 <template x-for="p in filteredPlaylists" :key="p.pk">
                   <div>
                     <div class="yt-imp-row flex items-center gap-2 px-3 py-2 rounded-lg">

@@ -732,6 +732,36 @@
                 </svg>
               </button>
             </div>
+            <div x-show="String(taskForm.liste_id).startsWith('yt:') && !!(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).is_mine"
+                 class="mt-1 space-y-1">
+              <div class="flex items-center gap-2">
+                <button type="button" @click="doYtPlaylistRefresh()"
+                        :disabled="ytRefreshJob.running"
+                        class="h-7 px-2 text-steel-400 border border-steel-500/30 bg-steel-500/10
+                               hover:bg-steel-500/20 rounded-lg transition
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="font-size:11px;font-weight:600">
+                  <template x-if="ytRefreshJob.running">
+                    <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity:.25"/>
+                      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style="opacity:.75"/>
+                    </svg>
+                  </template>
+                  <template x-if="!ytRefreshJob.running">
+                    <span>Listeyi yenile</span>
+                  </template>
+                </button>
+                <span style="font-size:11px;color:var(--muted-2)"
+                      x-text="(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).last_synced_at
+                        ? 'Son güncelleme: ' + _fmtDate((ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).last_synced_at)
+                        : ''"></span>
+              </div>
+              <p x-show="ytRefreshJob.msg" style="font-size:11px"
+                 :class="ytRefreshJob.failed
+                   ? 'text-ruby-500 bg-ruby-tint border border-ruby-500/30 rounded-lg px-2 py-1'
+                   : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1'"
+                 x-text="ytRefreshJob.msg"></p>
+            </div>
           </div>
 
           <div>
@@ -905,6 +935,7 @@ function coachMobilePanel() {
 
     /* ── API-driven data for konu_anlatimi cascade ── */
     dersler:[], listeler:[], videolar:[], ytListeler:[],
+    ytRefreshJob:{running:false,msg:'',failed:false},
 
     /* ── Sheet state (shared with _task_bottom_sheets.html) ── */
     showStudentSheet:false, showAddSheet:false, showEditSheet:false,
@@ -1078,6 +1109,7 @@ function coachMobilePanel() {
       }catch(e){ this.ytListeler=[]; }
     },
     async loadYtVideolar(pk){
+      this.ytRefreshJob={running:false,msg:'',failed:false};
       this.videolar=[];
       this.taskForm.ytPlaylistPk=pk;
       try{
@@ -1117,10 +1149,54 @@ function coachMobilePanel() {
       }catch(e){ console.error('[deleteYtPlaylist]',e); }
     },
 
+    _fmtDate(iso){
+      if(!iso)return'';
+      const d=new Date(iso);
+      return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'});
+    },
+
+    async doYtPlaylistRefresh(){
+      const pk=this.taskForm.ytPlaylistPk;
+      if(!pk)return;
+      this.ytRefreshJob={running:true,msg:'',failed:false};
+      try{
+        const r=await fetch(`/coach/tasks/api/youtube/${pk}/refresh`,{method:'POST',headers:{'X-CSRFToken':CSRF()}});
+        const d=await r.json();
+        if(!r.ok){this.ytRefreshJob={running:false,msg:d.error||'Güncelleme başarısız.',failed:true};return;}
+        this._pollYtRefresh(pk,d.job_id);
+      }catch(_){this.ytRefreshJob={running:false,msg:'Bağlantı hatası.',failed:true};}
+    },
+
+    _pollYtRefresh(pk,jobId){
+      const poll=async()=>{
+        try{
+          const r=await fetch(`/coach/tasks/api/youtube/jobs/${jobId}`);
+          const d=await r.json();
+          if(d.status==='done'){
+            const prevSel=[...this.taskForm.selectedVideos];
+            try{
+              const vr=await fetch(`/coach/tasks/api/youtube/${pk}/videos`);
+              const vd=await vr.json();
+              this.videolar=(vd.videos??[]).map(v=>({id:v.id,baslik:v.title,sure_dk:v.duration}));
+              const newIds=new Set(this.videolar.map(v=>String(v.id)));
+              this.taskForm.selectedVideos=prevSel.filter(id=>newIds.has(id));
+              this.updateSure();
+            }catch(_){}
+            if(d.playlist){this.ytListeler=this.ytListeler.map(l=>l.pk===pk?Object.assign({},l,d.playlist,{pk}):l);}
+            this.ytRefreshJob={running:false,msg:d.result_msg||'Güncellendi.',failed:false};
+          }else if(d.status==='failed'){
+            this.ytRefreshJob={running:false,msg:d.error_msg||'Güncelleme başarısız.',failed:true};
+          }else{setTimeout(poll,2000);}
+        }catch(_){setTimeout(poll,2000);}
+      };
+      poll();
+    },
+
     /* ── Sheet open/close ── */
     openAdd(){
       if(!this.selectedStudent)return;
       this.editingTask=null;
+      this.ytRefreshJob={running:false,msg:'',failed:false};
       const dayIso=this.days[this.activeDay-1]?.iso??this.weekStart;
       this.listeler=[]; this.videolar=[];
       this.taskForm={

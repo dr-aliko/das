@@ -166,6 +166,7 @@ function playlistImporter() {
     myPlaylists: [],
     loadingPlaylists: false,
     search: '',
+    playlistsExpanded: false,
     pendingDeletePk: null,
     deleteError: '',
     deleteErrorPk: null,
@@ -391,6 +392,7 @@ function panel() {
     days: [],
     toplamlar: {},
     dersler: [], listeler: [], videolar: [], ytListeler: [],
+    ytRefreshJob: { running: false, msg: '', failed: false },
     showTaskModal: false,
     showSettingsModal: false,
     pdfExporting: false,
@@ -772,6 +774,7 @@ function panel() {
     },
 
     handleListeChange() {
+      this.ytRefreshJob = { running: false, msg: '', failed: false };
       const val = this.taskForm.liste_id;
       if (typeof val === 'string' && val.startsWith('yt:')) {
         this.loadYtVideolar(parseInt(val.slice(3)));
@@ -779,6 +782,62 @@ function panel() {
         this.taskForm.ytPlaylistPk = null;
         this.loadVideolar();
       }
+    },
+
+    _fmtDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+    },
+
+    async doYtPlaylistRefresh() {
+      const pk = this.taskForm.ytPlaylistPk;
+      if (!pk) return;
+      this.ytRefreshJob = { running: true, msg: '', failed: false };
+      try {
+        const r = await fetch(`/coach/tasks/api/youtube/${pk}/refresh`, {
+          method: 'POST', headers: { 'X-CSRFToken': CSRF },
+        });
+        const d = await r.json();
+        if (!r.ok) {
+          this.ytRefreshJob = { running: false, msg: d.error || 'Güncelleme başarısız.', failed: true };
+          return;
+        }
+        this._pollYtRefresh(pk, d.job_id);
+      } catch (_) {
+        this.ytRefreshJob = { running: false, msg: 'Bağlantı hatası.', failed: true };
+      }
+    },
+
+    _pollYtRefresh(pk, jobId) {
+      const poll = async () => {
+        try {
+          const r = await fetch(`/coach/tasks/api/youtube/jobs/${jobId}`);
+          const d = await r.json();
+          if (d.status === 'done') {
+            const prevSel = [...this.taskForm.selectedVideos];
+            try {
+              const vr = await fetch(`/coach/tasks/api/youtube/${pk}/videos`);
+              const vd = await vr.json();
+              this.videolar = (vd.videos ?? []).map(v => ({ id: v.id, baslik: v.title, sure_dk: v.duration }));
+              const newIds = new Set(this.videolar.map(v => String(v.id)));
+              this.taskForm.selectedVideos = prevSel.filter(id => newIds.has(id));
+              this.updateSure();
+            } catch (_) {}
+            if (d.playlist) {
+              this.ytListeler = this.ytListeler.map(l =>
+                l.pk === pk ? Object.assign({}, l, d.playlist, { pk }) : l
+              );
+            }
+            this.ytRefreshJob = { running: false, msg: d.result_msg || 'Güncellendi.', failed: false };
+          } else if (d.status === 'failed') {
+            this.ytRefreshJob = { running: false, msg: d.error_msg || 'Güncelleme başarısız.', failed: true };
+          } else {
+            setTimeout(poll, 2000);
+          }
+        } catch (_) { setTimeout(poll, 2000); }
+      };
+      poll();
     },
 
     async deleteYtPlaylist(pk) {
@@ -831,6 +890,7 @@ function panel() {
 
     openAddTask(tarih) {
       this.editingTask = null;
+      this.ytRefreshJob = { running: false, msg: '', failed: false };
       this.taskForm = {
         aktivite_tipi: 'konu_anlatimi', sinav_tipi: 'TYT', ders_title: '',
         ozel_sure_dk: 0, aciklama: '', konu_not: '',
