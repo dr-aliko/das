@@ -22,7 +22,8 @@ def test_flag_off_returns_empty_no_http_call(client):
         r_vid  = client.get('/coach/tasks/api/videolar/1')
 
     assert r_ders.status_code == 200
-    assert r_ders.json() == {'dersler': []}
+    dersler_1 = r_ders.json()['dersler']
+    assert len(dersler_1) == 1 and dersler_1[0]['id'] == 'sub_0'
     assert r_list.status_code == 200
     assert r_list.json() == {'listeler': []}
     assert r_vid.status_code == 200
@@ -144,7 +145,7 @@ def test_dersler_own_playlists_flag_off(client):
     assert 'sub_0' in ids
     assert 'Matematik' in names
     assert 'Fizik' in names
-    assert 'Ders belirtilmemiş' in names
+    assert 'Diğer' in names
 
 
 # ── Test 5: flag off — ders.ad matches playlist subject_display (filter chain) ──
@@ -214,12 +215,15 @@ def test_dersler_same_display_name_plain_names_with_exam_type(client):
 @pytest.mark.django_db
 @override_settings(LEGACY_PLAYLISTS_ENABLED=False)
 def test_dersler_empty_for_coach_with_no_playlists(client):
-    """Coach with no imported playlists gets an empty dersler list, not an error."""
+    """Coach with no imported playlists gets only the Diğer sentinel entry."""
     coach = baker.make('users_app.User', role='coach', is_approved=True)
     client.force_login(coach)
     r = client.get('/coach/tasks/api/dersler')
     assert r.status_code == 200
-    assert r.json() == {'dersler': []}
+    dersler = r.json()['dersler']
+    assert len(dersler) == 1
+    assert dersler[0]['id'] == 'sub_0'
+    assert dersler[0]['ad'] == 'Diğer'
 
 
 # ── Test 8: exam_type field present; tip filter by exam_type works; sub_0 last ─
@@ -282,13 +286,11 @@ def test_dersler_single_exam_type_coach(client):
     client.force_login(coach)
     dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
 
-    assert len(dersler) == 1
+    assert len(dersler) == 2
     assert dersler[0]['ad'] == 'Matematik'
     assert dersler[0]['exam_type'] == 'TYT'
     assert dersler[0]['display_name'] == 'Matematik'
-
-    # flag=off → filteredDersler returns all entries; both TYT and AYT students see this entry
-    assert len(dersler) == 1
+    assert dersler[-1]['id'] == 'sub_0'
 
 
 # ── Test 10: production fixture — all entries returned, no silent drops ────────
@@ -322,7 +324,8 @@ def test_dersler_production_fixture_no_entries_dropped(client):
     assert f'sub_{fiz.pk}' in ids, 'Fizik (TYT) must not be dropped'
     assert f'sub_{ayt_mat.pk}' in ids
     assert f'sub_{ayt_bio.pk}' in ids
-    assert len(dersler) == 5
+    assert 'sub_0' in ids
+    assert len(dersler) == 6
 
 
 # ── Test 11: TYT ders exam_type survives — filteredYtListeler chain correct ───
@@ -440,15 +443,16 @@ def test_dersler_subject_without_playlist_returned_with_count_zero(client):
     client.force_login(coach)
     dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
 
-    assert len(dersler) == 1
-    assert dersler[0]['id'] == f'sub_{geo.pk}'
-    assert dersler[0]['ad'] == 'Geometri'
-    assert dersler[0]['exam_type'] == 'TYT'
-    assert dersler[0]['playlist_count'] == 0
+    assert len(dersler) == 2
+    geo_entry = next(d for d in dersler if d['id'] == f'sub_{geo.pk}')
+    assert geo_entry['ad'] == 'Geometri'
+    assert geo_entry['exam_type'] == 'TYT'
+    assert geo_entry['playlist_count'] == 0
+    assert dersler[-1]['id'] == 'sub_0'
 
-    # TYT tip filter shows it
+    # TYT tip filter shows Geometri + sub_0
     tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
-    assert len(tyt_visible) == 1
+    assert len(tyt_visible) == 2
 
 
 # ── Test 15: AYT + alan — subjects without playlists included, TYT subjects not ─
@@ -486,3 +490,80 @@ def test_dersler_ayt_alan_includes_subjects_without_playlists(client):
     assert f'sub_{ayt_mat.pk}' in ayt_ids
     assert f'sub_{ayt_fiz.pk}' in ayt_ids
     assert f'sub_{tyt_mat.pk}' not in ayt_ids
+
+
+# ── Test 16: TYT umbrella subjects excluded; split subjects present; sub_0 last ─
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_tyt_excludes_umbrella_subjects(client):
+    """TYT Fen Bilimleri and TYT Sosyal Bilimler are excluded from the selector;
+    split subjects (Fizik, Kimya, Biyoloji) appear; last entry is Diğer."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    baker.make(Subject, name='TYT Fen Bilimleri', exam_type='TYT', excluded_from_planning=False)
+    baker.make(Subject, name='TYT Sosyal Bilimler', exam_type='TYT', excluded_from_planning=False)
+    fiz = baker.make(Subject, name='TYT Fizik', exam_type='TYT', excluded_from_planning=False)
+    kim = baker.make(Subject, name='TYT Kimya', exam_type='TYT', excluded_from_planning=False)
+    bio = baker.make(Subject, name='TYT Biyoloji', exam_type='TYT', excluded_from_planning=False)
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    names = [d['ad'] for d in dersler]
+    assert 'Fen Bilimleri' not in names
+    assert 'Sosyal Bilimler' not in names
+    assert 'Fizik' in names
+    assert 'Kimya' in names
+    assert 'Biyoloji' in names
+    assert dersler[-1]['id'] == 'sub_0'
+    assert dersler[-1]['ad'] == 'Diğer'
+    # Exactly 3 subjects + sub_0
+    assert len(dersler) == 4
+
+
+# ── Test 17: AYT strict alan filter — SAY and EA show only allowed subjects ────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_ayt_alan_strict_filter(client):
+    """Client AYT alan filter is strict (no fail-open): SAY sees exactly SAY subjects + Diğer;
+    EA does not see Fizik/Kimya/Biyoloji; AYT Tarih 2 (SOZ only) excluded from both."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    ayt_fiz = baker.make(Subject, name='AYT Fizik', exam_type='AYT', excluded_from_planning=False)
+    ayt_kim = baker.make(Subject, name='AYT Kimya', exam_type='AYT', excluded_from_planning=False)
+    ayt_bio = baker.make(Subject, name='AYT Biyoloji', exam_type='AYT', excluded_from_planning=False)
+    ayt_geo = baker.make(Subject, name='AYT Geometri', exam_type='AYT', excluded_from_planning=False)
+    ayt_ede = baker.make(Subject, name='AYT Türk Dili ve Edebiyatı', exam_type='AYT', excluded_from_planning=False)
+    ayt_tar = baker.make(Subject, name='AYT Tarih 2', exam_type='AYT', excluded_from_planning=False)
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    norm = lambda s: s.strip().lower()
+    say_allowed = {'matematik', 'fizik', 'kimya', 'biyoloji', 'geometri'}
+    ea_allowed = {'matematik', 'türk dili ve edebiyatı', 'geometri'}
+
+    ayt_base = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+
+    say_visible = [
+        d for d in ayt_base
+        if not d['exam_type'] or norm(d.get('display_name') or d['ad']) in say_allowed
+    ]
+    say_names = {d['ad'] for d in say_visible if d['exam_type']}
+    assert say_names == {'Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri'}
+    assert say_visible[-1]['id'] == 'sub_0'
+
+    ea_visible = [
+        d for d in ayt_base
+        if not d['exam_type'] or norm(d.get('display_name') or d['ad']) in ea_allowed
+    ]
+    ea_names = {d['ad'] for d in ea_visible if d['exam_type']}
+    assert ea_names == {'Matematik', 'Türk Dili ve Edebiyatı', 'Geometri'}
+    assert 'Fizik' not in ea_names
+    assert 'Kimya' not in ea_names
+    assert 'Biyoloji' not in ea_names
+    assert 'Tarih 2' not in ea_names
+    assert ea_visible[-1]['id'] == 'sub_0'

@@ -270,8 +270,13 @@ class DerslerView(View):
             from django.db.models import Count, Q
             from exams_app.models import Subject
             from tasks_app.models import YouTubePlaylist
+            # Umbrella subjects excluded from selector by their exact Subject.name.
+            # Using name__in (DB-level filter) is more robust than normalising
+            # display_name: the name field is the unique_together key so it's stable.
+            _UMBRELLA = frozenset({'TYT Fen Bilimleri', 'TYT Sosyal Bilimler'})
             qs = (Subject.objects
                   .filter(excluded_from_planning=False)
+                  .exclude(name__in=_UMBRELLA)
                   .annotate(
                       playlist_count=Count(
                           'youtube_playlists',
@@ -294,11 +299,10 @@ class DerslerView(View):
             unspec_count = YouTubePlaylist.objects.filter(
                 imported_by=request.user, subject__isnull=True
             ).count()
-            if unspec_count > 0:
-                dersler.append({
-                    "id": "sub_0", "ad": "Ders belirtilmemiş", "display_name": "",
-                    "exam_type": "", "playlist_count": unspec_count,
-                })
+            dersler.append({
+                "id": "sub_0", "ad": "Diğer", "display_name": "",
+                "exam_type": "", "playlist_count": unspec_count,
+            })
             return JsonResponse({"dersler": dersler})
         return JsonResponse({"dersler": api_client.get_dersler()})
 

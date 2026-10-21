@@ -594,13 +594,10 @@ function panel() {
         if (!allowed) return base;
         const norm = s => s.trim().toLowerCase();
         const normAllowed = new Set([...allowed].map(norm));
-        const allKnown = new Set(
-          Object.values(_PLAYLIST_AYT_MAP).flatMap(s => [...s]).map(norm)
-        );
         return base.filter(d => {
           if (!d.exam_type) return true;
           const n = norm(d.display_name || d.ad);
-          return normAllowed.has(n) || !allKnown.has(n);
+          return normAllowed.has(n);
         });
       }
       if (sinav === 'TYT') return this.dersler.filter(d => _DERS_TYT_ALLOW.has(d.ad));
