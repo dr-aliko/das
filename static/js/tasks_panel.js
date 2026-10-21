@@ -563,10 +563,14 @@ function panel() {
       const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
         ? (_STUDENT_ALAN_MAP[this.studentId] || 'SAY') : 'SAY';
       return this.ytListeler.filter(l => {
-        if (tip && l.exam_type !== tip) return false;
-        if (l.exam_type === 'AYT' && alan && l.subject_display) {
-          const allowed = _PLAYLIST_AYT_MAP[alan];
-          if (allowed && !allowed.has(l.subject_display)) return false;
+        if (_LEGACY_ENABLED) {
+          if (tip && l.exam_type !== tip) return false;
+          if (l.exam_type === 'AYT' && alan && l.subject_display) {
+            const allowed = _PLAYLIST_AYT_MAP[alan];
+            if (allowed && !allowed.has(l.subject_display)) return false;
+          }
+        } else if (ders && ders.exam_type) {
+          if (l.exam_type !== ders.exam_type) return false;
         }
         if (ders) {
           if (ders.id === 'sub_0') return l.subject_display === '';
@@ -579,7 +583,7 @@ function panel() {
     get filteredDersler() {
       const sinav = this.taskForm.sinav_tipi;
       if (!_LEGACY_ENABLED) {
-        return this.dersler.filter(d => !d.exam_type || d.exam_type === sinav);
+        return this.dersler;
       }
       if (sinav === 'TYT') return this.dersler.filter(d => _DERS_TYT_ALLOW.has(d.ad));
       if (sinav === 'AYT') {

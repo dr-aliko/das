@@ -261,24 +261,18 @@ def test_dersler_exam_type_field_and_tip_filter(client):
     assert dersler[-1]['exam_type'] == ''
     assert dersler[-1]['display_name'] == ''
 
-    # Client-side tip filter simulation: flag=off → filter by exam_type field
-    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
-    ayt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
-    assert any(d['ad'] == 'Matematik (TYT)' for d in tyt_visible)
-    assert not any(d['ad'] == 'Matematik (AYT)' for d in tyt_visible)
-    assert any(d['ad'] == 'Matematik (AYT)' for d in ayt_visible)
-    assert not any(d['ad'] == 'Matematik (TYT)' for d in ayt_visible)
-    # sub_0 always visible regardless of tip
-    assert any(d['id'] == 'sub_0' for d in tyt_visible)
-    assert any(d['id'] == 'sub_0' for d in ayt_visible)
+    # flag=off → filteredDersler returns all entries unfiltered
+    assert len(dersler) == 3  # TYT Matematik, AYT Matematik, sub_0
+    assert any(d['ad'] == 'Matematik (TYT)' for d in dersler)
+    assert any(d['ad'] == 'Matematik (AYT)' for d in dersler)
 
 
-# ── Test 9: single exam_type coach — entries not wrongly filtered out ──────────
+# ── Test 9: single exam_type coach — entry returned unfiltered ────────────────
 
 @pytest.mark.django_db
 @override_settings(LEGACY_PLAYLISTS_ENABLED=False)
 def test_dersler_single_exam_type_coach(client):
-    """Coach with only TYT playlists: TYT entries show for TYT; nothing shows for AYT."""
+    """Coach with only TYT playlists: the TYT entry appears for all sinav types (no filtering)."""
     from exams_app.models import Subject
     coach = baker.make('users_app.User', role='coach', is_approved=True)
     math = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
@@ -292,10 +286,72 @@ def test_dersler_single_exam_type_coach(client):
     assert dersler[0]['exam_type'] == 'TYT'
     assert dersler[0]['display_name'] == 'Matematik'
 
-    # TYT tip filter: entry shows
-    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
-    assert len(tyt_visible) == 1
+    # flag=off → filteredDersler returns all entries; both TYT and AYT students see this entry
+    assert len(dersler) == 1
 
-    # AYT tip filter: nothing shows
-    ayt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
-    assert len(ayt_visible) == 0
+
+# ── Test 10: production fixture — all entries returned, no silent drops ────────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_production_fixture_no_entries_dropped(client):
+    """Mirrors real production data: coach has TYT-only subjects (Geometri, Matematik)
+    plus mixed AYT subjects. All entries must appear regardless of sinav_tipi."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+
+    # TYT-only subjects (the ones that disappeared in production when sinav_tipi=AYT)
+    geo = baker.make(Subject, name='TYT Geometri', exam_type='TYT', excluded_from_planning=False)
+    mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    fiz = baker.make(Subject, name='TYT Fizik', exam_type='TYT', excluded_from_planning=False)
+
+    # AYT subjects
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    ayt_bio = baker.make(Subject, name='AYT Biyoloji', exam_type='AYT', excluded_from_planning=False)
+
+    for subj, etype in [(geo, 'TYT'), (mat, 'TYT'), (fiz, 'TYT'), (ayt_mat, 'AYT'), (ayt_bio, 'AYT')]:
+        baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=subj, exam_type=etype)
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    ids = {d['id'] for d in dersler}
+    assert f'sub_{geo.pk}' in ids, 'Geometri (TYT) must not be dropped'
+    assert f'sub_{mat.pk}' in ids, 'Matematik (TYT) must not be dropped'
+    assert f'sub_{fiz.pk}' in ids, 'Fizik (TYT) must not be dropped'
+    assert f'sub_{ayt_mat.pk}' in ids
+    assert f'sub_{ayt_bio.pk}' in ids
+    assert len(dersler) == 5
+
+
+# ── Test 11: TYT ders exam_type survives — filteredYtListeler chain correct ───
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_tyt_ders_exam_type_enables_playlist_filter_for_ayt_student(client):
+    """Geometri (exam_type=TYT) ders entry carries exam_type='TYT'.
+    filteredYtListeler flag=OFF filters by ders.exam_type, not sinav_tipi,
+    so TYT Geometri playlists are shown even when a student's sinav_tipi is AYT."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    geo = baker.make(Subject, name='TYT Geometri', exam_type='TYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=geo, exam_type='TYT',
+               title='Geometri Playlist 1')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    geo_entry = next(d for d in dersler if d['id'] == f'sub_{geo.pk}')
+    assert geo_entry['exam_type'] == 'TYT'
+    assert geo_entry['display_name'] == 'Geometri'
+
+    # The playlist carries exam_type='TYT' and subject_display='Geometri'.
+    # When flag=OFF, filteredYtListeler uses ders.exam_type (TYT) — not sinav_tipi (AYT) —
+    # so the playlist passes the exam_type gate and then matches by subject_display.
+    playlists = client.get('/coach/tasks/api/youtube/list').json()['playlists']
+    # subject_display is computed from subject.display_name in the view
+    geo_pl = [p for p in playlists if p['subject_display'] == 'Geometri']
+    assert len(geo_pl) == 1
+    assert geo_pl[0]['exam_type'] == 'TYT'
+    # ders.display_name == playlist.subject_display → filteredYtListeler match is guaranteed
+    assert geo_entry['display_name'] == geo_pl[0]['subject_display']
