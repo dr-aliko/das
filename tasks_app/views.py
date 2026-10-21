@@ -15,6 +15,11 @@ from tasks_app.models import AktiviteTipi
 from tasks_app.services import api_client, tasks, week as week_svc
 from tasks_app.services import resources, students
 
+# YouTube playlist import wall-clock limit (seconds).
+# Must stay below Q_CLUSTER['retry'] in settings.py so Django-Q never re-queues
+# a still-running import and triggers a duplicate.
+_YT_IMPORT_TIMEOUT = 300
+
 
 def _body(request) -> dict:
     try:
@@ -421,7 +426,7 @@ class YoutubePlaylistImportView(View):
         async_task(
             'tasks_app.tasks.run_yt_import',
             job.pk, pid, subject_pk, exam_type, request.user.pk,
-            timeout=300,
+            timeout=_YT_IMPORT_TIMEOUT,
         )
         return JsonResponse({"job_id": job.pk}, status=202)
 
@@ -463,7 +468,7 @@ class YoutubePlaylistRefreshView(View):
         async_task(
             'tasks_app.tasks.run_yt_import',
             job.pk, pid, subject_pk, exam_type, request.user.pk,
-            timeout=300,
+            timeout=_YT_IMPORT_TIMEOUT,
         )
         return JsonResponse({"job_id": job.pk}, status=202)
 

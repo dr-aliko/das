@@ -337,10 +337,10 @@ if _LOG_FILE:
 # ── Django-Q2 — async task queue (ORM broker, no Redis required) ──────────────
 Q_CLUSTER = {
     'name': 'vagus',
-    'workers': 2,
+    'workers': 3,
     'recycle': 500,
     'timeout': 60,
-    'retry': 120,
+    'retry': 360,
     'max_attempts': 3,
     'queue_limit': 50,
     'bulk': 10,
