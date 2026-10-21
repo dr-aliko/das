@@ -172,3 +172,52 @@ def test_dersler_ad_matches_playlist_subject_display(client):
     pl_unspc = next(p for p in playlists if p['subject_display'] == '')
     assert ders_unspc['id'] == 'sub_0'
     assert pl_unspc['subject_display'] == ''
+
+
+# ── Test 6: same display_name for TYT and AYT → no duplicates, disambiguated ──
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_no_duplicates_for_same_display_name(client):
+    """Two subjects with the same display_name (e.g. TYT vs AYT Matematik) must
+    appear as 'Matematik (AYT)' and 'Matematik (TYT)', never as two plain 'Matematik' entries."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    # Unique subject, no name collision
+    tyt_bio = baker.make(Subject, name='TYT Biyoloji', exam_type='TYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_mat, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_bio, exam_type='TYT')
+
+    client.force_login(coach)
+    r = client.get('/coach/tasks/api/dersler')
+    assert r.status_code == 200
+    dersler = r.json()['dersler']
+
+    names = [d['ad'] for d in dersler]
+    # No plain 'Matematik' — must be disambiguated
+    assert 'Matematik' not in names
+    assert 'Matematik (TYT)' in names
+    assert 'Matematik (AYT)' in names
+    # Unique subject keeps its short name
+    assert 'Biyoloji' in names
+    # Alphabetical order: Biyoloji < Matematik (AYT) < Matematik (TYT)
+    assert names.index('Biyoloji') < names.index('Matematik (AYT)')
+    assert names.index('Matematik (AYT)') < names.index('Matematik (TYT)')
+    # No duplicates
+    assert len(names) == len(set(names))
+
+
+# ── Test 7: empty coach → empty dersler list, no error ────────────────────────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_empty_for_coach_with_no_playlists(client):
+    """Coach with no imported playlists gets an empty dersler list, not an error."""
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    client.force_login(coach)
+    r = client.get('/coach/tasks/api/dersler')
+    assert r.status_code == 200
+    assert r.json() == {'dersler': []}

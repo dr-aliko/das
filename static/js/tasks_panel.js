@@ -393,6 +393,7 @@ function panel() {
     days: [],
     toplamlar: {},
     dersler: [], listeler: [], videolar: [], ytListeler: [],
+    loadingDersler: false, loadingListeler: false, loadingVideolar: false,
     ytRefreshJob: { running: false, msg: '', failed: false },
     legacyHint: false,
     showTaskModal: false,
@@ -711,6 +712,7 @@ function panel() {
     // ── External API (create / refresh flow only) ──────────────────────────
 
     async loadDersler() {
+      this.loadingDersler = true;
       try {
         const r = await fetch('/coach/tasks/api/dersler');
         const d = await r.json();
@@ -718,24 +720,29 @@ function panel() {
       } catch (e) {
         console.error('[loadDersler]', e);
         this.dersler = [];
+      } finally {
+        this.loadingDersler = false;
       }
     },
 
     async loadListeler() {
       if (!this.taskForm.konu_ders_id) return;
+      this.loadingListeler = true;
       this.listeler = [];
       this.taskForm.liste_id = '';
       this.taskForm.ytPlaylistPk = null;
       this.videolar = [];
-      if (_LEGACY_ENABLED) {
-        try {
+      try {
+        if (_LEGACY_ENABLED) {
           const tip = this.taskForm.sinav_tipi || 'TYT';
           const r = await fetch(`/coach/tasks/api/oynatma-listeleri/${this.taskForm.konu_ders_id}?tip=${tip}`);
           const d = await r.json();
           this.listeler = d.listeler ?? [];
-        } catch (e) {
-          console.error('[loadListeler]', e);
         }
+      } catch (e) {
+        console.error('[loadListeler]', e);
+      } finally {
+        this.loadingListeler = false;
       }
       await this.loadYtListeler();
     },
@@ -746,12 +753,15 @@ function panel() {
       // with no argument and falls back to reading taskForm.liste_id from state.
       const id = listeId ?? this.taskForm.liste_id;
       if (!id) return;
+      this.loadingVideolar = true;
       try {
         const r = await fetch(`/coach/tasks/api/videolar/${id}`);
         const d = await r.json();
         this.videolar = d.videolar ?? [];
       } catch (e) {
         console.error('[loadVideolar]', e);
+      } finally {
+        this.loadingVideolar = false;
       }
     },
 
@@ -767,6 +777,7 @@ function panel() {
 
     async loadYtVideolar(pk) {
       this.videolar = [];
+      this.loadingVideolar = true;
       this.taskForm.ytPlaylistPk = pk;
       try {
         const r = await fetch(`/coach/tasks/api/youtube/${pk}/videos`);
@@ -779,6 +790,7 @@ function panel() {
         this.taskForm.selectedVideos = [];
         this.updateSure();
       } catch (e) { console.error('[loadYtVideolar]', e); }
+      finally { this.loadingVideolar = false; }
     },
 
     handleListeChange() {

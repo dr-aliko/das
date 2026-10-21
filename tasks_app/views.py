@@ -267,16 +267,28 @@ class KaynakKitapListView(View):
 class DerslerView(View):
     def get(self, request):
         if not settings.LEGACY_PLAYLISTS_ENABLED:
+            from collections import defaultdict
             from tasks_app.models import YouTubePlaylist
             qs = (YouTubePlaylist.objects
                   .filter(imported_by=request.user, subject__isnull=False)
                   .select_related('subject')
                   .order_by('subject__exam_type', 'subject__name'))
-            seen: dict[int, str] = {}
+            seen_pks: set[int] = set()
+            name_groups: dict[str, list[dict]] = defaultdict(list)
             for p in qs:
-                if p.subject_id not in seen:
-                    seen[p.subject_id] = p.subject.display_name
-            dersler = [{"id": f"sub_{sid}", "ad": name} for sid, name in seen.items()]
+                if p.subject_id not in seen_pks:
+                    seen_pks.add(p.subject_id)
+                    name_groups[p.subject.display_name].append(
+                        {"pk": p.subject_id, "exam_type": p.subject.exam_type}
+                    )
+            dersler = []
+            for display_name in sorted(name_groups):
+                subjects = name_groups[display_name]
+                if len(subjects) > 1:
+                    for s in sorted(subjects, key=lambda x: x["exam_type"]):
+                        dersler.append({"id": f"sub_{s['pk']}", "ad": f"{display_name} ({s['exam_type']})"})
+                else:
+                    dersler.append({"id": f"sub_{subjects[0]['pk']}", "ad": display_name})
             if YouTubePlaylist.objects.filter(imported_by=request.user, subject__isnull=True).exists():
                 dersler.append({"id": "sub_0", "ad": "Ders belirtilmemiş"})
             return JsonResponse({"dersler": dersler})

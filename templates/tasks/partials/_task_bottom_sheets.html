@@ -163,7 +163,7 @@
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">DERS</label>
 
                     <!-- Loading state -->
-                    <div x-show="dersler.length === 0 && !legacyHint" class="text-[var(--muted)] text-xs px-1">
+                    <div x-show="loadingDersler && !legacyHint" class="text-[var(--muted)] text-xs px-1">
                         Dersler yükleniyor…
                     </div>
                     <div x-show="legacyHint" class="text-xs px-1" style="color:var(--muted-2);">
@@ -254,7 +254,7 @@
                 <div x-show="taskForm.konu_ders_id" class="space-y-2">
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider px-1">OYNATMA LİSTESİ</label>
 
-                    <div x-show="listeler.length === 0 && taskForm.konu_ders_id"
+                    <div x-show="loadingListeler"
                          class="text-[var(--muted)] text-xs px-1">
                         Liste yükleniyor…
                     </div>
@@ -285,7 +285,7 @@
                               x-text="taskForm.selectedVideos.length + ' seçili'"></span>
                     </div>
 
-                    <div x-show="videolar.length === 0 && taskForm.liste_id"
+                    <div x-show="loadingVideolar"
                          class="text-[var(--muted)] text-xs px-1">
                         Videolar yükleniyor…
                     </div>
