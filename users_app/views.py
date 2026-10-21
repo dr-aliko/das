@@ -925,6 +925,15 @@ def profil_view(request):
             iban_display = ' '.join(coach_profile.iban[i:i+4] for i in range(0, len(coach_profile.iban), 4)) if coach_profile.iban else ''
             coach_payment_form = CoachProfileForm(instance=coach_profile, initial={'iban': iban_display})
 
+    coach_section_open = bool(
+        coach_profile and (
+            not coach_profile.phone or
+            not coach_profile.iban or
+            not coach_profile.document or
+            bool(coach_payment_form and coach_payment_form.errors)
+        )
+    )
+
     return render(request, 'profile/profile_v2.html', {
         'stats':                   stats,
         'activity_week':           activity_week,
@@ -938,6 +947,7 @@ def profil_view(request):
         'wp_is_available':         user.wp_is_available,
         'coach_profile':           coach_profile,
         'coach_payment_form':      coach_payment_form,
+        'coach_section_open':      coach_section_open,
     })
 
 

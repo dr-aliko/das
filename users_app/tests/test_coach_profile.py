@@ -400,3 +400,86 @@ class TestProfileRouting:
         resp = c.get(reverse('profil'))
         assert resp.status_code == 200
         assert b'coach_payment_submit' not in resp.content
+
+
+# ── 9. Payment section open/closed default ───────────────────────────────────
+
+@pytest.mark.django_db
+class TestPaymentSectionDefault:
+    def test_open_when_items_missing(self):
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, phone='', iban='', document='')
+        c = Client()
+        c.force_login(coach)
+        resp = c.get(reverse('profil'))
+        assert resp.context['coach_section_open'] is True
+
+    def test_closed_when_all_complete(self, tmp_path, settings):
+        settings.PRIVATE_MEDIA_ROOT = str(tmp_path)
+        (tmp_path / 'doc.pdf').write_bytes(b'%PDF-1.4')
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach,
+                   phone='+905051234567', iban=_VALID_IBAN, document='doc.pdf')
+        c = Client()
+        c.force_login(coach)
+        resp = c.get(reverse('profil'))
+        assert resp.context['coach_section_open'] is False
+
+
+# ── 10. End-to-end document upload ───────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestDocumentUploadEndToEnd:
+    def test_upload_writes_file_and_is_served(self, tmp_path, settings):
+        settings.PRIVATE_MEDIA_ROOT = str(tmp_path)
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, iban=_VALID_IBAN)
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile('testdoc.pdf', b'%PDF-1.4 fake', content_type='application/pdf')
+
+        c = Client()
+        c.force_login(coach)
+        resp = c.post(reverse('profil'), {
+            'coach_payment_submit': '1',
+            'iban': _VALID_IBAN,
+            'document': upload,
+        })
+        assert resp.status_code == 302
+
+        profile = CoachProfile.objects.get(user=coach)
+        assert profile.document                          # DB was updated
+        assert profile.document.name.endswith('.pdf')   # correct extension
+        assert profile.document_status == 'pending'     # status reset on new upload
+
+        # Verify file exists on disk via the storage's own path resolution.
+        from pathlib import Path
+        assert Path(profile.document.path).exists()
+
+    def test_owner_gets_200_other_coach_gets_403(self, tmp_path, settings):
+        settings.PRIVATE_MEDIA_ROOT = str(tmp_path)
+        filename = 'shared_doc.pdf'
+        (tmp_path / filename).write_bytes(b'%PDF-1.4')
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, document=filename)
+        other = _make_coach()
+
+        owner_c = Client()
+        owner_c.force_login(coach)
+        assert owner_c.get(reverse('private_document', args=[filename])).status_code == 200
+
+        other_c = Client()
+        other_c.force_login(other)
+        assert other_c.get(reverse('private_document', args=[filename])).status_code == 403
+
+    def test_staff_gets_200(self, tmp_path, settings):
+        settings.PRIVATE_MEDIA_ROOT = str(tmp_path)
+        filename = 'staff_doc.pdf'
+        (tmp_path / filename).write_bytes(b'%PDF-1.4')
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, document=filename)
+        staff = baker.make(User, role='coach', is_staff=True, is_active=True)
+
+        c = Client()
+        c.force_login(staff)
+        assert c.get(reverse('private_document', args=[filename])).status_code == 200

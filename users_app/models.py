@@ -455,6 +455,12 @@ def _coach_doc_path(instance, filename):
     return f'{uuid.uuid4().hex}{ext}'
 
 
+def _get_coach_document_storage():
+    """Callable storage so Django resolves PRIVATE_MEDIA_ROOT at call time, not import time."""
+    from core_config.private_storage import PrivateFileSystemStorage
+    return PrivateFileSystemStorage()
+
+
 class CoachProfile(models.Model):
     """Payment identity for a coach: phone, IBAN, and a verification document."""
     DOC_PENDING  = 'pending'
@@ -476,7 +482,7 @@ class CoachProfile(models.Model):
     iban  = models.CharField(max_length=34, blank=True, default='')
     document = models.FileField(
         upload_to=_coach_doc_path,
-        storage='core_config.private_storage.PrivateFileSystemStorage',
+        storage=_get_coach_document_storage,
         blank=True,
         null=True,
     )
