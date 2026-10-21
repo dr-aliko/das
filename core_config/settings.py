@@ -224,6 +224,7 @@ else:
 # Used only for konu_anlatimi create/refresh flow. Edit hydration uses meta.videos instead.
 EXTERNAL_API_BASE_URL = config('EXTERNAL_API_BASE_URL', default='http://152.70.23.159:5000/api')
 EXTERNAL_API_TIMEOUT = config('EXTERNAL_API_TIMEOUT', default=5, cast=int)
+LEGACY_PLAYLISTS_ENABLED = config('LEGACY_PLAYLISTS_ENABLED', default=True, cast=bool)
 
 # YouTube Data API v3 — used by the playlist importer; never exposed to frontend
 YOUTUBE_API_KEY = config('YOUTUBE_API_KEY', default='')

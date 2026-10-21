@@ -163,8 +163,11 @@
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">DERS</label>
 
                     <!-- Loading state -->
-                    <div x-show="dersler.length === 0" class="text-[var(--muted)] text-xs px-1">
+                    <div x-show="dersler.length === 0 && !legacyHint" class="text-[var(--muted)] text-xs px-1">
                         Dersler yükleniyor…
+                    </div>
+                    <div x-show="legacyHint" class="text-xs px-1" style="color:var(--muted-2);">
+                        Eski liste kataloğu kapatıldı.
                     </div>
 
                     <div x-show="dersler.length > 0"

@@ -37,6 +37,7 @@ const _DERS_AYT_MAP = {
 const _DERS_TYT_ALLOW = new Set(['Matematik', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Diğer', 'Din Kültürü', 'Fizik', 'Kimya', 'Biyoloji', 'Geometri']);
 const COLORS_KEY = 'das-tasks-colors';
 const DEFAULT_COLORS = { konu_anlatimi: '#3b82f6', soru_cozumu: '#eab308', tekrar: '#22c55e' };
+const _LEGACY_ENABLED = JSON.parse(document.getElementById('das-legacy-enabled')?.textContent ?? 'true');
 
 function hexTints(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -393,6 +394,7 @@ function panel() {
     toplamlar: {},
     dersler: [], listeler: [], videolar: [], ytListeler: [],
     ytRefreshJob: { running: false, msg: '', failed: false },
+    legacyHint: false,
     showTaskModal: false,
     showSettingsModal: false,
     pdfExporting: false,
@@ -891,6 +893,7 @@ function panel() {
     openAddTask(tarih) {
       this.editingTask = null;
       this.ytRefreshJob = { running: false, msg: '', failed: false };
+      this.legacyHint = false;
       this.taskForm = {
         aktivite_tipi: 'konu_anlatimi', sinav_tipi: 'TYT', ders_title: '',
         ozel_sure_dk: 0, aciklama: '', konu_not: '',
@@ -944,21 +947,26 @@ function panel() {
       this.taskForm.sinav_tipi = meta.sinav_tipi ?? 'TYT';
 
       if (meta.source === 'youtube' && meta.youtube_playlist_pk) {
-        // YouTube-sourced task: load videos from our DB
+        this.legacyHint = false;
         this.taskForm.liste_id = 'yt:' + meta.youtube_playlist_pk;
         await this.loadYtVideolar(meta.youtube_playlist_pk);
         const savedIds = new Set((meta.videos ?? []).map(v => String(v.id)));
         this.taskForm.selectedVideos = this.videolar
           .filter(v => savedIds.has(String(v.id)))
           .map(v => String(v.id));
+      } else if (!_LEGACY_ENABLED) {
+        // Legacy API is off: restore video list from stored meta so the edit can be re-saved
+        this.legacyHint = true;
+        this.taskForm.konu_ders_id = String(meta.ders_id ?? '');
+        this.taskForm.liste_id = String(meta.liste_id ?? '');
+        this.videolar = (meta.videos ?? []).map(v => ({ id: v.id, baslik: v.title, sure_dk: v.duration }));
+        this.taskForm.selectedVideos = this.videolar.map(v => String(v.id));
       } else {
-        // External API task (existing path)
+        this.legacyHint = false;
         this.taskForm.konu_ders_id = meta.ders_id ?? '';
         await this.loadListeler();
         this.taskForm.liste_id = meta.liste_id ?? '';
-        console.log('[hydrate] loading videos for liste:', meta.liste_id);
         await this.loadVideolar(meta.liste_id);
-        console.log('[hydrate] videolar loaded:', this.videolar.length, 'videos');
         const savedIds = new Set((meta.videos ?? []).map(v => String(v.id)));
         this.taskForm.selectedVideos = this.videolar
           .filter(v => savedIds.has(String(v.id)))

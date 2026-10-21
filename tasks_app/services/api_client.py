@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import time
 
 import requests
 from django.conf import settings
@@ -10,6 +11,15 @@ logger = logging.getLogger(__name__)
 _BASE = getattr(settings, "EXTERNAL_API_BASE_URL", "http://152.70.23.159:5000/api")
 _TIMEOUT = getattr(settings, "EXTERNAL_API_TIMEOUT", 5)
 _CACHE_TTL = 300  # 5 minutes
+_LOG_THROTTLE = 60  # seconds between repeated error logs for the same URL
+_last_error_log: dict[str, float] = {}
+
+
+def _throttled_warning(url: str, msg: str, *args) -> None:
+    now = time.monotonic()
+    if now - _last_error_log.get(url, 0) >= _LOG_THROTTLE:
+        _last_error_log[url] = now
+        logger.warning(msg, *args)
 
 
 def _get(url: str, params: dict | None = None):
@@ -26,10 +36,10 @@ def _get(url: str, params: dict | None = None):
         cache.set(cache_key, data, _CACHE_TTL)
         return data
     except requests.RequestException as exc:
-        logger.warning("External API request failed [%s]: %s", url, exc)
+        _throttled_warning(url, "External API request failed [%s]: %s", url, exc)
         return None
     except ValueError as exc:
-        logger.warning("External API returned invalid JSON [%s]: %s", url, exc)
+        _throttled_warning(url, "External API returned invalid JSON [%s]: %s", url, exc)
         return None
 
 

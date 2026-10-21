@@ -2,6 +2,7 @@ import io
 import json
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
@@ -73,6 +74,7 @@ class HaftaView(View):
         return render(request, "coach/tasks/hafta.html", {
             "students": coached_students,
             "student_expiry_map": expiry_map,
+            "legacy_playlists_enabled": settings.LEGACY_PLAYLISTS_ENABLED,
         })
 
 
@@ -264,12 +266,16 @@ class KaynakKitapListView(View):
 @method_decorator(coach_required, name='dispatch')
 class DerslerView(View):
     def get(self, request):
+        if not settings.LEGACY_PLAYLISTS_ENABLED:
+            return JsonResponse({"dersler": []})
         return JsonResponse({"dersler": api_client.get_dersler()})
 
 
 @method_decorator(coach_required, name='dispatch')
 class OynatmaListeleriView(View):
     def get(self, request, ders_id: int):
+        if not settings.LEGACY_PLAYLISTS_ENABLED:
+            return JsonResponse({"listeler": []})
         tip = request.GET.get("tip", "")
         return JsonResponse({"listeler": api_client.get_oynatma_listeleri(ders_id, tip)})
 
@@ -277,6 +283,8 @@ class OynatmaListeleriView(View):
 @method_decorator(coach_required, name='dispatch')
 class VideolarView(View):
     def get(self, request, liste_id: int):
+        if not settings.LEGACY_PLAYLISTS_ENABLED:
+            return JsonResponse({"videolar": []})
         return JsonResponse({"videolar": api_client.get_videolar(liste_id)})
 
 

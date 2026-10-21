@@ -282,6 +282,7 @@
 <script>window.DAS_TODAY = '{% now "Y-m-d" %}';</script>
 <script>const _STUDENT_ALAN_MAP = { {% for s in students %}{{ s.id }}: '{{ s.alan }}',{% endfor %} };</script>
 {{ student_expiry_map|json_script:"_das_expiry_data" }}
+{{ legacy_playlists_enabled|json_script:"das-legacy-enabled" }}
 <script>(function(){try{window._STUDENT_EXPIRY_MAP=JSON.parse(document.getElementById('_das_expiry_data').textContent);}catch(e){window._STUDENT_EXPIRY_MAP={};}})();</script>
 <div class="hidden md:block">
 <div x-data="panel()" x-init="init()" x-cloak
@@ -797,6 +798,10 @@
                    class="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)]
                           text-[var(--heading)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-steel-500 transition">
           </div>
+
+          <p x-show="legacyHint" style="font-size:11px;color:var(--muted-2);">
+            Eski liste kataloğu kapatıldı.
+          </p>
         </div>
 
         <div class="mb-4">
@@ -917,6 +922,7 @@ body.pdf-mode .p-2, body.pdf-mode .p-2\.5 {
 <script src="{% static 'js/tasks_panel.js' %}"></script>
 <script>
 /* DAS-501-522 + DAS-5.3: Coach Mobile Task Manager with Video/Playlist API */
+const _LEGACY_ENABLED_MOBILE = JSON.parse(document.getElementById('das-legacy-enabled')?.textContent ?? 'true');
 function coachMobilePanel() {
   const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';
   const ISO = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -936,6 +942,7 @@ function coachMobilePanel() {
     /* ── API-driven data for konu_anlatimi cascade ── */
     dersler:[], listeler:[], videolar:[], ytListeler:[],
     ytRefreshJob:{running:false,msg:'',failed:false},
+    legacyHint:false,
 
     /* ── Sheet state (shared with _task_bottom_sheets.html) ── */
     showStudentSheet:false, showAddSheet:false, showEditSheet:false,
@@ -1197,6 +1204,7 @@ function coachMobilePanel() {
       if(!this.selectedStudent)return;
       this.editingTask=null;
       this.ytRefreshJob={running:false,msg:'',failed:false};
+      this.legacyHint=false;
       const dayIso=this.days[this.activeDay-1]?.iso??this.weekStart;
       this.listeler=[]; this.videolar=[];
       this.taskForm={
@@ -1221,16 +1229,24 @@ function coachMobilePanel() {
         ytPlaylistPk:null, ytPlaylistTitle:'',
       };
 
-      /* Hydrate konu_anlatimi cascade identically to the desktop _hydrateKonuEdit */
       if(g.aktivite_tipi==='konu_anlatimi' && g.meta){
         const meta=g.meta;
         this.taskForm.sinav_tipi=meta.sinav_tipi??'TYT';
         if(meta.source==='youtube' && meta.youtube_playlist_pk){
+          this.legacyHint=false;
           await this.loadYtVideolar(meta.youtube_playlist_pk);
           const savedIds=new Set((meta.videos??[]).map(v=>String(v.id)));
           this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
           this.updateSure();
+        }else if(!_LEGACY_ENABLED_MOBILE){
+          this.legacyHint=true;
+          this.taskForm.konu_ders_id=String(meta.ders_id??'');
+          this.taskForm.liste_id=String(meta.liste_id??'');
+          this.videolar=(meta.videos??[]).map(v=>({id:v.id,baslik:v.title,sure_dk:v.duration}));
+          this.taskForm.selectedVideos=this.videolar.map(v=>String(v.id));
+          this.updateSure();
         }else{
+          this.legacyHint=false;
           this.taskForm.konu_ders_id=String(meta.ders_id??'');
           await this.loadListeler();
           this.taskForm.liste_id=String(meta.liste_id??'');
@@ -1239,6 +1255,8 @@ function coachMobilePanel() {
           this.taskForm.selectedVideos=this.videolar.filter(v=>savedIds.has(String(v.id))).map(v=>String(v.id));
           this.updateSure();
         }
+      }else{
+        this.legacyHint=false;
       }
       this.showEditSheet=true;
     },
