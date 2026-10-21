@@ -221,3 +221,81 @@ def test_dersler_empty_for_coach_with_no_playlists(client):
     r = client.get('/coach/tasks/api/dersler')
     assert r.status_code == 200
     assert r.json() == {'dersler': []}
+
+
+# ── Test 8: exam_type field present; tip filter by exam_type works; sub_0 last ─
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_exam_type_field_and_tip_filter(client):
+    """Each entry carries exam_type; tip-based client filter works; sub_0 is last."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    tyt_mat = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    ayt_mat = baker.make(Subject, name='AYT Matematik', exam_type='AYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=tyt_mat, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=ayt_mat, exam_type='AYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=None, exam_type='TYT')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    by_id = {d['id']: d for d in dersler}
+    tyt_entry = by_id[f'sub_{tyt_mat.pk}']
+    ayt_entry = by_id[f'sub_{ayt_mat.pk}']
+
+    # Each entry has the correct exam_type field
+    assert tyt_entry['exam_type'] == 'TYT'
+    assert ayt_entry['exam_type'] == 'AYT'
+
+    # display_name matches subject_display (used by filteredYtListeler)
+    assert tyt_entry['display_name'] == 'Matematik'
+    assert ayt_entry['display_name'] == 'Matematik'
+
+    # ad carries the disambiguating suffix shown in the selector
+    assert tyt_entry['ad'] == 'Matematik (TYT)'
+    assert ayt_entry['ad'] == 'Matematik (AYT)'
+
+    # sub_0 has empty exam_type and is last
+    assert dersler[-1]['id'] == 'sub_0'
+    assert dersler[-1]['exam_type'] == ''
+    assert dersler[-1]['display_name'] == ''
+
+    # Client-side tip filter simulation: flag=off → filter by exam_type field
+    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
+    ayt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+    assert any(d['ad'] == 'Matematik (TYT)' for d in tyt_visible)
+    assert not any(d['ad'] == 'Matematik (AYT)' for d in tyt_visible)
+    assert any(d['ad'] == 'Matematik (AYT)' for d in ayt_visible)
+    assert not any(d['ad'] == 'Matematik (TYT)' for d in ayt_visible)
+    # sub_0 always visible regardless of tip
+    assert any(d['id'] == 'sub_0' for d in tyt_visible)
+    assert any(d['id'] == 'sub_0' for d in ayt_visible)
+
+
+# ── Test 9: single exam_type coach — entries not wrongly filtered out ──────────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_single_exam_type_coach(client):
+    """Coach with only TYT playlists: TYT entries show for TYT; nothing shows for AYT."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    math = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=math, exam_type='TYT')
+
+    client.force_login(coach)
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+
+    assert len(dersler) == 1
+    assert dersler[0]['ad'] == 'Matematik'
+    assert dersler[0]['exam_type'] == 'TYT'
+    assert dersler[0]['display_name'] == 'Matematik'
+
+    # TYT tip filter: entry shows
+    tyt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'TYT']
+    assert len(tyt_visible) == 1
+
+    # AYT tip filter: nothing shows
+    ayt_visible = [d for d in dersler if not d['exam_type'] or d['exam_type'] == 'AYT']
+    assert len(ayt_visible) == 0

@@ -286,11 +286,21 @@ class DerslerView(View):
                 subjects = name_groups[display_name]
                 if len(subjects) > 1:
                     for s in sorted(subjects, key=lambda x: x["exam_type"]):
-                        dersler.append({"id": f"sub_{s['pk']}", "ad": f"{display_name} ({s['exam_type']})"})
+                        dersler.append({
+                            "id": f"sub_{s['pk']}",
+                            "ad": f"{display_name} ({s['exam_type']})",
+                            "display_name": display_name,
+                            "exam_type": s["exam_type"],
+                        })
                 else:
-                    dersler.append({"id": f"sub_{subjects[0]['pk']}", "ad": display_name})
+                    dersler.append({
+                        "id": f"sub_{subjects[0]['pk']}",
+                        "ad": display_name,
+                        "display_name": display_name,
+                        "exam_type": subjects[0]["exam_type"],
+                    })
             if YouTubePlaylist.objects.filter(imported_by=request.user, subject__isnull=True).exists():
-                dersler.append({"id": "sub_0", "ad": "Ders belirtilmemiş"})
+                dersler.append({"id": "sub_0", "ad": "Ders belirtilmemiş", "display_name": "", "exam_type": ""})
             return JsonResponse({"dersler": dersler})
         return JsonResponse({"dersler": api_client.get_dersler()})
 

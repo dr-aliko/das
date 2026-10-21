@@ -570,7 +570,7 @@ function panel() {
         }
         if (ders) {
           if (ders.id === 'sub_0') return l.subject_display === '';
-          return l.subject_display === ders.ad;
+          return l.subject_display === (ders.display_name ?? ders.ad);
         }
         return true;
       });
@@ -578,6 +578,9 @@ function panel() {
 
     get filteredDersler() {
       const sinav = this.taskForm.sinav_tipi;
+      if (!_LEGACY_ENABLED) {
+        return this.dersler.filter(d => !d.exam_type || d.exam_type === sinav);
+      }
       if (sinav === 'TYT') return this.dersler.filter(d => _DERS_TYT_ALLOW.has(d.ad));
       if (sinav === 'AYT') {
         const alan = (typeof _STUDENT_ALAN_MAP !== 'undefined' && this.studentId)
