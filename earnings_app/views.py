@@ -1,6 +1,6 @@
 import csv
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum
@@ -278,8 +278,148 @@ def panel_kazanclar_export_csv(request):
 
 # ── Coach ─────────────────────────────────────────────────────────────────────
 
+_TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
+
+_STATUS_LABELS = {
+    EarningRow.STATUS_HELD:     'Bekliyor',
+    EarningRow.STATUS_RELEASED: 'Serbest',
+    EarningRow.STATUS_APPROVED: 'Onaylandı',
+    EarningRow.STATUS_PAID:     'Ödendi',
+    EarningRow.STATUS_VOID:     'İptal',
+}
+
+
+def _fmt_tl(kurus):
+    tl = abs(int(kurus)) // 100
+    return f'{tl:,}'.replace(',', '.') + ' ₺'
+
+
+def _fmt_day(d):
+    return f'{d.day} {_TR_MONTHS[d.month - 1]}'
+
+
 def coach_kazanclar(request):
-    from django.contrib.auth.decorators import login_required
+    from django.utils.timezone import localtime
+
+    if not request.user.is_authenticated:
+        return redirect('users_app:login')
+    if not request.user.is_coach:
+        return redirect('/')
+
+    today = date.today()
+
+    rows = list(
+        EarningRow.objects
+        .filter(coach=request.user)
+        .select_related('student')
+        .order_by('-coverage_start', '-created_at')
+        [:300]
+    )
+
+    # Compute live coach_days for held rows from interval log
+    held_rows = [r for r in rows if r.status == EarningRow.STATUS_HELD]
+    live_days_map = {}
+    if held_rows:
+        from users_app.models import CoachStudentInterval
+        student_ids = {r.student_id for r in held_rows}
+        ivs_by_student = {}
+        for iv in CoachStudentInterval.objects.filter(
+            coach=request.user,
+            student_id__in=student_ids,
+        ):
+            ivs_by_student.setdefault(iv.student_id, []).append(iv)
+
+        for r in held_rows:
+            total = 0
+            for iv in ivs_by_student.get(r.student_id, []):
+                iv_start = localtime(iv.started_at).date()
+                iv_end = today if iv.ended_at is None else localtime(iv.ended_at).date()
+                seg_start = max(iv_start, r.coverage_start)
+                seg_end   = min(iv_end, today)
+                d = (seg_end - seg_start).days
+                if d > 0:
+                    total += d
+            live_days_map[r.pk] = min(total, r.period_days)
+
+    # Summary tile amounts
+    held_pool      = sum(r.pool_kurus   for r in rows if r.status == EarningRow.STATUS_HELD)
+    ready_sum      = sum(r.amount_kurus for r in rows if r.status in (EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED))
+    paid_sum       = sum(r.amount_kurus for r in rows if r.status == EarningRow.STATUS_PAID)
+    this_month_sum = 0
+    for r in rows:
+        if r.status in (EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED, EarningRow.STATUS_PAID):
+            ref = localtime(r.paid_at).date() if (r.status == EarningRow.STATUS_PAID and r.paid_at) else r.coverage_end
+            if (ref.year, ref.month) == (today.year, today.month):
+                this_month_sum += r.amount_kurus
+
+    count_tumu     = len(rows)
+    count_bekleyen = sum(1 for r in rows if r.status == EarningRow.STATUS_HELD)
+    count_hazir    = sum(1 for r in rows if r.status in (EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED))
+    count_odenen   = sum(1 for r in rows if r.status == EarningRow.STATUS_PAID)
+
+    # Build safe row dicts — no raw kurus values, no student price, no Vagus share
+    row_dicts = []
+    for r in rows:
+        is_held = r.status == EarningRow.STATUS_HELD
+        live_n  = live_days_map.get(r.pk, r.coach_days)
+
+        if is_held:
+            filter_group = 'bekleyen'
+        elif r.status in (EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED):
+            filter_group = 'hazir'
+        elif r.status == EarningRow.STATUS_PAID:
+            filter_group = 'odenen'
+        else:
+            filter_group = 'iptal'
+
+        # coverage_end is exclusive, so display end = coverage_end - 1 day
+        display_end = r.coverage_end - timedelta(days=1)
+
+        mk = ''
+        ml = ''
+        if r.status != EarningRow.STATUS_VOID:
+            ref = localtime(r.paid_at).date() if (r.status == EarningRow.STATUS_PAID and r.paid_at) else r.coverage_end
+            mk = ref.strftime('%Y-%m')
+            ml = f'{_TR_MONTHS[ref.month - 1]} {ref.year}'
+
+        paid_date_str = ''
+        if r.status == EarningRow.STATUS_PAID and r.paid_at:
+            paid_date_str = _fmt_day(localtime(r.paid_at).date())
+
+        row_dicts.append({
+            'id':             r.pk,
+            'student_name':   r.student.full_name,
+            'coverage_label': f'{_fmt_day(r.coverage_start)} – {_fmt_day(display_end)}',
+            'period_days':    r.period_days,
+            'coach_days':     live_n,
+            'is_held':        is_held,
+            'amount_display': '' if is_held else _fmt_tl(r.amount_kurus),
+            'pool_display':   _fmt_tl(r.pool_kurus) if is_held else '',
+            'status':         r.status,
+            'status_label':   _STATUS_LABELS.get(r.status, r.status),
+            'filter_group':   filter_group,
+            'month_key':      mk,
+            'month_label':    ml,
+            'paid_date':      paid_date_str,
+            'payout_ref':     r.payout_ref,
+        })
+
+    return render(request, 'earnings/coach_kazanclar.html', {
+        'rows':            row_dicts,
+        'tile_held_pool':  _fmt_tl(held_pool),
+        'tile_ready':      _fmt_tl(ready_sum),
+        'tile_paid':       _fmt_tl(paid_sum),
+        'tile_this_month': _fmt_tl(this_month_sum),
+        'count_tumu':      count_tumu,
+        'count_bekleyen':  count_bekleyen,
+        'count_hazir':     count_hazir,
+        'count_odenen':    count_odenen,
+        'has_rows':        bool(rows),
+    })
+
+
+def coach_kazanclar_export_csv(request):
+    from django.utils.timezone import localtime
 
     if not request.user.is_authenticated:
         return redirect('users_app:login')
@@ -289,25 +429,33 @@ def coach_kazanclar(request):
     rows = (
         EarningRow.objects
         .filter(coach=request.user)
-        .select_related('student', 'order', 'order__plan')
+        .select_related('student')
         .order_by('-coverage_start', '-created_at')
+        [:5000]
     )
 
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        rows = rows.filter(status=status_filter)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="kazanclarim.csv"'
+    response.write('﻿')  # BOM for Excel
 
-    rows = list(rows[:300])
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Öğrenci', 'Kapsam Başlangıç', 'Kapsam Bitiş',
+                     'Dönem Gün', 'Koç Gün', 'Tutar (TL)', 'Durum', 'Ödeme Ref', 'Ödeme Tarihi'])
+    for r in rows:
+        is_held = r.status == EarningRow.STATUS_HELD
+        amount_str = f'En fazla {r.pool_kurus // 100}' if is_held else str(r.amount_kurus // 100)
+        paid_str = localtime(r.paid_at).date().isoformat() if r.paid_at else ''
+        writer.writerow([
+            r.pk,
+            r.student.full_name if r.student else '',
+            r.coverage_start,
+            r.coverage_end,
+            r.period_days,
+            r.coach_days,
+            amount_str,
+            _STATUS_LABELS.get(r.status, r.status),
+            r.payout_ref,
+            paid_str,
+        ])
 
-    paid_total     = sum(r.amount_kurus for r in rows if r.status == EarningRow.STATUS_PAID)
-    approved_total = sum(r.amount_kurus for r in rows if r.status == EarningRow.STATUS_APPROVED)
-    released_total = sum(r.amount_kurus for r in rows if r.status == EarningRow.STATUS_RELEASED)
-
-    return render(request, 'earnings/coach_kazanclar.html', {
-        'rows':           rows,
-        'status_filter':  status_filter,
-        'status_choices': EarningRow.STATUS_CHOICES,
-        'paid_total':     paid_total,
-        'approved_total': approved_total,
-        'released_total': released_total,
-    })
+    return response
