@@ -412,12 +412,14 @@ def coach_kazanclar(request):
             'payout_ref':     r.payout_ref,
         })
 
-    # Soft reminder for missing IBAN / document
+    # Soft reminder for missing phone / IBAN / document
     try:
         cp = request.user.coach_profile
+        profile_has_phone = bool(cp.phone)
         profile_has_iban = bool(cp.iban)
         profile_has_document = bool(cp.document)
     except Exception:
+        profile_has_phone = False
         profile_has_iban = False
         profile_has_document = False
 
@@ -432,6 +434,7 @@ def coach_kazanclar(request):
         'count_hazir':     count_hazir,
         'count_odenen':    count_odenen,
         'has_rows':        bool(rows),
+        'profile_has_phone': profile_has_phone,
         'profile_has_iban': profile_has_iban,
         'profile_has_document': profile_has_document,
     })

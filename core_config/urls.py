@@ -17,7 +17,7 @@ from users_app.views import (
     panel_wp_koclar_view, panel_wp_koclar_confirm, panel_wp_koclar_unlink,
     panel_koc_ekle_view, panel_koc_davet_resend, panel_koc_sil, profil_wp_availability,
     coach_profile_view, coach_profile_quick_update, serve_private_document,
-    staff_coach_documents_view, staff_coach_document_action,
+    staff_coach_documents_view, staff_coach_document_action, staff_coach_phone_edit,
 )
 from struggle_app.views import CoachStruggleStatsView
 from earnings_app.views import coach_kazanclar, coach_kazanclar_export_csv
@@ -97,6 +97,7 @@ urlpatterns = [
     path('private-media/<path:path>', serve_private_document, name='private_document'),
     path('panel/koc-belgeleri/', staff_coach_documents_view, name='staff_coach_documents'),
     path('panel/koc-belgeleri/<int:pk>/karar/', staff_coach_document_action, name='staff_coach_document_action'),
+    path('panel/koc-belgeleri/<int:pk>/telefon/', staff_coach_phone_edit, name='staff_coach_phone_edit'),
     path('satin-al/', include('purchase_app.urls', namespace='purchase')),
     path('panel/satin-al/', include('purchase_app.panel_urls', namespace='purchase_panel')),
     path('panel/kazanclar/', include('earnings_app.panel_urls', namespace='earnings_panel')),

@@ -29,10 +29,10 @@ from .decorators import coach_required, staff_required
 from .forms import (
     CoachProfileForm, CoachProfileQuickForm, CoachRegistrationForm,
     EmailAuthenticationForm, InviteAcceptForm, InviteStudentForm,
-    UserRegistrationForm, mask_iban,
+    UserRegistrationForm, mask_iban, _normalize_tr_phone_e164,
 )
 from .models import (
-    CoachAlert, CoachIbanLog, CoachProfile, CoachStudent, CoachStudentInterval,
+    CoachAlert, CoachIbanLog, CoachPhoneLog, CoachProfile, CoachStudent, CoachStudentInterval,
     EmailVerificationCode, FeeTier, Notification, StudentAchievement, StudentInvite, User,
 )
 from .services.billing import coach_billing_summary
@@ -894,6 +894,37 @@ def profil_view(request):
             student=user, is_completed=True, exam__is_active=True
         ).exists()
 
+    # ── Coach payment section ─────────────────────────────────────────────────
+    coach_profile = None
+    coach_payment_form = None
+    if user.is_coach and not user.is_staff:
+        coach_profile, _ = CoachProfile.objects.get_or_create(user=user)
+        old_iban = coach_profile.iban
+        if request.method == 'POST' and 'coach_payment_submit' in request.POST:
+            coach_payment_form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
+            if coach_payment_form.is_valid():
+                new_iban = coach_payment_form.cleaned_data.get('iban', '')
+                iban_changed = new_iban and new_iban != old_iban
+                if coach_payment_form.cleaned_data.get('document'):
+                    coach_payment_form.instance.document_status = CoachProfile.DOC_PENDING
+                    coach_payment_form.instance.document_rejection_reason = ''
+                    coach_payment_form.instance.document_reviewed_by = None
+                    coach_payment_form.instance.document_reviewed_at = None
+                coach_payment_form.save()
+                if iban_changed:
+                    CoachIbanLog.objects.create(
+                        coach=coach_profile,
+                        changed_by=user,
+                        old_iban_masked=old_iban,
+                        new_iban_masked=new_iban,
+                    )
+                    _send_iban_change_email(user, old_iban, new_iban)
+                messages.success(request, 'Ödeme bilgileriniz kaydedildi.')
+                return redirect('profil')
+        else:
+            iban_display = ' '.join(coach_profile.iban[i:i+4] for i in range(0, len(coach_profile.iban), 4)) if coach_profile.iban else ''
+            coach_payment_form = CoachProfileForm(instance=coach_profile, initial={'iban': iban_display})
+
     return render(request, 'profile/profile_v2.html', {
         'stats':                   stats,
         'activity_week':           activity_week,
@@ -905,6 +936,8 @@ def profil_view(request):
         'v2_shell':                True,
         'shell_hide_fab':          True,
         'wp_is_available':         user.wp_is_available,
+        'coach_profile':           coach_profile,
+        'coach_payment_form':      coach_payment_form,
     })
 
 
@@ -1747,9 +1780,8 @@ def panel_koc_ekle_view(request):
         def _norm_phone(raw):
             if not raw:
                 return ''
-            from purchase_app.forms import _normalize_tr_mobile
             try:
-                return _normalize_tr_mobile(raw)
+                return _normalize_tr_phone_e164(raw)
             except ValueError:
                 return None  # signals invalid
 
@@ -1942,58 +1974,8 @@ def _send_iban_change_email(coach_user, old_masked, new_masked):
         _log.warning('IBAN change email failed for coach pk=%s', coach_user.pk, exc_info=True)
 
 
-@coach_required
 def coach_profile_view(request):
-    user = request.user
-    profile, _ = CoachProfile.objects.get_or_create(user=user)
-
-    old_iban = profile.iban  # capture before form.is_valid() mutates the instance
-
-    if request.method == 'POST':
-        form = CoachProfileForm(request.POST, request.FILES, instance=profile)
-        if form.is_valid():
-            new_iban = form.cleaned_data.get('iban', '')
-            iban_changed = new_iban and new_iban != old_iban
-            old_masked = mask_iban(old_iban) if (iban_changed and old_iban) else ''
-
-            # Reset document status when a new document is uploaded
-            if form.cleaned_data.get('document'):
-                form.instance.document_status = CoachProfile.DOC_PENDING
-                form.instance.document_rejection_reason = ''
-                form.instance.document_reviewed_by = None
-                form.instance.document_reviewed_at = None
-
-            # Only update full_name if provided (keep User.full_name in sync)
-            full_name_new = request.POST.get('full_name', '').strip()
-            if full_name_new:
-                user.full_name = full_name_new
-                user.save(update_fields=['full_name'])
-
-            form.save()
-
-            if iban_changed:
-                new_masked = profile.iban_masked()
-                CoachIbanLog.objects.create(
-                    coach=profile,
-                    changed_by=user,
-                    old_iban_masked=old_masked,
-                    new_iban_masked=new_masked,
-                )
-                _send_iban_change_email(user, old_masked, new_masked)
-
-            messages.success(request, 'Profil bilgileriniz kaydedildi.')
-            return redirect('coach_profile')
-    else:
-        form = CoachProfileForm(instance=profile, initial={'full_name': user.full_name})
-
-    return render(request, 'coach/profile.html', {
-        'form': form,
-        'profile': profile,
-        'iban_masked': profile.iban_masked(),
-        'has_iban': bool(profile.iban),
-        'has_document': bool(profile.document),
-        'iban_logs': profile.iban_logs.all()[:10],
-    })
+    return redirect('profil')
 
 
 @login_required
@@ -2009,8 +1991,9 @@ def coach_profile_quick_update(request):
             user.full_name = form.cleaned_data['full_name']
             user.save(update_fields=['full_name'])
             profile, _ = CoachProfile.objects.get_or_create(user=user)
-            profile.phone = form.cleaned_data['phone']
-            profile.save(update_fields=['phone', 'updated_at'])
+            if not profile.phone:  # phone is locked once set
+                profile.phone = form.cleaned_data['phone']
+                profile.save(update_fields=['phone', 'updated_at'])
         # success or invalid: redirect back (fail-open)
     except Exception:
         pass
@@ -2128,6 +2111,35 @@ def staff_coach_document_action(request, pk):
     else:
         messages.error(request, 'Geçersiz işlem.')
 
+    return redirect('staff_coach_documents')
+
+
+@staff_required
+@require_http_methods(['POST'])
+@ratelimit(key='user', rate='30/h', block=True)
+def staff_coach_phone_edit(request, pk):
+    """Staff-only: update a coach's phone and log the change."""
+    profile = get_object_or_404(CoachProfile, pk=pk)
+    raw = request.POST.get('phone', '').strip()
+    if not raw:
+        messages.error(request, 'Telefon numarası boş bırakılamaz.')
+        return redirect('staff_coach_documents')
+    try:
+        new_phone = _normalize_tr_phone_e164(raw)
+    except ValueError:
+        messages.error(request, 'Geçerli bir Türk cep telefonu numarası girin.')
+        return redirect('staff_coach_documents')
+    old_phone = profile.phone
+    if old_phone != new_phone:
+        CoachPhoneLog.objects.create(
+            coach=profile,
+            changed_by=request.user,
+            old_phone=old_phone,
+            new_phone=new_phone,
+        )
+        profile.phone = new_phone
+        profile.save(update_fields=['phone', 'updated_at'])
+        messages.success(request, f'{profile.user.full_name} telefonu güncellendi.')
     return redirect('staff_coach_documents')
 
 

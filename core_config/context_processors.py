@@ -57,6 +57,7 @@ _POPUP_EXEMPT_PREFIXES = (
     '/auth/logout',
     '/auth/awaiting-approval',
     '/coach/profil/',
+    '/profil/',
 )
 
 

@@ -538,3 +538,29 @@ class CoachIbanLog(models.Model):
 
     def __str__(self):
         return f'{self.coach.user.full_name} — {self.changed_at:%Y-%m-%d %H:%M}'
+
+
+class CoachPhoneLog(models.Model):
+    """Audit trail of staff-initiated phone changes for a coach."""
+    coach = models.ForeignKey(
+        CoachProfile,
+        on_delete=models.CASCADE,
+        related_name='phone_logs',
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    old_phone = models.CharField(max_length=20, blank=True, default='')
+    new_phone = models.CharField(max_length=20)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name = 'Telefon Değişiklik Kaydı'
+        verbose_name_plural = 'Telefon Değişiklik Kayıtları'
+
+    def __str__(self):
+        return f'{self.coach.user.full_name} — {self.changed_at:%Y-%m-%d %H:%M}'

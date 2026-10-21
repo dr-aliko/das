@@ -1,13 +1,15 @@
 """
 Tests for CoachProfile: IBAN validator, private file serving (path traversal,
-permissions, headers), IBAN-change email notification, and the popup condition.
+permissions, headers), IBAN-change email notification, popup condition, phone
+normalisation/lock, IBAN without spaces, /coach/profil/ redirect, coach section
+visibility on /profil/.
 """
 import pytest
 from django.test import Client
 from django.urls import reverse
 from model_bakery import baker
 
-from users_app.forms import mask_iban, validate_tr_iban
+from users_app.forms import mask_iban, validate_tr_iban, _normalize_tr_phone_e164
 from users_app.models import CoachProfile, User
 
 
@@ -72,9 +74,8 @@ class TestIbanEmailNotification:
         with patch('django.core.mail.send_mail') as mock_send:
             c = Client()
             c.force_login(coach)
-            c.post(reverse('coach_profile'), {
-                'full_name': coach.full_name,
-                'phone': '',
+            c.post(reverse('profil'), {
+                'coach_payment_submit': '1',
                 'iban': _VALID_IBAN,
             })
 
@@ -94,9 +95,8 @@ class TestIbanEmailNotification:
         with patch('django.core.mail.send_mail', side_effect=Exception('SMTP down')):
             c = Client()
             c.force_login(coach)
-            c.post(reverse('coach_profile'), {
-                'full_name': coach.full_name,
-                'phone': '',
+            c.post(reverse('profil'), {
+                'coach_payment_submit': '1',
                 'iban': _VALID_IBAN,
             })
 
@@ -228,7 +228,7 @@ class TestRegistrationCreatesProfile:
         user = User.objects.filter(email='testregister@example.com').first()
         assert user is not None
         assert hasattr(user, 'coach_profile')
-        assert user.coach_profile.phone == '05321234567'
+        assert user.coach_profile.phone == '+905321234567'
 
 
 # ── 5. Popup context processor ───────────────────────────────────────────────
@@ -315,3 +315,88 @@ class TestCoachProfilePopup:
         result = coach_profile_popup(req)
         assert isinstance(result, dict)
         assert not result.get('show_coach_popup')
+
+
+# ── 6. Phone normalisation and lock ──────────────────────────────────────────
+
+class TestPhoneNormalisation:
+    @pytest.mark.parametrize('raw,expected', [
+        ('05051234567',       '+905051234567'),
+        ('5051234567',        '+905051234567'),
+        ('+90 505 123 45 67', '+905051234567'),
+        ('0505-123-45-67',    '+905051234567'),
+        ('(0505) 123 45 67',  '+905051234567'),
+        ('905051234567',      '+905051234567'),
+    ])
+    def test_normalises_to_e164(self, raw, expected):
+        assert _normalize_tr_phone_e164(raw) == expected
+
+    @pytest.mark.django_db
+    def test_phone_locked_after_first_save(self):
+        """A second popup POST must not overwrite an already-saved phone."""
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, phone='+905051111111')
+
+        c = Client()
+        c.force_login(coach)
+        c.post(reverse('coach_profile_quick_update'), {
+            'full_name': coach.full_name or 'Test Koç',
+            'phone': '05059999999',
+        })
+
+        from users_app.models import CoachProfile as CP
+        assert CP.objects.get(user=coach).phone == '+905051111111'
+
+
+# ── 7. IBAN stored without spaces ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestIbanStoredWithoutSpaces:
+    def test_spaces_stripped_on_save(self):
+        """Submitting a spaced IBAN via the profile form must store it spaceless."""
+        _SPACED = 'TR33 0006 1005 1978 6457 8413 26'
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach, iban='')
+
+        c = Client()
+        c.force_login(coach)
+        resp = c.post(reverse('profil'), {
+            'coach_payment_submit': '1',
+            'iban': _SPACED,
+        })
+
+        assert resp.status_code == 302
+        from users_app.models import CoachProfile as CP
+        profile = CP.objects.get(user=coach)
+        assert ' ' not in profile.iban
+        assert profile.iban == 'TR330006100519786457841326'
+
+
+# ── 8. /coach/profil/ redirect and /profil/ section visibility ────────────────
+
+@pytest.mark.django_db
+class TestProfileRouting:
+    def test_coach_profil_url_redirects_to_profil(self):
+        coach = _make_coach()
+        c = Client()
+        c.force_login(coach)
+        resp = c.get(reverse('coach_profile'))
+        assert resp.status_code == 302
+        assert resp['Location'].rstrip('/') == '/profil'
+
+    def test_profil_shows_payment_section_for_coach(self):
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach)
+        c = Client()
+        c.force_login(coach)
+        resp = c.get(reverse('profil'))
+        assert resp.status_code == 200
+        assert b'coach_payment_submit' in resp.content
+
+    def test_profil_hides_payment_section_for_student(self):
+        student = _make_student()
+        c = Client()
+        c.force_login(student)
+        resp = c.get(reverse('profil'))
+        assert resp.status_code == 200
+        assert b'coach_payment_submit' not in resp.content

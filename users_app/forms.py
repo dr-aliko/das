@@ -7,6 +7,15 @@ from django.core.exceptions import ValidationError
 from .models import CoachProfile, StudentInvite, User
 
 
+# ── Phone helpers ─────────────────────────────────────────────────────────────
+
+def _normalize_tr_phone_e164(raw):
+    """Normalize Turkish mobile to +90XXXXXXXXXX (E.164). Raises ValueError for invalid."""
+    from purchase_app.forms import _normalize_tr_mobile
+    national = _normalize_tr_mobile(raw.strip())  # → 05XXXXXXXXX
+    return '+90' + national[1:]  # → +905XXXXXXXXX
+
+
 # ── IBAN helpers ──────────────────────────────────────────────────────────────
 
 def validate_tr_iban(value):
@@ -75,9 +84,8 @@ class CoachRegistrationForm(forms.Form):
         return email
 
     def clean_phone(self):
-        from purchase_app.forms import _normalize_tr_mobile
         try:
-            return _normalize_tr_mobile(self.cleaned_data['phone'])
+            return _normalize_tr_phone_e164(self.cleaned_data['phone'])
         except ValueError:
             raise forms.ValidationError(
                 'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
@@ -160,38 +168,21 @@ class EmailAuthenticationForm(AuthenticationForm):
 
 
 class CoachProfileForm(forms.ModelForm):
-    phone = forms.CharField(
-        max_length=32,
-        required=False,
-        label='Telefon',
-        widget=forms.TextInput(attrs={'autocomplete': 'tel', 'inputmode': 'tel', 'placeholder': '0505 123 45 67'}),
-    )
     iban = forms.CharField(
         max_length=40,
         required=False,
         label='IBAN',
-        widget=forms.TextInput(attrs={'placeholder': 'TR12 3456 7890 1234 5678 9012'}),
+        widget=forms.TextInput(attrs={'placeholder': 'TR12 3456 7890 1234 5678 9012', 'autocomplete': 'off'}),
     )
     document = forms.FileField(
         required=False,
-        label='Kimlik / Sözleşme Belgesi (PDF, JPG, PNG — maks. 5 MB)',
+        label='Belge',
+        widget=forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
     )
 
     class Meta:
         model = CoachProfile
-        fields = ['phone', 'iban', 'document']
-
-    def clean_phone(self):
-        raw = self.cleaned_data.get('phone', '').strip()
-        if not raw:
-            return ''
-        from purchase_app.forms import _normalize_tr_mobile
-        try:
-            return _normalize_tr_mobile(raw)
-        except ValueError:
-            raise forms.ValidationError(
-                'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
-            )
+        fields = ['iban', 'document']
 
     def clean_iban(self):
         raw = self.cleaned_data.get('iban', '').strip()
@@ -216,9 +207,8 @@ class CoachProfileQuickForm(forms.Form):
     )
 
     def clean_phone(self):
-        from purchase_app.forms import _normalize_tr_mobile
         try:
-            return _normalize_tr_mobile(self.cleaned_data['phone'])
+            return _normalize_tr_phone_e164(self.cleaned_data['phone'])
         except ValueError:
             raise forms.ValidationError(
                 'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
