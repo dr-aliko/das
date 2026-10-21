@@ -267,7 +267,19 @@ class KaynakKitapListView(View):
 class DerslerView(View):
     def get(self, request):
         if not settings.LEGACY_PLAYLISTS_ENABLED:
-            return JsonResponse({"dersler": []})
+            from tasks_app.models import YouTubePlaylist
+            qs = (YouTubePlaylist.objects
+                  .filter(imported_by=request.user, subject__isnull=False)
+                  .select_related('subject')
+                  .order_by('subject__exam_type', 'subject__name'))
+            seen: dict[int, str] = {}
+            for p in qs:
+                if p.subject_id not in seen:
+                    seen[p.subject_id] = p.subject.display_name
+            dersler = [{"id": f"sub_{sid}", "ad": name} for sid, name in seen.items()]
+            if YouTubePlaylist.objects.filter(imported_by=request.user, subject__isnull=True).exists():
+                dersler.append({"id": "sub_0", "ad": "Ders belirtilmemiş"})
+            return JsonResponse({"dersler": dersler})
         return JsonResponse({"dersler": api_client.get_dersler()})
 
 

@@ -567,7 +567,10 @@ function panel() {
           const allowed = _PLAYLIST_AYT_MAP[alan];
           if (allowed && !allowed.has(l.subject_display)) return false;
         }
-        if (ders) return l.subject_display === ders.ad;
+        if (ders) {
+          if (ders.id === 'sub_0') return l.subject_display === '';
+          return l.subject_display === ders.ad;
+        }
         return true;
       });
     },
@@ -720,16 +723,19 @@ function panel() {
 
     async loadListeler() {
       if (!this.taskForm.konu_ders_id) return;
-      try {
-        const tip = this.taskForm.sinav_tipi || 'TYT';
-        const r = await fetch(`/coach/tasks/api/oynatma-listeleri/${this.taskForm.konu_ders_id}?tip=${tip}`);
-        const d = await r.json();
-        this.listeler = d.listeler ?? [];
-        this.taskForm.liste_id = '';
-        this.taskForm.ytPlaylistPk = null;
-        this.videolar = [];
-      } catch (e) {
-        console.error('[loadListeler]', e);
+      this.listeler = [];
+      this.taskForm.liste_id = '';
+      this.taskForm.ytPlaylistPk = null;
+      this.videolar = [];
+      if (_LEGACY_ENABLED) {
+        try {
+          const tip = this.taskForm.sinav_tipi || 'TYT';
+          const r = await fetch(`/coach/tasks/api/oynatma-listeleri/${this.taskForm.konu_ders_id}?tip=${tip}`);
+          const d = await r.json();
+          this.listeler = d.listeler ?? [];
+        } catch (e) {
+          console.error('[loadListeler]', e);
+        }
       }
       await this.loadYtListeler();
     },

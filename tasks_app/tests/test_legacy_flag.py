@@ -115,3 +115,60 @@ def test_legacy_task_meta_videos_intact_when_flag_off(client):
 
     grup.refresh_from_db()
     assert grup.meta['videos'] == saved_videos, 'meta.videos must survive a re-save'
+
+
+# ── Test 4: flag off — DerslerView builds list from own playlists ─────────────
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_own_playlists_flag_off(client):
+    """DerslerView returns subjects from the coach's own playlists + unspecified entry."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    # name includes exam_type prefix so display_name strips it → 'Matematik', 'Fizik'
+    math = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    phys = baker.make(Subject, name='AYT Fizik', exam_type='AYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=math, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=phys, exam_type='AYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=None, exam_type='TYT')
+
+    client.force_login(coach)
+    r = client.get('/coach/tasks/api/dersler')
+    assert r.status_code == 200
+    dersler = r.json()['dersler']
+
+    ids = {d['id'] for d in dersler}
+    names = {d['ad'] for d in dersler}
+    assert f'sub_{math.pk}' in ids
+    assert f'sub_{phys.pk}' in ids
+    assert 'sub_0' in ids
+    assert 'Matematik' in names
+    assert 'Fizik' in names
+    assert 'Ders belirtilmemiş' in names
+
+
+# ── Test 5: flag off — ders.ad matches playlist subject_display (filter chain) ──
+
+@pytest.mark.django_db
+@override_settings(LEGACY_PLAYLISTS_ENABLED=False)
+def test_dersler_ad_matches_playlist_subject_display(client):
+    """ders.ad must equal playlist.subject_display so the JS filter chain works."""
+    from exams_app.models import Subject
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    math = baker.make(Subject, name='TYT Matematik', exam_type='TYT', excluded_from_planning=False)
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=math, exam_type='TYT')
+    baker.make('tasks_app.YouTubePlaylist', imported_by=coach, subject=None, exam_type='TYT')
+
+    client.force_login(coach)
+
+    dersler = client.get('/coach/tasks/api/dersler').json()['dersler']
+    playlists = client.get('/coach/tasks/api/youtube/list').json()['playlists']
+
+    ders_math = next(d for d in dersler if d['id'] == f'sub_{math.pk}')
+    pl_math = next(p for p in playlists if p['subject_display'] == 'Matematik')
+    assert ders_math['ad'] == pl_math['subject_display']
+
+    ders_unspc = next(d for d in dersler if d['id'] == 'sub_0')
+    pl_unspc = next(p for p in playlists if p['subject_display'] == '')
+    assert ders_unspc['id'] == 'sub_0'
+    assert pl_unspc['subject_display'] == ''
