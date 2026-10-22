@@ -208,12 +208,6 @@
                   </div>
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
-                {% if item.student.phone %}
-                <a href="tel:{{ item.student.phone }}"
-                   class="pii text-xs font-mono text-steel-400 hover:text-steel-300 transition-colors mt-0.5 block">
-                  {{ item.student.phone }}
-                </a>
-                {% endif %}
               </div>
             </div>
 
@@ -309,12 +303,6 @@
               <p class="pii text-[11px] text-ink-500 mt-0.5">{{ item.student.grade|default:"—" }}</p>
             </div>
             <div class="hidden sm:flex items-center gap-5 shrink-0">
-              {% if item.student.phone %}
-              <div class="hidden lg:block text-right">
-                <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Telefon</p>
-                <p class="pii text-sm font-mono text-steel-400 tnum"><a href="tel:{{ item.student.phone }}" class="hover:text-steel-300 transition-colors">{{ item.student.phone }}</a></p>
-              </div>
-              {% endif %}
               <div class="text-right">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Son Net</p>
                 <p class="text-sm font-bold text-ink-100 tnum">{% if item.last_net %}{{ item.last_net|floatformat:1 }}{% else %}—{% endif %}</p>
