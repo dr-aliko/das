@@ -590,47 +590,74 @@
       {% endif %}
 
       {% if user.is_student %}
-      <div class="rounded-xl border border-ink-700 bg-ink-850 p-4">
-        <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-3">{% trans "Kişisel Bilgiler" %}</p>
-        <div class="space-y-4">
-          <div>
-            <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "Ad Soyad" %}</p>
-            <p class="text-sm text-ink-200 pii">{{ user.full_name }}</p>
+      <div class="rounded-xl border border-ink-700 bg-ink-850 overflow-hidden"
+           x-data="{ kisiselOpen: {{ phone_error|yesno:'true,false' }} }">
+        <button @click="kisiselOpen = !kisiselOpen"
+                class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-ink-800 transition-colors text-left"
+                :class="kisiselOpen && 'bg-ink-800'">
+          <span class="w-8 h-8 rounded-lg bg-ink-800 flex items-center justify-center text-ink-400 shrink-0"
+                :class="kisiselOpen && 'bg-ink-750'">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#das-icon-user"/>
+            </svg>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-ink-100">{% trans "Kişisel Bilgiler" %}</p>
+            <p class="pii text-xs text-ink-400 mt-0.5 truncate" x-show="!kisiselOpen" x-cloak>
+              {% if phone_display %}{{ phone_display }}{% else %}{% trans "Telefon henüz eklenmedi" %}{% endif %}
+            </p>
           </div>
-          <div>
-            <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "E-posta" %}</p>
-            <p class="text-sm text-ink-200 pii">{{ user.email }}</p>
-          </div>
-          <div>
-            <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "Cep Telefonu" %}</p>
-            {% if phone_display %}
-            <p class="text-sm font-mono text-ink-200 pii">{{ phone_display }}</p>
-            <p class="text-xs text-ink-500 mt-0.5">{% trans "Değiştirmek için destek ile iletişime geç." %}</p>
-            {% else %}
-            <form method="post" action="{% url 'profil_telefon' %}">
-              {% csrf_token %}
-              <input type="tel" name="phone"
-                     placeholder="0505 123 45 67"
-                     autocomplete="tel"
-                     inputmode="tel"
-                     class="w-full rounded-lg border border-ink-700 bg-ink-800 text-ink-100 text-sm
-                            px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-steel-500
-                            transition-colors">
-              {% if phone_error %}
-              <p class="text-xs text-ruby-500 mt-1">{{ phone_error }}</p>
-              {% endif %}
-              <p class="text-xs text-ink-500 mt-1.5">{% trans "Koçunun sana ulaşabilmesi için telefon numaran gerekli." %}</p>
-              <div class="flex items-center gap-2 mt-2">
-                <button type="submit"
-                        class="h-8 px-4 rounded-lg bg-steel-600 hover:bg-steel-500 text-white text-xs font-semibold transition-colors">
-                  {% trans "Kaydet" %}
-                </button>
-                {% if phone_saved %}
-                <span class="text-[11px] text-emerald-500 font-semibold">{% trans "Kaydedildi" %}</span>
+          {% if phone_saved %}
+          <span class="text-[10px] text-emerald-500 font-semibold shrink-0 mr-1">{% trans "Kaydedildi" %}</span>
+          {% endif %}
+          <svg class="w-4 h-4 text-ink-500 shrink-0 transition-transform duration-200"
+               :class="kisiselOpen && 'rotate-180'"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <use href="#das-icon-chev-down"/>
+          </svg>
+        </button>
+        <div x-show="kisiselOpen" x-collapse>
+          <div class="px-4 pb-5 border-t border-ink-700 pt-4 space-y-4">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "Ad Soyad" %}</p>
+              <p class="text-sm text-ink-200 pii">{{ user.full_name }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "E-posta" %}</p>
+              <p class="text-sm text-ink-200 pii">{{ user.email }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1">{% trans "Cep Telefonu" %}</p>
+              {% if phone_display %}
+              <p class="text-sm font-mono text-ink-200 pii">{{ phone_display }}</p>
+              <p class="text-xs text-ink-500 mt-0.5">{% trans "Değiştirmek için destek ile iletişime geç." %}</p>
+              {% else %}
+              <form method="post" action="{% url 'profil_telefon' %}">
+                {% csrf_token %}
+                <input type="tel" name="phone"
+                       placeholder="0505 123 45 67"
+                       autocomplete="tel"
+                       inputmode="tel"
+                       class="w-full rounded-lg border border-ink-700 bg-ink-800 text-ink-100 text-sm
+                              px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-steel-500
+                              transition-colors">
+                {% if phone_error %}
+                <p class="text-xs text-ruby-500 mt-1">{{ phone_error }}</p>
                 {% endif %}
-              </div>
-            </form>
-            {% endif %}
+                <p class="text-xs text-ink-500 mt-1.5">{% trans "Koçunun sana ulaşabilmesi için telefon numaran gerekli." %}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  <button type="submit"
+                          class="h-8 px-4 rounded-lg bg-steel-600 hover:bg-steel-500 text-white text-xs font-semibold transition-colors">
+                    {% trans "Kaydet" %}
+                  </button>
+                  {% if phone_saved %}
+                  <span class="text-[11px] text-emerald-500 font-semibold">{% trans "Kaydedildi" %}</span>
+                  {% endif %}
+                </div>
+              </form>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
