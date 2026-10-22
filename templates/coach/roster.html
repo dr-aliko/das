@@ -22,6 +22,8 @@
   .wa-pill{width:36px;height:36px;padding:0;border-radius:50%;justify-content:center}
   .wa-pill::before{content:'';position:absolute;inset:-4px 0}
 }
+/* list-view: shared action-slot size — button (own) and placeholder (vagus) are the same width */
+.roster-action-slot{width:2rem;height:2rem;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
 </style>
 <div x-data="rosterApp()"
      @keydown.escape.window="inboxOpen = false; selectedStudent = ''">
@@ -349,16 +351,16 @@
               <span class="wa-list-text">{{ item.phone_display }}</span>
             </a>
             {% endif %}
-            <div class="hidden sm:flex items-center gap-5 shrink-0">
-              <div class="text-right">
+            <div class="roster-stats hidden sm:flex items-center gap-5 shrink-0">
+              <div class="text-right" style="width:56px">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Son Net</p>
                 <p class="text-sm font-bold text-ink-100 tnum">{% if item.last_net %}{{ item.last_net|floatformat:1 }}{% else %}—{% endif %}</p>
               </div>
-              <div class="text-right">
+              <div class="text-right" style="width:56px">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">30g Ort.</p>
                 <p class="text-sm font-bold text-ink-100 tnum">{% if item.avg_30d %}{{ item.avg_30d|floatformat:1 }}{% else %}—{% endif %}</p>
               </div>
-              <div class="text-right">
+              <div class="text-right" style="width:88px">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Son Sınav</p>
                 <p class="text-sm font-bold text-ink-200 tnum">{{ item.last_exam_ago }}</p>
               </div>
@@ -366,7 +368,7 @@
             <div class="flex items-center gap-1 shrink-0">
               {% if item.source != 'vagus' %}{# Trash — not rendered for Vagus-assigned students #}
               <button @click.prevent.stop="confirm = true" x-show="!confirm"
-                      class="w-8 h-8 inline-flex items-center justify-center rounded-md
+                      class="roster-action-slot rounded-md
                              text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint
                              opacity-0 group-hover:opacity-100 transition-all"
                       style="position:relative;z-index:1"
@@ -377,6 +379,8 @@
                   <path d="M10 11v6M14 11v6"/>
                 </svg>
               </button>
+              {% else %}
+              <span class="roster-action-slot" aria-hidden="true" style="visibility:hidden"></span>
               {% endif %}
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                    class="text-ink-500 group-hover:text-steel-400 transition-colors"
