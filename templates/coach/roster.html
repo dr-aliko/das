@@ -213,7 +213,7 @@
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
                           style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
                     {% endif %}
-                    {# Trash button — z-index:1 keeps it above the absolute profile overlay #}
+                    {% if item.source != 'vagus' %}{# Trash — not rendered for Vagus-assigned students #}
                     <button @click.prevent.stop="confirm = true" x-show="!confirm"
                             class="w-10 h-10 inline-flex items-center justify-center rounded-md
                                    text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint
@@ -227,6 +227,7 @@
                         <path d="M10 11v6M14 11v6"/>
                       </svg>
                     </button>
+                    {% endif %}
                   </div>
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
@@ -363,6 +364,7 @@
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
+              {% if item.source != 'vagus' %}{# Trash — not rendered for Vagus-assigned students #}
               <button @click.prevent.stop="confirm = true" x-show="!confirm"
                       class="w-8 h-8 inline-flex items-center justify-center rounded-md
                              text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint
@@ -375,13 +377,14 @@
                   <path d="M10 11v6M14 11v6"/>
                 </svg>
               </button>
+              {% endif %}
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                    class="text-ink-500 group-hover:text-steel-400 transition-colors"
                    viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
             </div>
           </div>
 
-          {# Confirm overlay #}
+          {% if item.source != 'vagus' %}{# Confirm overlay — not rendered for Vagus-assigned students #}
           <div x-show="confirm" x-cloak
                class="absolute inset-0 rounded-xl bg-ink-900/95 border border-ruby-500/30
                       flex flex-col items-center justify-center gap-3 p-4 z-20"
@@ -412,6 +415,7 @@
               </button>
             </div>
           </div>
+          {% endif %}
 
         </div>
         {% endfor %}

@@ -2737,11 +2737,17 @@ def unlink_student(request, student_id):
         return HttpResponseForbidden()
     from users_app.models import User as UserModel, CoachStudentInterval
     from users_app.services.coach_student import deactivate_link
+    from capacity_app.services import is_own_student_source
     student = get_object_or_404(UserModel, id=student_id, role='student')
+    link = CoachStudent.objects.filter(coach=request.user, student=student, active=True).first()
+    if link and not is_own_student_source(link.source, link.student):
+        return JsonResponse(
+            {'ok': False, 'error': 'Vagus öğrencileri yalnızca yönetici tarafından kaldırılabilir.'},
+            status=403,
+        )
     if student.coach_id == request.user.id:
         student.coach = None
         student.save(update_fields=['coach'])
-    link = CoachStudent.objects.filter(coach=request.user, student=student, active=True).first()
     if link:
         deactivate_link(link, CoachStudentInterval.REASON_MANUAL)
     return JsonResponse({'ok': True})
