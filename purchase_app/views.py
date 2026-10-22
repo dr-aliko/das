@@ -262,7 +262,7 @@ def step1(request, wp_id):
         # POST for logged-in student — inject email from authenticated user
         post_data = request.POST.copy()
         post_data['email'] = user.email
-        form = PurchaseForm(post_data)
+        form = PurchaseForm(post_data, current_user=user)
         if not form.is_valid():
             ctx = _base_ctx(coach, plans,
                             selected_plan_id=request.POST.get('plan', ''),

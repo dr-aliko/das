@@ -70,12 +70,12 @@ def _step1_post(client, wp_id, email, plan_pk, extra=None):
     return client.post(f'/satin-al/{wp_id}/', payload, follow=False)
 
 
-# ── 1. No user enumeration on step 1 ─────────────────────────────────────────
+# ── 1. Existing email shows a form error; new email proceeds to verify ─────────
 
 @pytest.mark.django_db
-def test_code_send_identical_for_known_unknown_email(coach, active_plan, purchase_settings):
-    """Both existing and new email addresses redirect to /dogrula/."""
-    existing = baker.make('users_app.User', email='exists@example.com', role='student', is_active=True)
+def test_existing_email_rejected_new_email_proceeds(coach, active_plan, purchase_settings):
+    """Existing email → form validation error (200); new email → redirect to /dogrula/."""
+    baker.make('users_app.User', email='exists@example.com', role='student', is_active=True)
 
     with patch('purchase_app.views.verification.issue_code', return_value='111111'), \
          patch('django_q.tasks.async_task'):
@@ -85,9 +85,9 @@ def test_code_send_identical_for_known_unknown_email(coach, active_plan, purchas
         c2 = Client()
         resp2 = _step1_post(c2, coach.wordpress_post_id, 'newone@example.com', active_plan.pk)
 
-    assert resp1.status_code == 302, f'Expected 302 for existing email, got {resp1.status_code}'
+    assert resp1.status_code == 200, f'Expected 200 for existing email, got {resp1.status_code}'
+    assert 'kayıtlı bir hesap zaten var' in resp1.content.decode('utf-8')
     assert resp2.status_code == 302, f'Expected 302 for new email, got {resp2.status_code}'
-    assert '/dogrula/' in resp1['Location']
     assert '/dogrula/' in resp2['Location']
 
 

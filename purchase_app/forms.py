@@ -1,6 +1,7 @@
 import re
 
 from django import forms
+from django.contrib.auth import get_user_model
 
 from .models import Plan
 
@@ -72,16 +73,42 @@ class PurchaseForm(forms.Form):
     guardian_name  = forms.CharField(max_length=255, label='Veli Adı Soyadı', required=False)
     guardian_phone = forms.CharField(max_length=32,  label='Veli Telefonu',   required=False)
 
+    def __init__(self, *args, current_user=None, **kwargs):
+        self.current_user = current_user
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        User = get_user_model()
+        qs = User.objects.filter(email__iexact=email)
+        if self.current_user:
+            qs = qs.exclude(pk=self.current_user.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                'Bu e-posta ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.'
+            )
+        return email
+
     def clean_phone(self):
         raw = (self.cleaned_data.get('phone') or '').strip()
         if not raw:
             raise forms.ValidationError('Telefon numarası zorunludur.')
         try:
-            return _normalize_tr_mobile(raw)
+            national = _normalize_tr_mobile(raw)
         except ValueError:
             raise forms.ValidationError(
                 'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
             )
+        e164 = '+90' + national[1:]
+        User = get_user_model()
+        qs = User.objects.filter(phone=e164)
+        if self.current_user:
+            qs = qs.exclude(pk=self.current_user.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                'Bu telefon numarası ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.'
+            )
+        return national
 
     def clean(self):
         cd = super().clean()

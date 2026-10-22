@@ -82,7 +82,7 @@ def test_student_phone_save_valid_and_invalid(db):
         'users_app.User',
         role='student',
         is_active=True,
-        phone='',
+        phone=None,
     )
     c = Client()
     c.force_login(student)
@@ -93,14 +93,11 @@ def test_student_phone_save_valid_and_invalid(db):
     student.refresh_from_db()
     assert student.phone == '+905559876543'
 
-    # Invalid phone — should redirect without changing the phone
+    # Phone already set — any POST must be rejected with 403
     resp = c.post('/profil/telefon/', {'phone': '12345'})
-    assert resp.status_code == 302
+    assert resp.status_code == 403
     student.refresh_from_db()
     assert student.phone == '+905559876543'  # unchanged
-    # Error stored in session
-    session = c.session
-    assert 'phone_error' in session
 
 
 # ── 3. on_payment_success: apply if empty, never overwrite ───────────────────
@@ -115,7 +112,7 @@ def test_phone_apply_if_empty_and_never_overwrite(active_plan):
         email='nophone@example.com',
         role='student',
         is_active=True,
-        phone='',
+        phone=None,
     )
     order_empty = baker.make(
         'purchase_app.Order',

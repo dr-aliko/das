@@ -28,7 +28,7 @@ class Command(BaseCommand):
         apply = options['apply']
         User = get_user_model()
 
-        students = User.objects.filter(role='student', phone='')
+        students = User.objects.filter(role='student', phone__isnull=True)
         updated = skipped = 0
 
         for student in students.iterator():

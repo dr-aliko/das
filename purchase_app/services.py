@@ -176,7 +176,11 @@ def on_payment_success(order):
         if order.phone and not user.phone:
             try:
                 from users_app.forms import _normalize_tr_phone_e164
-                profile_patch['phone'] = _normalize_tr_phone_e164(order.phone)
+                e164 = _normalize_tr_phone_e164(order.phone)
+                if not User.objects.filter(phone=e164).exclude(pk=user.pk).exists():
+                    profile_patch['phone'] = e164
+                else:
+                    _log.warning('on_payment_success: phone %s already taken, skipping for order %s', e164, order.pk)
             except Exception:
                 _log.exception('on_payment_success: phone normalisation failed for order %s', order.pk)
         if profile_patch:

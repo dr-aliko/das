@@ -1007,23 +1007,26 @@ def alan_sinif_save(request):
 @login_required
 @require_http_methods(['POST'])
 def student_phone_save(request):
-    """Save or clear the phone number for the logged-in student."""
+    """Set the phone number for the logged-in student (once only — immutable after save)."""
     if not request.user.is_student:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden()
-    from purchase_app.forms import _normalize_tr_mobile
+    if request.user.phone:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Telefon numarası zaten kayıtlı.')
     raw = request.POST.get('phone', '').strip()
     if not raw:
-        request.user.phone = ''
-        request.user.save(update_fields=['phone'])
-        request.session['phone_saved'] = True
         return redirect('profil')
     try:
-        national = _normalize_tr_mobile(raw)
-        e164 = '+90' + national[1:]
+        e164 = _normalize_tr_phone_e164(raw)
     except ValueError:
         request.session['phone_error'] = (
             'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
+        )
+        return redirect('profil')
+    if User.objects.filter(phone=e164).exists():
+        request.session['phone_error'] = (
+            'Bu telefon numarası ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.'
         )
         return redirect('profil')
     request.user.phone = e164

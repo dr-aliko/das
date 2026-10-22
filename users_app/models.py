@@ -49,7 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     grade = models.CharField(max_length=50, blank=True, default='')
     alan  = models.CharField(max_length=5, choices=ALAN_CHOICES, blank=True, default='')
     sinif = models.CharField(max_length=5, choices=SINIF_CHOICES, blank=True, default='')
-    phone = models.CharField(max_length=20, blank=True, default='')
+    phone = models.CharField(max_length=20, blank=True, null=True, default=None, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     # ── Streak tracking ───────────────────────────────────────────────────────
     current_streak     = models.PositiveIntegerField(default=0)

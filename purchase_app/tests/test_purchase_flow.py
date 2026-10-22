@@ -224,8 +224,8 @@ def test_recent_pending_order_not_cancelled(pending_order):
 # ── No user enumeration ────────────────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_existing_email_form_response_identical(coach, active_plan, settings):
-    """Step 1 POST with existing student email must redirect to verify (same as new email) — no user enumeration."""
+def test_existing_email_shows_form_error(coach, active_plan, settings):
+    """Step 1 POST with an email that already has an account must return a form error (200)."""
     settings.SELF_PURCHASE_ENABLED = True
     settings.LEGAL_TERMS_URL = 'https://example.com/terms'
     settings.LEGAL_DISTANCE_SALES_URL = 'https://example.com/ds'
@@ -236,7 +236,6 @@ def test_existing_email_form_response_identical(coach, active_plan, settings):
 
     with patch('purchase_app.views._purchase_enabled', return_value=True), \
          patch('purchase_app.views.get_provider') as mock_prov, \
-         patch('purchase_app.views.verification.issue_code', return_value='123456'), \
          patch('django_q.tasks.async_task'):
         mock_prov.return_value.name = 'sandbox'
 
@@ -254,9 +253,9 @@ def test_existing_email_form_response_identical(coach, active_plan, settings):
         }
         resp = client_obj.post(f'/satin-al/{coach.wordpress_post_id}/', payload, follow=False)
 
-    # Both known and unknown email should redirect to verify — no 409 or "you already have an account"
-    assert resp.status_code == 302
-    assert '/dogrula/' in resp['Location']
+    # Known email → form validation error, not a redirect
+    assert resp.status_code == 200
+    assert 'kayıtlı bir hesap zaten var' in resp.content.decode('utf-8')
 
 
 # ── Non-student role → needs_review ───────────────────────────────────────────
