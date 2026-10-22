@@ -1399,6 +1399,7 @@ def dashboard_analytics_partial(request):
         {'id': t['topic__id'], 'name': t['topic__name'],
          'subject': t['topic__subject__name'],
          'sub': t['topic__sub_category'] or '',
+         'errors': (t['errors'] or 0),
          'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
         for t in radar_topics
     ]
@@ -1485,21 +1486,16 @@ def _build_trial_topic_errors(user, period_str='', top_n=12, *, coach_view=False
 
     Pass coach_view=True and student_id=<int> so drill-down links point to the coach
     exam detail route instead of the student route.
+    Uses _exam_topic_error_totals so numbers always match the Görev Takibi widget.
     """
-    from django.db.models import Sum as _Sum
-
-    qs = ExamTopicError.objects.filter(exam__student=user)
-    if subject_name:
-        qs = qs.filter(topic__subject__name=subject_name)
     since = None
     if period_str in _PERIOD_DAYS:
         since = date.today() - timedelta(days=_PERIOD_DAYS[period_str])
-        qs = qs.filter(exam__exam_date__gte=since)
 
     agg = list(
-        qs.values('topic__id', 'topic__name', 'topic__subject__name')
-        .annotate(total=_Sum('wrong_count') + _Sum('blank_count'))
-        .order_by('-total')[:top_n]
+        _exam_topic_error_totals(
+            user.id, since=since, subject_name=subject_name or None
+        )[:top_n]
     )
     if not agg:
         return []
@@ -1542,7 +1538,7 @@ def _build_trial_topic_errors(user, period_str='', top_n=12, *, coach_view=False
             'id':      tid,
             'name':    r['topic__name'],
             'subject': r['topic__subject__name'] or '',
-            'errors':  r['total'] or 0,
+            'errors':  r['errors'] or 0,
             'exams':   exams,
         })
     return topics
@@ -1588,7 +1584,9 @@ def student_dashboard(request):
 
     radar_json = safe_json([
         {'id': t['topic__id'], 'name': t['topic__name'], 'subject': t['topic__subject__name'],
-         'sub': t['topic__sub_category'] or '', 'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
+         'sub': t['topic__sub_category'] or '',
+         'errors': (t['errors'] or 0),
+         'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
         for t in radar_topics
     ])
     active_json = safe_json([
@@ -2617,6 +2615,7 @@ def coach_student_detail(request, student_id):
     trial_radar_json = safe_json([
         {'id': t['topic__id'], 'name': t['topic__name'],
          'subject': t['topic__subject__name'], 'sub': t['topic__sub_category'] or '',
+         'errors': (t['errors'] or 0),
          'wrong': t['wrong_total'] or 0, 'blank': t['blank_total'] or 0}
         for t in radar_topics
     ])
@@ -3358,29 +3357,50 @@ def _get_radar_topics(student_id, since=None):
     return result
 
 
-def _get_gray_topics(student_id, last_n=None, since=None):
-    from django.db.models import Count, Sum
-    qs = ExamTopicError.objects.filter(exam__student_id=student_id)
+def _exam_topic_error_totals(student_id, since=None, subject_name=None):
+    """Shared helper: live wrong+blank totals per topic from ExamTopicError.
 
+    No top-N limit — callers apply their own slice. Returns a queryset annotated
+    with wrong_total, blank_total, and errors (=wrong+blank), ordered by -errors.
+    Both the Görev Takibi widget and the Denemeler accordion use this so they
+    always show identical numbers for the same topic.
+    """
+    from django.db.models import Sum
+    qs = ExamTopicError.objects.filter(exam__student_id=student_id)
     if since:
         qs = qs.filter(exam__exam_date__gte=since)
-    elif last_n:
-        recent_ids = (
+    if subject_name:
+        qs = qs.filter(topic__subject__name=subject_name)
+    return (
+        qs.values('topic__id', 'topic__name', 'topic__subject__name', 'topic__sub_category')
+        .annotate(
+            wrong_total=Sum('wrong_count'),
+            blank_total=Sum('blank_count'),
+            errors=Sum('wrong_count') + Sum('blank_count'),
+        )
+        .order_by('-errors')
+    )
+
+
+def _get_gray_topics(student_id, last_n=None, since=None):
+    if last_n:
+        from django.db.models import Sum
+        recent_ids = list(
             Exam.objects.filter(student_id=student_id)
             .order_by('-exam_date')
             .values_list('id', flat=True)[:last_n]
         )
-        qs = qs.filter(exam_id__in=recent_ids)
-
-    return (
-        qs.values('topic__id', 'topic__name', 'topic__subject__name', 'topic__sub_category')
-        .annotate(
-            error_count=Sum('wrong_count') + Sum('blank_count'),
-            wrong_total=Sum('wrong_count'),
-            blank_total=Sum('blank_count'),
+        return (
+            ExamTopicError.objects.filter(exam__student_id=student_id, exam_id__in=recent_ids)
+            .values('topic__id', 'topic__name', 'topic__subject__name', 'topic__sub_category')
+            .annotate(
+                wrong_total=Sum('wrong_count'),
+                blank_total=Sum('blank_count'),
+                errors=Sum('wrong_count') + Sum('blank_count'),
+            )
+            .order_by('-errors')[:20]
         )
-        .order_by('-error_count')[:20]
-    )
+    return _exam_topic_error_totals(student_id, since=since)[:20]
 
 
 def _build_student_chart_data(student_id, since=None):
