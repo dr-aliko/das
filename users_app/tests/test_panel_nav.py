@@ -1,4 +1,4 @@
-"""Panel navigation — shared nav widget is present on all staff pages."""
+"""Panel navigation — two-level shared nav widget."""
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -19,7 +19,7 @@ def _student():
     return baker.make(User, role='student', is_active=True)
 
 
-# ── 1. Parametrized smoke: all pure-DB panel pages return 200 ─────────────────
+# ── Smoke: pure-DB panel pages return 200 ────────────────────────────────────
 
 PANEL_URLS = [
     'panel_home',
@@ -40,19 +40,46 @@ def test_panel_page_returns_200(url_name):
     assert c.get(reverse(url_name)).status_code == 200
 
 
-# ── 2. Nav widget is present and contains expected links ─────────────────────
+# ── Nav test 1: all five group pills render ───────────────────────────────────
 
 @pytest.mark.django_db
-def test_panel_nav_links_present():
+def test_group_pills_render():
     c = Client()
     c.force_login(_staff())
     content = c.get(reverse('panel_home')).content.decode()
     assert 'id="panel-main-nav"' in content
-    for label in ('Genel bakış', 'Kontenjan', 'Kazançlar', 'Belgeler', 'Siparişler'):
-        assert label in content, f'"{label}" missing from panel nav'
+    for label in ('Genel bakış', 'Koçlar', 'Öğrenciler', 'Satış', 'Ödemeler'):
+        assert label in content, f'group pill "{label}" missing from nav'
 
 
-# ── 3. Secondary page highlights its parent section ──────────────────────────
+# ── Nav test 2: second row shows only the active group's pages ────────────────
+
+@pytest.mark.django_db
+def test_second_row_shows_only_active_group():
+    c = Client()
+    c.force_login(_staff())
+    # panel_koc_ekle → active_section='koc_ekle' → group 'koclar'
+    # second row must include 'Belgeler' (Koçlar group) and must NOT include 'Davetler' (Öğrenciler group)
+    content = c.get(reverse('panel_koc_ekle')).content.decode()
+    assert 'Belgeler' in content
+    assert 'Davetler' not in content
+
+
+# ── Nav test 3: removed pages absent from menu ───────────────────────────────
+
+@pytest.mark.django_db
+def test_removed_pages_not_in_nav():
+    c = Client()
+    c.force_login(_staff())
+    content = c.get(reverse('panel_home')).content.decode()
+    nav_start = content.find('id="panel-main-nav"')
+    nav_end   = content.find('</div>', nav_start + 500)  # rough boundary
+    nav_block = content[nav_start:nav_end]
+    assert 'Tarifeler' not in nav_block
+    assert 'Ödeme özeti' not in nav_block
+
+
+# ── Secondary page still has the nav widget ──────────────────────────────────
 
 @pytest.mark.django_db
 def test_koc_degistir_has_panel_nav():
@@ -70,7 +97,7 @@ def test_koc_degistir_has_panel_nav():
     assert 'id="panel-main-nav"' in response.content.decode()
 
 
-# ── 4. Coach-side pages must never render the panel nav ──────────────────────
+# ── Coach-side pages must never render the panel nav ─────────────────────────
 
 @pytest.mark.django_db
 def test_no_panel_nav_on_coach_billing():
