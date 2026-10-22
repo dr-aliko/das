@@ -167,12 +167,18 @@ def on_payment_success(order):
             User.objects.filter(pk=user.pk).update(coach=order.coach)
             user.coach_id = order.coach_id
 
-        # Apply sinif/alan snapshot from order — never overwrite an existing value.
+        # Apply sinif/alan/phone snapshot from order — never overwrite an existing value.
         profile_patch = {}
         if order.sinif and not user.sinif:
             profile_patch['sinif'] = order.sinif
         if order.alan and not user.alan:
             profile_patch['alan'] = order.alan
+        if order.phone and not user.phone:
+            try:
+                from users_app.forms import _normalize_tr_phone_e164
+                profile_patch['phone'] = _normalize_tr_phone_e164(order.phone)
+            except Exception:
+                _log.exception('on_payment_success: phone normalisation failed for order %s', order.pk)
         if profile_patch:
             User.objects.filter(pk=user.pk).update(**profile_patch)
 

@@ -103,6 +103,7 @@
           <tr class="border-b border-ink-800 bg-ink-900/50">
             <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Öğrenci</th>
             <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">E-posta</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Telefon</th>
             <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28">Kaynak</th>
             <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-24"></th>
           </tr>
@@ -120,6 +121,9 @@
               </div>
             </td>
             <td class="px-4 py-3 text-ink-400 pii">{{ link.student.email }}</td>
+            <td class="px-4 py-3 text-ink-400 pii font-mono text-xs">
+              {% if link.student.phone %}{{ link.student.phone }}{% else %}<span class="text-ink-700">—</span>{% endif %}
+            </td>
             <td class="px-4 py-3">
               {% if link.source == 'vagus' %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold

@@ -31,6 +31,11 @@
       {% if student.grade %}
       <span class="pii shrink-0 text-xs text-ink-500">· {{ student.grade }}</span>
       {% endif %}
+      {% if student.phone %}
+      <a href="tel:{{ student.phone }}"
+         class="pii shrink-0 text-xs font-mono text-steel-400 hover:text-steel-300 transition-colors"
+         title="Öğrenciyi ara">{{ student.phone }}</a>
+      {% endif %}
       {% if status == 'iyi' %}
       <span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İYİ</span>
       {% elif status == 'dusus' %}

@@ -934,6 +934,13 @@ def profil_view(request):
         )
     )
 
+    phone_error = request.session.pop('phone_error', '')
+    phone_saved = bool(request.session.pop('phone_saved', False))
+    phone_display = ''
+    if user.is_student and user.phone:
+        p = user.phone
+        phone_display = ('0' + p[3:]) if p.startswith('+90') else p
+
     return render(request, 'profile/profile_v2.html', {
         'stats':                   stats,
         'activity_week':           activity_week,
@@ -948,6 +955,9 @@ def profil_view(request):
         'coach_profile':           coach_profile,
         'coach_payment_form':      coach_payment_form,
         'coach_section_open':      coach_section_open,
+        'phone_display':           phone_display,
+        'phone_error':             phone_error,
+        'phone_saved':             phone_saved,
     })
 
 
@@ -992,6 +1002,34 @@ def alan_sinif_save(request):
             target_year = _date.today().year + sinif_offset + 1
 
     return JsonResponse({'ok': True, 'target_year': target_year})
+
+
+@login_required
+@require_http_methods(['POST'])
+def student_phone_save(request):
+    """Save or clear the phone number for the logged-in student."""
+    if not request.user.is_student:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+    from purchase_app.forms import _normalize_tr_mobile
+    raw = request.POST.get('phone', '').strip()
+    if not raw:
+        request.user.phone = ''
+        request.user.save(update_fields=['phone'])
+        request.session['phone_saved'] = True
+        return redirect('profil')
+    try:
+        national = _normalize_tr_mobile(raw)
+        e164 = '+90' + national[1:]
+    except ValueError:
+        request.session['phone_error'] = (
+            'Geçerli bir Türk cep telefonu numarası girin. Örnek: 0505 123 45 67'
+        )
+        return redirect('profil')
+    request.user.phone = e164
+    request.user.save(update_fields=['phone'])
+    request.session['phone_saved'] = True
+    return redirect('profil')
 
 
 @login_required

@@ -10,6 +10,7 @@ from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
 from users_app.views import (
     profil_view, theme_save, activity_calendar_api, alan_sinif_save, profil_ayarlar,
+    student_phone_save,
     geri_bildirim_gonder, push_subscribe, push_unsubscribe, push_test,
     student_notifications_api, student_notification_read, student_notification_mark_all_read,
     notification_page_view, notification_delete, notification_delete_all, notification_mark_all_read,
@@ -65,7 +66,8 @@ urlpatterns = [
     path('profil/', profil_view,    name='profil'),
     path('profil/theme/', theme_save, name='profil_theme'),
     path('profil/aktivite/', activity_calendar_api, name='profil_aktivite'),
-    path('profil/alan-sinif/', alan_sinif_save, name='profil_alan_sinif'),
+    path('profil/alan-sinif/', alan_sinif_save,    name='profil_alan_sinif'),
+    path('profil/telefon/',   student_phone_save, name='profil_telefon'),
     path('profil/ayarlar/', profil_ayarlar, name='profil_ayarlar'),
     path('profil/geri-bildirim/', geri_bildirim_gonder, name='profil_geri_bildirim'),
     path('profil/push-subscribe/',   push_subscribe,   name='profil_push_subscribe'),

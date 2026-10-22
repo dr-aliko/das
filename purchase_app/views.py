@@ -102,6 +102,13 @@ def _save_consents(order, post_data, ip, ua, now, doc_version):
     PurchaseConsent.objects.bulk_create(rows)
 
 
+def _e164_to_national(e164):
+    """Convert +905XXXXXXXXX to 05XXXXXXXXX for form prefill."""
+    if e164 and e164.startswith('+90') and len(e164) == 13:
+        return '0' + e164[3:]
+    return e164 or ''
+
+
 def _group_iban(iban):
     s = iban.replace(' ', '')
     return ' '.join(s[i:i+4] for i in range(0, len(s), 4))
@@ -238,9 +245,11 @@ def step1(request, wp_id):
         if request.method == 'GET':
             session_data = request.session.get('purchase_step1', {})
             initial = {
-                'sinif': session_data.get('sinif', user.sinif or ''),
-                'alan':  session_data.get('alan',  user.alan  or ''),
-                'plan':  session_data.get('plan_id', str(plans.first().pk) if plans.exists() else ''),
+                'full_name': session_data.get('full_name', user.full_name or ''),
+                'phone':     session_data.get('phone', _e164_to_national(user.phone)),
+                'sinif':     session_data.get('sinif', user.sinif or ''),
+                'alan':      session_data.get('alan',  user.alan  or ''),
+                'plan':      session_data.get('plan_id', str(plans.first().pk) if plans.exists() else ''),
             }
             form = PurchaseForm(initial=initial)
             ctx = _base_ctx(coach, plans,
