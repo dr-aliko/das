@@ -310,7 +310,7 @@
             </div>
             <div class="hidden sm:flex items-center gap-5 shrink-0">
               {% if item.student.phone %}
-              <div class="text-right">
+              <div class="hidden lg:block text-right">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Telefon</p>
                 <p class="pii text-sm font-mono text-steel-400 tnum"><a href="tel:{{ item.student.phone }}" class="hover:text-steel-300 transition-colors">{{ item.student.phone }}</a></p>
               </div>
