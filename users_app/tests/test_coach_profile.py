@@ -185,23 +185,26 @@ class TestServePrivateDocument:
 
     # ── response headers ──────────────────────────────────────────────────────
 
-    def test_pdf_has_attachment_disposition(self, tmp_path):
+    def test_pdf_has_inline_disposition_csp_nosniff(self, tmp_path):
         coach, doc = self._setup_doc(tmp_path, 'report.pdf', b'%PDF-1.4')
         c = Client()
         c.force_login(coach)
         resp = c.get(reverse('private_document', args=[doc]))
         assert resp.status_code == 200
         cd = resp['Content-Disposition']
-        assert 'attachment' in cd
-        assert '.pdf' in cd
+        assert 'inline' in cd
+        assert 'ogrenci-belgesi.pdf' in cd
+        assert resp.get('X-Content-Type-Options') == 'nosniff'
+        assert resp.get('Cache-Control') == 'private, no-store'
+        assert "default-src 'none'" in resp.get('Content-Security-Policy', '')
 
-    def test_png_has_inline_disposition(self, tmp_path):
+    def test_legacy_png_has_attachment_disposition(self, tmp_path):
         coach, doc = self._setup_doc(tmp_path, 'photo.png', b'\x89PNG\r\n\x1a\n')
         c = Client()
         c.force_login(coach)
         resp = c.get(reverse('private_document', args=[doc]))
         assert resp.status_code == 200
-        assert 'inline' in resp['Content-Disposition']
+        assert 'attachment' in resp['Content-Disposition']
 
     def test_nosniff_header_present(self, tmp_path):
         coach, doc = self._setup_doc(tmp_path)
@@ -483,3 +486,40 @@ class TestDocumentUploadEndToEnd:
         c = Client()
         c.force_login(staff)
         assert c.get(reverse('private_document', args=[filename])).status_code == 200
+
+
+# ── 11. Upload validation: PDF-only ──────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestDocumentUploadValidation:
+    """Only PDF (by content) may be uploaded; PNG and fake .pdf files are rejected."""
+
+    _ERROR = 'Yalnızca PDF yükleyebilirsiniz.'
+
+    def _post_doc(self, tmp_path, settings, name, content, content_type='application/octet-stream'):
+        settings.PRIVATE_MEDIA_ROOT = str(tmp_path)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        coach = _make_coach()
+        baker.make(CoachProfile, user=coach)
+        c = Client()
+        c.force_login(coach)
+        upload = SimpleUploadedFile(name, content, content_type=content_type)
+        return c.post(reverse('profil'), {
+            'coach_payment_submit': '1',
+            'iban': _VALID_IBAN,
+            'document': upload,
+        })
+
+    def test_pdf_upload_accepted(self, tmp_path, settings):
+        resp = self._post_doc(tmp_path, settings, 'belge.pdf', b'%PDF-1.4 content', 'application/pdf')
+        assert resp.status_code == 302
+
+    def test_png_upload_rejected(self, tmp_path, settings):
+        resp = self._post_doc(tmp_path, settings, 'photo.png', b'\x89PNG\r\n\x1a\nfake', 'image/png')
+        assert resp.status_code == 200
+        assert self._ERROR.encode() in resp.content
+
+    def test_fake_pdf_upload_rejected(self, tmp_path, settings):
+        resp = self._post_doc(tmp_path, settings, 'fake.pdf', b'\x89PNG\r\n\x1a\nfake', 'application/pdf')
+        assert resp.status_code == 200
+        assert self._ERROR.encode() in resp.content

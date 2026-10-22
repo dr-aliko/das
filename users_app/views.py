@@ -2055,15 +2055,16 @@ def serve_private_document(request, path):
     content_type, _ = mimetypes.guess_type(f'file{ext}')
     content_type = content_type or 'application/octet-stream'
 
-    # Inline for images; attachment (force-download) for everything else.
-    if content_type.startswith('image/'):
-        disposition = f'inline; filename="belge{ext}"'
+    if content_type == 'application/pdf':
+        disposition = 'inline; filename="ogrenci-belgesi.pdf"'
     else:
         disposition = f'attachment; filename="belge{ext}"'
 
     response = FileResponse(open(file_path, 'rb'), content_type=content_type)
     response['Content-Disposition'] = disposition
     response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-store'
+    response['Content-Security-Policy'] = "default-src 'none'; sandbox"
     return response
 
 

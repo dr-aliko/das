@@ -12,7 +12,7 @@
         <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
         <h1 class="text-lg font-semibold text-white">Koç Belgeleri</h1>
       </div>
-      <p class="text-sm text-ink-400">Koç kimlik ve sözleşme belgelerini inceleyin, onaylayın veya reddedin.</p>
+      <p class="text-sm text-ink-400">Koç öğrenci belgelerini inceleyin, onaylayın veya reddedin.</p>
     </div>
     <div class="flex items-center gap-3 text-sm">
       <a href="{% url 'panel_koc_ekle' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Koç Ekle</a>
@@ -68,9 +68,9 @@
             <p class="text-xs text-amber-500 mt-1">IBAN girilmemiş</p>
             {% endif %}
             <p class="text-xs text-ink-500 mt-0.5">
-              Belge:
-              <a href="{% url 'private_document' profile.document.name %}" target="_blank"
-                 class="text-steel-400 hover:underline">Görüntüle / İndir</a>
+              Öğrenci belgesi:
+              <a href="{% url 'private_document' profile.document.name %}" target="_blank" rel="noopener"
+                 class="text-steel-400 hover:underline">Belgeyi aç</a>
             </p>
             {% if profile.document_reviewed_by %}
             <p class="text-xs text-ink-600 mt-0.5">

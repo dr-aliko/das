@@ -263,7 +263,7 @@
               <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
             </svg>
           </span>
-          <p class="flex-1 text-sm font-semibold text-ink-100 min-w-0 text-left">Ödeme ve kimlik bilgileri</p>
+          <p class="flex-1 text-sm font-semibold text-ink-100 min-w-0 text-left">Ödeme ve belge bilgileri</p>
           {% if not coach_profile.phone or not coach_profile.iban or not coach_profile.document %}
           <span class="text-[10px] font-bold text-amber-400 bg-amber-400/10
                        border border-amber-400/20 px-2 py-0.5 rounded-full shrink-0">Eksik bilgi var</span>
@@ -289,7 +289,7 @@
               <ul class="mt-1 space-y-0.5 text-xs text-amber-300/80">
                 {% if not coach_profile.phone %}<li>• Telefon</li>{% endif %}
                 {% if not coach_profile.iban %}<li>• IBAN</li>{% endif %}
-                {% if not coach_profile.document %}<li>• Belge</li>{% endif %}
+                {% if not coach_profile.document %}<li>• Öğrenci belgesi</li>{% endif %}
               </ul>
               <p class="mt-1.5 text-xs text-amber-300/60">Ödemelerin yapılabilmesi için bu bilgiler gerekli.</p>
             </div>
@@ -328,10 +328,10 @@
 
               {% comment %} Document {% endcomment %}
               <div class="mb-4">
-                <label class="block text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1.5">Belge</label>
+                <label class="block text-[10px] uppercase tracking-wider font-bold text-ink-500 mb-1.5">Öğrenci belgesi</label>
                 {% if coach_profile.document %}
                 <p class="text-xs text-ink-400 mb-2">
-                  <a href="{% url 'private_document' coach_profile.document.name %}" target="_blank"
+                  <a href="{% url 'private_document' coach_profile.document.name %}" target="_blank" rel="noopener"
                      class="text-steel-400 hover:underline">Mevcut belgeyi görüntüle</a>
                   —
                   {% if coach_profile.document_status == 'approved' %}
@@ -343,13 +343,13 @@
                   {% endif %}
                 </p>
                 {% endif %}
-                <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"
+                <input type="file" name="document" accept="application/pdf"
                        style="font-size:12px;color:var(--muted);">
                 {% if coach_payment_form.document.errors %}
                 <p class="text-xs text-ruby-500 mt-1">{{ coach_payment_form.document.errors.0 }}</p>
                 {% endif %}
                 <p class="text-[11px] text-ink-500 mt-1">
-                  PDF, JPG veya PNG — maks. 5 MB. Kimlik veya ödeme sözleşmesi yükleyin.
+                  Öğrenci belgenizi PDF olarak yükleyin (en fazla 5 MB).
                 </p>
               </div>
 

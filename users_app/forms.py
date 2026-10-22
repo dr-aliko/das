@@ -47,11 +47,7 @@ def mask_iban(iban):
 
 # ── Document validation ───────────────────────────────────────────────────────
 
-_ALLOWED_MAGIC = {
-    b'%PDF': 'PDF',
-    b'\xff\xd8\xff': 'JPEG',
-    b'\x89PNG': 'PNG',
-}
+_PDF_MAGIC = b'%PDF'
 _MAX_DOCUMENT_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
@@ -61,8 +57,8 @@ def validate_coach_document(f):
     f.seek(0)
     header = f.read(8)
     f.seek(0)
-    if not any(header.startswith(sig) for sig in _ALLOWED_MAGIC):
-        raise ValidationError('Yalnızca PDF, JPG veya PNG dosyası yükleyebilirsiniz.')
+    if not header.startswith(_PDF_MAGIC):
+        raise ValidationError('Yalnızca PDF yükleyebilirsiniz.')
 
 
 class CoachRegistrationForm(forms.Form):
@@ -176,8 +172,8 @@ class CoachProfileForm(forms.ModelForm):
     )
     document = forms.FileField(
         required=False,
-        label='Belge',
-        widget=forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+        label='Öğrenci belgesi',
+        widget=forms.FileInput(attrs={'accept': 'application/pdf'}),
     )
 
     class Meta:
