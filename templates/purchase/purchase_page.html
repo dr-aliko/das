@@ -3,6 +3,198 @@
 
 {% block title %}{{ coach.full_name }} ile Vagus — Satın Al{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ── Auth: segmented tab control ──────────────────────────────────── */
+  .auth-seg {
+    display: flex;
+    position: relative;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+  .auth-seg__tab {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
+    border-radius: 9px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    transition: color 0.18s;
+  }
+  .auth-seg__tab:focus-visible {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4f46e5;
+    border-radius: 9px;
+  }
+  .auth-seg__tab--active {
+    color: #1e1b4b;
+    font-weight: 600;
+  }
+  .auth-seg__indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: #fff;
+    border-radius: 9px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+  }
+  .auth-tabs--giris .auth-seg__indicator {
+    transform: translateX(100%);
+  }
+
+  /* ── Auth panels ───────────────────────────────────────────────────── */
+  .auth-panel--hidden { display: none; }
+  .auth-panel--entering {
+    animation: authFadeIn 0.17s ease forwards;
+  }
+  @keyframes authFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-panel--entering { animation: none; }
+    .auth-seg__indicator  { transition: none; }
+  }
+
+  /* ── Password input wrapper ────────────────────────────────────────── */
+  .pw-wrap {
+    position: relative;
+    display: flex;
+  }
+  .pw-wrap input[type="password"],
+  .pw-wrap input[type="text"] {
+    flex: 1;
+    width: 100%;
+    padding: 10px 44px 10px 12px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    min-height: 44px;
+  }
+  .pw-wrap input:focus { border-color: #4f46e5; }
+  .pw-wrap input.is-error { border-color: #dc2626; }
+  .pw-toggle {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    border-radius: 0 8px 8px 0;
+    outline: none;
+  }
+  .pw-toggle:hover { color: #4f46e5; }
+  .pw-toggle:focus-visible {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4f46e5;
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* ── Field error with icon support ────────────────────────────────── */
+  .field-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 12px;
+    color: #dc2626;
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+  .field-error svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Login panel extras ────────────────────────────────────────────── */
+  .login-hint-row {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .login-pw-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .login-pw-row label {
+    display: inline;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0;
+  }
+  .forgot-link {
+    font-size: 12px;
+    color: #4f46e5;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+  .forgot-link:hover { text-decoration: underline; }
+  .login-note {
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Guardian box animation ────────────────────────────────────────── */
+  .guardian-box {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0 16px;
+    background: #f8fafc;
+    transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+  }
+  .guardian-box--open {
+    max-height: 700px;
+    opacity: 1;
+    padding: 16px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .guardian-box { transition: none; }
+  }
+
+  /* ── Enforce 44 px tap targets ─────────────────────────────────────── */
+  .field select,
+  .field input[type="text"],
+  .field input[type="email"],
+  .field input[type="tel"] {
+    min-height: 44px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
   <!-- Coach card -->
@@ -18,7 +210,7 @@
   <div class="error-box" role="alert">{{ purchase_block_msg }}</div>
   {% endif %}
 
-  <!-- Plan selection -->
+  <!-- Plan selection — radios link to #purchase-form via the form= attribute -->
   <div style="margin-bottom:20px;">
     <div class="section-label">Plan Seç</div>
     {% for plan in plans %}
@@ -44,12 +236,16 @@
     </label>
     {% endfor %}
     {% if form.plan.errors %}
-      <p class="field-error">{{ form.plan.errors.0 }}</p>
+    <p class="field-error">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+      {{ form.plan.errors.0 }}
+    </p>
     {% endif %}
   </div>
 
   {% if not is_logged_in_student %}
-  <!-- Nasıl çalışır -->
+
+  <!-- How it works -->
   <div class="how-strip" role="list" aria-label="Nasıl çalışır">
     <div class="how-step" role="listitem">
       <div class="how-num">1</div>
@@ -68,108 +264,312 @@
       <div class="how-label">Koçunla başla</div>
     </div>
   </div>
-  {% endif %}
 
-  <!-- Tab strip (anonymous only) -->
-  {% if not is_logged_in_student %}
-  <div class="tab-strip" role="tablist">
-    <a href="?{% if selected_plan_id %}plan={{ selected_plan_id }}{% endif %}"
-       class="tab {% if mod != 'giris' %}tab--active{% endif %}"
-       role="tab" aria-selected="{% if mod != 'giris' %}true{% else %}false{% endif %}">
-      Yeni hesap
-    </a>
-    <a href="?mod=giris{% if selected_plan_id %}&amp;plan={{ selected_plan_id }}{% endif %}"
-       class="tab {% if mod == 'giris' %}tab--active{% endif %}"
-       role="tab" aria-selected="{% if mod == 'giris' %}true{% else %}false{% endif %}">
-      Hesabım var
-    </a>
-  </div>
-  {% endif %}
+  {% comment %}
+    Both panels are always in the DOM. CSS hides the inactive one.
+    JS intercepts tab clicks for instant switching; without JS the <a>
+    elements navigate normally (page reload shows the correct panel).
+    data-url-* provides the two canonical URLs for history.replaceState.
+  {% endcomment %}
+  <div class="auth-tabs{% if mod == 'giris' %} auth-tabs--giris{% endif %}"
+       id="auth-tabs"
+       data-url-base="{{ request.path }}"
+       data-url-giris="{{ request.path }}?mod=giris">
 
-  {% if mod == 'giris' and not is_logged_in_student %}
-  <!-- Login tab -->
-  <div class="form-card">
-    {% if login_error %}
-    <div class="error-box" role="alert">{{ login_error }}</div>
-    {% endif %}
-    <form method="post" action="?mod=giris" id="login-form" novalidate>
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <div class="field">
-        <label for="id_login_email">E-posta <span class="req-mark">*</span></label>
-        <input type="email" name="login_email" id="id_login_email"
-          value="{{ login_email_hint }}"
-          autocomplete="email">
+    <div role="tablist" aria-label="Hesap türü" class="auth-seg" id="auth-tablist">
+      <a href="{{ request.path }}{% if selected_plan_id %}?plan={{ selected_plan_id }}{% endif %}"
+         role="tab"
+         id="tab-yeni"
+         aria-selected="{% if mod == 'giris' %}false{% else %}true{% endif %}"
+         aria-controls="panel-yeni"
+         tabindex="{% if mod == 'giris' %}-1{% else %}0{% endif %}"
+         class="auth-seg__tab{% if mod != 'giris' %} auth-seg__tab--active{% endif %}">
+        Yeni hesap
+      </a>
+      <a href="{{ request.path }}?mod=giris{% if selected_plan_id %}&amp;plan={{ selected_plan_id }}{% endif %}"
+         role="tab"
+         id="tab-giris"
+         aria-selected="{% if mod == 'giris' %}true{% else %}false{% endif %}"
+         aria-controls="panel-giris"
+         tabindex="{% if mod == 'giris' %}0{% else %}-1{% endif %}"
+         class="auth-seg__tab{% if mod == 'giris' %} auth-seg__tab--active{% endif %}">
+        Hesabım var
+      </a>
+      <span class="auth-seg__indicator" aria-hidden="true"></span>
+    </div>
+
+    {% comment %}Login panel — hidden when mod is not 'giris'.{% endcomment %}
+    <div role="tabpanel"
+         id="panel-giris"
+         aria-labelledby="tab-giris"
+         class="auth-panel{% if mod != 'giris' %} auth-panel--hidden{% endif %}">
+
+      {% if login_error %}
+      <div class="error-box" role="alert">{{ login_error }}</div>
+      {% endif %}
+
+      <p class="login-hint-row">Daha önce satın aldıysan hesabınla giriş yap.</p>
+
+      <form method="post" action="{{ request.path }}?mod=giris" id="login-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+        <div class="form-card">
+
+          <div class="field">
+            <label for="id_login_email">E-posta <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="email" name="login_email" id="id_login_email"
+              value="{{ login_email_hint }}"
+              autocomplete="email"
+              inputmode="email">
+          </div>
+
+          <div class="field">
+            <div class="login-pw-row">
+              <label for="id_login_password">Şifre <span class="req-mark" aria-hidden="true">*</span></label>
+              <a href="/auth/password-reset/" class="forgot-link">Şifremi unuttum</a>
+            </div>
+            <div class="pw-wrap">
+              <input type="password" name="login_password" id="id_login_password"
+                autocomplete="current-password">
+              <button type="button" class="pw-toggle"
+                      aria-label="Şifreyi göster"
+                      data-pw-target="id_login_password">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit">Giriş Yap</button>
+
+        </div>
+      </form>
+
+      <p class="login-note">Bu giriş yalnızca öğrenci hesapları içindir.</p>
+
+    </div>
+
+    {% comment %}Registration panel — hidden when mod is 'giris'.{% endcomment %}
+    <div role="tabpanel"
+         id="panel-yeni"
+         aria-labelledby="tab-yeni"
+         class="auth-panel{% if mod == 'giris' %} auth-panel--hidden{% endif %}">
+
+      {% if form.non_field_errors %}
+      <div class="error-box" role="alert">
+        {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
       </div>
-      <div class="field">
-        <label for="id_login_password">Şifre <span class="req-mark">*</span></label>
-        <input type="password" name="login_password" id="id_login_password"
-          autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn-submit">Giriş Yap</button>
-    </form>
+      {% endif %}
+
+      <form method="post"
+            action="{% url 'purchase:page' coach.wordpress_post_id %}"
+            id="purchase-form"
+            novalidate>
+        {% csrf_token %}
+
+        <div class="form-card">
+          <p class="section-label">Bilgiler</p>
+
+          <div class="field">
+            <label for="id_full_name">Ad Soyad <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="text" name="full_name" id="id_full_name"
+              value="{{ form.full_name.value|default:'' }}"
+              autocomplete="name"
+              {% if form.full_name.errors %}class="is-error"{% endif %}>
+            {% if form.full_name.errors %}
+            <p class="field-error">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+              {{ form.full_name.errors.0 }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="field">
+            <label for="id_email">E-posta <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="email" name="email" id="id_email"
+              value="{{ form.email.value|default:'' }}"
+              autocomplete="email"
+              {% if form.email.errors %}class="is-error"{% endif %}>
+            {% if form.email.errors %}
+            <p class="field-error">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+              {{ form.email.errors.0 }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="field">
+            <label for="id_phone">Telefon <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="tel" name="phone" id="id_phone"
+              value="{{ form.phone.value|default:'' }}"
+              autocomplete="tel"
+              inputmode="tel"
+              {% if form.phone.errors %}class="is-error"{% endif %}>
+            {% if form.phone.errors %}
+            <p class="field-error">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+              {{ form.phone.errors.0 }}
+            </p>
+            {% else %}
+            <p class="field-hint">Başında sıfır ile yazın (örn. 05051234567)</p>
+            {% endif %}
+          </div>
+
+          <div class="field">
+            <label for="id_sinif">Sınıf <span class="req-mark" aria-hidden="true">*</span></label>
+            <select name="sinif" id="id_sinif"
+                    {% if form.sinif.errors %}class="is-error"{% endif %}>
+              <option value="">Seçin</option>
+              <option value="9"     {% if form.sinif.value == '9'     %}selected{% endif %}>9. Sınıf</option>
+              <option value="10"    {% if form.sinif.value == '10'    %}selected{% endif %}>10. Sınıf</option>
+              <option value="11"    {% if form.sinif.value == '11'    %}selected{% endif %}>11. Sınıf</option>
+              <option value="12"    {% if form.sinif.value == '12'    %}selected{% endif %}>12. Sınıf</option>
+              <option value="mezun" {% if form.sinif.value == 'mezun' %}selected{% endif %}>Mezun</option>
+            </select>
+            {% if form.sinif.errors %}
+            <p class="field-error">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+              {{ form.sinif.errors.0 }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="field">
+            <label for="id_alan" id="id_alan_label">
+              Alan
+              <span id="alan-req-mark" class="req-mark" aria-hidden="true" style="display:none"> *</span>
+              <span id="alan-opt-mark" style="font-size:12px;color:#64748b;font-weight:400"> (isteğe bağlı)</span>
+            </label>
+            <select name="alan" id="id_alan"
+                    {% if form.alan.errors %}class="is-error"{% endif %}>
+              <option value=""    {% if not form.alan.value         %}selected{% endif %}>Henüz seçmedim</option>
+              <option value="SAY" {% if form.alan.value == 'SAY'    %}selected{% endif %}>Sayısal</option>
+              <option value="EA"  {% if form.alan.value == 'EA'     %}selected{% endif %}>Eşit Ağırlık</option>
+              <option value="SOZ" {% if form.alan.value == 'SOZ'    %}selected{% endif %}>Sözel</option>
+              <option value="DIL" {% if form.alan.value == 'DIL'    %}selected{% endif %}>Dil</option>
+            </select>
+            {% if form.alan.errors %}
+            <p class="field-error">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+              {{ form.alan.errors.0 }}
+            </p>
+            {% else %}
+            <p class="field-hint" id="alan-hint" style="display:none">11. sınıf ve üzerinde alan seçimi zorunludur.</p>
+            {% endif %}
+          </div>
+
+        </div>
+
+        <!-- Under-18 + guardian -->
+        <div class="form-card">
+          <div class="under18-row">
+            <input type="checkbox" name="is_under_18" id="id_is_under_18"
+              {% if form.is_under_18.value %}checked{% endif %}>
+            <label for="id_is_under_18">18 yaşından küçüğüm (veli bilgileri gerekli)</label>
+          </div>
+
+          <div id="guardian-fields"
+               class="guardian-box{% if form.is_under_18.value %} guardian-box--open{% endif %}">
+            <div class="field" style="margin-top:4px;">
+              <label for="id_guardian_name">Veli Adı Soyadı <span class="req-mark" aria-hidden="true">*</span></label>
+              <input type="text" name="guardian_name" id="id_guardian_name"
+                value="{{ form.guardian_name.value|default:'' }}"
+                autocomplete="name"
+                {% if form.guardian_name.errors %}class="is-error"{% endif %}>
+              {% if form.guardian_name.errors %}
+              <p class="field-error">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+                {{ form.guardian_name.errors.0 }}
+              </p>
+              {% endif %}
+            </div>
+            <div class="field">
+              <label for="id_guardian_phone">Veli Telefonu <span class="req-mark" aria-hidden="true">*</span></label>
+              <input type="tel" name="guardian_phone" id="id_guardian_phone"
+                value="{{ form.guardian_phone.value|default:'' }}"
+                autocomplete="tel"
+                inputmode="tel"
+                {% if form.guardian_phone.errors %}class="is-error"{% endif %}>
+              {% if form.guardian_phone.errors %}
+              <p class="field-error">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+                {{ form.guardian_phone.errors.0 }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">Devam et →</button>
+
+      </form>
+    </div>
+
   </div>
 
   {% else %}
-  <!-- Registration form (new account) -->
+  {% comment %}Logged-in student: registration form only, no tabs.{% endcomment %}
+
   {% if form.non_field_errors %}
   <div class="error-box" role="alert">
     {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
   </div>
   {% endif %}
 
-  <form method="post" action="{% url 'purchase:page' coach.wordpress_post_id %}" id="purchase-form" novalidate>
+  <form method="post"
+        action="{% url 'purchase:page' coach.wordpress_post_id %}"
+        id="purchase-form"
+        novalidate>
     {% csrf_token %}
 
     <div class="form-card">
       <p class="section-label">Bilgiler</p>
 
       <div class="field">
-        <label for="id_full_name">Ad Soyad <span class="req-mark">*</span></label>
+        <label for="id_full_name">Ad Soyad <span class="req-mark" aria-hidden="true">*</span></label>
         <input type="text" name="full_name" id="id_full_name"
           value="{{ form.full_name.value|default:'' }}"
           autocomplete="name"
           {% if form.full_name.errors %}class="is-error"{% endif %}>
         {% if form.full_name.errors %}
-          <p class="field-error">{{ form.full_name.errors.0 }}</p>
+        <p class="field-error">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+          {{ form.full_name.errors.0 }}
+        </p>
         {% endif %}
       </div>
 
-      {% if is_logged_in_student %}
       <div class="field">
         <label>E-posta</label>
         <div class="email-readonly">{{ request.user.email }}</div>
       </div>
-      {% else %}
-      <div class="field">
-        <label for="id_email">E-posta <span class="req-mark">*</span></label>
-        <input type="email" name="email" id="id_email"
-          value="{{ form.email.value|default:'' }}"
-          autocomplete="email"
-          {% if form.email.errors %}class="is-error"{% endif %}>
-        {% if form.email.errors %}
-          <p class="field-error">{{ form.email.errors.0 }}</p>
-        {% endif %}
-      </div>
-      {% endif %}
 
       <div class="field">
-        <label for="id_phone">Telefon <span class="req-mark">*</span></label>
+        <label for="id_phone">Telefon <span class="req-mark" aria-hidden="true">*</span></label>
         <input type="tel" name="phone" id="id_phone"
           value="{{ form.phone.value|default:'' }}"
           autocomplete="tel"
           inputmode="tel"
           {% if form.phone.errors %}class="is-error"{% endif %}>
         {% if form.phone.errors %}
-          <p class="field-error">{{ form.phone.errors.0 }}</p>
+        <p class="field-error">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+          {{ form.phone.errors.0 }}
+        </p>
         {% else %}
-          <p class="field-hint">Başında sıfır ile yazın (örn. 05051234567)</p>
+        <p class="field-hint">Başında sıfır ile yazın (örn. 05051234567)</p>
         {% endif %}
       </div>
 
       <div class="field">
-        <label for="id_sinif">Sınıf <span class="req-mark">*</span></label>
-        <select name="sinif" id="id_sinif" {% if form.sinif.errors %}class="is-error"{% endif %}>
+        <label for="id_sinif">Sınıf <span class="req-mark" aria-hidden="true">*</span></label>
+        <select name="sinif" id="id_sinif"
+                {% if form.sinif.errors %}class="is-error"{% endif %}>
           <option value="">Seçin</option>
           <option value="9"     {% if form.sinif.value == '9'     %}selected{% endif %}>9. Sınıf</option>
           <option value="10"    {% if form.sinif.value == '10'    %}selected{% endif %}>10. Sınıf</option>
@@ -178,17 +578,21 @@
           <option value="mezun" {% if form.sinif.value == 'mezun' %}selected{% endif %}>Mezun</option>
         </select>
         {% if form.sinif.errors %}
-          <p class="field-error">{{ form.sinif.errors.0 }}</p>
+        <p class="field-error">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+          {{ form.sinif.errors.0 }}
+        </p>
         {% endif %}
       </div>
 
       <div class="field">
         <label for="id_alan" id="id_alan_label">
           Alan
-          <span id="alan-req-mark" class="req-mark" style="display:none"> *</span>
+          <span id="alan-req-mark" class="req-mark" aria-hidden="true" style="display:none"> *</span>
           <span id="alan-opt-mark" style="font-size:12px;color:#64748b;font-weight:400"> (isteğe bağlı)</span>
         </label>
-        <select name="alan" id="id_alan" {% if form.alan.errors %}class="is-error"{% endif %}>
+        <select name="alan" id="id_alan"
+                {% if form.alan.errors %}class="is-error"{% endif %}>
           <option value=""    {% if not form.alan.value         %}selected{% endif %}>Henüz seçmedim</option>
           <option value="SAY" {% if form.alan.value == 'SAY'    %}selected{% endif %}>Sayısal</option>
           <option value="EA"  {% if form.alan.value == 'EA'     %}selected{% endif %}>Eşit Ağırlık</option>
@@ -196,15 +600,17 @@
           <option value="DIL" {% if form.alan.value == 'DIL'    %}selected{% endif %}>Dil</option>
         </select>
         {% if form.alan.errors %}
-          <p class="field-error">{{ form.alan.errors.0 }}</p>
+        <p class="field-error">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+          {{ form.alan.errors.0 }}
+        </p>
         {% else %}
-          <p class="field-hint" id="alan-hint" style="display:none">11. sınıf ve üzerinde alan seçimi zorunludur.</p>
+        <p class="field-hint" id="alan-hint" style="display:none">11. sınıf ve üzerinde alan seçimi zorunludur.</p>
         {% endif %}
       </div>
 
     </div>
 
-    <!-- Under-18 + guardian -->
     <div class="form-card">
       <div class="under18-row">
         <input type="checkbox" name="is_under_18" id="id_is_under_18"
@@ -212,24 +618,33 @@
         <label for="id_is_under_18">18 yaşından küçüğüm (veli bilgileri gerekli)</label>
       </div>
 
-      <div id="guardian-fields" class="guardian-box"
-        {% if not form.is_under_18.value %}style="display:none"{% endif %}>
-        <div class="field">
-          <label for="id_guardian_name">Veli Adı Soyadı <span class="req-mark">*</span></label>
+      <div id="guardian-fields"
+           class="guardian-box{% if form.is_under_18.value %} guardian-box--open{% endif %}">
+        <div class="field" style="margin-top:4px;">
+          <label for="id_guardian_name">Veli Adı Soyadı <span class="req-mark" aria-hidden="true">*</span></label>
           <input type="text" name="guardian_name" id="id_guardian_name"
             value="{{ form.guardian_name.value|default:'' }}"
+            autocomplete="name"
             {% if form.guardian_name.errors %}class="is-error"{% endif %}>
           {% if form.guardian_name.errors %}
-            <p class="field-error">{{ form.guardian_name.errors.0 }}</p>
+          <p class="field-error">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+            {{ form.guardian_name.errors.0 }}
+          </p>
           {% endif %}
         </div>
         <div class="field">
-          <label for="id_guardian_phone">Veli Telefonu <span class="req-mark">*</span></label>
+          <label for="id_guardian_phone">Veli Telefonu <span class="req-mark" aria-hidden="true">*</span></label>
           <input type="tel" name="guardian_phone" id="id_guardian_phone"
             value="{{ form.guardian_phone.value|default:'' }}"
+            autocomplete="tel"
+            inputmode="tel"
             {% if form.guardian_phone.errors %}class="is-error"{% endif %}>
           {% if form.guardian_phone.errors %}
-            <p class="field-error">{{ form.guardian_phone.errors.0 }}</p>
+          <p class="field-error">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM7.25 5.5h1.5v4h-1.5v-4z"/></svg>
+            {{ form.guardian_phone.errors.0 }}
+          </p>
           {% endif %}
         </div>
       </div>
@@ -248,34 +663,120 @@
 (function () {
   'use strict';
 
+  /* ── Guardian checkbox toggle ─── */
   var cb18 = document.getElementById('id_is_under_18');
   var gBox = document.getElementById('guardian-fields');
   if (cb18 && gBox) {
     cb18.addEventListener('change', function () {
-      gBox.style.display = this.checked ? '' : 'none';
+      gBox.classList.toggle('guardian-box--open', this.checked);
     });
   }
 
+  /* ── Alan/sınıf label sync ─── */
   var alanReqEl = document.getElementById('alan-required-grades');
-  if (!alanReqEl) return;
-  var alanReqGrades = JSON.parse(alanReqEl.textContent);
-  var sinifSel  = document.getElementById('id_sinif');
-  var reqMark   = document.getElementById('alan-req-mark');
-  var optMark   = document.getElementById('alan-opt-mark');
-  var alanHint  = document.getElementById('alan-hint');
+  if (alanReqEl) {
+    var alanReqGrades = JSON.parse(alanReqEl.textContent);
+    var sinifSel = document.getElementById('id_sinif');
+    var reqMark  = document.getElementById('alan-req-mark');
+    var optMark  = document.getElementById('alan-opt-mark');
+    var alanHint = document.getElementById('alan-hint');
 
-  function syncAlanLabel() {
-    if (!sinifSel) return;
-    var isReq = alanReqGrades.indexOf(sinifSel.value) !== -1;
-    if (reqMark)  reqMark.style.display  = isReq ? '' : 'none';
-    if (optMark)  optMark.style.display  = isReq ? 'none' : '';
-    if (alanHint) alanHint.style.display = isReq ? '' : 'none';
+    function syncAlanLabel() {
+      if (!sinifSel) return;
+      var isReq = alanReqGrades.indexOf(sinifSel.value) !== -1;
+      if (reqMark)  reqMark.style.display  = isReq ? '' : 'none';
+      if (optMark)  optMark.style.display  = isReq ? 'none' : '';
+      if (alanHint) alanHint.style.display = isReq ? '' : 'none';
+    }
+
+    if (sinifSel) {
+      sinifSel.addEventListener('change', syncAlanLabel);
+      syncAlanLabel();
+    }
   }
 
-  if (sinifSel) {
-    sinifSel.addEventListener('change', syncAlanLabel);
-    syncAlanLabel();
+  /* ── Password show/hide toggle ─── */
+  var EYE_OPEN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_SHUT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+  document.querySelectorAll('.pw-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var inp = document.getElementById(this.getAttribute('data-pw-target'));
+      if (!inp) return;
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      this.setAttribute('aria-label', show ? 'Şifreyi gizle' : 'Şifreyi göster');
+      this.innerHTML = show ? EYE_SHUT : EYE_OPEN;
+    });
+  });
+
+  /* ── Tab switching ─── */
+  var tabs    = document.getElementById('auth-tabs');
+  var tabList = document.getElementById('auth-tablist');
+  if (!tabs || !tabList) return;
+
+  var tabEls     = Array.prototype.slice.call(tabList.querySelectorAll('[role="tab"]'));
+  var panelYeni  = document.getElementById('panel-yeni');
+  var panelGiris = document.getElementById('panel-giris');
+  if (!panelYeni || !panelGiris || tabEls.length < 2) return;
+
+  var urlBase  = tabs.getAttribute('data-url-base');
+  var urlGiris = tabs.getAttribute('data-url-giris');
+
+  function activateTab(targetMod, focusFirst) {
+    var isGiris = targetMod === 'giris';
+
+    tabs.classList.toggle('auth-tabs--giris', isGiris);
+
+    tabEls.forEach(function (t) {
+      var active = t.id === (isGiris ? 'tab-giris' : 'tab-yeni');
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+      t.setAttribute('tabindex', active ? '0' : '-1');
+      t.classList.toggle('auth-seg__tab--active', active);
+    });
+
+    var showPanel = isGiris ? panelGiris : panelYeni;
+    var hidePanel = isGiris ? panelYeni  : panelGiris;
+
+    hidePanel.classList.add('auth-panel--hidden');
+    hidePanel.classList.remove('auth-panel--entering');
+
+    showPanel.classList.remove('auth-panel--hidden');
+    showPanel.classList.remove('auth-panel--entering');
+    void showPanel.offsetWidth; /* reflow restarts the CSS animation */
+    showPanel.classList.add('auth-panel--entering');
+
+    history.replaceState(null, '', isGiris ? urlGiris : urlBase);
+
+    if (focusFirst) {
+      var first = showPanel.querySelector('input:not([type="hidden"]), select');
+      if (first) { first.focus(); }
+    }
   }
+
+  tabEls.forEach(function (t) {
+    t.addEventListener('click', function (e) {
+      e.preventDefault();
+      activateTab(this.id === 'tab-giris' ? 'giris' : '', true);
+    });
+  });
+
+  /* Roving keyboard: ArrowLeft/Right, ArrowUp/Down, Home, End */
+  tabList.addEventListener('keydown', function (e) {
+    var idx = tabEls.indexOf(document.activeElement);
+    if (idx === -1) return;
+    var next = -1;
+    if      (e.key === 'ArrowRight' || e.key === 'ArrowDown')  { next = (idx + 1) % tabEls.length; }
+    else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    { next = (idx - 1 + tabEls.length) % tabEls.length; }
+    else if (e.key === 'Home') { next = 0; }
+    else if (e.key === 'End')  { next = tabEls.length - 1; }
+    if (next !== -1) {
+      e.preventDefault();
+      tabEls[next].focus();
+      tabEls[next].click();
+    }
+  });
+
 }());
 </script>
 {% endblock %}
