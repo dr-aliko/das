@@ -312,10 +312,7 @@
               {% if item.student.phone %}
               <div class="text-right">
                 <p class="text-[9px] uppercase tracking-wider text-ink-500 font-semibold">Telefon</p>
-                <a href="tel:{{ item.student.phone }}"
-                   class="pii text-xs font-mono text-steel-400 hover:text-steel-300 transition-colors tnum">
-                  {{ item.student.phone }}
-                </a>
+                <p class="pii text-sm font-mono text-steel-400 tnum"><a href="tel:{{ item.student.phone }}" class="hover:text-steel-300 transition-colors">{{ item.student.phone }}</a></p>
               </div>
               {% endif %}
               <div class="text-right">
