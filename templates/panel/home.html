@@ -14,8 +14,63 @@
       <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
       <h1 class="text-lg font-semibold text-white">Genel Bakış</h1>
     </div>
-    <p class="text-sm text-ink-400">Panel ana sayfası. Sayaçlar yakında eklenecek.</p>
+    {% if not badges.any_pending %}
+    <p class="text-sm text-emerald-400 mt-1">Bekleyen iş yok.</p>
+    {% endif %}
   </div>
+
+  {% if badges.any_pending %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+    {% if badges.belgeler %}
+    <a href="{% url 'staff_coach_documents' %}"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Belgeler</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.belgeler }}</p>
+      <p class="text-xs text-ink-400 mt-1">
+        {% if badges.docs %}{{ badges.docs }} onay bekliyor{% endif %}{% if badges.docs and badges.no_iban %} · {% endif %}{% if badges.no_iban %}{{ badges.no_iban }} IBAN eksik{% endif %}
+      </p>
+    </a>
+    {% endif %}
+
+    {% if badges.no_wp %}
+    <a href="{% url 'panel_wp_koclar' %}"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">WordPress</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.no_wp }}</p>
+      <p class="text-xs text-ink-400 mt-1">WP profili oluşturulmamış</p>
+    </a>
+    {% endif %}
+
+    {% if badges.overdue %}
+    <a href="{% url 'panel_ogrenciler' %}"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Öğrenciler</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.overdue }}</p>
+      <p class="text-xs text-ink-400 mt-1">Ödemesi gecikmiş</p>
+    </a>
+    {% endif %}
+
+    {% if badges.transfers %}
+    <a href="{% url 'purchase_panel:orders' %}"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Havale</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers }}</p>
+      <p class="text-xs text-ink-400 mt-1">Onay bekleyen transfer</p>
+    </a>
+    {% endif %}
+
+    {% if badges.earnings %}
+    <a href="{% url 'earnings_panel:list' %}"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Ödemeler</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.earnings }}</p>
+      <p class="text-xs text-ink-400 mt-1">Ödeme bekleyen kazanç</p>
+    </a>
+    {% endif %}
+
+  </div>
+  {% endif %}
 
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 

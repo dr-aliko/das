@@ -1320,9 +1320,11 @@ def _fee_tier_sections():
 
 @staff_required
 def panel_home_view(request):
+    from users_app.panel_badges import all_badges
     return render(request, 'panel/home.html', {
         'active_section': 'home',
         'active_tab':     'home',
+        'badges':         all_badges(),
     })
 
 

@@ -1,4 +1,30 @@
 {# Staff panel shared navigation – two levels. Rendered by {% panel_nav active_section %}. #}
+<style>
+  .pnav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  html:not(.dark) .pnav-badge {
+    background: #f59e0b20;
+    color: #b45309;
+    border: 1px solid #f59e0b40;
+  }
+  .dark .pnav-badge {
+    background: #f59e0b18;
+    color: #fbbf24;
+    border: 1px solid #f59e0b30;
+  }
+</style>
 <div id="panel-main-nav" class="rounded-2xl border border-ink-700 bg-ink-950 px-3 py-2.5">
 
   {# ── Level 1: group pills – flex-wrap so items never scroll at any width ── #}
@@ -6,7 +32,7 @@
     {% for group in groups %}
       <a href="{{ group.url }}"
          class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap {% if group.active %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
-        {{ group.label }}
+        {{ group.label }}{% if group.badge %}<span class="pnav-badge">{{ group.badge }}</span>{% endif %}
       </a>
     {% endfor %}
     <a href="{{ admin_url }}" target="_blank" rel="noopener"
@@ -22,7 +48,7 @@
       {% for page in second_row %}
         <a href="{{ page.url }}"
            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {% if page.active %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
-          {{ page.label }}
+          {{ page.label }}{% if page.badge %}<span class="pnav-badge">{{ page.badge }}</span>{% endif %}
         </a>
       {% endfor %}
     </div>
