@@ -12,26 +12,32 @@ from users_app.panel_badges import all_badges
 
 @pytest.mark.django_db
 def test_badges_count_accurately():
-    # One coach with a pending document upload
-    coach = baker.make(User, role='coach', is_active=True, is_approved=True)
-    profile = baker.make(CoachProfile, user=coach, document_status='pending', document='some/path.pdf', iban='')
+    # Coach 1: pending document, valid IBAN → counted in docs and belgeler
+    coach1 = baker.make(User, role='coach', is_active=True, is_approved=True)
+    baker.make(CoachProfile, user=coach1, document_status='pending', document='some/path.pdf', iban='TR330006100519786457841326')
+
+    # Coach 2: no IBAN, approved doc → counted in no_iban and belgeler (not in docs)
+    coach2 = baker.make(User, role='coach', is_active=True, is_approved=True)
+    baker.make(CoachProfile, user=coach2, document_status='approved', document='other/path.pdf', iban='')
 
     # One overdue active student
-    other_coach = baker.make(User, role='coach', is_active=True, is_approved=True)
+    overdue_coach = baker.make(User, role='coach', is_active=True, is_approved=True)
     baker.make(
         CoachStudent,
-        coach=other_coach,
+        coach=overdue_coach,
         source='vagus',
         active=True,
         next_payment_due='2000-01-01',
     )
 
+    from users_app.panel_badges import _belgeler, qs_profile_issues
     badges = all_badges()
 
-    assert badges['docs'] >= 1        # our pending doc
-    assert badges['no_iban'] >= 1     # our coach has blank IBAN
-    assert badges['overdue'] >= 1     # our overdue student
-    assert badges['belgeler'] == badges['docs'] + badges['no_iban']
+    assert badges['docs'] >= 1        # coach1 has pending doc
+    assert badges['no_iban'] >= 1     # coach2 has no IBAN
+    assert badges['overdue'] >= 1     # overdue student
+    assert badges['belgeler'] == _belgeler()   # badge uses qs_profile_issues, not docs+no_iban
+    assert badges['belgeler'] >= 2    # both coach1 and coach2 have issues
     assert badges['any_pending'] is True
 
 
@@ -52,6 +58,7 @@ def test_safe_returns_zero_on_exception(monkeypatch):
     monkeypatch.setattr(pb, '_no_iban', _boom)
     monkeypatch.setattr(pb, '_no_wp', _boom)
     monkeypatch.setattr(pb, '_overdue', _boom)
+    monkeypatch.setattr(pb, '_belgeler', _boom)
 
     badges = all_badges()
     assert badges['docs'] == 0

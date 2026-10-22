@@ -37,6 +37,50 @@
     {% if q %}<a href="{% url 'panel_wp_koclar' %}" class="text-xs text-steel-400 hover:text-steel-300">Temizle</a>{% endif %}
   </form>
 
+  {# ── Unmatched coaches — shown first so badge-relevant content is visible without a filter ── #}
+  {% if unmatched_coaches %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-ink-500 shrink-0"></span>
+      <h2 class="text-sm font-semibold text-ink-100">Eşleşme Bulunamayan Django Koçlar</h2>
+      <span class="ml-auto text-xs text-ink-500">{{ unmatched_coaches|length }} koç</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-56">Manuel WP ID ile Bağla</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for coach in unmatched_coaches %}
+          <tr class="hover:bg-ink-900/40 transition-colors" id="urow-{{ coach.pk }}"
+              data-coach-row data-coach-name="{{ coach.full_name }}" data-coach-email="{{ coach.email }}">
+            <td class="px-5 py-3">
+              <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
+              <p class="text-xs text-ink-500">{{ coach.email }}</p>
+            </td>
+            <td class="px-5 py-3 text-right flex items-center justify-end gap-2">
+              <input type="number" placeholder="WP Post ID"
+                     id="manual-{{ coach.pk }}"
+                     class="w-28 h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-600 text-ink-200 text-center
+                            focus:outline-none focus:border-indigo-500" />
+              <button type="button"
+                      onclick="confirmMatch({{ coach.pk }}, 'manual-{{ coach.pk }}', 'urow-{{ coach.pk }}', this)"
+                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-steel-500/30
+                             text-steel-400 hover:bg-steel-500/10 transition-colors">
+                Bağla
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Suggested matches ──────────────────────────────────────────────────── #}
   {% if suggested and filtre != 'wp-unmatched' %}
   <div class="rounded-2xl border border-amber-500/25 bg-ink-950 overflow-hidden">
@@ -133,50 +177,6 @@
                       class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-ruby-500/30
                              text-ruby-400 hover:bg-ruby-500/10 transition-colors">
                 Bağı Kes
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Unmatched coaches ──────────────────────────────────────────────────── #}
-  {% if unmatched_coaches %}
-  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
-    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-ink-500 shrink-0"></span>
-      <h2 class="text-sm font-semibold text-ink-100">Eşleşme Bulunamayan Django Koçlar</h2>
-      <span class="ml-auto text-xs text-ink-500">{{ unmatched_coaches|length }} koç</span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-ink-800 bg-ink-900/50">
-            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
-            <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-56">Manuel WP ID ile Bağla</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-ink-800/60">
-          {% for coach in unmatched_coaches %}
-          <tr class="hover:bg-ink-900/40 transition-colors" id="urow-{{ coach.pk }}"
-              data-coach-row data-coach-name="{{ coach.full_name }}" data-coach-email="{{ coach.email }}">
-            <td class="px-5 py-3">
-              <p class="font-medium text-ink-100">{{ coach.full_name }}</p>
-              <p class="text-xs text-ink-500">{{ coach.email }}</p>
-            </td>
-            <td class="px-5 py-3 text-right flex items-center justify-end gap-2">
-              <input type="number" placeholder="WP Post ID"
-                     id="manual-{{ coach.pk }}"
-                     class="w-28 h-7 px-2 rounded-lg text-xs bg-ink-800 border border-ink-600 text-ink-200 text-center
-                            focus:outline-none focus:border-indigo-500" />
-              <button type="button"
-                      onclick="confirmMatch({{ coach.pk }}, 'manual-{{ coach.pk }}', 'urow-{{ coach.pk }}', this)"
-                      class="h-7 px-3 rounded-lg text-[11px] font-semibold border border-steel-500/30
-                             text-steel-400 hover:bg-steel-500/10 transition-colors">
-                Bağla
               </button>
             </td>
           </tr>

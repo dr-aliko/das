@@ -1527,11 +1527,11 @@ def panel_ogrenciler_view(request):
     filtre = request.GET.get('filtre', '').strip()
     filtre_label = ''
     filtre_count = 0
-    overdue_links = None
+
+    from users_app.panel_badges import qs_overdue
+    overdue_links = list(qs_overdue())
 
     if filtre == 'vagus-ended':
-        from users_app.panel_badges import qs_overdue
-        overdue_links = list(qs_overdue())
         filtre_label = 'Ödemesi gecikmiş öğrenciler'
         filtre_count = len(overdue_links)
     elif filtre:
@@ -2126,91 +2126,70 @@ def serve_private_document(request, path):
 @staff_required
 @ratelimit(key='user', rate='30/h', block=True)
 def staff_coach_documents_view(request):
-    from users_app.panel_badges import qs_docs, qs_no_iban, qs_no_phone, qs_doc_missing
+    from users_app.panel_badges import qs_docs, qs_no_iban, qs_no_phone, qs_doc_missing, qs_profile_issues
 
     filtre = request.GET.get('filtre', '').strip()
     filtre_label = ''
     filtre_count = 0
-    show_profile_issues = False
+
+    _KNOWN = {'no-iban', 'no-phone', 'doc-missing', 'documents-pending'}
+    if filtre and filtre not in _KNOWN:
+        filtre = ''
+
+    # Profile issues section — always shown; filter narrows it
+    if filtre == 'no-iban':
+        raw = list(qs_no_iban())
+        filtre_label = 'IBAN eksik'
+    elif filtre == 'no-phone':
+        raw = list(qs_no_phone())
+        filtre_label = 'Telefon eksik'
+    elif filtre == 'doc-missing':
+        raw = list(qs_doc_missing())
+        filtre_label = 'Belge eksik'
+    else:
+        raw = list(qs_profile_issues())
+
     coaches_missing = []
+    for coach in raw:
+        try:
+            profile = coach.coach_profile
+        except Exception:
+            profile = None
+        missing = []
+        if not profile or not profile.phone:
+            missing.append('Telefon')
+        if not profile or not profile.iban:
+            missing.append('IBAN')
+        if not profile or not profile.document:
+            missing.append('Belge')
+        coaches_missing.append({'coach': coach, 'profile': profile, 'missing': missing})
 
-    _PROFILE_FILTERS = {'no-iban', 'no-phone', 'doc-missing', 'profile-issues'}
-
+    # Document review section
     if filtre == 'documents-pending':
         profiles = qs_docs()
         filtre_label = 'Belge bekliyor'
         filtre_count = profiles.count()
-    elif filtre in _PROFILE_FILTERS:
-        show_profile_issues = True
-        if filtre == 'no-iban':
-            raw = list(qs_no_iban())
-            filtre_label = 'IBAN eksik'
-        elif filtre == 'no-phone':
-            raw = list(qs_no_phone())
-            filtre_label = 'Telefon eksik'
-        elif filtre == 'doc-missing':
-            raw = list(qs_doc_missing())
-            filtre_label = 'Belge eksik'
-        else:
-            from django.db.models import Q
-            raw = list(
-                User.objects
-                .select_related('coach_profile')
-                .filter(role='coach', is_active=True, is_approved=True)
-                .filter(
-                    Q(coach_profile__isnull=True)
-                    | Q(coach_profile__iban='')
-                    | Q(coach_profile__phone='') | Q(coach_profile__phone__isnull=True)
-                    | Q(coach_profile__document='') | Q(coach_profile__document__isnull=True)
-                )
-                .distinct()
-                .order_by('full_name')
-            )
-            filtre_label = 'Profil eksikliği olan koçlar'
-
-        for coach in raw:
-            try:
-                profile = coach.coach_profile
-            except Exception:
-                profile = None
-            missing = []
-            if not profile or not profile.phone:
-                missing.append('Telefon')
-            if not profile or not profile.iban:
-                missing.append('IBAN')
-            if not profile or not profile.document:
-                missing.append('Belge')
-            coaches_missing.append({'coach': coach, 'profile': profile, 'missing': missing})
-
-        filtre_count = len(coaches_missing)
-        profiles = (
-            CoachProfile.objects
-            .select_related('user', 'document_reviewed_by')
-            .filter(document__gt='')
-            .order_by('document_status', '-updated_at')
-        )
     else:
-        if filtre:
-            filtre = ''  # unknown value — ignore
         profiles = (
             CoachProfile.objects
             .select_related('user', 'document_reviewed_by')
             .filter(document__gt='')
             .order_by('document_status', '-updated_at')
         )
+        if filtre_label:
+            filtre_count = len(coaches_missing)
 
     return render(request, 'panel/koc_belgeleri.html', {
-        'active_tab':          'koc_belgeleri',
-        'active_section':      'koc_belgeleri',
-        'profiles':            profiles,
-        'coaches_missing':     coaches_missing,
-        'show_profile_issues': show_profile_issues,
-        'filtre':              filtre,
-        'filtre_label':        filtre_label,
-        'filtre_count':        filtre_count,
-        'DOC_PENDING':         CoachProfile.DOC_PENDING,
-        'DOC_APPROVED':        CoachProfile.DOC_APPROVED,
-        'DOC_REJECTED':        CoachProfile.DOC_REJECTED,
+        'active_tab':      'koc_belgeleri',
+        'active_section':  'koc_belgeleri',
+        'profiles':        profiles,
+        'coaches_missing': coaches_missing,
+        'filtre':          filtre,
+        'filtre_label':    filtre_label,
+        'filtre_count':    filtre_count,
+        'DOC_PENDING':     CoachProfile.DOC_PENDING,
+        'DOC_APPROVED':    CoachProfile.DOC_APPROVED,
+        'DOC_REJECTED':    CoachProfile.DOC_REJECTED,
     })
 
 

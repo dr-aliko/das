@@ -34,14 +34,19 @@
     {% endfor %}
   {% endif %}
 
+  {% if not coaches_missing and not profiles %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-10 text-center">
+    <p class="text-ink-600 text-sm">Eksik bilgi ve bekleyen belge yok.</p>
+  </div>
+  {% else %}
+
   {% comment %}
-    Profile-issues section — shown when filtre is a profile-filter value
+    Profile-issues section — always shown; chips narrow the list
   {% endcomment %}
-  {% if show_profile_issues %}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-2 flex-wrap">
-      <a href="?filtre=profile-issues"
-         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if filtre == 'profile-issues' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
+      <a href="{{ request.path }}"
+         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if not filtre or filtre == 'documents-pending' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
         Tümü
       </a>
       <a href="?filtre=no-phone"
@@ -100,7 +105,6 @@
     </div>
     {% endif %}
   </div>
-  {% endif %}
 
   {% comment %}
     Document review section
@@ -205,6 +209,8 @@
     </div>
     {% endif %}
   </div>
+
+  {% endif %}
 
 </div>
 {% endblock %}

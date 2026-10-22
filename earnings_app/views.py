@@ -45,7 +45,6 @@ def panel_kazanclar_list(request):
         rows = (
             EarningRow.objects
             .select_related('coach', 'student', 'order', 'order__plan', 'manual_record')
-            .order_by('-coverage_start', '-created_at')
         )
 
         status_filter = request.GET.get('status', '')
@@ -62,6 +61,16 @@ def panel_kazanclar_list(request):
                 rows = rows.filter(coverage_start__year=y, coverage_start__month=m)
             except (ValueError, AttributeError):
                 month_filter = ''
+
+        if not status_filter and not coach_filter and not month_filter:
+            from django.db.models import Case, IntegerField, Value, When
+            rows = rows.annotate(_ready=Case(
+                When(status__in=[EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED], then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )).order_by('_ready', '-coverage_start', '-created_at')
+        else:
+            rows = rows.order_by('-coverage_start', '-created_at')
 
         rows = list(rows[:500])
 

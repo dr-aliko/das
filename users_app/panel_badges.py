@@ -113,6 +113,28 @@ def qs_no_wp():
             .order_by('full_name'))
 
 
+def qs_profile_issues():
+    """Coaches with any profile issue: no phone, no IBAN, or non-approved/missing document."""
+    from django.db.models import Q
+    from users_app.models import CoachProfile, User
+    unapproved_doc_ids = (CoachProfile.objects
+                          .exclude(document_status=CoachProfile.DOC_APPROVED)
+                          .exclude(document='').exclude(document=None)
+                          .values_list('user_id', flat=True))
+    return (User.objects
+            .select_related('coach_profile')
+            .filter(role='coach', is_active=True, is_approved=True)
+            .filter(
+                Q(coach_profile__isnull=True)
+                | Q(coach_profile__iban='')
+                | Q(coach_profile__phone='') | Q(coach_profile__phone__isnull=True)
+                | Q(coach_profile__document='') | Q(coach_profile__document__isnull=True)
+                | Q(pk__in=unapproved_doc_ids)
+            )
+            .distinct()
+            .order_by('full_name'))
+
+
 def qs_overdue():
     from users_app.models import CoachStudent
     return (CoachStudent.objects
@@ -152,6 +174,10 @@ def _overdue():
     return qs_overdue().count()
 
 
+def _belgeler():
+    return qs_profile_issues().count()
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def all_badges():
@@ -164,6 +190,7 @@ def all_badges():
     no_iban    = _safe('pbadge:no_iban',      _no_iban)
     no_wp      = _safe('pbadge:no_wp',        _no_wp)
     overdue    = _safe('pbadge:overdue',      _overdue)
+    belgeler   = _safe('pbadge:belgeler',     _belgeler)
 
     transfers = t_purchase + t_capacity
 
@@ -178,12 +205,12 @@ def all_badges():
         'no_wp':              no_wp,
         'overdue':            overdue,
         # Per-page second-row badge values
-        'belgeler':           docs + no_iban,   # Belgeler page
+        'belgeler':           belgeler,
         # Group-level pill badge rollups
-        'koclar':             docs + no_iban + no_wp,
+        'koclar':             belgeler + no_wp,
         'ogrenciler_group':   overdue,
         'satis':              transfers,
         'odemeler_group':     earnings,
         # Home-page helper
-        'any_pending': bool(docs + no_iban + no_wp + transfers + earnings + overdue),
+        'any_pending': bool(belgeler + no_wp + transfers + earnings + overdue),
     }
