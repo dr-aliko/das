@@ -448,7 +448,52 @@ def test_idempotent_no_double_email(active_plan):
     assert len(email_task_calls) == 1, 'send_purchase_emails must be dispatched exactly once'
 
 
-# ── 19. Flag off — step2 returns 404 ─────────────────────────────────────────
+# ── 19. Brand-new session: code issued in step1 must be verifiable in step2 ──
+
+@pytest.mark.django_db
+def test_fresh_session_code_survives_step1_redirect(coach, active_plan, purchase_settings):
+    """
+    Regression: step1 called issue_code(session_key=None, …) for brand-new sessions
+    (no prior cookie).  After process_response, Django assigned a real key and sent
+    the cookie, so step2 looked up a different cache key → NO_CODE.
+    Fix: request.session.save() is called before issue_code so session_key is real.
+
+    Note: c.session.session_key creates a transient session and is NOT the same
+    as the request.session in the view.  We check c.cookies (the actual cookie jar)
+    instead to confirm no session was present before step1.
+    """
+    from django.conf import settings as djsettings
+
+    real_issue = verification.issue_code
+    captured = {}
+
+    def capture(session_key, email):
+        code = real_issue(session_key, email)
+        captured['session_key'] = session_key
+        return code
+
+    c = Client()
+    # A brand-new Client has no session cookie in its cookie jar.
+    assert djsettings.SESSION_COOKIE_NAME not in c.cookies
+
+    with patch('purchase_app.views.verification.issue_code', side_effect=capture), \
+         patch('django_q.tasks.async_task'):
+        _step1_post(c, coach.wordpress_post_id, 'fresh@example.com', active_plan.pk)
+
+    # After step1, the response must have set a session cookie.
+    assert djsettings.SESSION_COOKIE_NAME in c.cookies, 'step1 must set a session cookie'
+    cookie_key = c.cookies[djsettings.SESSION_COOKIE_NAME].value
+
+    # The key used in issue_code must match the cookie key so step2 can find it.
+    assert captured['session_key'] == cookie_key, (
+        f'issue_code used session_key={captured["session_key"]!r} but '
+        f'response cookie has key {cookie_key!r} — '
+        f'step2 would look up a different cache key and return NO_CODE '
+        f'(session-key-None regression)'
+    )
+
+
+# ── 20. Flag off — step2 returns 404 ─────────────────────────────────────────
 
 @pytest.mark.django_db
 def test_flag_off_step2_returns_404(coach, active_plan):

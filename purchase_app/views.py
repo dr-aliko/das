@@ -359,7 +359,13 @@ def step1(request, wp_id):
         'guardian_phone': form.cleaned_data.get('guardian_phone', ''),
     }
 
-    # Issue verification code and send email
+    # Issue verification code and send email.
+    # Force session creation before issuing the code: for a brand-new session
+    # (no prior cookie) session_key is None until process_response calls save().
+    # Without this, the code is stored under _keys(None, email) but step-2
+    # looks it up under _keys(real_key, email) → cache miss → spurious NO_CODE.
+    if not request.session.session_key:
+        request.session.save()
     from django_q.tasks import async_task
     code = verification.issue_code(request.session.session_key, email)
     full_name = form.cleaned_data['full_name']
@@ -494,9 +500,14 @@ def step2_verify(request, wp_id):
         request.session['purchase_verified_email'] = email
         return redirect('purchase:payment', wp_id=wp_id)
 
+    _log.info(
+        'verify result=%s session_prefix=%s',
+        result,
+        (request.session.session_key or 'none')[:8],
+    )
     error_map = {
-        verification.WRONG:        'Kod hatalı. Lütfen tekrar deneyin.',
-        verification.NO_CODE:      'Kodun süresi doldu veya geçersiz. Yeni bir kod isteyin.',
+        verification.WRONG:        'Kod yanlış. Lütfen tekrar deneyin.',
+        verification.NO_CODE:      'Kodun süresi doldu. Yeni bir kod isteyin.',
         verification.MAX_ATTEMPTS: 'Çok fazla yanlış deneme. Lütfen yeni bir kod isteyin.',
     }
     return render(request, 'purchase/step2_verify.html', {
