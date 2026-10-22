@@ -394,3 +394,21 @@ if SENTRY_DSN:
         send_default_pii=False,   # never attach user PII (name/email) to Sentry events
         before_send=_sentry_before_send,
     )
+
+# ── Admin URL ─────────────────────────────────────────────────────────────────
+# ADMIN_URL_PATH controls where the Django admin is mounted.
+# Strip leading slashes, ensure one trailing slash; only letters, digits,
+# '-', '_' and '/' are allowed.  Invalid values fall back to 'admin/'.
+def _normalize_admin_url(raw):
+    import re
+    norm = raw.lstrip('/').rstrip('/') + '/'
+    if norm == '/' or not re.fullmatch(r'[a-zA-Z0-9\-_/]+', norm):
+        import logging
+        logging.getLogger('core_config').warning(
+            'ADMIN_URL_PATH %r is invalid; falling back to admin/', raw
+        )
+        return 'admin/'
+    return norm
+
+ADMIN_URL_PATH = _normalize_admin_url(config('ADMIN_URL_PATH', default='admin/'))
+del _normalize_admin_url

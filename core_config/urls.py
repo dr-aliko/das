@@ -1,9 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import Http404
 from django.urls import include, path
 from django.views.decorators.cache import never_cache
 from django.views.generic import RedirectView, TemplateView
+from core_config.admin_login import admin_login_view
 from core_config.views import app_root_view, healthz_view
 from exams_app.views import brans_hub_student, brans_hub_api, brans_subject_detail_student, brans_subject_detail_student_api, brans_hub_export, brans_subject_export
 from users_app.views import (
@@ -40,7 +42,8 @@ urlpatterns = [
          TemplateView.as_view(template_name='pwa/offline.html'),
          name='offline'),
 
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL_PATH + 'login/', admin_login_view),
+    path(settings.ADMIN_URL_PATH, admin.site.urls),
     path('', app_root_view, name='app_root'),
     path('', include('marketing_app.urls', namespace='marketing')),
     path('auth/', include('users_app.urls', namespace='users_app')),
@@ -108,6 +111,16 @@ urlpatterns = [
     path('coach/kontenjan/', include('capacity_app.urls', namespace='capacity')),
     path('panel/kontenjan/', include('capacity_app.panel_urls', namespace='capacity_panel')),
 ]
+
+def _admin_404(request, **kwargs):
+    raise Http404
+
+
+if settings.ADMIN_URL_PATH != 'admin/':
+    urlpatterns += [
+        path('admin/', _admin_404),
+        path('admin/<path:rest>', _admin_404),
+    ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
