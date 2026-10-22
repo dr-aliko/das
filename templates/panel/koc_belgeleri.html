@@ -17,6 +17,13 @@
     <p class="text-sm text-ink-400">Koç öğrenci belgelerini inceleyin, onaylayın veya reddedin.</p>
   </div>
 
+  {% if filtre_label %}
+  <div class="rounded-xl border border-amber-500/25 px-4 py-3 flex items-center justify-between gap-3" style="background:rgba(245,158,11,0.06)">
+    <span class="text-sm text-amber-300"><strong>{{ filtre_count }}</strong> kayıt gösteriliyor: {{ filtre_label }}</span>
+    <a href="{{ request.path }}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors shrink-0">Filtreyi temizle</a>
+  </div>
+  {% endif %}
+
   {% if messages %}
     {% for msg in messages %}
     <div class="rounded-xl px-4 py-3 text-sm
@@ -27,6 +34,77 @@
     {% endfor %}
   {% endif %}
 
+  {% comment %}
+    Profile-issues section — shown when filtre is a profile-filter value
+  {% endcomment %}
+  {% if show_profile_issues %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-2 flex-wrap">
+      <a href="?filtre=profile-issues"
+         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if filtre == 'profile-issues' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
+        Tümü
+      </a>
+      <a href="?filtre=no-phone"
+         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if filtre == 'no-phone' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
+        Telefon eksik
+      </a>
+      <a href="?filtre=no-iban"
+         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if filtre == 'no-iban' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
+        IBAN eksik
+      </a>
+      <a href="?filtre=doc-missing"
+         class="px-3 py-1 rounded-full text-xs font-medium transition-colors {% if filtre == 'doc-missing' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-ink-800 text-ink-400 border border-ink-700 hover:text-ink-200{% endif %}">
+        Belge eksik
+      </a>
+    </div>
+
+    {% if coaches_missing %}
+    <div class="divide-y divide-ink-800">
+      {% for item in coaches_missing %}
+      <div class="px-5 py-4 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-sm font-medium text-ink-100">{{ item.coach.full_name }}</p>
+          <p class="text-xs text-ink-500 mt-0.5">{{ item.coach.email }}</p>
+          {% if item.profile %}
+          <p class="text-xs text-ink-500 mt-1">
+            Belge durumu:
+            {% if item.profile.document_status == DOC_PENDING %}
+              <span class="text-amber-400">Bekliyor</span>
+            {% elif item.profile.document_status == DOC_APPROVED %}
+              <span class="text-emerald-400">Onaylandı</span>
+            {% elif item.profile.document_status == DOC_REJECTED %}
+              <span class="text-red-400">Reddedildi</span>
+            {% else %}
+              <span class="text-ink-600">Yüklenmemiş</span>
+            {% endif %}
+          </p>
+          {% else %}
+          <p class="text-xs text-ink-600 mt-1">Profil henüz oluşturulmamış</p>
+          {% endif %}
+          <div class="flex gap-2 mt-1.5 flex-wrap">
+            {% for m in item.missing %}
+            <span class="text-xs px-2 py-0.5 rounded border border-amber-500/30 text-amber-400" style="background:rgba(245,158,11,0.08)">{{ m }} eksik</span>
+            {% endfor %}
+          </div>
+        </div>
+        <a href="{% url 'admin:users_app_user_change' item.coach.pk %}" target="_blank" rel="noopener"
+           class="text-xs text-steel-400 hover:text-steel-300 transition-colors shrink-0">
+          Admin →
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-10 text-center text-ink-500 text-sm">
+      Bu filtrede koç bulunamadı.
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% comment %}
+    Document review section
+  {% endcomment %}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-700 flex items-center justify-between">
       <span class="text-sm text-ink-300 font-medium">{{ profiles|length }} belge yüklü koç</span>

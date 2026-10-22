@@ -63,13 +63,31 @@ def panel_capacity(request):
         })
 
     cfg = CapacitySettings.get()
+
+    filtre = request.GET.get('filtre', '').strip()
+    filtre_label = ''
+    filtre_count = 0
+    if filtre == 'capacity-transfer':
+        from users_app.panel_badges import qs_transfers_capacity
+        orders = qs_transfers_capacity()
+        filtre_label = 'Havale bekleyen kontenjan siparişleri'
+        filtre_count = orders.count()
+    elif filtre:
+        filtre = ''
+        orders = CoachCapacityOrder.objects.select_related('coach').order_by('-created_at')[:100]
+    else:
+        orders = CoachCapacityOrder.objects.select_related('coach').order_by('-created_at')[:100]
+
     return render(request, 'panel/capacity.html', {
         **_tab_ctx(),
         'rows':         rows,
         'cfg':          cfg,
-        'orders':       CoachCapacityOrder.objects.select_related('coach').order_by('-created_at')[:100],
+        'orders':       orders,
         'coaches_all':  User.objects.filter(role='coach', is_active=True).order_by('full_name'),
         'q':            q,
+        'filtre':       filtre,
+        'filtre_label': filtre_label,
+        'filtre_count': filtre_count,
     })
 
 

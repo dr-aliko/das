@@ -5,6 +5,10 @@ Counter (g) — coaches with no free capacity — is intentionally omitted:
 computing it requires a 3-table join with date-filtered aggregation over
 CoachCapacityGrant and CoachStudent for every coach.  That is not a cheap
 single query, so it is skipped per spec.
+
+Each qs_*() function returns the queryset that both the badge counter and
+the matching filtered list view use, so the count can never disagree with
+the list.
 """
 from datetime import date
 
@@ -32,59 +36,120 @@ def _safe(key, fn):
         return 0
 
 
-# ── Individual counter functions ──────────────────────────────────────────────
+# ── Shared queryset functions ─────────────────────────────────────────────────
 
-def _docs():
+def qs_docs():
     from users_app.models import CoachProfile
     return (CoachProfile.objects
+            .select_related('user', 'document_reviewed_by')
             .filter(document_status=CoachProfile.DOC_PENDING)
             .exclude(document='').exclude(document=None)
-            .count())
+            .order_by('-updated_at'))
 
 
-def _transfers_purchase():
+def qs_transfers_purchase():
     from purchase_app.models import Order
-    return Order.objects.filter(status=Order.STATUS_AWAITING_TRANSFER).count()
+    return (Order.objects
+            .select_related('coach', 'student', 'plan')
+            .filter(status=Order.STATUS_AWAITING_TRANSFER))
 
 
-def _transfers_capacity():
+def qs_transfers_capacity():
     from capacity_app.models import CoachCapacityOrder
-    return CoachCapacityOrder.objects.filter(
-        status=CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
-    ).count()
+    return (CoachCapacityOrder.objects
+            .select_related('coach')
+            .filter(status=CoachCapacityOrder.STATUS_AWAITING_TRANSFER)
+            .order_by('-created_at'))
 
 
-def _earnings():
+def qs_earnings():
     from earnings_app.models import EarningRow
-    return EarningRow.objects.filter(
-        status__in=[EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED],
-    ).count()
+    return (EarningRow.objects
+            .select_related('coach', 'student', 'order', 'order__plan', 'manual_record')
+            .filter(status__in=[EarningRow.STATUS_RELEASED, EarningRow.STATUS_APPROVED])
+            .order_by('-coverage_start', '-created_at'))
 
 
-def _no_iban():
+def qs_no_iban():
     from django.db.models import Q
     from users_app.models import User
     return (User.objects
+            .select_related('coach_profile')
             .filter(role='coach', is_active=True, is_approved=True)
             .filter(Q(coach_profile__isnull=True) | Q(coach_profile__iban=''))
-            .count())
+            .order_by('full_name'))
+
+
+def qs_no_phone():
+    from django.db.models import Q
+    from users_app.models import User
+    return (User.objects
+            .select_related('coach_profile')
+            .filter(role='coach', is_active=True, is_approved=True)
+            .filter(Q(coach_profile__isnull=True)
+                    | Q(coach_profile__phone='')
+                    | Q(coach_profile__phone__isnull=True))
+            .order_by('full_name'))
+
+
+def qs_doc_missing():
+    """Approved active coaches who have not uploaded any document."""
+    from users_app.models import CoachProfile, User
+    approved_ids = (CoachProfile.objects
+                    .filter(document_status=CoachProfile.DOC_APPROVED, document__gt='')
+                    .values_list('user_id', flat=True))
+    return (User.objects
+            .select_related('coach_profile')
+            .filter(role='coach', is_active=True, is_approved=True)
+            .exclude(pk__in=approved_ids)
+            .order_by('full_name'))
+
+
+def qs_no_wp():
+    from users_app.models import User
+    return (User.objects
+            .filter(role='coach', is_active=True, is_approved=True,
+                    wordpress_post_id__isnull=True)
+            .order_by('full_name'))
+
+
+def qs_overdue():
+    from users_app.models import CoachStudent
+    return (CoachStudent.objects
+            .select_related('student', 'coach')
+            .filter(source=CoachStudent.SOURCE_VAGUS, active=True,
+                    next_payment_due__lt=date.today())
+            .order_by('next_payment_due'))
+
+
+# ── Individual counter functions ──────────────────────────────────────────────
+
+def _docs():
+    return qs_docs().count()
+
+
+def _transfers_purchase():
+    return qs_transfers_purchase().count()
+
+
+def _transfers_capacity():
+    return qs_transfers_capacity().count()
+
+
+def _earnings():
+    return qs_earnings().count()
+
+
+def _no_iban():
+    return qs_no_iban().count()
 
 
 def _no_wp():
-    from users_app.models import User
-    return User.objects.filter(
-        role='coach', is_active=True, is_approved=True,
-        wordpress_post_id__isnull=True,
-    ).count()
+    return qs_no_wp().count()
 
 
 def _overdue():
-    from users_app.models import CoachStudent
-    return CoachStudent.objects.filter(
-        source=CoachStudent.SOURCE_VAGUS,
-        active=True,
-        next_payment_due__lt=date.today(),
-    ).count()
+    return qs_overdue().count()
 
 
 # ── Public API ────────────────────────────────────────────────────────────────

@@ -17,9 +17,9 @@ _NAV_GROUPS = [
         'label': 'Koçlar',
         'badge_key': 'koclar',
         'pages': [
-            {'key': 'koclar',        'label': 'Koç listesi & WP', 'url_name': 'panel_wp_koclar',        'badge_key': 'no_wp'},
+            {'key': 'koclar',        'label': 'Koç listesi & WP', 'url_name': 'panel_wp_koclar',        'badge_key': 'no_wp',    'badge_filter': '?filtre=wp-unmatched'},
             {'key': 'koc_ekle',      'label': 'Koç ekle',         'url_name': 'panel_koc_ekle'},
-            {'key': 'koc_belgeleri', 'label': 'Belgeler',          'url_name': 'staff_coach_documents',  'badge_key': 'belgeler'},
+            {'key': 'koc_belgeleri', 'label': 'Belgeler',          'url_name': 'staff_coach_documents',  'badge_key': 'belgeler', 'badge_filter': '?filtre=documents-pending'},
             {'key': 'capacity',      'label': 'Kontenjan',         'url_name': 'capacity_panel:overview'},
         ],
     },
@@ -28,7 +28,7 @@ _NAV_GROUPS = [
         'label': 'Öğrenciler',
         'badge_key': 'ogrenciler_group',
         'pages': [
-            {'key': 'students', 'label': 'Öğrenciler', 'url_name': 'panel_ogrenciler', 'badge_key': 'overdue'},
+            {'key': 'students', 'label': 'Öğrenciler', 'url_name': 'panel_ogrenciler', 'badge_key': 'overdue', 'badge_filter': '?filtre=vagus-ended'},
             {'key': 'invites',  'label': 'Davetler',   'url_name': 'panel_davetler'},
         ],
     },
@@ -37,7 +37,7 @@ _NAV_GROUPS = [
         'label': 'Satış',
         'badge_key': 'satis',
         'pages': [
-            {'key': 'orders', 'label': 'Siparişler', 'url_name': 'purchase_panel:orders', 'badge_key': 'transfers'},
+            {'key': 'orders', 'label': 'Siparişler', 'url_name': 'purchase_panel:orders', 'badge_key': 'transfers', 'badge_filter': '?filter=claimed'},
             {'key': 'plans',  'label': 'Planlar',    'url_name': 'purchase_panel:plans'},
         ],
     },
@@ -46,7 +46,7 @@ _NAV_GROUPS = [
         'label': 'Ödemeler',
         'badge_key': 'odemeler_group',
         'pages': [
-            {'key': 'earnings', 'label': 'Kazançlar', 'url_name': 'earnings_panel:list', 'badge_key': 'earnings'},
+            {'key': 'earnings', 'label': 'Kazançlar', 'url_name': 'earnings_panel:list', 'badge_key': 'earnings', 'badge_filter': '?filtre=earnings-ready'},
         ],
     },
 ]
@@ -89,15 +89,18 @@ def panel_nav(context, active_section=''):
         })
 
         if g_active and len(pages) > 1:
-            second_row = [
-                {
+            second_row = []
+            for p in pages:
+                bval = badges.get(p.get('badge_key', ''), 0) or 0
+                purl = reverse(p['url_name'])
+                if bval and p.get('badge_filter'):
+                    purl += p['badge_filter']
+                second_row.append({
                     'label':  p['label'],
-                    'url':    reverse(p['url_name']),
+                    'url':    purl,
                     'active': p['key'] == active_section,
-                    'badge':  badges.get(p.get('badge_key', ''), 0) or 0,
-                }
-                for p in pages
-            ]
+                    'badge':  bval,
+                })
 
     return {
         'groups':    groups,

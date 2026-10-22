@@ -22,28 +22,35 @@
   {% if badges.any_pending %}
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 
-    {% if badges.belgeler %}
-    <a href="{% url 'staff_coach_documents' %}"
+    {% if badges.docs %}
+    <a href="{% url 'staff_coach_documents' %}?filtre=documents-pending"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
-      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Belgeler</p>
-      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.belgeler }}</p>
-      <p class="text-xs text-ink-400 mt-1">
-        {% if badges.docs %}{{ badges.docs }} onay bekliyor{% endif %}{% if badges.docs and badges.no_iban %} · {% endif %}{% if badges.no_iban %}{{ badges.no_iban }} IBAN eksik{% endif %}
-      </p>
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Belge bekliyor</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.docs }}</p>
+      <p class="text-xs text-ink-400 mt-1">Onay bekleyen belge</p>
+    </a>
+    {% endif %}
+
+    {% if badges.no_iban %}
+    <a href="{% url 'staff_coach_documents' %}?filtre=no-iban"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">IBAN eksik</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.no_iban }}</p>
+      <p class="text-xs text-ink-400 mt-1">IBAN girilmemiş koç</p>
     </a>
     {% endif %}
 
     {% if badges.no_wp %}
-    <a href="{% url 'panel_wp_koclar' %}"
+    <a href="{% url 'panel_wp_koclar' %}?filtre=wp-unmatched"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">WordPress</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.no_wp }}</p>
-      <p class="text-xs text-ink-400 mt-1">WP profili oluşturulmamış</p>
+      <p class="text-xs text-ink-400 mt-1">WP profili olmayan koç</p>
     </a>
     {% endif %}
 
     {% if badges.overdue %}
-    <a href="{% url 'panel_ogrenciler' %}"
+    <a href="{% url 'panel_ogrenciler' %}?filtre=vagus-ended"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Öğrenciler</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.overdue }}</p>
@@ -51,17 +58,26 @@
     </a>
     {% endif %}
 
-    {% if badges.transfers %}
-    <a href="{% url 'purchase_panel:orders' %}"
+    {% if badges.transfers_purchase %}
+    <a href="{% url 'purchase_panel:orders' %}?filter=claimed"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
-      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Havale</p>
-      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers }}</p>
-      <p class="text-xs text-ink-400 mt-1">Onay bekleyen transfer</p>
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Satın alma havalesi</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers_purchase }}</p>
+      <p class="text-xs text-ink-400 mt-1">Havale bekleyen sipariş</p>
+    </a>
+    {% endif %}
+
+    {% if badges.transfers_capacity %}
+    <a href="{% url 'capacity_panel:overview' %}?filtre=capacity-transfer"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Kontenjan havalesi</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers_capacity }}</p>
+      <p class="text-xs text-ink-400 mt-1">Havale bekleyen kontenjan siparişi</p>
     </a>
     {% endif %}
 
     {% if badges.earnings %}
-    <a href="{% url 'earnings_panel:list' %}"
+    <a href="{% url 'earnings_panel:list' %}?filtre=earnings-ready"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Ödemeler</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.earnings }}</p>

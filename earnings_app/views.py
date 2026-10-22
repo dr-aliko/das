@@ -27,35 +27,48 @@ User = get_user_model()
 
 @staff_required
 def panel_kazanclar_list(request):
-    rows = (
-        EarningRow.objects
-        .select_related('coach', 'student', 'order', 'order__plan', 'manual_record')
-        .order_by('-coverage_start', '-created_at')
-    )
+    filtre = request.GET.get('filtre', '').strip()
+    filtre_label = ''
+    filtre_count = 0
 
-    status_filter = request.GET.get('status', '')
-    coach_filter  = request.GET.get('coach', '')
-    month_filter  = request.GET.get('month', '')
+    if filtre == 'earnings-ready':
+        from users_app.panel_badges import qs_earnings
+        rows = list(qs_earnings()[:500])
+        filtre_label = 'Ödeme bekleyen kazançlar'
+        filtre_count = len(rows)
+        status_filter = ''
+        coach_filter  = ''
+        month_filter  = ''
+    else:
+        if filtre:
+            filtre = ''
+        rows = (
+            EarningRow.objects
+            .select_related('coach', 'student', 'order', 'order__plan', 'manual_record')
+            .order_by('-coverage_start', '-created_at')
+        )
 
-    if status_filter:
-        rows = rows.filter(status=status_filter)
-    if coach_filter:
-        rows = rows.filter(coach_id=coach_filter)
-    if month_filter:
-        try:
-            y, m = month_filter.split('-')
-            rows = rows.filter(coverage_start__year=y, coverage_start__month=m)
-        except (ValueError, AttributeError):
-            month_filter = ''
+        status_filter = request.GET.get('status', '')
+        coach_filter  = request.GET.get('coach', '')
+        month_filter  = request.GET.get('month', '')
 
-    rows = list(rows[:500])
+        if status_filter:
+            rows = rows.filter(status=status_filter)
+        if coach_filter:
+            rows = rows.filter(coach_id=coach_filter)
+        if month_filter:
+            try:
+                y, m = month_filter.split('-')
+                rows = rows.filter(coverage_start__year=y, coverage_start__month=m)
+            except (ValueError, AttributeError):
+                month_filter = ''
+
+        rows = list(rows[:500])
 
     totals = _compute_totals(rows)
     config = EarningConfig.get()
     coaches = User.objects.filter(role='coach', is_active=True).order_by('full_name')
 
-    # IBAN lookup: {coach_id: iban_string} — only for coaches who have an IBAN set.
-    # Coaches absent from this map should get the "IBAN eksik" badge.
     coach_ids = {r.coach_id for r in rows if r.coach_id}
     profiles = CoachProfile.objects.filter(user_id__in=coach_ids, iban__gt='').values('user_id', 'iban')
     coach_iban_map = {p['user_id']: p['iban'] for p in profiles}
@@ -70,6 +83,9 @@ def panel_kazanclar_list(request):
         'month_filter':   month_filter,
         'status_choices': EarningRow.STATUS_CHOICES,
         'coach_iban_map': coach_iban_map,
+        'filtre':         filtre,
+        'filtre_label':   filtre_label,
+        'filtre_count':   filtre_count,
         'active_section': 'earnings',
     })
 

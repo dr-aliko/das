@@ -17,6 +17,13 @@
     <p class="text-sm text-ink-400">Tüm satın alma işlemlerini görüntüleyin ve yönetin.</p>
   </div>
 
+  {% if claimed_filter %}
+  <div class="rounded-xl border border-amber-500/25 px-4 py-3 flex items-center justify-between gap-3" style="background:rgba(245,158,11,0.06)">
+    <span class="text-sm text-amber-300"><strong>{{ orders|length }}</strong> kayıt gösteriliyor: {{ filtre_label }}</span>
+    <a href="{% url 'purchase_panel:orders' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors shrink-0">Filtreyi temizle</a>
+  </div>
+  {% endif %}
+
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3 border-b border-ink-700 flex items-center gap-3 flex-wrap">
       <form method="get" class="flex items-center gap-2 flex-wrap">

@@ -771,11 +771,14 @@ def panel_orders(request):
         )
     ).order_by('_claimed_sort', '-created_at')
 
+    filtre_label = 'Ödeme bildirilmiş siparişler' if claimed_filter else ''
+
     return render(request, 'panel/purchase_orders.html', {
         'orders':         orders,
         'status_choices': Order.STATUS_CHOICES,
         'status_filter':  status_filter,
         'claimed_filter': claimed_filter,
+        'filtre_label':   filtre_label,
         'q':              q,
         'active_section': 'orders',
     })
