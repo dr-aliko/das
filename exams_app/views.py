@@ -2363,6 +2363,18 @@ def exam_compare(request):
 # COACH VIEWS
 # ──────────────────────────────────────────────
 
+def _fmt_phone(phone):
+    """Convert +905051234567 → ('0505 123 45 67', '+905051234567') for display and tel links."""
+    if not phone:
+        return '', ''
+    digits = ''.join(c for c in phone if c.isdigit())
+    if digits.startswith('90') and len(digits) == 12:
+        digits = '0' + digits[2:]
+    if len(digits) == 11 and digits[0] == '0':
+        return f'{digits[0:4]} {digits[4:7]} {digits[7:9]} {digits[9:11]}', phone
+    return '', ''
+
+
 @coach_required
 def coach_dashboard(request):
     """DAS-413/414/416: Coach Roster — lists active students with status and quick stats."""
@@ -2464,6 +2476,7 @@ def coach_dashboard(request):
         else:  # NULL: own unless student has a paid Order
             item_source = 'vagus' if student.id in _paid_student_ids else 'coach'
 
+        _ph_display, _ph_e164 = _fmt_phone(student.phone)
         student_data.append({
             'student': student,
             'cs': cs_map.get(student.id),
@@ -2475,6 +2488,8 @@ def coach_dashboard(request):
             'initials': initials,
             'trend': trend,
             'net_delta': net_delta,
+            'phone_display': _ph_display,
+            'phone_e164': _ph_e164,
         })
 
     total_vagus = sum(1 for item in student_data if item['source'] == 'vagus')

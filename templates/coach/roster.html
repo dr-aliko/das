@@ -208,6 +208,7 @@
                   </div>
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
+                {% if item.phone_display %}<span class="pii text-xs text-ink-500 cursor-pointer" style="display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" @click.stop="window.location.href='tel:{{ item.phone_e164 }}'">{{ item.phone_display }}</span>{% endif %}
               </div>
             </div>
 
@@ -300,7 +301,7 @@
                       style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
                 {% endif %}
               </div>
-              <p class="pii text-[11px] text-ink-500 mt-0.5">{{ item.student.grade|default:"—" }}</p>
+              <p class="pii text-[11px] text-ink-500 mt-0.5" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ item.student.grade|default:"—" }}{% if item.phone_display %} · <span class="cursor-pointer" @click.stop="window.location.href='tel:{{ item.phone_e164 }}'">{{ item.phone_display }}</span>{% endif %}</p>
             </div>
             <div class="hidden sm:flex items-center gap-5 shrink-0">
               <div class="text-right">
