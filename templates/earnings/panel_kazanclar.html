@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 {% load earnings_filters %}
+{% load panel_nav_tags %}
 
 {% block title %}Panel — Koç Kazançları{% endblock %}
 
 {% block content %}
 <div class="space-y-5">
 
-  {% comment %}
-    Page header
-  {% endcomment %}
+  {% panel_nav active_section %}
+
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
     <div>
       <div class="flex items-center gap-2 mb-0.5">
@@ -19,8 +19,6 @@
       <p class="text-sm text-ink-400">Koç kazançlarını listeleyin, onaylayın ve ödeyin.</p>
     </div>
     <div class="flex items-center gap-3 text-sm">
-      <a href="{% url 'purchase_panel:orders' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Siparişler</a>
-      <a href="{% url 'purchase_panel:plans' %}" class="text-ink-400 hover:text-ink-200 transition-colors">Planlar</a>
       <a href="{% url 'earnings_panel:export_csv' %}?status={{ status_filter }}&coach={{ coach_filter }}&month={{ month_filter }}"
          class="text-xs bg-ink-800 border border-ink-700 text-ink-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors">
         CSV İndir

@@ -20,7 +20,7 @@ _TAB = 'capacity'
 
 
 def _tab_ctx():
-    return {'active_tab': _TAB}
+    return {'active_tab': _TAB, 'active_section': _TAB}
 
 
 @staff_required

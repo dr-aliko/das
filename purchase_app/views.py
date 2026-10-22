@@ -777,6 +777,7 @@ def panel_orders(request):
         'status_filter':  status_filter,
         'claimed_filter': claimed_filter,
         'q':              q,
+        'active_section': 'orders',
     })
 
 
@@ -788,15 +789,16 @@ def panel_order_detail(request, pk):
     )
     consents = order.consents.order_by('accepted_at')
     return render(request, 'panel/purchase_order_detail.html', {
-        'order':    order,
-        'consents': consents,
+        'order':          order,
+        'consents':       consents,
+        'active_section': 'orders',
     })
 
 
 @staff_required
 def panel_plans(request):
     plans = Plan.objects.order_by('kind', 'price_kurus')
-    return render(request, 'panel/purchase_plans.html', {'plans': plans})
+    return render(request, 'panel/purchase_plans.html', {'plans': plans, 'active_section': 'plans'})
 
 
 @staff_required
@@ -845,8 +847,9 @@ def panel_plan_create(request):
 
     plans = Plan.objects.order_by('kind', 'price_kurus')
     return render(request, 'panel/purchase_plans.html', {
-        'plans': plans,
-        'errors': errors,
+        'plans':          plans,
+        'errors':         errors,
+        'active_section': 'plans',
     })
 
 
@@ -896,8 +899,9 @@ def panel_plan_update(request, pk):
 
     plans = Plan.objects.order_by('kind', 'price_kurus')
     return render(request, 'panel/purchase_plans.html', {
-        'plans':  plans,
-        'errors': errors,
+        'plans':          plans,
+        'errors':         errors,
+        'active_section': 'plans',
     })
 
 

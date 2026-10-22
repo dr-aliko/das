@@ -1,0 +1,24 @@
+{# Staff panel shared navigation. Rendered by {% panel_nav active_section %}. #}
+<div id="panel-main-nav" class="rounded-2xl border border-ink-700 bg-ink-950 px-3 py-2.5">
+  <div class="overflow-x-auto">
+    <div class="flex items-center bg-ink-900 rounded-lg p-0.5 min-w-max text-xs font-medium">
+      {% for item in items %}
+        {% if item.sep %}
+          <span class="hidden sm:flex items-center mx-1 text-xs font-bold uppercase tracking-wider text-ink-600">{{ item.sep }}</span>
+          <span class="sm:hidden flex items-center mx-0.5 text-ink-700">|</span>
+        {% else %}
+          <a href="{{ item.url }}"
+             class="px-3 py-1.5 rounded-md transition-colors whitespace-nowrap {% if item.active %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
+            {{ item.label }}
+          </a>
+        {% endif %}
+      {% endfor %}
+      <span class="ml-2 pl-2 border-l border-ink-700 flex items-center shrink-0">
+        <a href="{{ admin_url }}" target="_blank" rel="noopener"
+           class="px-3 py-1.5 rounded-md transition-colors whitespace-nowrap text-ink-500 hover:text-ink-300">
+          Yönetim (Django)
+        </a>
+      </span>
+    </div>
+  </div>
+</div>

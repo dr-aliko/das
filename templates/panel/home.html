@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+{% load panel_nav_tags %}
+
+{% block title %}Panel — Genel Bakış{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% panel_nav active_section %}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <div class="flex items-center gap-2 mb-0.5">
+      <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+      <h1 class="text-lg font-semibold text-white">Genel Bakış</h1>
+    </div>
+    <p class="text-sm text-ink-400">Panel ana sayfası. Sayaçlar yakında eklenecek.</p>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+    <a href="{% url 'panel_wp_koclar' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Koçlar</p>
+      <p class="text-sm font-semibold text-ink-100">Koç listesi & WP</p>
+    </a>
+
+    <a href="{% url 'panel_koc_ekle' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Koçlar</p>
+      <p class="text-sm font-semibold text-ink-100">Koç ekle</p>
+    </a>
+
+    <a href="{% url 'staff_coach_documents' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Koçlar</p>
+      <p class="text-sm font-semibold text-ink-100">Belgeler</p>
+    </a>
+
+    <a href="{% url 'capacity_panel:overview' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Koçlar</p>
+      <p class="text-sm font-semibold text-ink-100">Kontenjan</p>
+    </a>
+
+    <a href="{% url 'panel_ogrenciler' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Öğrenciler</p>
+      <p class="text-sm font-semibold text-ink-100">Öğrenciler</p>
+    </a>
+
+    <a href="{% url 'panel_davetler' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Öğrenciler</p>
+      <p class="text-sm font-semibold text-ink-100">Davetler</p>
+    </a>
+
+    <a href="{% url 'purchase_panel:orders' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Satış</p>
+      <p class="text-sm font-semibold text-ink-100">Siparişler</p>
+    </a>
+
+    <a href="{% url 'purchase_panel:plans' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Satış</p>
+      <p class="text-sm font-semibold text-ink-100">Planlar</p>
+    </a>
+
+    <a href="{% url 'earnings_panel:list' %}"
+       class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Ödemeler</p>
+      <p class="text-sm font-semibold text-ink-100">Kazançlar</p>
+    </a>
+
+  </div>
+
+</div>
+{% endblock %}

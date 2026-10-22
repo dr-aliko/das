@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load panel_nav_tags %}
 
 {% block title %}
   {% if action == 'reduce' %}Slot Azalt{% else %}Hak Sonlandır{% endif %} — {{ grant.coach.full_name }}
@@ -8,11 +9,13 @@
 {% block content %}
 <div class="space-y-5 max-w-xl">
 
+  {% panel_nav active_section %}
+
   {# ── Page header ───────────────────────────────────────────────────────── #}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
     <div>
       <div class="flex items-center gap-2 mb-0.5">
-        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
         <h1 class="text-lg font-semibold text-white">
           {% if action == 'reduce' %}Slot Azalt{% else %}Hak Sonlandır{% endif %}
         </h1>

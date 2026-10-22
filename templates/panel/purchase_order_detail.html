@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
+{% load panel_nav_tags %}
 
 {% block title %}Sipariş #{{ order.pk }} — Panel{% endblock %}
 
 {% block content %}
 <div class="space-y-5 max-w-2xl">
+
+  {% panel_nav active_section %}
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
     <div class="flex items-center gap-2 mb-0.5">

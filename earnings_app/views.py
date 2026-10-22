@@ -70,6 +70,7 @@ def panel_kazanclar_list(request):
         'month_filter':   month_filter,
         'status_choices': EarningRow.STATUS_CHOICES,
         'coach_iban_map': coach_iban_map,
+        'active_section': 'earnings',
     })
 
 
@@ -220,6 +221,7 @@ def panel_manuel_odeme_create(request):
             'status_choices': EarningRow.STATUS_CHOICES,
             'form_errors':    errors,
             'show_form':      True,
+            'active_section': 'earnings',
         })
 
     return redirect('earnings_panel:list')

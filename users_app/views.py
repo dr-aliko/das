@@ -1316,6 +1316,16 @@ def _fee_tier_sections():
     return sections
 
 
+# ── Staff panel — home ───────────────────────────────────────────────────────
+
+@staff_required
+def panel_home_view(request):
+    return render(request, 'panel/home.html', {
+        'active_section': 'home',
+        'active_tab':     'home',
+    })
+
+
 # ── Staff panel — billing management ─────────────────────────────────────────
 
 @staff_required
@@ -1371,7 +1381,8 @@ def panel_billing_view(request):
         'unclassified_count': len(unclassified),
         'all_coaches': all_coaches,
         'coach_filter_id': coach_filter_id or '',
-        'active_tab': 'classification',
+        'active_tab':     'classification',
+        'active_section': 'classification',
         'fee_tier_sections': _fee_tier_sections(),
     })
 
@@ -1437,7 +1448,8 @@ def panel_odemeler_view(request):
     return render(request, 'panel/odemeler.html', {
         'rows': rows,
         'grand_total': grand_total,
-        'active_tab': 'payments',
+        'active_tab':     'payments',
+        'active_section': 'payments',
         'q': q,
     })
 
@@ -1499,7 +1511,8 @@ def panel_davetler_view(request):
         'pending': pending,
         'error': error,
         'success': success,
-        'active_tab': 'invites',
+        'active_tab':     'invites',
+        'active_section': 'invites',
     })
 
 
@@ -1525,7 +1538,8 @@ def panel_ogrenciler_view(request):
         coaches = filter_coaches_by_q(list(coaches), q)
     return render(request, 'panel/ogrenciler.html', {
         'coaches': coaches,
-        'active_tab': 'students',
+        'active_tab':     'students',
+        'active_section': 'students',
         'q': q,
     })
 
@@ -1591,8 +1605,9 @@ def panel_koc_degistir_view(request, student_id):
         'student': student,
         'current_link': current_link,
         'eligible_coaches': eligible_coaches,
-        'error': error,
-        'active_tab': 'students',
+        'error':          error,
+        'active_tab':     'students',
+        'active_section': 'students',
     })
 
 
@@ -1686,7 +1701,8 @@ def panel_wp_koclar_view(request):
         'unmatched_coaches': matches['unmatched_coaches'],
         'unmatched_wp':      matches['unmatched_wp'],
         'linked_coaches':    linked,
-        'active_tab':        'wp_koclar',
+        'active_tab':     'wp_koclar',
+        'active_section': 'koclar',
         'q':                 q,
     })
 
@@ -1839,7 +1855,8 @@ def panel_koc_ekle_view(request):
                 return redirect('panel_koc_ekle')
 
     return render(request, 'panel/koc_ekle.html', {
-        'active_tab': 'koc_ekle',
+        'active_tab':     'koc_ekle',
+        'active_section': 'koc_ekle',
         'step': step,
         'form_data': form_data,
         'error': error,
@@ -1899,8 +1916,9 @@ def panel_koc_sil(request, coach_id):
             messages.error(request, block)
             return redirect('panel_koc_ekle')
         return render(request, 'panel/koc_sil_onayla.html', {
-            'coach': coach,
-            'active_tab': 'koc_ekle',
+            'coach':          coach,
+            'active_tab':     'koc_ekle',
+            'active_section': 'koc_ekle',
         })
 
     # POST — execute deletion after re-validating
@@ -2080,7 +2098,8 @@ def staff_coach_documents_view(request):
         .order_by('document_status', '-updated_at')
     )
     return render(request, 'panel/koc_belgeleri.html', {
-        'active_tab': 'koc_belgeleri',
+        'active_tab':     'koc_belgeleri',
+        'active_section': 'koc_belgeleri',
         'profiles': profiles,
         'DOC_PENDING':  CoachProfile.DOC_PENDING,
         'DOC_APPROVED': CoachProfile.DOC_APPROVED,

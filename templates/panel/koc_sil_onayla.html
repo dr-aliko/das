@@ -1,48 +1,21 @@
 {% extends "base.html" %}
 {% load static %}
+{% load panel_nav_tags %}
 
 {% block title %}Panel — Koç Silme Onayı{% endblock %}
 
 {% block content %}
 <div class="space-y-5">
 
+  {% panel_nav active_section %}
+
   {# ── Page header ───────────────────────────────────────────────────────── #}
-  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
-    <div>
-      <div class="flex items-center gap-2 mb-0.5">
-        <span class="text-[10px] font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
-        <h1 class="text-lg font-semibold text-white">Koç Ekle</h1>
-      </div>
-      <p class="text-sm text-ink-400">Yeni bir koç hesabı oluştur ve şifre belirleme daveti gönder.</p>
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <div class="flex items-center gap-2 mb-0.5">
+      <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+      <h1 class="text-lg font-semibold text-white">Koç Silme Onayı</h1>
     </div>
-    <div class="flex items-center gap-3 shrink-0">
-      <div class="flex gap-0.5 bg-ink-900 rounded-lg p-0.5 text-xs font-medium">
-        <a href="{% url 'panel_billing' %}"
-           class="px-3 py-1.5 rounded-md transition-colors text-ink-500 hover:text-ink-300">
-          Sınıflandırma &amp; Tarifeler
-        </a>
-        <a href="{% url 'panel_odemeler' %}"
-           class="px-3 py-1.5 rounded-md transition-colors text-ink-500 hover:text-ink-300">
-          Ödemeler
-        </a>
-        <a href="{% url 'panel_davetler' %}"
-           class="px-3 py-1.5 rounded-md transition-colors text-ink-500 hover:text-ink-300">
-          Davetler
-        </a>
-        <a href="{% url 'panel_ogrenciler' %}"
-           class="px-3 py-1.5 rounded-md transition-colors text-ink-500 hover:text-ink-300">
-          Öğrenciler
-        </a>
-        <a href="{% url 'panel_wp_koclar' %}"
-           class="px-3 py-1.5 rounded-md transition-colors text-ink-500 hover:text-ink-300">
-          WP Koçlar
-        </a>
-        <a href="{% url 'panel_koc_ekle' %}"
-           class="px-3 py-1.5 rounded-md transition-colors bg-ink-700 text-ink-100">
-          Koç Ekle
-        </a>
-      </div>
-    </div>
+    <p class="text-sm text-ink-400">Koç hesabını kalıcı olarak sil.</p>
   </div>
 
   {# ── Confirm card ───────────────────────────────────────────────────────── #}

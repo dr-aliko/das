@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% load earnings_filters %}
+{% load panel_nav_tags %}
 
 {% block title %}Kontenjan Ayarları — Panel{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl space-y-5">
+
+  {% panel_nav active_section %}
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
     <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>

@@ -18,6 +18,7 @@ from users_app.views import (
     panel_koc_ekle_view, panel_koc_davet_resend, panel_koc_sil, profil_wp_availability,
     coach_profile_view, coach_profile_quick_update, serve_private_document,
     staff_coach_documents_view, staff_coach_document_action, staff_coach_phone_edit,
+    panel_home_view,
 )
 from struggle_app.views import CoachStruggleStatsView
 from earnings_app.views import coach_kazanclar, coach_kazanclar_export_csv
@@ -75,6 +76,7 @@ urlpatterns = [
     path('notifications/delete-all/',            notification_delete_all,            name='notifications_delete_all'),
     path('notifications/<int:pk>/delete/',       notification_delete,                name='notification_delete'),
     path('coach/odeme/', coach_billing_view, name='coach_billing'),
+    path('panel/', panel_home_view, name='panel_home'),
     path('panel/odeme/', panel_billing_view, name='panel_billing'),
     path('panel/odeme/<int:pk>/update/', panel_billing_update, name='panel_billing_update'),
     path('panel/odemeler/', panel_odemeler_view, name='panel_odemeler'),
