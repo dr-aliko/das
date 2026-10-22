@@ -2490,6 +2490,7 @@ def coach_dashboard(request):
             'net_delta': net_delta,
             'phone_display': _ph_display,
             'phone_e164': _ph_e164,
+            'phone_digits': _ph_e164.lstrip('+') if _ph_e164 else '',
         })
 
     total_vagus = sum(1 for item in student_data if item['source'] == 'vagus')
