@@ -2557,21 +2557,22 @@ def coach_dashboard(request):
     cap_status = get_capacity_status(request.user)
 
     return render(request, 'coach/roster.html', {
-        'student_data':   student_data,
-        'status_counts':  status_counts,
-        'total':          len(student_data),
-        'total_vagus':      total_vagus,
-        'total_own':        total_own,
-        'status_by_source': status_by_source,
-        'inbox_alerts':   inbox_alerts,
-        'alert_unread':   alert_unread,
-        'inbox_unread':   alert_unread + notif_unread,
-        'notif_data':     notif_data,
-        'notif_unread':   notif_unread,
-        'inbox_students': inbox_students,
-        'first_run':      request.session.pop('first_run', False),
-        'cap_status':     cap_status,
-        'enforcement_on': getattr(_settings, 'COACH_CAPACITY_ENFORCED', False),
+        'student_data':         student_data,
+        'status_counts':        status_counts,
+        'total':                len(student_data),
+        'total_vagus':          total_vagus,
+        'total_own':            total_own,
+        'status_by_source':     status_by_source,
+        'inbox_alerts':         inbox_alerts,
+        'alert_unread':         alert_unread,
+        'inbox_unread':         alert_unread + notif_unread,
+        'notif_data':           notif_data,
+        'notif_unread':         notif_unread,
+        'inbox_students':       inbox_students,
+        'first_run':            request.session.pop('first_run', False),
+        'cap_status':           cap_status,
+        'enforcement_on':       getattr(_settings, 'COACH_CAPACITY_ENFORCED', False),
+        'per_student_periods':  getattr(_settings, 'COACH_PER_STUDENT_PERIODS', False),
     })
 
 

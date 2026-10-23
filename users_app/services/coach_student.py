@@ -115,6 +115,8 @@ def reassign_student(student, new_coach, acting_staff):
 
         old_coach = old_link.coach
         source = old_link.source
+        # next_payment_due travels with the student: the 30-day period is per student,
+        # not per coach. No credit is charged or refunded on reassign.
         next_payment_due = old_link.next_payment_due
 
         close_interval(old_link, CoachStudentInterval.REASON_REASSIGN)

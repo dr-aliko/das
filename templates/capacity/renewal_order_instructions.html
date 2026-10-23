@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load earnings_filters %}
+
+{% block title %}Öğrenci Yenileme Siparişi — DAS{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-lg">
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <a href="{% url 'users_app:coach_invites' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Öğrenci Davetleri</a>
+    <h1 class="text-lg font-semibold text-white mt-2">Öğrenci Yenileme Siparişi</h1>
+    <p class="text-sm text-ink-400">{{ order.coach_student.student.full_name }} · {{ order.created_at|date:"d.m.Y H:i" }}</p>
+  </div>
+
+  {% if order.status == 'awaiting_transfer' or order.status == 'pending' %}
+
+    {% if claimed %}
+    <div class="rounded-2xl border border-emerald-500/30 bg-emerald-900/20 px-5 py-4 text-center">
+      <p class="text-sm font-semibold text-emerald-400">Bildiriminiz Alındı</p>
+      <p class="text-xs text-ink-400 mt-1">Ödemeniz onaylandığında öğrenci süresi uzatılacak.</p>
+    </div>
+    {% endif %}
+
+    <div class="rounded-2xl border border-steel-500/30 bg-ink-950 px-5 py-4 text-center">
+      <p class="text-[10px] uppercase tracking-widest text-steel-400 font-bold mb-2">Havale Açıklamasına Yazın</p>
+      <p class="text-2xl font-mono font-bold text-steel-300 tracking-widest">{{ order.ref_code }}</p>
+    </div>
+
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-ink-700">
+        <h2 class="text-sm font-semibold text-ink-200">Sipariş Özeti</h2>
+      </div>
+      <div class="px-5 py-4 space-y-2.5 text-sm">
+        <div class="flex justify-between">
+          <span class="text-ink-500">Öğrenci</span>
+          <span class="text-ink-200 font-medium">{{ order.coach_student.student.full_name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-ink-500">Tutar</span>
+          <span class="text-ink-200 font-semibold">{{ order.amount_kurus|kurus_tl }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-ink-500">Referans</span>
+          <span class="text-ink-200 font-mono font-bold text-steel-300">{{ order.ref_code }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-ink-500">Durum</span>
+          <span class="text-amber-400 font-medium">{{ order.get_status_display }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% if bank_name or holder or iban_grouped %}
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-ink-700">
+        <h2 class="text-sm font-semibold text-ink-200">Banka Bilgileri</h2>
+      </div>
+      <div class="px-5 py-4 space-y-2.5 text-sm">
+        {% if bank_name %}
+        <div class="flex justify-between">
+          <span class="text-ink-500">Banka</span>
+          <span class="text-ink-200 font-medium">{{ bank_name }}</span>
+        </div>
+        {% endif %}
+        {% if holder %}
+        <div class="flex justify-between">
+          <span class="text-ink-500">Alıcı</span>
+          <span class="text-ink-200 font-medium">{{ holder }}</span>
+        </div>
+        {% endif %}
+        {% if iban_grouped %}
+        <div class="flex justify-between items-center">
+          <span class="text-ink-500">IBAN</span>
+          <span class="text-ink-200 font-mono text-xs">{{ iban_grouped }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not claimed %}
+    <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-ink-700">
+        <h2 class="text-sm font-semibold text-ink-200">Havaleyi Yaptım</h2>
+      </div>
+      <div class="px-5 py-4">
+        <form method="post" action="{% url 'capacity:renewal_claim' order_token=order.token %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="block text-xs text-ink-400 font-medium mb-1.5">
+              Havaleyi yapan isim <span class="text-ink-500 font-normal">(isteğe bağlı)</span>
+            </label>
+            <input type="text" name="sender_name" maxlength="80" placeholder="Ad Soyad"
+                   class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700
+                          text-sm text-ink-100 placeholder:text-ink-500
+                          focus:outline-none focus:border-steel-500 transition-colors">
+          </div>
+          <button type="submit"
+                  class="w-full h-10 rounded-lg bg-steel-500 hover:bg-steel-400 text-white font-medium text-sm transition-colors">
+            Ödemeyi Yaptım — Bildir
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+  {% elif order.status == 'paid' %}
+  <div class="rounded-2xl border border-emerald-500/30 bg-ink-950 px-5 py-8 text-center">
+    <p class="text-2xl font-bold text-emerald-400 mb-2">Ödeme Onaylandı</p>
+    <p class="text-sm text-ink-400">{{ order.coach_student.student.full_name }} için süre uzatıldı.</p>
+    <a href="{% url 'users_app:coach_invites' %}"
+       class="inline-block mt-4 px-4 py-2 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium transition-colors">
+      Öğrenci Davetleri
+    </a>
+  </div>
+
+  {% elif order.status == 'cancelled' %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-8 text-center">
+    <p class="text-lg font-semibold text-ink-400 mb-2">Sipariş İptal Edildi</p>
+    <a href="{% url 'users_app:coach_invites' %}"
+       class="inline-block mt-3 px-4 py-2 rounded-lg bg-ink-800 hover:bg-ink-700 text-ink-200 text-sm font-medium transition-colors">
+      Öğrenci Davetleri
+    </a>
+  </div>
+
+  {% else %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <p class="text-sm text-ink-400">Sipariş durumu: {{ order.get_status_display }}</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

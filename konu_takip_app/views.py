@@ -9,6 +9,7 @@ from django.views import View
 
 from users_app.decorators import coach_can_view_student, coach_required, student_required
 from users_app.models import User
+from users_app.utils import is_student_program_expired
 
 from .alan_utils import subject_groups as _subject_groups
 from .models import KonuTakipTopic
@@ -140,6 +141,9 @@ class CoachToggleView(View):
         if not coach_can_view_student(request.user, student_id):
             return HttpResponseForbidden()
 
+        if is_student_program_expired(request.user, student_id):
+            return JsonResponse({'ok': False, 'error': 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'}, status=403)
+
         topic = get_object_or_404(KonuTakipTopic, pk=topic_id, checkable=True)
         student = get_object_or_404(User, pk=student_id, role='student')
 
@@ -197,6 +201,9 @@ class CoachReviewView(View):
 
         if not coach_can_view_student(request.user, student_id):
             return HttpResponseForbidden()
+
+        if is_student_program_expired(request.user, student_id):
+            return JsonResponse({'ok': False, 'error': 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'}, status=403)
 
         student = get_object_or_404(User, pk=student_id, role='student')
         progress = submit_review(student, topic_id, quality)
@@ -344,6 +351,9 @@ class CoachToggleSrView(View):
 
         if not coach_can_view_student(request.user, student_id):
             return HttpResponseForbidden()
+
+        if is_student_program_expired(request.user, student_id):
+            return JsonResponse({'ok': False, 'error': 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'}, status=403)
 
         student = get_object_or_404(User, pk=student_id, role='student')
         new_value = toggle_subject_sr(student, subject_id)

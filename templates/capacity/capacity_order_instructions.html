@@ -7,9 +7,13 @@
 <div class="space-y-5 max-w-lg">
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
-    <a href="{% url 'capacity:page' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>
+    <a href="{% url 'capacity:page' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← {% if per_student_periods %}Davet Hakkı{% else %}Kontenjan{% endif %}</a>
     <h1 class="text-lg font-semibold text-white mt-2">Kontenjan Siparişi</h1>
+    {% if per_student_periods %}
+    <p class="text-sm text-ink-400">{{ order.slots }} davet hakkı · {{ order.created_at|date:"d.m.Y H:i" }}</p>
+    {% else %}
     <p class="text-sm text-ink-400">{{ order.slots }} slot · {{ order.created_at|date:"d.m.Y H:i" }}</p>
+    {% endif %}
   </div>
 
   {% if order.status == 'awaiting_transfer' or order.status == 'pending' %}
@@ -32,7 +36,11 @@
       </div>
       <div class="px-5 py-4 space-y-2.5 text-sm">
         <div class="flex justify-between">
+          {% if per_student_periods %}
+          <span class="text-ink-500">Davet Hakkı</span>
+          {% else %}
           <span class="text-ink-500">Slot</span>
+          {% endif %}
           <span class="text-ink-200 font-medium">{{ order.slots }} adet</span>
         </div>
         <div class="flex justify-between">
@@ -49,6 +57,12 @@
         </div>
       </div>
     </div>
+
+    {% if per_student_periods %}
+    <div class="rounded-2xl border border-steel-500/30 bg-steel-tint px-5 py-3 text-sm text-steel-300">
+      30 günlük süre öğrenci davete kabul edince başlar.
+    </div>
+    {% endif %}
 
     {% if not claimed %}
     <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
@@ -79,7 +93,11 @@
   {% elif order.status == 'paid' %}
   <div class="rounded-2xl border border-emerald-500/30 bg-ink-950 px-5 py-8 text-center">
     <p class="text-2xl font-bold text-emerald-400 mb-2">Ödeme Onaylandı</p>
+    {% if per_student_periods %}
+    <p class="text-sm text-ink-400">{{ order.slots }} davet hakkı kredilendi.</p>
+    {% else %}
     <p class="text-sm text-ink-400">{{ order.slots }} slot kontenjanınıza eklendi.</p>
+    {% endif %}
     <a href="{% url 'capacity:page' %}"
        class="inline-block mt-4 px-4 py-2 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium transition-colors">
       Kontenjanım

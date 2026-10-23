@@ -397,6 +397,9 @@
             <p class="text-[11px] text-ink-400 text-center leading-relaxed">
               Tüm deneme ve görev verileri korunur.<br>Yalnızca koç bağlantısı kesilir.
             </p>
+            {% if per_student_periods and item.source == 'coach' %}
+            <p class="text-[10px] text-amber-400 text-center">Bu öğrenciyi kaldırırsanız harcanan davet hakkınız iade edilmez.</p>
+            {% endif %}
             <div class="flex items-center gap-2 mt-1">
               <button @click.stop="
                 const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '';

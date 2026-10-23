@@ -131,8 +131,22 @@ def get_capacity_status(coach):
 def can_add_own_student(coach):
     """
     Returns (allowed: bool, error_msg: str|None).
-    When COACH_CAPACITY_ENFORCED is False → always allowed.
+
+    When COACH_PER_STUDENT_PERIODS=True: credit-based check.
+    When COACH_PER_STUDENT_PERIODS=False: old capacity-enforcement check (unchanged).
     """
+    if getattr(settings, 'COACH_PER_STUDENT_PERIODS', False):
+        avail = available_credits(coach)
+        if avail > 0:
+            return True, None
+        bal = credit_balance(coach)
+        if bal <= 0:
+            msg = 'Davet hakkınız yok. Yeni öğrenci ekleyebilmek için davet hakkı satın alın.'
+        else:
+            pending = pending_invite_count(coach)
+            msg = f'{pending} davet bekliyor, hakların ayrıldı. Davet hakkınız kalmadı.'
+        return False, msg
+
     if not getattr(settings, 'COACH_CAPACITY_ENFORCED', False):
         return True, None
     status = get_capacity_status(coach)
@@ -168,10 +182,43 @@ def mark_capacity_order_paid(order):
     """
     Atomically mark order as paid and create the grant. Idempotent.
     Returns (order, grant_created: bool).
+
+    When COACH_PER_STUDENT_PERIODS=True: credits a ledger entry instead of a grant.
+    When COACH_PER_STUDENT_PERIODS=False: old grant path (unchanged).
     """
     from .models import CoachCapacityGrant, CoachCapacityOrder
+    per_student = getattr(settings, 'COACH_PER_STUDENT_PERIODS', False)
+
     with transaction.atomic():
         order = CoachCapacityOrder.objects.select_for_update().get(pk=order.pk)
+
+        if per_student:
+            from .models import CoachCreditLedger
+            if order.status == CoachCapacityOrder.STATUS_PAID:
+                return order, False
+
+            if order.status not in (
+                CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
+                CoachCapacityOrder.STATUS_PENDING,
+            ):
+                return order, False
+
+            order.status = CoachCapacityOrder.STATUS_PAID
+            order.save(update_fields=['status', 'updated_at'])
+
+            already = CoachCreditLedger.objects.filter(
+                order=order,
+                reason=CoachCreditLedger.REASON_PURCHASE_APPROVED,
+            ).exists()
+            if not already:
+                grant_credits(order.coach, order.slots, CoachCreditLedger.REASON_PURCHASE_APPROVED, order=order)
+                _log.info(
+                    'capacity: order pk=%s marked paid, %d credits granted for coach pk=%s',
+                    order.pk, order.slots, order.coach_id,
+                )
+            return order, True
+
+        # flag=False: original grant path
         if order.status == CoachCapacityOrder.STATUS_PAID:
             grant_created = not CoachCapacityGrant.objects.filter(order=order).exists()
             return order, grant_created
@@ -415,3 +462,54 @@ def adjust_credits_staff(coach, delta, staff, notes=''):
         created_by=staff,
         notes=notes,
     )
+
+
+def mark_renewal_order_paid(order, staff):
+    """
+    Atomically mark a CoachStudentRenewalOrder as paid and extend the student's period.
+    Idempotent: if already PAID or CANCELLED, returns (order, False).
+    Returns (order, True) when the period was extended.
+
+    new_end = max(cs.next_payment_due or today, today) + timedelta(days=30)
+    """
+    from django.utils import timezone as _tz
+    from .models import CoachStudentRenewalOrder
+    from users_app.models import CoachStudent, Notification
+
+    with transaction.atomic():
+        order = CoachStudentRenewalOrder.objects.select_for_update().get(pk=order.pk)
+        cs = CoachStudent.objects.select_for_update().get(pk=order.coach_student_id)
+
+        if order.status in (
+            CoachStudentRenewalOrder.STATUS_PAID,
+            CoachStudentRenewalOrder.STATUS_CANCELLED,
+        ):
+            return order, False
+
+        today = _tz.localdate()
+        current_due = cs.next_payment_due or today
+        base = max(current_due, today)
+        new_end = base + timedelta(days=30)
+
+        cs.next_payment_due = new_end
+        cs.save(update_fields=['next_payment_due'])
+
+        order.status = CoachStudentRenewalOrder.STATUS_PAID
+        order.save(update_fields=['status', 'updated_at'])
+
+        Notification.objects.create(
+            user=cs.coach,
+            title='Öğrenci süresi uzatıldı',
+            body=(
+                f'{cs.student.full_name} için 30 günlük süre uzatıldı. '
+                f'Yeni son tarih: {cs.next_payment_due.strftime("%d.%m.%Y")}'
+            ),
+            url='/auth/invite-students/',
+        )
+
+        _log.info(
+            'renewal: order pk=%s marked paid by staff pk=%s; '
+            'coach_student pk=%s new_end=%s',
+            order.pk, getattr(staff, 'pk', None), cs.pk, new_end,
+        )
+        return order, True

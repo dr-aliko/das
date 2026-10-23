@@ -467,7 +467,12 @@ def coach_invite_view(request):
 
     from django.conf import settings as _settings
     from capacity_app.models import CapacitySettings
-    from capacity_app.services import can_add_own_student, get_capacity_status, parse_explanation_body
+    from capacity_app.services import (
+        available_credits, can_add_own_student, get_capacity_status,
+        parse_explanation_body, pending_invite_count,
+    )
+
+    per_student_periods = getattr(_settings, 'COACH_PER_STUDENT_PERIODS', False)
 
     invites = StudentInvite.objects.filter(
         coach=request.user, initiated_by_staff=False
@@ -476,10 +481,21 @@ def coach_invite_view(request):
 
     cap_status = get_capacity_status(request.user)
     enforcement_on = getattr(_settings, 'COACH_CAPACITY_ENFORCED', False)
-    capacity_blocked = enforcement_on and cap_status['free'] <= 0
-    capacity_error = None
-    if capacity_blocked:
-        _, capacity_error = can_add_own_student(request.user)
+
+    if per_student_periods:
+        avail_credits = available_credits(request.user)
+        pending_credits = pending_invite_count(request.user)
+        capacity_blocked = avail_credits <= 0
+        capacity_error = None
+        if capacity_blocked:
+            _, capacity_error = can_add_own_student(request.user)
+    else:
+        avail_credits = None
+        pending_credits = None
+        capacity_blocked = enforcement_on and cap_status['free'] <= 0
+        capacity_error = None
+        if capacity_blocked:
+            _, capacity_error = can_add_own_student(request.user)
 
     if request.method == 'POST':
         form = InviteStudentForm(request.POST)
@@ -505,18 +521,71 @@ def coach_invite_view(request):
     cfg = CapacitySettings.get()
     explanation = parse_explanation_body(cfg.explanation_body)
 
+    invited_rows = None
+    if per_student_periods:
+        from users_app.utils import membership_expiry_info
+
+        used_invites_q = invites.filter(is_used=True)
+        used_emails = list(used_invites_q.values_list('email', flat=True))
+        email_to_user = {}
+        student_to_cs = {}
+        if used_emails:
+            from django.contrib.auth import get_user_model
+            _User = get_user_model()
+            for u in _User.objects.filter(email__in=used_emails, role='student'):
+                email_to_user[u.email] = u
+            student_ids = [u.pk for u in email_to_user.values()]
+            for cs in CoachStudent.objects.filter(
+                coach=request.user, student_id__in=student_ids
+            ).select_related('student'):
+                student_to_cs[cs.student_id] = cs
+
+        cfg_price = cfg.per_slot_price_kurus
+
+        invited_rows = []
+        for inv in invites:
+            if inv.is_used:
+                user = email_to_user.get(inv.email)
+                if not user:
+                    continue
+                cs = student_to_cs.get(user.pk)
+                if not cs or not cs.active:
+                    continue
+                expiry = membership_expiry_info(cs)
+                if expiry is not None:
+                    show_renew = expiry['expired'] or expiry['days'] <= 7
+                else:
+                    show_renew = False
+                invited_rows.append({
+                    'invite': inv, 'is_pending': False, 'user': user, 'cs': cs,
+                    'expiry': expiry,
+                    'status': 'expired' if (expiry and expiry['expired']) else 'active',
+                    'show_renew': show_renew,
+                    'price_kurus': cfg_price,
+                })
+            else:
+                invited_rows.append({
+                    'invite': inv, 'is_pending': True, 'user': None, 'cs': None,
+                    'expiry': None, 'status': 'pending', 'show_renew': False,
+                    'price_kurus': cfg_price,
+                })
+
     return render(request, 'coach/invites.html', {
-        'form':              form,
-        'invites':           invites,
-        'invite_accepted':   invite_accepted,
-        'invite_pending':    invite_pending,
-        'invite_total':      invite_accepted + invite_pending,
-        'cap_status':        cap_status,
-        'capacity_error':    capacity_error,
-        'capacity_blocked':  capacity_blocked,
-        'enforcement_on':    enforcement_on,
-        'cfg':               cfg,
-        'explanation':       explanation,
+        'form':                 form,
+        'invites':              invites,
+        'invite_accepted':      invite_accepted,
+        'invite_pending':       invite_pending,
+        'invite_total':         invite_accepted + invite_pending,
+        'cap_status':           cap_status,
+        'capacity_error':       capacity_error,
+        'capacity_blocked':     capacity_blocked,
+        'enforcement_on':       enforcement_on,
+        'cfg':                  cfg,
+        'explanation':          explanation,
+        'per_student_periods':  per_student_periods,
+        'avail_credits':        avail_credits,
+        'pending_credits':      pending_credits,
+        'invited_rows':         invited_rows,
     })
 
 
@@ -547,7 +616,67 @@ def invite_register_view(request, token):
     if request.method == 'POST':
         form = InviteAcceptForm(request.POST)
         if form.is_valid():
-            # FINAL GUARD: check capacity before any account is created
+            from django.conf import settings as _invite_settings
+            per_student = getattr(_invite_settings, 'COACH_PER_STUDENT_PERIODS', False)
+
+            if per_student and not invite.initiated_by_staff:
+                from django.db import IntegrityError, transaction as _tx
+                from django.utils import timezone as _tz
+                from capacity_app.services import InsufficientCredits, consume_credit_for_invite
+                try:
+                    with _tx.atomic():
+                        locked_invite = StudentInvite.objects.select_for_update().get(pk=invite.pk)
+                        if locked_invite.is_used:
+                            from django.http import Http404
+                            raise Http404
+                        user = User.objects.create_user(
+                            email=locked_invite.email,
+                            full_name=form.cleaned_data['full_name'],
+                            role='student',
+                            password=form.cleaned_data['password1'],
+                        )
+                        user.coach = locked_invite.coach
+                        user.is_approved = True
+                        user.is_active = True
+                        user.save(update_fields=['coach', 'is_approved', 'is_active'])
+                        source = CoachStudent.SOURCE_COACH
+                        from .services.coach_student import ensure_active_link
+                        link, created, reactivated = ensure_active_link(locked_invite.coach, user, source, None)
+                        # Explicitly set next_payment_due regardless of whether link was
+                        # created or reactivated. ensure_active_link does not update
+                        # next_payment_due for an existing/reactivated link.
+                        today_d = _tz.localdate()
+                        link.next_payment_due = today_d + timedelta(days=30)
+                        link.save(update_fields=['next_payment_due'])
+                        locked_invite.is_used = True
+                        locked_invite.save(update_fields=['is_used'])
+                        consume_credit_for_invite(locked_invite.coach, locked_invite, link)
+                except IntegrityError:
+                    raise  # duplicate email: keeps current 500 behavior, nothing consumed
+                except InsufficientCredits as exc:
+                    import logging as _logging
+                    _logging.getLogger(__name__).error(
+                        'invite_register: InsufficientCredits coach pk=%s invite pk=%s: %s',
+                        invite.coach_id, invite.pk, exc,
+                    )
+                    return render(request, 'auth/invite_register.html', {
+                        'form': form, 'invite': invite, 'capacity_full_error': True,
+                    })
+                except Exception as exc:
+                    import logging as _logging
+                    _logging.getLogger(__name__).error(
+                        'invite_register: unexpected error coach pk=%s invite pk=%s: %s',
+                        invite.coach_id, invite.pk, exc,
+                    )
+                    return render(request, 'auth/invite_register.html', {
+                        'form': form, 'invite': invite, 'capacity_full_error': True,
+                    })
+                login(request, user)
+                request.session['first_run'] = True
+                messages.success(request, f'Hoş geldin, {user.full_name}!')
+                return redirect('/student/')
+
+            # flag=False or staff invite: existing code path unchanged
             if not invite.initiated_by_staff:
                 from capacity_app.services import can_add_own_student
                 allowed, cap_msg = can_add_own_student(invite.coach)
