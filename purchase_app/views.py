@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -746,6 +747,8 @@ def bank_transfer_claim(request, order_token):
         order_pk = order.pk
         async_task('purchase_app.tasks.notify_staff_payment_claimed', order_pk)
 
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p'))
     return redirect('purchase:bank_transfer_instructions', order_token=str(order_token))
 
 
@@ -934,6 +937,8 @@ def panel_order_mark_paid(request, pk):
     """Mark an order as paid and trigger on_payment_success. Idempotent."""
     order = get_object_or_404(Order, pk=pk)
     on_payment_success(order)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p', 'pbadge:earnings'))
     return redirect('purchase_panel:order_detail', pk=pk)
 
 
@@ -945,4 +950,6 @@ def panel_order_cancel(request, pk):
     if order.status in (Order.STATUS_PENDING, Order.STATUS_AWAITING_TRANSFER):
         order.status = Order.STATUS_CANCELLED
         order.save(update_fields=['status', 'updated_at'])
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p'))
     return redirect('purchase_panel:order_detail', pk=pk)

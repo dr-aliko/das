@@ -24,73 +24,81 @@
 
     {% if badges.docs %}
     <a href="{% url 'staff_coach_documents' %}?filtre=documents-pending"
+       title="{{ badges.docs }} koçun belgesi onay bekliyor"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Belge bekliyor</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.docs }}</p>
-      <p class="text-xs text-ink-400 mt-1">Onay bekleyen belge</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.docs }} koçun belgesi onay bekliyor</p>
     </a>
     {% endif %}
 
     {% if badges.no_iban %}
     <a href="{% url 'staff_coach_documents' %}?filtre=no-iban"
+       title="{{ badges.no_iban }} koçun IBAN bilgisi eksik"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">IBAN eksik</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.no_iban }}</p>
-      <p class="text-xs text-ink-400 mt-1">IBAN girilmemiş koç</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.no_iban }} koçun IBAN bilgisi eksik</p>
     </a>
     {% endif %}
 
     {% if badges.no_wp %}
     <a href="{% url 'panel_wp_koclar' %}?filtre=wp-unmatched"
+       title="{{ badges.no_wp }} koç WordPress'e bağlı değil"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">WordPress</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.no_wp }}</p>
-      <p class="text-xs text-ink-400 mt-1">WP profili olmayan koç</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.no_wp }} koç WordPress'e bağlı değil</p>
     </a>
     {% endif %}
 
     {% if badges.overdue %}
     <a href="{% url 'panel_ogrenciler' %}?filtre=vagus-ended"
+       title="{{ badges.overdue }} öğrencinin ödemesi gecikmiş"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Öğrenciler</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.overdue }}</p>
-      <p class="text-xs text-ink-400 mt-1">Ödemesi gecikmiş</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.overdue }} öğrencinin ödemesi gecikmiş</p>
     </a>
     {% endif %}
 
     {% if badges.transfers_purchase %}
     <a href="{% url 'purchase_panel:orders' %}?filter=claimed"
+       title="{{ badges.transfers_purchase }} satın alma havalesi onay bekliyor"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Satın alma havalesi</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers_purchase }}</p>
-      <p class="text-xs text-ink-400 mt-1">Havale bekleyen sipariş</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.transfers_purchase }} havale onay bekliyor</p>
     </a>
     {% endif %}
 
     {% if badges.transfers_capacity %}
     <a href="{% url 'capacity_panel:overview' %}?filtre=capacity-transfer"
+       title="{{ badges.transfers_capacity }} kontenjan havalesi onay bekliyor"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Kontenjan havalesi</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.transfers_capacity }}</p>
-      <p class="text-xs text-ink-400 mt-1">Havale bekleyen kontenjan siparişi</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.transfers_capacity }} kontenjan havalesi onay bekliyor</p>
     </a>
     {% endif %}
 
     {% if badges.renewals_claimed %}
     <a href="{% url 'capacity_panel:renewal_list' %}?filtre=claimed"
+       title="{{ badges.renewals_claimed }} yenileme siparişi onay bekliyor"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Yenileme havalesi</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.renewals_claimed }}</p>
-      <p class="text-xs text-ink-400 mt-1">Onay bekleyen yenileme siparişi</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.renewals_claimed }} yenileme siparişi onay bekliyor</p>
     </a>
     {% endif %}
 
     {% if badges.earnings %}
     <a href="{% url 'earnings_panel:list' %}?filtre=earnings-ready"
+       title="{{ badges.earnings }} kazanç ödeme bekliyor"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Ödemeler</p>
       <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.earnings }}</p>
-      <p class="text-xs text-ink-400 mt-1">Ödeme bekleyen kazanç</p>
+      <p class="text-xs text-ink-400 mt-1">{{ badges.earnings }} kazanç ödeme bekliyor</p>
     </a>
     {% endif %}
 

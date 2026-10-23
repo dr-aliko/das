@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -117,6 +118,8 @@ def panel_capacity_order_detail(request, pk):
 def panel_capacity_order_mark_paid(request, pk):
     order = get_object_or_404(CoachCapacityOrder, pk=pk)
     mark_capacity_order_paid(order)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_c'))
     return redirect('capacity_panel:order_detail', pk=pk)
 
 
@@ -130,6 +133,8 @@ def panel_capacity_order_cancel(request, pk):
     ):
         order.status = CoachCapacityOrder.STATUS_CANCELLED
         order.save(update_fields=['status', 'updated_at'])
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_c'))
     return redirect('capacity_panel:order_detail', pk=pk)
 
 
@@ -399,6 +404,8 @@ def panel_renewal_mark_paid(request, pk):
     from .services import mark_renewal_order_paid
     order = get_object_or_404(CoachStudentRenewalOrder, pk=pk)
     mark_renewal_order_paid(order, request.user)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:renewals_claimed', 'pbadge:overdue'))
     return redirect('capacity_panel:renewal_detail', pk=pk)
 
 
@@ -411,6 +418,8 @@ def panel_renewal_cancel(request, pk):
     if order.status == CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER:
         order.status = CoachStudentRenewalOrder.STATUS_CANCELLED
         order.save(update_fields=['status', 'updated_at'])
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:renewals_claimed'))
     return redirect('capacity_panel:renewal_detail', pk=pk)
 
 
@@ -468,6 +477,8 @@ def panel_coach_credits(request, coach_pk):
                     body=f'Size {n} davet hakkı tanımlandı.',
                     url='/auth/invite-students/',
                 )
+                from users_app.panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                 return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
 
         elif action == 'adjust':
@@ -482,6 +493,8 @@ def panel_coach_credits(request, coach_pk):
                     error = 'Geçerli bir tam sayı girin (pozitif veya negatif).'
             if not error:
                 adjust_credits_staff(coach, delta, request.user, notes=notes)
+                from users_app.panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                 return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
 
         elif action == 'set_period':
@@ -505,6 +518,8 @@ def panel_coach_credits(request, coach_pk):
                     error = 'Geçerli bir tarih girin (YYYY-AA-GG).'
             if not error and cs is not None:
                 set_student_period_staff(cs, new_end, request.user, notes)
+                from users_app.panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                 return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
 
     balance = credit_balance(coach)

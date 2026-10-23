@@ -3,6 +3,7 @@ import logging
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -137,6 +138,8 @@ def panel_kazanclar_approve(request, pk):
         approve_earning(row, request.user)
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
     return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
 
 
@@ -149,6 +152,8 @@ def panel_kazanclar_mark_paid(request, pk):
         mark_paid(row, request.user, payout_ref=payout_ref)
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
     return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
 
 
@@ -161,6 +166,8 @@ def panel_kazanclar_void(request, pk):
         void_earning(row, request.user, reason=reason)
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
+    from users_app.panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
     return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
 
 
@@ -232,6 +239,8 @@ def panel_manuel_odeme_create(request):
             created_by=request.user,
         )
         create_earning_for_manual_record(record)
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
 
     if errors:
         rows    = list(EarningRow.objects.select_related('coach', 'student', 'order').order_by('-coverage_start')[:500])

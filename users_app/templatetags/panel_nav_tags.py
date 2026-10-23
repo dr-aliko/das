@@ -3,6 +3,22 @@ from django.urls import reverse
 
 register = template.Library()
 
+_BADGE_TOOLTIPS = {
+    'docs':               '{n} koçun belgesi onay bekliyor',
+    'no_iban':            '{n} koçun IBAN bilgisi eksik',
+    'no_wp':              '{n} koç WordPress\'e bağlı değil',
+    'belgeler':           '{n} koçun profil bilgisi eksik',
+    'transfers_capacity': '{n} kontenjan havalesi onay bekliyor',
+    'renewals_claimed':   '{n} yenileme siparişi onay bekliyor',
+    'overdue':            '{n} öğrencinin ödemesi gecikmiş',
+    'transfers':          '{n} satın alma havalesi onay bekliyor',
+    'earnings':           '{n} kazanç ödeme bekliyor',
+    'koclar':             '{n} bekleyen koç işlemi',
+    'ogrenciler_group':   '{n} öğrencinin ödemesi gecikmiş',
+    'satis':              '{n} satın alma havalesi onay bekliyor',
+    'odemeler_group':     '{n} kazanç ödeme bekliyor',
+}
+
 
 def _build_nav_groups(per_student):
     capacity_label = 'Davet Hakkı' if per_student else 'Kontenjan'
@@ -92,23 +108,29 @@ def panel_nav(context, active_section=''):
         url = reverse(group['url_name']) if not pages else reverse(pages[0]['url_name'])
         badge_val = badges.get(group.get('badge_key', ''), 0)
 
+        g_badge_key = group.get('badge_key', '')
+        g_tooltip = _BADGE_TOOLTIPS.get(g_badge_key, '').format(n=badge_val) if badge_val else ''
         groups.append({
-            'label':  group['label'],
-            'url':    url,
-            'active': g_active,
-            'badge':  badge_val if badge_val else 0,
+            'label':         group['label'],
+            'url':           url,
+            'active':        g_active,
+            'badge':         badge_val if badge_val else 0,
+            'badge_tooltip': g_tooltip,
         })
 
         if g_active and len(pages) > 1:
             second_row = []
             for p in pages:
                 bval = badges.get(p.get('badge_key', ''), 0) or 0
+                p_badge_key = p.get('badge_key', '')
+                p_tooltip = _BADGE_TOOLTIPS.get(p_badge_key, '').format(n=bval) if bval else ''
                 purl = reverse(p['url_name'])
                 second_row.append({
-                    'label':  p['label'],
-                    'url':    purl,
-                    'active': p['key'] == active_section,
-                    'badge':  bval,
+                    'label':         p['label'],
+                    'url':           purl,
+                    'active':        p['key'] == active_section,
+                    'badge':         bval,
+                    'badge_tooltip': p_tooltip,
                 })
 
     return {

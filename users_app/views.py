@@ -1048,6 +1048,8 @@ def profil_view(request):
                         new_iban_masked=new_iban,
                     )
                     _send_iban_change_email(user, old_iban, new_iban)
+                from .panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:no_iban', 'pbadge:docs', 'pbadge:belgeler'))
                 messages.success(request, 'Ödeme bilgileriniz kaydedildi.')
                 return redirect('profil')
         else:
@@ -1589,6 +1591,8 @@ def panel_billing_update(request, pk):
         if should_reactivate:
             from .services.coach_student import ensure_active_link
             _, _, reactivated = ensure_active_link(link.coach, link.student, link.source)
+        from .panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
         return JsonResponse({'ok': True, 'reactivated': reactivated})
     except CoachStudent.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'not found'}, status=404)
@@ -1748,6 +1752,8 @@ def panel_student_unlink(request, coach_id, student_id):
     if student.coach_id == coach.id:
         student.coach = None
         student.save(update_fields=['coach'])
+    from .panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
     return JsonResponse({'ok': True})
 
 
@@ -1791,6 +1797,8 @@ def panel_koc_degistir_view(request, student_id):
                 except ValueError as exc:
                     error = str(exc)
                 else:
+                    from .panel_badges import invalidate_panel_badges
+                    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                     return redirect('panel_ogrenciler')
 
     return render(request, 'panel/koc_degistir.html', {
@@ -1926,6 +1934,8 @@ def panel_wp_koclar_confirm(request):
     coach = get_object_or_404(User, pk=coach_id, role='coach')
     coach.wordpress_post_id = wp_post_id
     coach.save(update_fields=['wordpress_post_id'])
+    from .panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:no_wp'))
     return JsonResponse({'ok': True})
 
 
@@ -1936,6 +1946,8 @@ def panel_wp_koclar_unlink(request, coach_id):
     coach.wordpress_post_id = None
     coach.wp_is_available = None
     coach.save(update_fields=['wordpress_post_id', 'wp_is_available'])
+    from .panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:no_wp'))
     return JsonResponse({'ok': True})
 
 
@@ -2049,6 +2061,8 @@ def panel_koc_ekle_view(request):
                 coach.is_approved = True
                 coach.save(update_fields=['is_active', 'is_approved'])
                 CoachProfile.objects.create(user=coach, phone=_norm_phone(phone_raw) or '')
+                from .panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:no_iban', 'pbadge:no_wp', 'pbadge:belgeler'))
 
                 ok = _send_koc_invite_email_now(coach, request)
                 if ok:
@@ -2138,6 +2152,8 @@ def panel_koc_sil(request, coach_id):
         coach.full_name, coach.pk, coach.email,
     )
     coach.delete()
+    from .panel_badges import invalidate_panel_badges
+    transaction.on_commit(lambda: invalidate_panel_badges('pbadge:no_iban', 'pbadge:no_wp', 'pbadge:belgeler'))
     messages.success(request, f'Koç hesabı silindi: {coach.full_name} ({coach.email})')
     return redirect('panel_koc_ekle')
 
@@ -2229,6 +2245,8 @@ def coach_profile_quick_update(request):
             if not profile.phone:  # phone is locked once set
                 profile.phone = form.cleaned_data['phone']
                 profile.save(update_fields=['phone', 'updated_at'])
+                from .panel_badges import invalidate_panel_badges
+                transaction.on_commit(lambda: invalidate_panel_badges('pbadge:belgeler'))
         # success or invalid: redirect back (fail-open)
     except Exception:
         pass
@@ -2374,6 +2392,7 @@ def staff_coach_document_action(request, pk):
     reason = request.POST.get('reason', '').strip()
 
     from django.utils import timezone
+    from .panel_badges import invalidate_panel_badges
     if action == 'approve':
         profile.document_status = CoachProfile.DOC_APPROVED
         profile.document_rejection_reason = ''
@@ -2384,6 +2403,7 @@ def staff_coach_document_action(request, pk):
             'document_reviewed_by', 'document_reviewed_at', 'updated_at',
         ])
         _notify_coach_document_decision(profile, approved=True, reason='')
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:docs', 'pbadge:belgeler'))
         messages.success(request, f'{profile.user.full_name} belgesi onaylandı.')
     elif action == 'reject':
         profile.document_status = CoachProfile.DOC_REJECTED
@@ -2395,6 +2415,7 @@ def staff_coach_document_action(request, pk):
             'document_reviewed_by', 'document_reviewed_at', 'updated_at',
         ])
         _notify_coach_document_decision(profile, approved=False, reason=reason)
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:docs', 'pbadge:belgeler'))
         messages.success(request, f'{profile.user.full_name} belgesi reddedildi.')
     else:
         messages.error(request, 'Geçersiz işlem.')
@@ -2427,6 +2448,8 @@ def staff_coach_phone_edit(request, pk):
         )
         profile.phone = new_phone
         profile.save(update_fields=['phone', 'updated_at'])
+        from .panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:belgeler'))
         messages.success(request, f'{profile.user.full_name} telefonu güncellendi.')
     return redirect('staff_coach_documents')
 

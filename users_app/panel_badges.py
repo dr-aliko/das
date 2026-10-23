@@ -6,15 +6,46 @@ computing it requires a 3-table join with date-filtered aggregation over
 CoachCapacityGrant and CoachStudent for every coach.  That is not a cheap
 single query, so it is skipped per spec.
 
-Each qs_*() function returns the queryset that both the badge counter and
-the matching filtered list view use, so the count can never disagree with
-the list.
+The qs_*() functions are used by BOTH badge counters and filtered list views.
+Badge counters apply an additional workload filter (coaches with ≥1 active
+student link or any earning row) so that unused/test accounts with no students
+are excluded from the nav pills and Genel bakış cards.  The list views continue
+to show every active approved coach so staff always see the full picture.
 """
 from datetime import date
 
 from django.core.cache import cache
 
 _TTL = 60  # seconds
+
+# All badge cache keys — only these are ever touched by invalidate_panel_badges.
+_ALL_BADGE_KEYS = (
+    'pbadge:docs',
+    'pbadge:transfers_p',
+    'pbadge:transfers_c',
+    'pbadge:earnings',
+    'pbadge:no_iban',
+    'pbadge:no_wp',
+    'pbadge:overdue',
+    'pbadge:belgeler',
+    'pbadge:renewals_claimed',
+)
+
+
+def invalidate_panel_badges(*keys):
+    """Delete pbadge: cache entries so they are recomputed on next request.
+
+    Call with no arguments to delete all badge keys, or pass specific key
+    names (e.g. 'pbadge:docs') to delete only those.
+    Never raises: every exception is swallowed so the calling action is
+    never disrupted by a cache failure.
+    """
+    targets = keys if keys else _ALL_BADGE_KEYS
+    for key in targets:
+        try:
+            cache.delete(key)
+        except Exception:
+            pass
 
 
 def _safe(key, fn):
@@ -36,7 +67,30 @@ def _safe(key, fn):
         return 0
 
 
+# ── Workload filter ───────────────────────────────────────────────────────────
+
+def _coaches_with_workload_ids():
+    """Return a set of coach PKs that have ≥1 active CoachStudent link or any EarningRow.
+
+    Only these coaches count in the nav/home badge counters — coaches with no
+    students and no earnings are test/dormant accounts whose missing profile
+    data is not actionable for payments.
+    """
+    from .models import CoachStudent
+    from earnings_app.models import EarningRow
+
+    cs_ids = set(
+        CoachStudent.objects.filter(active=True).values_list('coach_id', flat=True)
+    )
+    er_ids = set(
+        EarningRow.objects.exclude(coach_id=None).values_list('coach_id', flat=True)
+    )
+    return cs_ids | er_ids
+
+
 # ── Shared queryset functions ─────────────────────────────────────────────────
+# These are used by BOTH the badge counters and the filtered list views.
+# Do not add the workload filter here — the list views must show all coaches.
 
 def qs_docs():
     from users_app.models import CoachProfile
@@ -160,10 +214,15 @@ def qs_renewal_orders_claimed():
             .order_by('-payment_claimed_at'))
 
 
-# ── Individual counter functions ──────────────────────────────────────────────
+# ── Individual counter functions (badge counts, workload-filtered) ─────────────
+# Narrow the "coach profile" counters to coaches with actual workload so that
+# dormant/test accounts don't create noise in the nav pills and home cards.
+# The list views (staff_coach_documents_view, panel_wp_koclar_view) continue to
+# use the unfiltered qs_*() functions — staff can still see all gaps.
 
 def _docs():
-    return qs_docs().count()
+    wids = _coaches_with_workload_ids()
+    return qs_docs().filter(user_id__in=wids).count()
 
 
 def _transfers_purchase():
@@ -179,11 +238,13 @@ def _earnings():
 
 
 def _no_iban():
-    return qs_no_iban().count()
+    wids = _coaches_with_workload_ids()
+    return qs_no_iban().filter(pk__in=wids).count()
 
 
 def _no_wp():
-    return qs_no_wp().count()
+    wids = _coaches_with_workload_ids()
+    return qs_no_wp().filter(pk__in=wids).count()
 
 
 def _overdue():
@@ -191,7 +252,8 @@ def _overdue():
 
 
 def _belgeler():
-    return qs_profile_issues().count()
+    wids = _coaches_with_workload_ids()
+    return qs_profile_issues().filter(pk__in=wids).count()
 
 
 def _renewals_claimed():

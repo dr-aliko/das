@@ -32,7 +32,7 @@
     {% for group in groups %}
       <a href="{{ group.url }}"
          class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap {% if group.active %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
-        {{ group.label }}{% if group.badge %}<span class="pnav-badge">{{ group.badge }}</span>{% endif %}
+        {{ group.label }}{% if group.badge %}<span class="pnav-badge" title="{{ group.badge_tooltip }}">{{ group.badge }}</span>{% endif %}
       </a>
     {% endfor %}
     <a href="{{ admin_url }}" target="_blank" rel="noopener"
@@ -48,7 +48,7 @@
       {% for page in second_row %}
         <a href="{{ page.url }}"
            class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap {% if page.active %}bg-ink-700 text-ink-100{% else %}text-ink-500 hover:text-ink-300{% endif %}">
-          {{ page.label }}{% if page.badge %}<span class="pnav-badge">{{ page.badge }}</span>{% endif %}
+          {{ page.label }}{% if page.badge %}<span class="pnav-badge" title="{{ page.badge_tooltip }}">{{ page.badge }}</span>{% endif %}
         </a>
       {% endfor %}
     </div>

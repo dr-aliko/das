@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -124,6 +125,8 @@ def capacity_order_claim(request, order_token):
 
     if is_first:
         _log.info('capacity: order %s claimed by coach %s', order.pk, request.user.pk)
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_c'))
 
     return redirect('capacity:order_instructions', order_token=str(order_token))
 
@@ -198,4 +201,6 @@ def renewal_claim(request, order_token):
             payment_claimed_at=timezone.now(),
             sender_name=sender_name,
         )
+        from users_app.panel_badges import invalidate_panel_badges
+        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:renewals_claimed'))
     return redirect('capacity:renewal_instructions', order_token=str(order_token))
