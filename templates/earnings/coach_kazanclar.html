@@ -192,6 +192,7 @@
               <div>
                 <p class="text-sm font-semibold text-ink-300" x-text="'En fazla ' + row.pool_display"></p>
                 <p class="text-xs text-ink-500 mt-0.5">Hizmet verilen güne göre kesinleşir</p>
+                <p class="text-xs text-ink-400 mt-1" x-text="'Bugün dahil ' + row.coach_days + ' gün hizmet verdin'"></p>
               </div>
             </template>
             <template x-if="!row.is_held">
@@ -311,6 +312,7 @@ function kazanclarApp() {
       var pct = row.period_days > 0
         ? Math.min(100, Math.round(row.coach_days / row.period_days * 100))
         : 0;
+      if (row.is_held && row.coach_days >= 1 && pct < 3) { pct = 3; }
       return 'width:' + pct + '%';
     },
   };

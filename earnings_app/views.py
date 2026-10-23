@@ -343,14 +343,14 @@ def _fmt_day(d):
 
 
 def coach_kazanclar(request):
-    from django.utils.timezone import localtime
+    from django.utils.timezone import localtime, now as tz_now
 
     if not request.user.is_authenticated:
         return redirect('users_app:login')
     if not request.user.is_coach:
         return redirect('/')
 
-    today = date.today()
+    today = localtime(tz_now()).date()
 
     rows = list(
         EarningRow.objects
@@ -373,13 +373,15 @@ def coach_kazanclar(request):
         ):
             ivs_by_student.setdefault(iv.student_id, []).append(iv)
 
+        tomorrow = today + timedelta(days=1)
         for r in held_rows:
             total = 0
             for iv in ivs_by_student.get(r.student_id, []):
                 iv_start = localtime(iv.started_at).date()
-                iv_end = today if iv.ended_at is None else localtime(iv.ended_at).date()
+                # Open interval: exclusive upper bound is tomorrow so today is counted
+                iv_end = tomorrow if iv.ended_at is None else localtime(iv.ended_at).date()
                 seg_start = max(iv_start, r.coverage_start)
-                seg_end   = min(iv_end, today)
+                seg_end   = min(iv_end, tomorrow)
                 d = (seg_end - seg_start).days
                 if d > 0:
                     total += d
