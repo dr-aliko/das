@@ -54,14 +54,15 @@ def _generate_ref():
 
 
 def generate_unique_ref():
-    """Generate a reference code that is unique across both order tables."""
+    """Generate a reference code unique across Order, CoachCapacityOrder, and CoachStudentRenewalOrder."""
     from purchase_app.models import Order
-    from .models import CoachCapacityOrder
+    from .models import CoachCapacityOrder, CoachStudentRenewalOrder
     while True:
         ref = _generate_ref()
         taken = (
             Order.objects.filter(provider_ref=ref).exists()
             or CoachCapacityOrder.objects.filter(ref_code=ref).exists()
+            or CoachStudentRenewalOrder.objects.filter(ref_code=ref).exists()
         )
         if not taken:
             return ref
@@ -307,3 +308,110 @@ def adjust_grant(grant_pk, action, new_slots, new_period_end, staff, reason, not
             grant.pk, staff.pk, action, old_slots, new_slots, old_period_end, new_period_end,
         )
         return log
+
+
+# ── Per-student period credit ledger ─────────────────────────────────────────
+
+class InsufficientCredits(Exception):
+    """Raised when consume_credit_for_invite finds the coach's raw balance at zero or below."""
+
+
+def credit_balance(coach):
+    """Sum of all delta values in the ledger for this coach (0 if no entries)."""
+    from django.db.models import Sum
+    from .models import CoachCreditLedger
+    return CoachCreditLedger.objects.filter(coach=coach).aggregate(
+        total=Sum('delta')
+    )['total'] or 0
+
+
+def pending_invite_count(coach):
+    """Count of unused, non-staff-initiated invites for this coach (credits already earmarked)."""
+    from users_app.models import StudentInvite
+    return StudentInvite.objects.filter(
+        coach=coach,
+        is_used=False,
+        initiated_by_staff=False,
+    ).count()
+
+
+def available_credits(coach):
+    """Credits available to consume: raw balance minus already-pending invite count."""
+    return credit_balance(coach) - pending_invite_count(coach)
+
+
+def grant_credits(coach, n, reason, order=None, staff=None, notes=''):
+    """Create a positive credit ledger entry for a coach."""
+    from .models import CoachCreditLedger
+    return CoachCreditLedger.objects.create(
+        coach=coach,
+        delta=n,
+        reason=reason,
+        order=order,
+        created_by=staff,
+        notes=notes,
+    )
+
+
+def consume_credit_for_invite(coach, invite, coach_student):
+    """
+    Atomically consume one credit when a coach invite is accepted.
+
+    Idempotent: if this invite already consumed a credit, the existing entry is
+    returned without creating a second one.
+
+    Raises InsufficientCredits when the raw balance is zero or would go negative
+    (consuming 1 from a balance of 0 would yield -1 < 0).
+
+    Locking: the coach's User row is locked with SELECT FOR UPDATE before the
+    balance is summed so that concurrent calls cannot both see a positive balance
+    and both consume.  PostgreSQL does not allow FOR UPDATE on aggregate queries,
+    which is why the lock is taken on the User row instead.
+    """
+    from django.contrib.auth import get_user_model
+    from django.db.models import Sum
+    from .models import CoachCreditLedger
+
+    User = get_user_model()
+
+    with transaction.atomic():
+        User.objects.select_for_update().get(pk=coach.pk)
+
+        existing = CoachCreditLedger.objects.filter(
+            invite=invite,
+            reason=CoachCreditLedger.REASON_CONSUMED_INVITE,
+        ).first()
+        if existing:
+            return existing
+
+        balance = CoachCreditLedger.objects.filter(coach=coach).aggregate(
+            total=Sum('delta')
+        )['total'] or 0
+
+        if balance <= 0:
+            raise InsufficientCredits(
+                f'Coach pk={coach.pk} has no available credits (balance={balance}).'
+            )
+
+        return CoachCreditLedger.objects.create(
+            coach=coach,
+            delta=-1,
+            reason=CoachCreditLedger.REASON_CONSUMED_INVITE,
+            invite=invite,
+            coach_student=coach_student,
+        )
+
+
+def adjust_credits_staff(coach, delta, staff, notes=''):
+    """
+    Staff-initiated signed credit adjustment.  May drive the balance negative.
+    delta: positive = grant credits, negative = revoke credits.
+    """
+    from .models import CoachCreditLedger
+    return CoachCreditLedger.objects.create(
+        coach=coach,
+        delta=delta,
+        reason=CoachCreditLedger.REASON_STAFF_ADJUSTMENT,
+        created_by=staff,
+        notes=notes,
+    )

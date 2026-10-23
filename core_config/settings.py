@@ -283,6 +283,12 @@ PRIVATE_MEDIA_ROOT = Path(config('PRIVATE_MEDIA_ROOT', default=str(BASE_DIR / 'p
 # Default False: gate is off; turn on after existing coaches have been notified.
 COACH_PROFILE_REQUIRED = config('COACH_PROFILE_REQUIRED', default=False, cast=bool)
 
+# When True, each coach-own student gets an individual 30-day payment period tracked
+# via the credit ledger.  The credit gate and per-student expiry block replace the
+# slot model regardless of COACH_CAPACITY_ENFORCED.
+# Default False: gate is off until rollout.
+COACH_PER_STUDENT_PERIODS = config('COACH_PER_STUDENT_PERIODS', default=False, cast=bool)
+
 # V2 shell feature flag — set V2_SHELL_ENABLED=False in env to disable for all users.
 V2_SHELL_ENABLED = config('V2_SHELL_ENABLED', default=True, cast=bool)
 

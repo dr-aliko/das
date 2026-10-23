@@ -165,3 +165,125 @@ class GrantAdjustmentLog(models.Model):
             f'Grant#{self.grant_id} {self.get_action_display()} '
             f'by {self.adjusted_by_id} at {self.adjusted_at}'
         )
+
+
+class CoachCreditLedger(models.Model):
+    """Credit ledger for COACH_PER_STUDENT_PERIODS: one credit = one coach-own-student slot."""
+    REASON_PURCHASE_APPROVED      = 'purchase_approved'
+    REASON_MANUAL_GRANT           = 'manual_grant'
+    REASON_CONVERTED_FROM_GRANT   = 'converted_from_grant'
+    REASON_CONSUMED_INVITE        = 'consumed_invite'
+    REASON_STAFF_ADJUSTMENT       = 'staff_adjustment'
+    REASON_TRANSITION_FIRST_PERIOD = 'transition_first_period'
+    REASON_CHOICES = [
+        (REASON_PURCHASE_APPROVED,       'Satın alma onaylandı'),
+        (REASON_MANUAL_GRANT,            'Manuel kredi verildi'),
+        (REASON_CONVERTED_FROM_GRANT,    'Kontenjan hakkından dönüştürüldü'),
+        (REASON_CONSUMED_INVITE,         'Davet tüketti'),
+        (REASON_STAFF_ADJUSTMENT,        'Personel düzenlemesi'),
+        (REASON_TRANSITION_FIRST_PERIOD, 'İlk dönem geçiş kredisi'),
+    ]
+
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='credit_ledger_entries',
+        limit_choices_to={'role': 'coach'},
+    )
+    delta = models.IntegerField(help_text='Pozitif: kredi eklendi. Negatif: kredi tükendi.')
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
+    order = models.ForeignKey(
+        CoachCapacityOrder,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='credit_entries',
+    )
+    coach_student = models.ForeignKey(
+        'users_app.CoachStudent',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='credit_entries',
+    )
+    invite = models.ForeignKey(
+        'users_app.StudentInvite',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='credit_entries',
+    )
+    notes = models.CharField(max_length=500, blank=True, default='')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Kredi Kaydı'
+        verbose_name_plural = 'Kredi Kayıtları'
+        ordering            = ['-created_at']
+        constraints = [
+            # One invite may consume at most one credit.
+            models.UniqueConstraint(
+                fields=['invite'],
+                condition=models.Q(reason='consumed_invite'),
+                name='unique_invite_per_consumed_credit',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.coach.full_name}: {self.delta:+d} [{self.get_reason_display()}]'
+
+
+class CoachStudentRenewalOrder(models.Model):
+    """Per-student renewal payment order (used when COACH_PER_STUDENT_PERIODS is True)."""
+    STATUS_AWAITING_TRANSFER = 'awaiting_transfer'
+    STATUS_PAID              = 'paid'
+    STATUS_CANCELLED         = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_AWAITING_TRANSFER, 'Havale Bekleniyor'),
+        (STATUS_PAID,              'Ödendi'),
+        (STATUS_CANCELLED,         'İptal Edildi'),
+    ]
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    coach_student = models.ForeignKey(
+        'users_app.CoachStudent',
+        on_delete=models.PROTECT,
+        related_name='renewal_orders',
+    )
+    amount_kurus      = models.PositiveIntegerField(help_text='Sipariş tutarı (kuruş)')
+    per_student_kurus = models.PositiveIntegerField(
+        help_text='Sipariş anındaki öğrenci başı fiyat (kuruş)'
+    )
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES,
+        default=STATUS_AWAITING_TRANSFER, db_index=True,
+    )
+    ref_code           = models.CharField(max_length=20, unique=True)
+    payment_claimed_at = models.DateTimeField(null=True, blank=True)
+    sender_name        = models.CharField(max_length=80, blank=True, default='')
+    created_at         = models.DateTimeField(auto_now_add=True)
+    updated_at         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Öğrenci Yenileme Siparişi'
+        verbose_name_plural = 'Öğrenci Yenileme Siparişleri'
+        ordering            = ['-created_at']
+        constraints = [
+            # At most one open (awaiting_transfer) renewal per coach-student link.
+            models.UniqueConstraint(
+                fields=['coach_student'],
+                condition=models.Q(status='awaiting_transfer'),
+                name='unique_open_renewal_per_coach_student',
+            ),
+        ]
+
+    def __str__(self):
+        return f'#{self.pk} {self.coach_student} [{self.get_status_display()}]'
+
+    @property
+    def amount_tl_display(self):
+        tl = self.amount_kurus // 100
+        return f'{tl:,}'.replace(',', '.') + ' ₺'

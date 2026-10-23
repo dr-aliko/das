@@ -27,11 +27,31 @@ def filter_coaches_by_q(coaches, q):
 def membership_expiry_info(cs):
     """
     Returns expiry display info for a CoachStudent, or None if no badge should show.
-    Only Vagus-sourced students with a set next_payment_due get a badge.
+
+    Vagus-sourced students with a set next_payment_due always get a badge (unchanged).
+
+    When COACH_PER_STUDENT_PERIODS is True, coach-own students also get the same
+    badge when next_payment_due is set.  "Own student" is determined by the shared
+    is_own_student_source rule: source=='coach' → own; source=='vagus' → not own;
+    NULL source → own UNLESS the student has a paid purchase_app Order (legacy links
+    created before the source field was added default to own-student behaviour unless
+    evidence of a Vagus purchase exists).
+
+    Any error in the new code path returns None (fail-open).
     """
     from users_app.models import CoachStudent
     if cs.source != CoachStudent.SOURCE_VAGUS:
-        return None
+        try:
+            from django.conf import settings
+            if not getattr(settings, 'COACH_PER_STUDENT_PERIODS', False):
+                return None
+            from capacity_app.services import is_own_student_source
+            if not is_own_student_source(cs.source, cs.student):
+                return None
+            # own student with flag on — fall through to the shared badge logic
+        except Exception:
+            return None
+
     if cs.next_payment_due is None:
         return None
     today = timezone.localdate()
@@ -80,8 +100,17 @@ def membership_expiry_info(cs):
 
 def is_student_program_expired(coach, student_id):
     """
-    Returns True only when coach's active Vagus-sourced student has next_payment_due < today.
-    Returns False for every other case, including unexpected exceptions (fail open).
+    Returns True only when coach's active student has next_payment_due < today AND
+    the expiry rule applies to them.
+
+    Expiry rule applies to:
+    - Vagus-sourced students (always, unchanged behaviour).
+    - Coach-own students when COACH_PER_STUDENT_PERIODS is True.
+      "Own student" = is_own_student_source(source, student): source=='coach' → True;
+      source=='vagus' → False; NULL source → True unless a paid purchase Order exists
+      (same rule as capacity slot counting).
+
+    Returns False in every other case, including unexpected exceptions (fail open).
     """
     import logging
     try:
@@ -90,8 +119,15 @@ def is_student_program_expired(coach, student_id):
             cs = CoachStudent.objects.get(coach=coach, student_id=student_id, active=True)
         except CoachStudent.DoesNotExist:
             return False
+
         if cs.source != CoachStudent.SOURCE_VAGUS:
-            return False
+            from django.conf import settings
+            if not getattr(settings, 'COACH_PER_STUDENT_PERIODS', False):
+                return False
+            from capacity_app.services import is_own_student_source
+            if not is_own_student_source(cs.source, cs.student):
+                return False
+
         if cs.next_payment_due is None:
             return False
         return cs.next_payment_due < timezone.localdate()
