@@ -144,6 +144,18 @@ def qs_overdue():
             .order_by('next_payment_due'))
 
 
+def qs_renewal_orders_claimed():
+    """CoachStudentRenewalOrders that have been claimed (payment notified) but not yet approved."""
+    from capacity_app.models import CoachStudentRenewalOrder
+    return (CoachStudentRenewalOrder.objects
+            .select_related('coach_student__coach', 'coach_student__student')
+            .filter(
+                status=CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER,
+                payment_claimed_at__isnull=False,
+            )
+            .order_by('-payment_claimed_at'))
+
+
 # ── Individual counter functions ──────────────────────────────────────────────
 
 def _docs():
@@ -178,39 +190,45 @@ def _belgeler():
     return qs_profile_issues().count()
 
 
+def _renewals_claimed():
+    return qs_renewal_orders_claimed().count()
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def all_badges():
     """Compute (or serve from 60-s cache) every panel counter.  Always returns
     a dict with int values; any failure falls back to 0 for that counter."""
-    docs       = _safe('pbadge:docs',         _docs)
-    t_purchase = _safe('pbadge:transfers_p',  _transfers_purchase)
-    t_capacity = _safe('pbadge:transfers_c',  _transfers_capacity)
-    earnings   = _safe('pbadge:earnings',     _earnings)
-    no_iban    = _safe('pbadge:no_iban',      _no_iban)
-    no_wp      = _safe('pbadge:no_wp',        _no_wp)
-    overdue    = _safe('pbadge:overdue',      _overdue)
-    belgeler   = _safe('pbadge:belgeler',     _belgeler)
+    docs            = _safe('pbadge:docs',            _docs)
+    t_purchase      = _safe('pbadge:transfers_p',     _transfers_purchase)
+    t_capacity      = _safe('pbadge:transfers_c',     _transfers_capacity)
+    earnings        = _safe('pbadge:earnings',        _earnings)
+    no_iban         = _safe('pbadge:no_iban',         _no_iban)
+    no_wp           = _safe('pbadge:no_wp',           _no_wp)
+    overdue         = _safe('pbadge:overdue',         _overdue)
+    belgeler        = _safe('pbadge:belgeler',        _belgeler)
+    renewals_claimed = _safe('pbadge:renewals_claimed', _renewals_claimed)
 
     transfers = t_purchase + t_capacity
 
     return {
         # Raw counters
-        'docs':               docs,
-        'transfers_purchase': t_purchase,
-        'transfers_capacity': t_capacity,
-        'transfers':          transfers,
-        'earnings':           earnings,
-        'no_iban':            no_iban,
-        'no_wp':              no_wp,
-        'overdue':            overdue,
+        'docs':                docs,
+        'transfers_purchase':  t_purchase,
+        'transfers_capacity':  t_capacity,
+        'transfers':           transfers,
+        'earnings':            earnings,
+        'no_iban':             no_iban,
+        'no_wp':               no_wp,
+        'overdue':             overdue,
+        'renewals_claimed':    renewals_claimed,
         # Per-page second-row badge values
-        'belgeler':           belgeler,
+        'belgeler':            belgeler,
         # Group-level pill badge rollups
-        'koclar':             belgeler + no_wp,
-        'ogrenciler_group':   overdue,
-        'satis':              transfers,
-        'odemeler_group':     earnings,
+        'koclar':              belgeler + no_wp,
+        'ogrenciler_group':    overdue,
+        'satis':               transfers,
+        'odemeler_group':      earnings,
         # Home-page helper
-        'any_pending': bool(belgeler + no_wp + transfers + earnings + overdue),
+        'any_pending': bool(belgeler + no_wp + transfers + earnings + overdue + renewals_claimed),
     }

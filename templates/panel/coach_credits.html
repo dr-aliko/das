@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+{% load panel_nav_tags %}
+
+{% block title %}Davet Hakkı — {{ coach.full_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% panel_nav active_section %}
+
+  {# ── Header ───────────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Davet Hakkı</h1>
+      </div>
+      <p class="text-sm text-ink-400">{{ coach.full_name }} <span class="text-ink-600">— {{ coach.email }}</span></p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-right">
+        <p class="text-[10px] text-ink-500 uppercase tracking-wider">Bakiye / Kullanılabilir</p>
+        <p class="text-xl font-bold {% if avail <= 0 %}text-ruby-400{% elif avail < 3 %}text-amber-400{% else %}text-emerald-400{% endif %} tabular-nums">
+          {{ balance }}&thinsp;/&thinsp;{{ avail }}
+        </p>
+      </div>
+      <a href="{% url 'capacity_panel:overview' %}"
+         class="text-sm text-ink-400 hover:text-ink-200 transition-colors">← Geri</a>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="rounded-xl border border-ruby-500/30 bg-ruby-500/5 px-4 py-3">
+    <p class="text-sm text-ruby-400">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {# ── Hak ver ──────────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Hak Ver</h2>
+    </div>
+    <div class="px-5 py-4">
+      <form method="post" class="flex flex-wrap items-end gap-3"
+            onsubmit="return confirm('Bu koça hak eklenecek. Devam edilsin mi?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="grant">
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Adet</label>
+          <input type="number" name="n" min="1" max="500" value="1"
+                 class="w-24 h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <div class="flex-1 min-w-48">
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Not (zorunlu)</label>
+          <input type="text" name="notes" maxlength="490" required
+                 placeholder="Neden tanımlandığını açıklayın…"
+                 class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        placeholder:text-ink-600 focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <button type="submit"
+                class="h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
+          Hak Ver
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {# ── Düzeltme ─────────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Düzeltme</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Pozitif veya negatif tam sayı. Bakiyeyi negatife düşürebilir.</p>
+    </div>
+    <div class="px-5 py-4">
+      <form method="post" class="flex flex-wrap items-end gap-3"
+            onsubmit="return confirm('Bakiye düzeltmesi yapılacak. Devam edilsin mi?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="adjust">
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Delta (±)</label>
+          <input type="number" name="delta" value="0"
+                 class="w-28 h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <div class="flex-1 min-w-48">
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Not (zorunlu)</label>
+          <input type="text" name="notes" maxlength="490" required
+                 placeholder="Düzeltme nedenini açıklayın…"
+                 class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        placeholder:text-ink-600 focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <button type="submit"
+                class="h-10 px-4 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors">
+          Uygula
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {# ── Öğrenci süresini ayarla ───────────────────────────────────────────────── #}
+  {% if own_students %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Öğrenci Süresini Ayarla</h2>
+    </div>
+    <div class="px-5 py-4">
+      <form method="post" class="flex flex-wrap items-end gap-3"
+            onsubmit="return confirm('Öğrenci bitiş tarihi değiştirilecek. Devam edilsin mi?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="set_period">
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Öğrenci</label>
+          <select name="coach_student_id"
+                  class="h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                         focus:outline-none focus:border-steel-500 transition-colors">
+            {% for cs in own_students %}
+            <option value="{{ cs.pk }}">{{ cs.student.full_name }}{% if cs.next_payment_due %} ({{ cs.next_payment_due|date:"d.m.Y" }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Yeni Bitiş Tarihi</label>
+          <input type="date" name="new_end_date" value="{{ today|date:'Y-m-d' }}"
+                 class="h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <div class="flex-1 min-w-48">
+          <label class="block text-xs text-ink-400 font-medium mb-1.5">Not (zorunlu)</label>
+          <input type="text" name="notes" maxlength="490" required
+                 placeholder="Değişiklik nedenini açıklayın…"
+                 class="w-full h-10 px-3 rounded-lg bg-ink-800 border border-ink-700 text-sm text-ink-100
+                        placeholder:text-ink-600 focus:outline-none focus:border-steel-500 transition-colors">
+        </div>
+        <button type="submit"
+                class="h-10 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-sm font-medium transition-colors">
+          Kaydet
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Kredi defteri ─────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-ink-700 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-ink-200">Kredi Defteri</h2>
+      <span class="text-xs text-ink-500">Bakiye: <span class="text-ink-200 font-semibold tnum">{{ balance }}</span> | Bekleyen: <span class="text-ink-200 tnum">{{ pending }}</span> | Kullanılabilir: <span class="{% if avail <= 0 %}text-ruby-400{% else %}text-emerald-400{% endif %} font-semibold tnum">{{ avail }}</span></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800">
+            <th class="px-5 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Tarih</th>
+            <th class="px-4 py-2.5 text-center text-xs font-semibold text-ink-500 uppercase tracking-wide">Delta</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Neden</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Sipariş / Öğrenci</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Yapan</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Not</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800">
+          {% for entry in ledger %}
+          <tr class="hover:bg-ink-900 transition-colors">
+            <td class="px-5 py-3 text-ink-400 text-xs tabular-nums">{{ entry.created_at|date:"d.m.Y H:i" }}</td>
+            <td class="px-4 py-3 text-center font-semibold tnum text-sm
+                       {% if entry.delta > 0 %}text-emerald-400
+                       {% elif entry.delta < 0 %}text-ruby-400
+                       {% else %}text-ink-500{% endif %}">
+              {% if entry.delta > 0 %}+{% endif %}{{ entry.delta }}
+            </td>
+            <td class="px-4 py-3 text-ink-300 text-xs">{{ entry.get_reason_display }}</td>
+            <td class="px-4 py-3 text-ink-400 text-xs">
+              {% if entry.order %}#{{ entry.order.pk }} (sipariş){% elif entry.coach_student %}{{ entry.coach_student.student.full_name }}{% else %}&mdash;{% endif %}
+            </td>
+            <td class="px-4 py-3 text-ink-400 text-xs">{{ entry.created_by.full_name|default:"—" }}</td>
+            <td class="px-4 py-3 text-ink-500 text-xs max-w-xs truncate">{{ entry.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-5 py-8 text-center text-ink-500">Kayıt yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

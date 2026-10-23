@@ -2,7 +2,7 @@
 {% load earnings_filters %}
 {% load panel_nav_tags %}
 
-{% block title %}Kontenjan Ayarları — Panel{% endblock %}
+{% block title %}{% if per_student %}Davet Hakkı Ayarları{% else %}Kontenjan Ayarları{% endif %} — Panel{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl space-y-5">
@@ -10,14 +10,14 @@
   {% panel_nav active_section %}
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
-    <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>
-    <h1 class="text-lg font-semibold text-white mt-2">Kontenjan Ayarları</h1>
+    <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← {% if per_student %}Davet Hakkı{% else %}Kontenjan{% endif %}</a>
+    <h1 class="text-lg font-semibold text-white mt-2">{% if per_student %}Davet Hakkı Ayarları{% else %}Kontenjan Ayarları{% endif %}</h1>
   </div>
 
   {# ── Slot fiyatı ──────────────────────────────────────────────────────────── #}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3.5 border-b border-ink-700">
-      <h2 class="text-sm font-semibold text-ink-200">Slot Başına Fiyat</h2>
+      <h2 class="text-sm font-semibold text-ink-200">{% if per_student %}Öğrenci Başına Fiyat{% else %}Slot Başına Fiyat{% endif %}</h2>
     </div>
     <div class="px-5 py-4">
       {% if error %}
@@ -49,8 +49,8 @@
        x-data="explanationEditor()">
 
     <div class="px-5 py-3.5 border-b border-ink-700">
-      <h2 class="text-sm font-semibold text-ink-200">Kontenjan Açıklaması</h2>
-      <p class="text-xs text-ink-500 mt-0.5">Koçların davet sayfasındaki kontenjan bilgi kutusunun içeriği.</p>
+      <h2 class="text-sm font-semibold text-ink-200">{% if per_student %}Davet Hakkı Açıklaması{% else %}Kontenjan Açıklaması{% endif %}</h2>
+      <p class="text-xs text-ink-500 mt-0.5">Koçların davet sayfasındaki bilgi kutusunun içeriği.</p>
     </div>
 
     <div class="p-5 space-y-4">

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+{% load panel_nav_tags %}
+
+{% block title %}Yenileme Siparişleri — Panel{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% panel_nav active_section %}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+        <h1 class="text-lg font-semibold text-white">Yenileme Siparişleri</h1>
+      </div>
+      <p class="text-sm text-ink-400">Öğrenci dönemi yenileme ödemeleri.</p>
+    </div>
+    {% if claimed_count %}
+    <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+      {{ claimed_count }} onay bekliyor
+    </span>
+    {% endif %}
+  </div>
+
+  {# ── Filter chips ─────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap gap-2">
+    <a href="?filtre=claimed"
+       class="h-7 px-3 rounded-full text-xs font-medium border transition-colors
+              {% if filtre == 'claimed' %}bg-amber-500/20 border-amber-500/40 text-amber-300
+              {% else %}bg-ink-900 border-ink-700 text-ink-400 hover:text-ink-200{% endif %}">
+      Havale bildirimi gelen{% if claimed_count and filtre != 'claimed' %} ({{ claimed_count }}){% endif %}
+    </a>
+    <a href="?filtre=open"
+       class="h-7 px-3 rounded-full text-xs font-medium border transition-colors
+              {% if filtre == 'open' %}bg-steel-500/20 border-steel-500/40 text-steel-300
+              {% else %}bg-ink-900 border-ink-700 text-ink-400 hover:text-ink-200{% endif %}">
+      Tüm açık
+    </a>
+    <a href="?filtre=paid"
+       class="h-7 px-3 rounded-full text-xs font-medium border transition-colors
+              {% if filtre == 'paid' %}bg-emerald-500/20 border-emerald-500/40 text-emerald-300
+              {% else %}bg-ink-900 border-ink-700 text-ink-400 hover:text-ink-200{% endif %}">
+      Ödendi
+    </a>
+    <a href="?filtre=cancelled"
+       class="h-7 px-3 rounded-full text-xs font-medium border transition-colors
+              {% if filtre == 'cancelled' %}bg-ink-700 border-ink-600 text-ink-300
+              {% else %}bg-ink-900 border-ink-700 text-ink-400 hover:text-ink-200{% endif %}">
+      İptal edildi
+    </a>
+    {% if filtre %}
+    <a href="{{ request.path }}" class="h-7 px-3 rounded-full text-xs font-medium bg-ink-900 border border-ink-700 text-ink-500 hover:text-ink-300 transition-colors">
+      Filtreyi temizle
+    </a>
+    {% endif %}
+  </div>
+
+  {# ── Table ────────────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    {% if filtre_label %}
+    <div class="px-5 py-3 border-b border-ink-700 bg-amber-500/5">
+      <p class="text-xs text-amber-300 font-medium">{{ filtre_label }}</p>
+    </div>
+    {% endif %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800">
+            <th class="px-5 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Koç</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Öğrenci</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Ref</th>
+            <th class="px-4 py-2.5 text-right text-xs font-semibold text-ink-500 uppercase tracking-wide">Tutar</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Durum</th>
+            <th class="px-4 py-2.5 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">Tarih</th>
+            <th class="px-4 py-2.5 w-16"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800">
+          {% for order in orders %}
+          <tr class="hover:bg-ink-900 transition-colors">
+            <td class="px-5 py-3">
+              <p class="text-ink-200 font-medium leading-tight">{{ order.coach_student.coach.full_name }}</p>
+              <p class="text-xs text-ink-500 mt-0.5">{{ order.coach_student.coach.email }}</p>
+            </td>
+            <td class="px-4 py-3 text-ink-300 text-sm">{{ order.coach_student.student.full_name }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-ink-300">{{ order.ref_code }}</td>
+            <td class="px-4 py-3 text-right text-ink-300 tnum">{{ order.amount_tl_display }}</td>
+            <td class="px-4 py-3">
+              <span class="text-xs font-medium
+                {% if order.status == 'paid' %}text-emerald-400
+                {% elif order.status == 'cancelled' %}text-ink-500
+                {% elif order.payment_claimed_at %}text-amber-300
+                {% else %}text-amber-500{% endif %}">
+                {% if order.status == 'awaiting_transfer' and order.payment_claimed_at %}Bildirildi{% else %}{{ order.get_status_display }}{% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-ink-500 text-xs">{{ order.created_at|date:"d.m.Y" }}</td>
+            <td class="px-4 py-3 text-right">
+              <a href="{% url 'capacity_panel:renewal_detail' pk=order.pk %}"
+                 class="text-xs text-steel-400 hover:text-steel-300 transition-colors">Detay →</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="px-5 py-8 text-center text-ink-500">Sipariş bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

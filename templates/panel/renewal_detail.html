@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+{% load panel_nav_tags %}
+
+{% block title %}Yenileme Siparişi #{{ order.pk }} — Panel{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-2xl">
+
+  {% panel_nav active_section %}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <a href="{% url 'capacity_panel:renewal_list' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Yenileme Siparişleri</a>
+    <h1 class="text-lg font-semibold text-white mt-2">Yenileme Siparişi #{{ order.pk }}</h1>
+    <p class="text-sm text-ink-400">{{ order.created_at|date:"d.m.Y H:i" }}</p>
+  </div>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">Sipariş Bilgileri</h2>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Durum</span>
+        <span class="font-medium
+          {% if order.status == 'paid' %}text-emerald-400
+          {% elif order.status == 'cancelled' %}text-red-400
+          {% elif order.payment_claimed_at %}text-amber-300
+          {% else %}text-amber-500{% endif %}">
+          {% if order.status == 'awaiting_transfer' and order.payment_claimed_at %}Bildirildi (onay bekliyor){% else %}{{ order.get_status_display }}{% endif %}
+        </span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Koç</span>
+        <span class="text-ink-200">{{ order.coach_student.coach.full_name }} ({{ order.coach_student.coach.email }})</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Öğrenci</span>
+        <span class="text-ink-200">{{ order.coach_student.student.full_name }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Tutar</span>
+        <span class="text-ink-200 tnum">{{ order.amount_tl_display }}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Referans Kodu</span>
+        <span class="text-steel-400 font-mono font-semibold">{{ order.ref_code }}</span>
+      </div>
+      {% if order.payment_claimed_at %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Havale Bildirimi</span>
+        <span class="text-ink-200">{{ order.payment_claimed_at|date:"d.m.Y H:i" }}{% if order.sender_name %} — {{ order.sender_name }}{% endif %}</span>
+      </div>
+      {% endif %}
+      <div class="flex gap-4 text-sm">
+        <span class="text-ink-500 w-40 shrink-0">Mevcut Bitiş</span>
+        <span class="text-ink-200">{{ order.coach_student.next_payment_due|date:"d.m.Y"|default:"—" }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if order.status == 'awaiting_transfer' %}
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="px-5 py-3 border-b border-ink-700">
+      <h2 class="text-sm font-semibold text-ink-200">İşlemler</h2>
+    </div>
+    <div class="px-5 py-4 flex gap-3">
+      <form method="post" action="{% url 'capacity_panel:renewal_mark_paid' pk=order.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
+          Ödeme Alındı
+        </button>
+      </form>
+      <form method="post" action="{% url 'capacity_panel:renewal_cancel' pk=order.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="h-9 px-4 rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-600 text-ink-300 text-sm font-medium transition-colors">
+          İptal Et
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

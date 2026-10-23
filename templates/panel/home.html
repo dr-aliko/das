@@ -76,6 +76,15 @@
     </a>
     {% endif %}
 
+    {% if badges.renewals_claimed %}
+    <a href="{% url 'capacity_panel:renewal_list' %}?filtre=claimed"
+       class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
+      <p class="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">Yenileme havalesi</p>
+      <p class="text-2xl font-bold text-amber-400 tabular-nums">{{ badges.renewals_claimed }}</p>
+      <p class="text-xs text-ink-400 mt-1">Onay bekleyen yenileme siparişi</p>
+    </a>
+    {% endif %}
+
     {% if badges.earnings %}
     <a href="{% url 'earnings_panel:list' %}?filtre=earnings-ready"
        class="rounded-xl border border-amber-500/30 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
@@ -111,7 +120,7 @@
     <a href="{% url 'capacity_panel:overview' %}"
        class="rounded-xl border border-ink-700 bg-ink-950 px-4 py-4 hover:bg-ink-900 transition-colors">
       <p class="text-xs font-bold uppercase tracking-wider text-ink-500 mb-1">Koçlar</p>
-      <p class="text-sm font-semibold text-ink-100">Kontenjan</p>
+      <p class="text-sm font-semibold text-ink-100">{% if per_student %}Davet Hakkı{% else %}Kontenjan{% endif %}</p>
     </a>
 
     <a href="{% url 'panel_ogrenciler' %}"

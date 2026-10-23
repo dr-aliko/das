@@ -513,3 +513,92 @@ def mark_renewal_order_paid(order, staff):
             order.pk, getattr(staff, 'pk', None), cs.pk, new_end,
         )
         return order, True
+
+
+# ── Per-student wording defaults ──────────────────────────────────────────────
+
+EXPLANATION_DEFAULT_TITLE_PER_STUDENT = 'Davet hakkı nasıl çalışır?'
+
+EXPLANATION_DEFAULT_BODY_PER_STUDENT = (
+    "Her kabul edilen davet bir hak tüketir: Bir öğrenci davetinizi kabul ettiğinde "
+    "bir davet hakkı kullanılır; hak süresi dolmaz.\n"
+    "30 günlük dönem: Her öğrenci, daveti kabul ettiği günden itibaren 30 günlük "
+    "bireysel bir dönem başlar. Dönem sonunda öğrencinin süresi yenilenmesi gerekir.\n"
+    "Bitiş uyarısı: Bir öğrencinin dönemi bitmeden 5 gün önce bildirim alırsınız.\n"
+    "Süre dolunca: Süresi biten öğrencinin programı, yenileme yapılana kadar "
+    "davetler sayfasından düzenlenemez.\n"
+    "Öğrenci kaldırma: Öğrenciyi kaldırmak kullanılan davet hakkını iade etmez."
+)
+
+
+def notify_expiring_student_periods():
+    """
+    Notify each coach once per OWN student whose period ends in exactly 5 days.
+
+    Runs only when COACH_PER_STUDENT_PERIODS=True.
+    Idempotent: uses the Notification.url field as an idempotency key so that
+    re-running the task on the same day does not create duplicate notifications.
+    Returns the number of new notifications sent.
+    """
+    from django.conf import settings
+    if not getattr(settings, 'COACH_PER_STUDENT_PERIODS', False):
+        return 0
+
+    from django.utils import timezone as _tz
+    from users_app.models import CoachStudent, Notification
+
+    today = _tz.localdate()
+    target_due = today + timedelta(days=5)
+
+    links = (
+        CoachStudent.objects
+        .filter(active=True, next_payment_due=target_due)
+        .select_related('coach', 'student')
+        .exclude(source='vagus')
+    )
+
+    count = 0
+    for cs in links:
+        if not is_own_student_source(cs.source, cs.student):
+            continue
+        reminder_url = f'/auth/invite-students/?reminder={cs.student_id}-{target_due}'
+        if Notification.objects.filter(user=cs.coach, url=reminder_url).exists():
+            continue
+        Notification.objects.create(
+            user=cs.coach,
+            title='Öğrenci süresi bitiyor',
+            body=(
+                f'{cs.student.full_name} adlı öğrencinizin 30 günlük süresi '
+                f'{target_due.strftime("%d.%m.%Y")} tarihinde sona eriyor. '
+                f'Süreyi uzatmak için davetler sayfasını ziyaret edin.'
+            ),
+            url=reminder_url,
+        )
+        count += 1
+    if count:
+        _log.info('renewal: sent %d expiry reminders (5 days ahead)', count)
+    return count
+
+
+def set_student_period_staff(cs, new_end_date, staff, notes):
+    """
+    Staff adjusts a student's period end date.
+    Writes a delta=0 ledger row with the old→new date info and returns the entry.
+    """
+    from .models import CoachCreditLedger
+    old_date = cs.next_payment_due
+    cs.next_payment_due = new_end_date
+    cs.save(update_fields=['next_payment_due'])
+    entry = CoachCreditLedger.objects.create(
+        coach=cs.coach,
+        delta=0,
+        reason=CoachCreditLedger.REASON_STAFF_ADJUSTMENT,
+        coach_student=cs,
+        created_by=staff,
+        notes=f'Süre değiştirildi: {old_date} → {new_end_date}. {notes}',
+    )
+    _log.info(
+        'renewal: staff pk=%s set period for coach_student pk=%s: %s → %s',
+        getattr(staff, 'pk', None), cs.pk, old_date, new_end_date,
+    )
+    return entry

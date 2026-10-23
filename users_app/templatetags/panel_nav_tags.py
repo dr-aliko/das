@@ -3,77 +3,88 @@ from django.urls import reverse
 
 register = template.Library()
 
-# Single source of truth. To add a page: one dict in the right group's pages list.
-# badge_key references a key in the all_badges() dict; omit for no badge.
-_NAV_GROUPS = [
-    {
-        'key': 'home',
-        'label': 'Genel bakış',
-        'url_name': 'panel_home',
-        'pages': [],
-    },
-    {
-        'key': 'koclar',
-        'label': 'Koçlar',
-        'badge_key': 'koclar',
-        'pages': [
-            {'key': 'koclar',        'label': 'Koç listesi & WP', 'url_name': 'panel_wp_koclar',       'badge_key': 'no_wp'},
-            {'key': 'koc_ekle',      'label': 'Koç ekle',         'url_name': 'panel_koc_ekle'},
-            {'key': 'koc_belgeleri', 'label': 'Belgeler',          'url_name': 'staff_coach_documents', 'badge_key': 'belgeler'},
-            {'key': 'capacity',      'label': 'Kontenjan',         'url_name': 'capacity_panel:overview'},
-        ],
-    },
-    {
-        'key': 'ogrenciler',
-        'label': 'Öğrenciler',
-        'badge_key': 'ogrenciler_group',
-        'pages': [
-            {'key': 'students', 'label': 'Öğrenciler', 'url_name': 'panel_ogrenciler', 'badge_key': 'overdue'},
-            {'key': 'invites',  'label': 'Davetler',   'url_name': 'panel_davetler'},
-        ],
-    },
-    {
-        'key': 'satis',
-        'label': 'Satış',
-        'badge_key': 'satis',
-        'pages': [
-            {'key': 'orders', 'label': 'Siparişler', 'url_name': 'purchase_panel:orders', 'badge_key': 'transfers'},
-            {'key': 'plans',  'label': 'Planlar',    'url_name': 'purchase_panel:plans'},
-        ],
-    },
-    {
-        'key': 'odemeler',
-        'label': 'Ödemeler',
-        'badge_key': 'odemeler_group',
-        'pages': [
-            {'key': 'earnings', 'label': 'Kazançlar', 'url_name': 'earnings_panel:list', 'badge_key': 'earnings'},
-        ],
-    },
-]
 
-# Auto-built: every page key → its group key.
-_SECTION_TO_GROUP = {
-    page['key']: group['key']
-    for group in _NAV_GROUPS
-    for page in group['pages']
-}
-_SECTION_TO_GROUP['home'] = 'home'
+def _build_nav_groups(per_student):
+    capacity_label = 'Davet Hakkı' if per_student else 'Kontenjan'
+    koclar_pages = [
+        {'key': 'koclar',        'label': 'Koç listesi & WP', 'url_name': 'panel_wp_koclar',       'badge_key': 'no_wp'},
+        {'key': 'koc_ekle',      'label': 'Koç ekle',         'url_name': 'panel_koc_ekle'},
+        {'key': 'koc_belgeleri', 'label': 'Belgeler',          'url_name': 'staff_coach_documents', 'badge_key': 'belgeler'},
+        {'key': 'capacity',      'label': capacity_label,      'url_name': 'capacity_panel:overview'},
+    ]
+    if per_student:
+        koclar_pages.append({
+            'key':       'renewals',
+            'label':     'Yenileme',
+            'url_name':  'capacity_panel:renewal_list',
+            'badge_key': 'renewals_claimed',
+        })
+    return [
+        {
+            'key':      'home',
+            'label':    'Genel bakış',
+            'url_name': 'panel_home',
+            'pages':    [],
+        },
+        {
+            'key':       'koclar',
+            'label':     'Koçlar',
+            'badge_key': 'koclar',
+            'pages':     koclar_pages,
+        },
+        {
+            'key':       'ogrenciler',
+            'label':     'Öğrenciler',
+            'badge_key': 'ogrenciler_group',
+            'pages': [
+                {'key': 'students', 'label': 'Öğrenciler', 'url_name': 'panel_ogrenciler', 'badge_key': 'overdue'},
+                {'key': 'invites',  'label': 'Davetler',   'url_name': 'panel_davetler'},
+            ],
+        },
+        {
+            'key':       'satis',
+            'label':     'Satış',
+            'badge_key': 'satis',
+            'pages': [
+                {'key': 'orders', 'label': 'Siparişler', 'url_name': 'purchase_panel:orders', 'badge_key': 'transfers'},
+                {'key': 'plans',  'label': 'Planlar',    'url_name': 'purchase_panel:plans'},
+            ],
+        },
+        {
+            'key':       'odemeler',
+            'label':     'Ödemeler',
+            'badge_key': 'odemeler_group',
+            'pages': [
+                {'key': 'earnings', 'label': 'Kazançlar', 'url_name': 'earnings_panel:list', 'badge_key': 'earnings'},
+            ],
+        },
+    ]
 
 
 @register.inclusion_tag('panel/includes/panel_nav.html', takes_context=True)
 def panel_nav(context, active_section=''):
+    from django.conf import settings
+    per_student = getattr(settings, 'COACH_PER_STUDENT_PERIODS', False)
+
     request = context.get('request')
     badges = {}
     if request and getattr(request.user, 'is_staff', False):
         from users_app.panel_badges import all_badges
         badges = all_badges()
 
-    active_group_key = _SECTION_TO_GROUP.get(active_section)
+    nav_groups = _build_nav_groups(per_student)
+    section_to_group = {
+        page['key']: group['key']
+        for group in nav_groups
+        for page in group['pages']
+    }
+    section_to_group['home'] = 'home'
+    active_group_key = section_to_group.get(active_section)
 
     groups = []
     second_row = None
 
-    for group in _NAV_GROUPS:
+    for group in nav_groups:
         gkey = group['key']
         pages = group['pages']
         g_active = (gkey == active_group_key)
@@ -101,7 +112,7 @@ def panel_nav(context, active_section=''):
                 })
 
     return {
-        'groups':    groups,
+        'groups':     groups,
         'second_row': second_row,
-        'admin_url': reverse('admin:index'),
+        'admin_url':  reverse('admin:index'),
     }

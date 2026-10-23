@@ -131,3 +131,17 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'{action} schedule: {schedule.name}'
         ))
+
+        schedule, created = Schedule.objects.update_or_create(
+            func='capacity_app.tasks.notify_expiring_student_periods_task',
+            defaults={
+                'name': 'Notify coaches of expiring student periods (daily 08:00 Istanbul)',
+                'schedule_type': Schedule.CRON,
+                'cron': '0 8 * * *',
+                'repeats': -1,
+            },
+        )
+        action = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(
+            f'{action} schedule: {schedule.name}'
+        ))

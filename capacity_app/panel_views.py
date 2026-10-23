@@ -1,6 +1,7 @@
 import logging
 from datetime import date, timedelta
 
+from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,12 +21,14 @@ _TAB = 'capacity'
 
 
 def _tab_ctx():
-    return {'active_tab': _TAB, 'active_section': _TAB}
+    per_student = getattr(django_settings, 'COACH_PER_STUDENT_PERIODS', False)
+    return {'active_tab': _TAB, 'active_section': _TAB, 'per_student': per_student}
 
 
 @staff_required
 def panel_capacity(request):
     from users_app.utils import filter_coaches_by_q
+    per_student = getattr(django_settings, 'COACH_PER_STUDENT_PERIODS', False)
     q = request.GET.get('q', '').strip()
     coaches = list(
         User.objects.filter(role='coach', is_active=True)
@@ -35,32 +38,36 @@ def panel_capacity(request):
         coaches = filter_coaches_by_q(coaches, q)
     today = date.today()
     rows = []
-    for coach in coaches:
-        st = get_capacity_status(coach)
-        latest_grant = (
-            CoachCapacityGrant.objects
-            .filter(coach=coach, period_end__gte=today)
-            .order_by('-period_end')
-            .first()
-        )
-        pending_order = (
-            CoachCapacityOrder.objects
-            .filter(
-                coach=coach,
-                status__in=[CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
-                            CoachCapacityOrder.STATUS_PENDING],
+    if per_student:
+        from .services import credit_balance, available_credits, pending_invite_count
+        for coach in coaches:
+            rows.append({
+                'coach':   coach,
+                'balance': credit_balance(coach),
+                'pending': pending_invite_count(coach),
+                'avail':   available_credits(coach),
+            })
+    else:
+        for coach in coaches:
+            st = get_capacity_status(coach)
+            pending_order = (
+                CoachCapacityOrder.objects
+                .filter(
+                    coach=coach,
+                    status__in=[CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
+                                CoachCapacityOrder.STATUS_PENDING],
+                )
+                .order_by('-created_at')
+                .first()
             )
-            .order_by('-created_at')
-            .first()
-        )
-        rows.append({
-            'coach':         coach,
-            'in_use':        st['in_use'],
-            'granted':       st['granted'],
-            'free':          st['free'],
-            'period_end':    st['period_end'],
-            'pending_order': pending_order,
-        })
+            rows.append({
+                'coach':         coach,
+                'in_use':        st['in_use'],
+                'granted':       st['granted'],
+                'free':          st['free'],
+                'period_end':    st['period_end'],
+                'pending_order': pending_order,
+            })
 
     cfg = CapacitySettings.get()
 
@@ -157,7 +164,12 @@ def panel_capacity_grant_create(request):
 @staff_required
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def panel_capacity_settings(request):
-    from .services import EXPLANATION_DEFAULT_TITLE, EXPLANATION_DEFAULT_BODY, parse_explanation_body
+    from .services import (
+        EXPLANATION_DEFAULT_TITLE, EXPLANATION_DEFAULT_BODY,
+        EXPLANATION_DEFAULT_TITLE_PER_STUDENT, EXPLANATION_DEFAULT_BODY_PER_STUDENT,
+        parse_explanation_body,
+    )
+    per_student = getattr(django_settings, 'COACH_PER_STUDENT_PERIODS', False)
     cfg = CapacitySettings.get()
     error = None
     expl_error = None
@@ -201,9 +213,13 @@ def panel_capacity_settings(request):
                     return redirect('capacity_panel:settings')
 
         elif action == 'reset_explanation':
-            cfg.explanation_title = EXPLANATION_DEFAULT_TITLE
-            cfg.explanation_body  = EXPLANATION_DEFAULT_BODY
-            cfg.updated_by        = request.user
+            if per_student:
+                cfg.explanation_title = EXPLANATION_DEFAULT_TITLE_PER_STUDENT
+                cfg.explanation_body  = EXPLANATION_DEFAULT_BODY_PER_STUDENT
+            else:
+                cfg.explanation_title = EXPLANATION_DEFAULT_TITLE
+                cfg.explanation_body  = EXPLANATION_DEFAULT_BODY
+            cfg.updated_by = request.user
             cfg.save()
             return redirect('capacity_panel:settings')
 
@@ -317,4 +333,192 @@ def panel_grant_adjust(request, pk):
         'new_slots_default': new_slots_default,
         'preview_free':     cap_status['free'] + preview_delta,
         'post_action':      request.POST if request.method == 'POST' else None,
+    })
+
+
+# ── Staff — Renewal orders ─────────────────────────────────────────────────────
+
+@staff_required
+def panel_renewal_list(request):
+    from .models import CoachStudentRenewalOrder
+    from users_app.panel_badges import qs_renewal_orders_claimed
+
+    filtre = request.GET.get('filtre', '').strip()
+    base_qs = CoachStudentRenewalOrder.objects.select_related(
+        'coach_student__coach', 'coach_student__student'
+    )
+
+    if filtre == 'claimed':
+        orders = qs_renewal_orders_claimed()
+        filtre_label = 'Havale bildirimi gelen'
+    elif filtre == 'open':
+        orders = base_qs.filter(status=CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER).order_by('-created_at')
+        filtre_label = 'Açık (tüm bekleyenler)'
+    elif filtre == 'paid':
+        orders = base_qs.filter(status=CoachStudentRenewalOrder.STATUS_PAID).order_by('-created_at')
+        filtre_label = 'Ödendi'
+    elif filtre == 'cancelled':
+        orders = base_qs.filter(status=CoachStudentRenewalOrder.STATUS_CANCELLED).order_by('-created_at')
+        filtre_label = 'İptal edildi'
+    else:
+        orders = base_qs.order_by('-created_at')[:100]
+        filtre_label = ''
+
+    claimed_count = qs_renewal_orders_claimed().count()
+
+    ctx = _tab_ctx()
+    ctx['active_section'] = 'renewals'
+    return render(request, 'panel/renewal_list.html', {
+        **ctx,
+        'orders':        orders,
+        'filtre':        filtre,
+        'filtre_label':  filtre_label,
+        'claimed_count': claimed_count,
+    })
+
+
+@staff_required
+def panel_renewal_detail(request, pk):
+    from .models import CoachStudentRenewalOrder
+    order = get_object_or_404(
+        CoachStudentRenewalOrder.objects.select_related(
+            'coach_student__coach', 'coach_student__student'
+        ),
+        pk=pk,
+    )
+    ctx = _tab_ctx()
+    ctx['active_section'] = 'renewals'
+    return render(request, 'panel/renewal_detail.html', {**ctx, 'order': order})
+
+
+@staff_required
+@require_POST
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
+def panel_renewal_mark_paid(request, pk):
+    from .models import CoachStudentRenewalOrder
+    from .services import mark_renewal_order_paid
+    order = get_object_or_404(CoachStudentRenewalOrder, pk=pk)
+    mark_renewal_order_paid(order, request.user)
+    return redirect('capacity_panel:renewal_detail', pk=pk)
+
+
+@staff_required
+@require_POST
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
+def panel_renewal_cancel(request, pk):
+    from .models import CoachStudentRenewalOrder
+    order = get_object_or_404(CoachStudentRenewalOrder, pk=pk)
+    if order.status == CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER:
+        order.status = CoachStudentRenewalOrder.STATUS_CANCELLED
+        order.save(update_fields=['status', 'updated_at'])
+    return redirect('capacity_panel:renewal_detail', pk=pk)
+
+
+# ── Staff — Per-coach credit management ──────────────────────────────────────
+
+@staff_required
+@ratelimit(key='user', rate='20/m', method='POST', block=True)
+def panel_coach_credits(request, coach_pk):
+    from .models import CoachCreditLedger
+    from .services import (
+        credit_balance, available_credits, pending_invite_count,
+        grant_credits, adjust_credits_staff, set_student_period_staff,
+        is_own_student_source,
+    )
+    from users_app.models import CoachStudent, Notification
+
+    coach = get_object_or_404(User, pk=coach_pk, role='coach')
+
+    ledger = (
+        CoachCreditLedger.objects
+        .filter(coach=coach)
+        .select_related('order', 'coach_student__student', 'created_by')
+        .order_by('-created_at')
+    )
+
+    own_students = [
+        cs for cs in
+        CoachStudent.objects.filter(coach=coach, active=True).select_related('student')
+        if is_own_student_source(cs.source, cs.student)
+    ]
+
+    error = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        if action == 'grant':
+            n_str = request.POST.get('n', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            if not notes:
+                error = 'Not zorunludur.'
+            else:
+                try:
+                    n = int(n_str)
+                    if n < 1:
+                        raise ValueError
+                except (ValueError, TypeError):
+                    error = 'Geçerli bir pozitif tam sayı girin.'
+            if not error:
+                grant_credits(coach, n, CoachCreditLedger.REASON_MANUAL_GRANT,
+                              staff=request.user, notes=notes)
+                Notification.objects.create(
+                    user=coach,
+                    title='Davet hakkı tanımlandı',
+                    body=f'Size {n} davet hakkı tanımlandı.',
+                    url='/auth/invite-students/',
+                )
+                return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
+
+        elif action == 'adjust':
+            delta_str = request.POST.get('delta', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            if not notes:
+                error = 'Not zorunludur.'
+            else:
+                try:
+                    delta = int(delta_str)
+                except (ValueError, TypeError):
+                    error = 'Geçerli bir tam sayı girin (pozitif veya negatif).'
+            if not error:
+                adjust_credits_staff(coach, delta, request.user, notes=notes)
+                return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
+
+        elif action == 'set_period':
+            cs_id_str = request.POST.get('coach_student_id', '').strip()
+            new_date_str = request.POST.get('new_end_date', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            cs = None
+            if not notes:
+                error = 'Not zorunludur.'
+            if not error:
+                try:
+                    cs_id = int(cs_id_str)
+                    cs = CoachStudent.objects.get(pk=cs_id, coach=coach, active=True)
+                except (ValueError, CoachStudent.DoesNotExist):
+                    error = 'Geçersiz öğrenci seçimi.'
+            if not error:
+                try:
+                    from datetime import date as _date
+                    new_end = _date.fromisoformat(new_date_str)
+                except ValueError:
+                    error = 'Geçerli bir tarih girin (YYYY-AA-GG).'
+            if not error and cs is not None:
+                set_student_period_staff(cs, new_end, request.user, notes)
+                return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
+
+    balance = credit_balance(coach)
+    pending = pending_invite_count(coach)
+    avail   = available_credits(coach)
+
+    return render(request, 'panel/coach_credits.html', {
+        **_tab_ctx(),
+        'coach':        coach,
+        'ledger':       ledger,
+        'own_students': own_students,
+        'balance':      balance,
+        'pending':      pending,
+        'avail':        avail,
+        'error':        error,
+        'today':        date.today(),
     })
