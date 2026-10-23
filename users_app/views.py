@@ -515,48 +515,78 @@ def coach_invite_view(request):
                 messages.success(request, f'{invite.email} adresine davet gönderildi.')
                 return redirect('users_app:coach_invites')
 
-    invite_accepted = invites.filter(is_used=True).count()
-    invite_pending  = invites.filter(is_used=False).count()
+    invite_accepted_lifetime = invites.filter(is_used=True).count()
+    invite_pending = invites.filter(is_used=False).count()
 
     cfg = CapacitySettings.get()
     explanation = parse_explanation_body(cfg.explanation_body)
 
-    invited_rows = None
-    if per_student_periods:
-        from users_app.utils import membership_expiry_info
+    # active_own_count mirrors the roster's "Kendi öğrencilerim" count (all active own
+    # students, whether they joined via invite, invite-less link, or staff assignment).
+    active_own_count = cap_status['in_use']
 
-        used_invites_q = invites.filter(is_used=True)
-        used_emails = list(used_invites_q.values_list('email', flat=True))
-        email_to_user = {}
-        student_to_cs = {}
-        if used_emails:
-            from django.contrib.auth import get_user_model
-            _User = get_user_model()
-            for u in _User.objects.filter(email__in=used_emails, role='student'):
-                email_to_user[u.email] = u
-            student_ids = [u.pk for u in email_to_user.values()]
+    # expired_own_count: active own students whose payment period has ended (flag=True only).
+    expired_own_count = None
+    if per_student_periods:
+        from django.utils import timezone as _tz
+        _today = _tz.localdate()
+        expired_own_count = CoachStudent.objects.filter(
+            coach=request.user,
+            active=True,
+            next_payment_due__lt=_today,
+        ).exclude(source=CoachStudent.SOURCE_VAGUS).count()
+
+    # Build email→user and student→cs maps for categorising accepted invites.
+    used_emails = list(invites.filter(is_used=True).values_list('email', flat=True))
+    email_to_user = {}
+    student_to_cs = {}
+    if used_emails:
+        from django.contrib.auth import get_user_model
+        _User = get_user_model()
+        for u in _User.objects.filter(email__in=used_emails, role='student'):
+            email_to_user[u.email] = u
+        student_ids = [u.pk for u in email_to_user.values()]
+        if student_ids:
             for cs in CoachStudent.objects.filter(
                 coach=request.user, student_id__in=student_ids
             ).select_related('student'):
                 student_to_cs[cs.student_id] = cs
 
-        cfg_price = cfg.per_slot_price_kurus
+    if per_student_periods:
+        from users_app.utils import membership_expiry_info
+    cfg_price = cfg.per_slot_price_kurus
 
-        invited_rows = []
-        for inv in invites:
-            if inv.is_used:
-                user = email_to_user.get(inv.email)
-                if not user:
-                    continue
-                cs = student_to_cs.get(user.pk)
-                if not cs or not cs.active:
-                    continue
+    active_invited_rows = []
+    invite_history_rows = []
+
+    for inv in invites:
+        if inv.is_used:
+            user = email_to_user.get(inv.email)
+            if not user:
+                invite_history_rows.append({
+                    'invite': inv, 'user': None, 'cs': None,
+                    'status': 'no_account', 'is_pending': False,
+                })
+                continue
+            cs = student_to_cs.get(user.pk)
+            if not cs:
+                invite_history_rows.append({
+                    'invite': inv, 'user': user, 'cs': None,
+                    'status': 'removed', 'is_pending': False,
+                })
+                continue
+            if cs.source == CoachStudent.SOURCE_VAGUS:
+                continue  # vagus students not listed in own-student sections
+            if not cs.active:
+                invite_history_rows.append({
+                    'invite': inv, 'user': user, 'cs': cs,
+                    'status': 'removed', 'is_pending': False,
+                })
+                continue
+            if per_student_periods:
                 expiry = membership_expiry_info(cs)
-                if expiry is not None:
-                    show_renew = expiry['expired'] or expiry['days'] <= 7
-                else:
-                    show_renew = False
-                invited_rows.append({
+                show_renew = bool(expiry and (expiry['expired'] or expiry['days'] <= 7))
+                active_invited_rows.append({
                     'invite': inv, 'is_pending': False, 'user': user, 'cs': cs,
                     'expiry': expiry,
                     'status': 'expired' if (expiry and expiry['expired']) else 'active',
@@ -564,28 +594,37 @@ def coach_invite_view(request):
                     'price_kurus': cfg_price,
                 })
             else:
-                invited_rows.append({
-                    'invite': inv, 'is_pending': True, 'user': None, 'cs': None,
-                    'expiry': None, 'status': 'pending', 'show_renew': False,
-                    'price_kurus': cfg_price,
+                active_invited_rows.append({
+                    'invite': inv, 'is_pending': False, 'user': user, 'cs': cs,
+                    'expiry': None, 'status': 'active', 'show_renew': False,
+                    'price_kurus': 0,
                 })
+        else:
+            active_invited_rows.append({
+                'invite': inv, 'is_pending': True, 'user': None, 'cs': None,
+                'expiry': None, 'status': 'pending', 'show_renew': False,
+                'price_kurus': cfg_price,
+            })
 
     return render(request, 'coach/invites.html', {
-        'form':                 form,
-        'invites':              invites,
-        'invite_accepted':      invite_accepted,
-        'invite_pending':       invite_pending,
-        'invite_total':         invite_accepted + invite_pending,
-        'cap_status':           cap_status,
-        'capacity_error':       capacity_error,
-        'capacity_blocked':     capacity_blocked,
-        'enforcement_on':       enforcement_on,
-        'cfg':                  cfg,
-        'explanation':          explanation,
-        'per_student_periods':  per_student_periods,
-        'avail_credits':        avail_credits,
-        'pending_credits':      pending_credits,
-        'invited_rows':         invited_rows,
+        'form':                       form,
+        'invites':                    invites,
+        'invite_accepted_lifetime':   invite_accepted_lifetime,
+        'invite_pending':             invite_pending,
+        'invite_total':               invite_accepted_lifetime + invite_pending,
+        'active_own_count':           active_own_count,
+        'expired_own_count':          expired_own_count,
+        'cap_status':                 cap_status,
+        'capacity_error':             capacity_error,
+        'capacity_blocked':           capacity_blocked,
+        'enforcement_on':             enforcement_on,
+        'cfg':                        cfg,
+        'explanation':                explanation,
+        'per_student_periods':        per_student_periods,
+        'avail_credits':              avail_credits,
+        'pending_credits':            pending_credits,
+        'active_invited_rows':        active_invited_rows,
+        'invite_history_rows':        invite_history_rows,
     })
 
 
