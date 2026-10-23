@@ -17,6 +17,13 @@
 .earn-chip-iptal     { background: var(--surface-2); color: var(--muted-2); }
 .earn-progress-track { height: 6px; border-radius: 9999px; background: var(--surface-2); overflow: hidden; }
 .earn-progress-bar   { height: 100%; border-radius: 9999px; transition: width 0.3s ease; }
+
+/* Segmented day-by-day bar for held rows (≤ 62 days) */
+.earn-seg-track { display: flex; gap: 2px; height: 8px; min-width: 0; }
+.earn-seg-item  { flex: 1 1 0; height: 100%; border-radius: 9999px; min-width: 0; }
+.earn-seg-empty  { background: var(--surface-2); }
+.earn-seg-filled { background: rgb(109 91 255); }
+.earn-seg-today  { background: rgb(139 124 255); box-shadow: 0 0 0 2px rgba(139,124,255,0.35); }
 </style>
 
 {{ rows|json_script:"kazanclar-data" }}
@@ -176,12 +183,43 @@
           </div>
 
           <div>
-            <div class="earn-progress-track">
-              <div class="earn-progress-bar"
-                   :style="progressStyle(row)"
-                   :class="row.is_held ? 'bg-ink-600' : 'bg-steel-500'">
+            {% comment %}
+            Segmented bar — held rows with period ≤ 62 days.
+            One segment per day; last filled segment = today (emphasised).
+            {% endcomment %}
+            <template x-if="row.is_held && row.segments.length > 0">
+              <div class="earn-seg-track"
+                   role="progressbar"
+                   aria-valuemin="0"
+                   :aria-valuemax="row.period_days"
+                   :aria-valuenow="row.coach_days"
+                   :aria-label="'Bugün dahil ' + row.coach_days + ' / ' + row.period_days + ' gün hizmet verildi'">
+                <template x-for="(seg, idx) in row.segments" :key="idx">
+                  <div class="earn-seg-item"
+                       :class="seg.today ? 'earn-seg-today' : (seg.filled ? 'earn-seg-filled' : 'earn-seg-empty')">
+                  </div>
+                </template>
               </div>
-            </div>
+            </template>
+
+            {% comment %}
+            Continuous bar — non-held rows, or held rows with period > 62 days.
+            bg-ink-600 is absent from the compiled bundle; use bg-ink-700 instead.
+            {% endcomment %}
+            <template x-if="!row.is_held || row.segments.length === 0">
+              <div class="earn-progress-track"
+                   role="progressbar"
+                   aria-valuemin="0"
+                   :aria-valuemax="row.period_days"
+                   :aria-valuenow="row.coach_days"
+                   :aria-label="row.coach_days + ' / ' + row.period_days + ' gün'">
+                <div class="earn-progress-bar"
+                     :style="progressStyle(row)"
+                     :class="row.is_held ? 'bg-ink-700' : 'bg-steel-500'">
+                </div>
+              </div>
+            </template>
+
             <p class="text-xs text-ink-400 mt-1 tabular-nums"
                x-text="row.coach_days + ' / ' + row.period_days + ' gün'">
             </p>

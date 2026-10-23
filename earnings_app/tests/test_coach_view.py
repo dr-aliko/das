@@ -201,3 +201,78 @@ def test_progress_bar_mid_period_coach_change_clips_to_interval():
     held = [r for r in response.context['rows'] if r['status'] == 'held']
     assert held, 'expected held row'
     assert held[0]['coach_days'] == 6
+
+
+# ── Segmented bar tests ────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_segments_day2_has_2_filled_28_empty_with_today_on_last():
+    """Day 2 of 30: 2 filled segments (last one today=True), 28 empty."""
+    today = date.today()
+    coach   = make_coach()
+    student = make_student()
+    make_row(coach, student, status=EarningRow.STATUS_HELD,
+             coverage_start=today - timedelta(days=1),
+             coverage_end=today + timedelta(days=29),
+             period_days=30, coach_days=0, pool_kurus=300_000, amount_kurus=0)
+    _make_interval(coach, student, started_days_ago=1)
+
+    c = Client()
+    c.force_login(coach)
+    response = c.get(reverse('coach_kazanclar'))
+    assert response.status_code == 200
+
+    held = [r for r in response.context['rows'] if r['status'] == 'held']
+    segs = held[0]['segments']
+
+    assert len(segs) == 30
+    assert segs[0]  == {'filled': True,  'today': False}   # day 1, not today
+    assert segs[1]  == {'filled': True,  'today': True}    # day 2 = today
+    assert all(s == {'filled': False, 'today': False} for s in segs[2:])
+
+
+@pytest.mark.django_db
+def test_segments_day1_has_1_filled_today():
+    """Day 1 of 30: the single filled segment is today=True, rest empty."""
+    today = date.today()
+    coach   = make_coach()
+    student = make_student()
+    make_row(coach, student, status=EarningRow.STATUS_HELD,
+             coverage_start=today,
+             coverage_end=today + timedelta(days=30),
+             period_days=30, coach_days=0, pool_kurus=300_000, amount_kurus=0)
+    _make_interval(coach, student, started_days_ago=0)
+
+    c = Client()
+    c.force_login(coach)
+    response = c.get(reverse('coach_kazanclar'))
+    assert response.status_code == 200
+
+    held = [r for r in response.context['rows'] if r['status'] == 'held']
+    segs = held[0]['segments']
+
+    assert len(segs) == 30
+    assert segs[0] == {'filled': True, 'today': True}
+    assert all(s == {'filled': False, 'today': False} for s in segs[1:])
+
+
+@pytest.mark.django_db
+def test_segments_long_period_falls_back_to_continuous_bar():
+    """Period > 62 days: segments=[] so the continuous bar is shown instead."""
+    today = date.today()
+    coach   = make_coach()
+    student = make_student()
+    make_row(coach, student, status=EarningRow.STATUS_HELD,
+             coverage_start=today,
+             coverage_end=today + timedelta(days=90),
+             period_days=90, coach_days=0, pool_kurus=300_000, amount_kurus=0)
+    _make_interval(coach, student, started_days_ago=0)
+
+    c = Client()
+    c.force_login(coach)
+    response = c.get(reverse('coach_kazanclar'))
+    assert response.status_code == 200
+
+    held = [r for r in response.context['rows'] if r['status'] == 'held']
+    assert held[0]['segments'] == []       # fallback to continuous bar
+    assert held[0]['coach_days'] == 1      # day count still correct

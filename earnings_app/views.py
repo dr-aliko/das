@@ -342,6 +342,24 @@ def _fmt_day(d):
     return f'{d.day} {_TR_MONTHS[d.month - 1]}'
 
 
+def _build_segments(coach_days, period_days):
+    """
+    Returns a list of {filled, today} dicts, one per day, for the segmented
+    progress bar. Returns [] when period_days > 62 (continuous bar fallback).
+    The last filled segment carries today=True (the most recent day served).
+    """
+    if period_days > 62:
+        return []
+    n = min(max(coach_days, 0), period_days)
+    segs = []
+    for i in range(period_days):
+        if i < n:
+            segs.append({'filled': True, 'today': i == n - 1})
+        else:
+            segs.append({'filled': False, 'today': False})
+    return segs
+
+
 def coach_kazanclar(request):
     from django.utils.timezone import localtime, now as tz_now
 
@@ -438,6 +456,7 @@ def coach_kazanclar(request):
             'coverage_label': f'{_fmt_day(r.coverage_start)} – {_fmt_day(display_end)}',
             'period_days':    r.period_days,
             'coach_days':     live_n,
+            'segments':       _build_segments(live_n, r.period_days) if is_held else [],
             'is_held':        is_held,
             'amount_display': '' if is_held else _fmt_tl(r.amount_kurus),
             'pool_display':   _fmt_tl(r.pool_kurus) if is_held else '',
