@@ -18,7 +18,8 @@ PLAYLISTIMPORTER_MEMBERS = {
     # state
     'show', 'step', 'url', 'errorMsg', 'progressMsg', 'preview', 'subjects',
     'selectedSubjectId', 'selectedExamType', 'importResult', 'myPlaylists',
-    'loadingPlaylists', 'search', 'pendingDeletePk', 'deleteError', 'deleteErrorPk',
+    'loadingPlaylists', 'search', 'playlistsExpanded', 'pendingDeletePk',
+    'deleteError', 'deleteErrorPk',
     'refreshJobs', '_activeJobId', '_pollTimer',
     # computed getter
     'filteredPlaylists',
@@ -29,8 +30,8 @@ PLAYLISTIMPORTER_MEMBERS = {
 }
 
 _ALLOWED = {
-    # JS keywords / operators
-    'true', 'false', 'null', 'undefined', 'void', 'in', 'of', 'new',
+    # JS keywords / operators / control flow
+    'true', 'false', 'null', 'undefined', 'void', 'in', 'of', 'new', 'if',
     'typeof', 'instanceof', 'return', 'let', 'const', 'var',
     # JS built-ins
     'window', 'document', 'this', 'Object', 'String', 'Number', 'Boolean',
@@ -39,8 +40,10 @@ _ALLOWED = {
     # array/string prototype methods
     'length', 'filter', 'map', 'find', 'includes', 'startsWith', 'trim',
     'toLowerCase', 'join', 'replace', 'slice', 'split', 'push', 'some', 'every',
-    # Alpine magic tokens ($el etc. captured as bare words)
+    # Alpine magic tokens ($el etc. captured as bare words after $ is stripped)
     'el', 'event', 'refs', 'nextTick', 'watch', 'dispatch', 'store',
+    # Common property names accessed via $event or other objects
+    'detail', 'target', 'value',
     # x-for loop variables in the modal
     'p', 's', 'tip',
     # object property names on loop items (not component state)

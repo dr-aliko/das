@@ -875,7 +875,8 @@ def test_unlinked_student_not_viewable_by_old_coach():
 
     coach = make_coach()
     student = make_student(coach=coach)
-    link = make_link(coach, student, active=True)
+    # source='coach' — own student; Vagus-source 403 is covered in test_roster_unlink_source.py
+    link = make_link(coach, student, active=True, source='coach')
     open_interval(link)
 
     # Unlink via the coach view (POST)

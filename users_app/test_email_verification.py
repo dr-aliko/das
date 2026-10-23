@@ -35,6 +35,7 @@ LOCMEM = {
 COACH_DATA = {
     'email':     'verifycoach@test.com',
     'full_name': 'Verify Coach',
+    'phone':     '05051234567',
     'password1': 'VerifyPW1!',
     'password2': 'VerifyPW1!',
 }
@@ -111,6 +112,18 @@ class EmailVerificationTests(TestCase):
         self.assertEqual(r.status_code, 302)
         self.assertIn('verify-email', r['Location'])
         self.assertEqual(self.client.session['pending_verification_uid'], user.id)
+
+    # ── Test 1b: registration without phone is rejected ───────────────────────
+
+    def test_1b_registration_without_phone_rejected(self):
+        data_no_phone = {k: v for k, v in COACH_DATA.items() if k != 'phone'}
+        r = self.client.post(REGISTER_URL, data_no_phone, REMOTE_ADDR=self.IP)
+        self.assertEqual(r.status_code, 200, 'missing phone must return form with errors (200)')
+        self.assertFalse(User.objects.filter(email='verifycoach@test.com').exists(),
+                         'no user must be created when phone is missing')
+        form = r.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertIn('phone', form.errors, 'form must report phone field error')
 
     # ── Test 2: 5 wrong codes -> 6th blocked ─────────────────────────────────
 
