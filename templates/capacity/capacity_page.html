@@ -16,7 +16,8 @@
     {% endif %}
   </div>
 
-  {% comment %}Status card{% endcomment %}
+  {% comment %}Status card — slot model only; hidden in per-student mode{% endcomment %}
+  {% if not per_student_periods %}
   <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
     <div class="px-5 py-3.5 border-b border-ink-700">
       <h2 class="text-sm font-semibold text-ink-200">Mevcut Kontenjan</h2>
@@ -41,6 +42,7 @@
     </div>
     {% endif %}
   </div>
+  {% endif %}
 
   {% comment %}Purchase form{% endcomment %}
   {% if cfg.per_slot_price_kurus > 0 %}

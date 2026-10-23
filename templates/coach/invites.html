@@ -33,15 +33,15 @@
       </div>
     </div>
     {% if capacity_blocked and capacity_error %}
-    <div class="rounded-xl bg-ruby-tint border border-ruby-500/30 px-4 py-3 text-sm text-ruby-400">
+    <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
       {{ capacity_error }}
     </div>
     {% endif %}
   </div>
   {% endif %}
 
-  {# ── Kontenjan card ─────────────────────────────────────────────────────── #}
-  {% if enforcement_on or cap_status.granted > 0 %}
+  {# ── Kontenjan card — hidden in per-student mode ─────────────────────────── #}
+  {% if not per_student_periods %}{% if enforcement_on or cap_status.granted > 0 %}
   <div class="border-b border-ink-700 px-4 md:px-6 py-4">
 
     {# Three stat tiles #}
@@ -103,7 +103,7 @@
       Kontenjan satın al
     </a>
   </div>
-  {% endif %}
+  {% endif %}{% endif %}
 
   <div class="p-4 md:p-6">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -114,6 +114,15 @@
           <h3 class="text-sm font-semibold text-ink-100 uppercase tracking-wider mb-4">Yeni Davet</h3>
 
           {% if capacity_blocked %}
+          {% if per_student_periods %}
+          <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+            <p>{{ capacity_error }}</p>
+            <a href="{% url 'capacity:page' %}"
+               class="mt-2 inline-flex items-center h-8 px-4 rounded-lg bg-steel-500 hover:bg-steel-400 text-white text-xs font-semibold transition-colors">
+              Davet Hakkı Al
+            </a>
+          </div>
+          {% else %}
           <div class="rounded-xl bg-ruby-tint border border-ruby-500/30 px-4 py-3 text-sm text-ruby-400">
             <p>{{ capacity_error }}</p>
             <a href="{% url 'capacity:page' %}"
@@ -121,6 +130,7 @@
               Kontenjan satın al
             </a>
           </div>
+          {% endif %}
           {% else %}
 
           <form method="post" class="space-y-3">

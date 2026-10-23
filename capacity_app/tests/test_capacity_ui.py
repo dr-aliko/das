@@ -239,3 +239,82 @@ def test_student_invite_page_no_capacity_wording(coach, settings, db):
     body = resp.content.decode('utf-8')
     assert 'Kontenjan satın al' not in body
     assert '/coach/kontenjan/' not in body
+
+
+# ── per-student flag: slot card hidden, credit card shown ─────────────────────
+
+@pytest.mark.django_db
+def test_invites_flag_true_hides_slot_card_shows_credit_card(coach_client, active_grant, settings):
+    """With COACH_PER_STUDENT_PERIODS=True the old Kullanılan/Toplam/Boş tiles
+    must not appear; the new 'Kullanılabilir Hak' tile must appear."""
+    settings.COACH_PER_STUDENT_PERIODS = True
+    settings.COACH_CAPACITY_ENFORCED = True
+    resp = coach_client.get(reverse('users_app:coach_invites'))
+    assert resp.status_code == 200
+    body = resp.content.decode('utf-8')
+    # New credit card present
+    assert 'Kullanılabilir Hak' in body
+    # Old slot tiles absent
+    assert 'Kullanılan' not in body
+    assert 'Toplam' not in body or 'Kullanılan' not in body  # slot header gone
+    assert 'Kontenjan satın al' not in body
+
+
+@pytest.mark.django_db
+def test_invites_flag_false_slot_card_present(coach_client, active_grant, settings):
+    """With COACH_PER_STUDENT_PERIODS=False and an active grant the old slot card
+    (Kullanılan / Toplam / Boş) must still appear."""
+    settings.COACH_PER_STUDENT_PERIODS = False
+    settings.COACH_CAPACITY_ENFORCED = False
+    resp = coach_client.get(reverse('users_app:coach_invites'))
+    assert resp.status_code == 200
+    body = resp.content.decode('utf-8')
+    assert 'Kullanılan' in body
+
+
+@pytest.mark.django_db
+def test_activation_command_matches_get_capacity_status(settings):
+    """Command converts the same number of credits as get_capacity_status.free
+    for a coach with two active grants (8+5=13) and 11 own students (free=2)."""
+    from datetime import date, timedelta
+    from io import StringIO
+
+    from django.core.management import call_command
+    from django.db.models import Sum
+
+    from capacity_app.models import CoachCapacityGrant, CoachCreditLedger
+    from capacity_app.services import get_capacity_status
+    from users_app.models import CoachStudent
+
+    settings.COACH_PER_STUDENT_PERIODS = False  # command works regardless of flag
+
+    coach = baker.make(User, role='coach', is_active=True, is_approved=True)
+    today = date.today()
+
+    baker.make(CoachCapacityGrant, coach=coach, slots=8,
+               period_start=today - timedelta(days=1),
+               period_end=today + timedelta(days=29))
+    baker.make(CoachCapacityGrant, coach=coach, slots=5,
+               period_start=today - timedelta(days=1),
+               period_end=today + timedelta(days=29))
+
+    for _ in range(11):
+        s = baker.make(User, role='student', is_active=True)
+        baker.make(CoachStudent, coach=coach, student=s, active=True, source='coach')
+
+    status = get_capacity_status(coach)
+    assert status['granted'] == 13
+    assert status['in_use'] == 11
+    assert status['free'] == 2
+
+    call_command('activate_per_student_periods', apply=True, coach=coach.pk,
+                 stdout=StringIO())
+
+    converted = (
+        CoachCreditLedger.objects
+        .filter(coach=coach, reason=CoachCreditLedger.REASON_CONVERTED_FROM_GRANT)
+        .aggregate(total=Sum('delta'))['total'] or 0
+    )
+    assert converted == status['free'], (
+        f'command wrote {converted} credits but get_capacity_status.free={status["free"]}'
+    )

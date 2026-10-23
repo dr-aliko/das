@@ -64,7 +64,7 @@ class Command(BaseCommand):
             # (a) links needing a due date
             links_to_date = [cs for cs in own_links if cs.next_payment_due is None]
 
-            # (b) active grants to convert
+            # (b) active grants to convert — use same aggregation as get_capacity_status
             active_grants = list(
                 CoachCapacityGrant.objects.filter(
                     coach=coach,
@@ -74,8 +74,8 @@ class Command(BaseCommand):
             )
             in_use = len(own_links)
 
-            credits_to_convert = 0
             grants_to_process = []
+            total_grant_slots = 0
             for grant in active_grants:
                 marker = f'grant_id:{grant.pk}'
                 already = CoachCreditLedger.objects.filter(
@@ -85,9 +85,16 @@ class Command(BaseCommand):
                 ).exists()
                 if already:
                     continue
-                unused = max(0, grant.slots - in_use)
-                grants_to_process.append((grant, unused))
-                credits_to_convert += unused
+                grants_to_process.append(grant)
+                total_grant_slots += grant.slots
+
+            # Aggregate across all unprocessed grants, then subtract in_use once —
+            # same formula as get_capacity_status so the numbers always agree.
+            credits_to_convert = max(0, total_grant_slots - in_use)
+
+            has_manual = CoachCreditLedger.objects.filter(
+                coach=coach, reason=CoachCreditLedger.REASON_MANUAL_GRANT
+            ).exists()
 
             existing_balance = sum(
                 e.delta for e in CoachCreditLedger.objects.filter(coach=coach)
@@ -95,11 +102,12 @@ class Command(BaseCommand):
             resulting_balance = existing_balance + credits_to_convert
 
             rows.append({
-                'coach':    f'{coach.full_name} ({coach.email})',
-                'students': len(own_links),
-                'dates':    len(links_to_date),
-                'credits':  credits_to_convert,
-                'balance':  resulting_balance,
+                'coach':      f'{coach.full_name} ({coach.email})',
+                'students':   len(own_links),
+                'dates':      len(links_to_date),
+                'credits':    credits_to_convert,
+                'balance':    resulting_balance,
+                'has_manual': has_manual,
             })
             total_dates   += len(links_to_date)
             total_credits += credits_to_convert
@@ -112,16 +120,15 @@ class Command(BaseCommand):
                         cs.save(update_fields=['next_payment_due'])
                         changed = True
 
-                    for grant, unused in grants_to_process:
-                        if unused > 0:
-                            CoachCreditLedger.objects.create(
-                                coach=coach,
-                                delta=unused,
-                                reason=CoachCreditLedger.REASON_CONVERTED_FROM_GRANT,
-                                order=grant.order,
-                                notes=f'grant_id:{grant.pk}',
-                            )
-                            changed = True
+                    if grants_to_process and credits_to_convert > 0:
+                        all_markers = ', '.join(f'grant_id:{g.pk}' for g in grants_to_process)
+                        CoachCreditLedger.objects.create(
+                            coach=coach,
+                            delta=credits_to_convert,
+                            reason=CoachCreditLedger.REASON_CONVERTED_FROM_GRANT,
+                            notes=all_markers,
+                        )
+                        changed = True
 
                     if changed:
                         CoachCreditLedger.objects.create(
@@ -134,13 +141,14 @@ class Command(BaseCommand):
         # Print table
         mode = 'APPLY' if apply else 'DRY RUN'
         self.stdout.write(f'\n{mode} — activate_per_student_periods\n')
-        header = f'{"Koç":<40} {"Öğr":>5} {"Tarih":>6} {"Kredi":>6} {"Bakiye":>7}'
+        header = f'{"Koç":<40} {"Öğr":>5} {"Tarih":>6} {"Kredi":>6} {"Bakiye":>7}  {"Not"}'
         self.stdout.write(header)
         self.stdout.write('-' * len(header))
         for r in rows:
+            note = 'WARN: manual_grant mevcut' if r['has_manual'] else ''
             self.stdout.write(
                 f'{r["coach"][:40]:<40} {r["students"]:>5} '
-                f'{r["dates"]:>6} {r["credits"]:>6} {r["balance"]:>7}'
+                f'{r["dates"]:>6} {r["credits"]:>6} {r["balance"]:>7}  {note}'
             )
         self.stdout.write('-' * len(header))
         self.stdout.write(
