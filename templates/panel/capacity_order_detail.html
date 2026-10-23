@@ -2,7 +2,7 @@
 {% load earnings_filters %}
 {% load panel_nav_tags %}
 
-{% block title %}Kontenjan Siparişi #{{ order.pk }} — Panel{% endblock %}
+{% block title %}{% if per_student %}Davet Hakkı{% else %}Kontenjan{% endif %} Siparişi #{{ order.pk }} — Panel{% endblock %}
 
 {% block content %}
 <div class="space-y-5 max-w-2xl">
@@ -10,8 +10,8 @@
   {% panel_nav active_section %}
 
   <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
-    <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← Kontenjan</a>
-    <h1 class="text-lg font-semibold text-white mt-2">Kontenjan Siparişi #{{ order.pk }}</h1>
+    <a href="{% url 'capacity_panel:overview' %}" class="text-xs text-ink-500 hover:text-ink-300 transition-colors">← {% if per_student %}Davet Hakkı{% else %}Kontenjan{% endif %}</a>
+    <h1 class="text-lg font-semibold text-white mt-2">{% if per_student %}Davet Hakkı{% else %}Kontenjan{% endif %} Siparişi #{{ order.pk }}</h1>
     <p class="text-sm text-ink-400">{{ order.created_at|date:"d.m.Y H:i" }}</p>
   </div>
 
@@ -34,7 +34,7 @@
         <span class="text-ink-200">{{ order.coach.full_name }} ({{ order.coach.email }})</span>
       </div>
       <div class="flex gap-4 text-sm">
-        <span class="text-ink-500 w-40 shrink-0">Slot</span>
+        <span class="text-ink-500 w-40 shrink-0">{% if per_student %}Hak{% else %}Slot{% endif %}</span>
         <span class="text-ink-200 font-semibold tnum">{{ order.slots }}</span>
       </div>
       <div class="flex gap-4 text-sm">
@@ -42,8 +42,8 @@
         <span class="text-ink-200 tnum">{{ order.amount_kurus|kurus_tl }}</span>
       </div>
       <div class="flex gap-4 text-sm">
-        <span class="text-ink-500 w-40 shrink-0">Slot Fiyatı</span>
-        <span class="text-ink-300 tnum">{{ order.per_slot_kurus|kurus_tl }} / slot</span>
+        <span class="text-ink-500 w-40 shrink-0">{% if per_student %}Hak Fiyatı{% else %}Slot Fiyatı{% endif %}</span>
+        <span class="text-ink-300 tnum">{{ order.per_slot_kurus|kurus_tl }} / {% if per_student %}hak{% else %}slot{% endif %}</span>
       </div>
       <div class="flex gap-4 text-sm">
         <span class="text-ink-500 w-40 shrink-0">Referans Kodu</span>
@@ -73,21 +73,27 @@
     <div class="px-5 py-3 border-b border-ink-700">
       <h2 class="text-sm font-semibold text-ink-200">İşlemler</h2>
     </div>
-    <div class="px-5 py-4 flex gap-3">
-      <form method="post" action="{% url 'capacity_panel:order_mark_paid' pk=order.pk %}">
-        {% csrf_token %}
-        <button type="submit"
-                class="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
-          Ödeme Alındı
-        </button>
-      </form>
-      <form method="post" action="{% url 'capacity_panel:order_cancel' pk=order.pk %}">
-        {% csrf_token %}
-        <button type="submit"
-                class="h-9 px-4 rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-600 text-ink-300 text-sm font-medium transition-colors">
-          İptal Et
-        </button>
-      </form>
+    <div class="px-5 py-4 space-y-3">
+      {% if per_student %}
+      <p class="text-sm text-ink-400">Onayda <span class="text-white font-semibold">{{ order.slots }} davet hakkı</span> tanımlanacak.</p>
+      {% endif %}
+      <div class="flex gap-3">
+        <form method="post" action="{% url 'capacity_panel:order_mark_paid' pk=order.pk %}">
+          {% csrf_token %}
+          <button type="submit"
+                  onclick="return confirm('Ödemenin hesaba geçtiğinden emin misin?\n{{ order.coach.full_name }} · {{ order.ref_code }} · {{ order.amount_kurus|kurus_tl }}')"
+                  class="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
+            Ödeme Alındı
+          </button>
+        </form>
+        <form method="post" action="{% url 'capacity_panel:order_cancel' pk=order.pk %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="h-9 px-4 rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-600 text-ink-300 text-sm font-medium transition-colors">
+            İptal Et
+          </button>
+        </form>
+      </div>
     </div>
   </div>
   {% endif %}

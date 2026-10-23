@@ -10,7 +10,7 @@ def _build_nav_groups(per_student):
         {'key': 'koclar',        'label': 'Koç listesi & WP', 'url_name': 'panel_wp_koclar',       'badge_key': 'no_wp'},
         {'key': 'koc_ekle',      'label': 'Koç ekle',         'url_name': 'panel_koc_ekle'},
         {'key': 'koc_belgeleri', 'label': 'Belgeler',          'url_name': 'staff_coach_documents', 'badge_key': 'belgeler'},
-        {'key': 'capacity',      'label': capacity_label,      'url_name': 'capacity_panel:overview'},
+        {'key': 'capacity',      'label': capacity_label,      'url_name': 'capacity_panel:overview', 'badge_key': 'transfers_capacity'},
     ]
     if per_student:
         koclar_pages.append({

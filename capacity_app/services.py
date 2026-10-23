@@ -212,6 +212,16 @@ def mark_capacity_order_paid(order):
             ).exists()
             if not already:
                 grant_credits(order.coach, order.slots, CoachCreditLedger.REASON_PURCHASE_APPROVED, order=order)
+                from users_app.models import Notification
+                Notification.objects.create(
+                    user=order.coach,
+                    title='Davet hakkı tanımlandı',
+                    body=(
+                        f'{order.slots} davet hakkı hesabınıza eklendi. '
+                        f'Referans: {order.ref_code}'
+                    ),
+                    url='/auth/invite-students/',
+                )
                 _log.info(
                     'capacity: order pk=%s marked paid, %d credits granted for coach pk=%s',
                     order.pk, order.slots, order.coach_id,

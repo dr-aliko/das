@@ -55,11 +55,15 @@ def qs_transfers_purchase():
 
 
 def qs_transfers_capacity():
+    """Claimed capacity orders awaiting staff approval (coach has notified payment)."""
     from capacity_app.models import CoachCapacityOrder
     return (CoachCapacityOrder.objects
             .select_related('coach')
-            .filter(status=CoachCapacityOrder.STATUS_AWAITING_TRANSFER)
-            .order_by('-created_at'))
+            .filter(
+                status=CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
+                payment_claimed_at__isnull=False,
+            )
+            .order_by('-payment_claimed_at'))
 
 
 def qs_earnings():
@@ -209,7 +213,8 @@ def all_badges():
     belgeler        = _safe('pbadge:belgeler',        _belgeler)
     renewals_claimed = _safe('pbadge:renewals_claimed', _renewals_claimed)
 
-    transfers = t_purchase + t_capacity
+    # Capacity claimed is distinct from the purchase-order sales badge
+    transfers = t_purchase
 
     return {
         # Raw counters
@@ -225,10 +230,10 @@ def all_badges():
         # Per-page second-row badge values
         'belgeler':            belgeler,
         # Group-level pill badge rollups
-        'koclar':              belgeler + no_wp,
+        'koclar':              belgeler + no_wp + t_capacity,
         'ogrenciler_group':    overdue,
         'satis':               transfers,
         'odemeler_group':      earnings,
         # Home-page helper
-        'any_pending': bool(belgeler + no_wp + transfers + earnings + overdue + renewals_claimed),
+        'any_pending': bool(belgeler + no_wp + t_capacity + transfers + earnings + overdue + renewals_claimed),
     }
