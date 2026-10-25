@@ -13,7 +13,6 @@ urlpatterns = [
     # Tasks
     path('api/gorevler', views.GorevListView.as_view(), name='api-gorevler'),
     path('api/gorev/<int:pk>', views.GorevDetailView.as_view(), name='api-gorev-detail'),
-    path('api/gorev/<int:pk>/move', views.GorevMoveView.as_view(), name='api-gorev-move'),
     path('api/gorev/<int:pk>/copy', views.GorevCopyView.as_view(), name='api-gorev-copy'),
     path('api/gorev/<int:pk>/reorder', views.GorevReorderView.as_view(), name='api-gorev-reorder'),
     # Kaynak kitaplar

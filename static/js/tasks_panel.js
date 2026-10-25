@@ -1123,15 +1123,15 @@ function panel() {
     async onDrop(evt, toDate) {
       if (!this.dragTaskId) return;
       if (this.dragFromDate !== toDate) {
-        // Cross-day: move — server changes only tarih+sira_no, detaylar/meta/note untouched.
+        // Cross-day drag = COPY: task stays on source day, duplicate created on target day.
         try {
-          await fetch(`/coach/tasks/api/gorev/${this.dragTaskId}/move`, {
+          await fetch(`/coach/tasks/api/gorev/${this.dragTaskId}/copy`, {
             method: 'POST',
             headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
             body: JSON.stringify({ hedef_tarih: toDate }),
           });
         } catch (e) {
-          console.error('[onDrop move]', e);
+          console.error('[onDrop copy]', e);
         }
       }
       // Same-day drop: intentional no-op (sira_no/meta invariant preserved).

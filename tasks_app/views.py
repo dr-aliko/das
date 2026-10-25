@@ -199,23 +199,6 @@ class GorevDetailView(View):
 
 
 @method_decorator(coach_required, name='dispatch')
-class GorevMoveView(View):
-    def post(self, request, pk: int):
-        try:
-            hedef = date.fromisoformat(_body(request)["hedef_tarih"])
-        except (KeyError, ValueError):
-            return JsonResponse({"errors": "hedef_tarih gerekli"}, status=400)
-        from tasks_app.models import GorevGrubu
-        sid = GorevGrubu.objects.filter(
-            student__coach=request.user, pk=pk
-        ).values_list('student_id', flat=True).first()
-        if sid and is_student_program_expired(request.user, sid):
-            return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
-        ok = tasks.move_to_date(request.user, pk, hedef)
-        return JsonResponse({"ok": ok}, status=200 if ok else 404)
-
-
-@method_decorator(coach_required, name='dispatch')
 class GorevCopyView(View):
     def post(self, request, pk: int):
         try:

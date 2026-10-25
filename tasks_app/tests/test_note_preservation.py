@@ -1,11 +1,11 @@
 """
-Tests for note + video preservation when moving/copying coach tasks.
+Tests for note + video preservation when copying/editing coach tasks.
 
 Contract verified:
-- move_to_date changes ONLY tarih and sira_no (meta, detaylar, note, duration untouched)
-- copy_to_date preserves everything including the note
-- moving a task without videos has no regression
-- expired student → 403 on move endpoint
+- copy_to_date preserves note, videos, meta, duration on the new copy
+- copy_to_date leaves the original task fully intact on the original day
+- update() preserves the note when detaylar payload includes the note row
+- expired student → 403 on copy endpoint
 """
 import json
 from datetime import date, timedelta
@@ -57,46 +57,10 @@ def _make_konu_task_with_videos_and_note(student, tarih):
     return grup
 
 
-# ── Test 1: move preserves note, videos, meta, duration ───────────────────────
+# ── Test 1: copy preserves note, videos, meta, duration on the target day ─────
 
 @pytest.mark.django_db
-def test_move_konu_anlatimi_with_videos_preserves_all_fields(coach, student):
-    monday = date.today()
-    tuesday = monday + timedelta(days=1)
-
-    grup = _make_konu_task_with_videos_and_note(student, monday)
-    original_meta = dict(grup.meta)
-    original_sure = grup.ozel_sure_dk
-    original_detaylar = list(grup.detaylar.values("aciklama", "sure_bilgisi"))
-
-    ok = tasks_svc.move_to_date(coach, grup.id, tuesday)
-
-    assert ok is True
-    grup.refresh_from_db()
-
-    # Only tarih and sira_no changed
-    assert grup.tarih == tuesday
-    assert grup.ders_title == "Matematik - Konu Anlatimi"
-    assert grup.ozel_sure_dk == original_sure
-    assert grup.meta == original_meta
-
-    # detaylar (videos + note) unchanged
-    detaylar_after = list(grup.detaylar.values("aciklama", "sure_bilgisi"))
-    assert len(detaylar_after) == 3
-    note_rows = [d for d in detaylar_after if not d["sure_bilgisi"]]
-    assert len(note_rows) == 1
-    assert note_rows[0]["aciklama"] == "bu konuya dikkat et"
-    video_rows = [d for d in detaylar_after if d["sure_bilgisi"]]
-    assert len(video_rows) == 2
-
-    # Original day has no tasks left
-    assert GorevGrubu.objects.filter(student=student, tarih=monday).count() == 0
-
-
-# ── Test 2: copy preserves note, videos, meta, duration ───────────────────────
-
-@pytest.mark.django_db
-def test_copy_konu_anlatimi_with_videos_preserves_all_fields(coach, student):
+def test_copy_konu_anlatimi_preserves_note_on_target_day(coach, student):
     monday = date.today()
     tuesday = monday + timedelta(days=1)
 
@@ -115,43 +79,68 @@ def test_copy_konu_anlatimi_with_videos_preserves_all_fields(coach, student):
     note_rows = [d for d in detaylar if not d["sure_bilgisi"]]
     assert len(note_rows) == 1
     assert note_rows[0]["aciklama"] == "bu konuya dikkat et"
+    video_rows = [d for d in detaylar if d["sure_bilgisi"]]
+    assert len(video_rows) == 2
 
-    # Original also still has 3 detaylar
-    assert grup.detaylar.count() == 3
 
-
-# ── Test 3: move task without videos — no regression ─────────────────────────
+# ── Test 2: copy leaves the original task fully intact on the original day ────
 
 @pytest.mark.django_db
-def test_move_task_without_videos_no_regression(coach, student):
+def test_copy_konu_anlatimi_original_task_unmodified(coach, student):
     monday = date.today()
-    wednesday = monday + timedelta(days=2)
+    tuesday = monday + timedelta(days=1)
 
-    grup = GorevGrubu.objects.create(
-        student=student, tarih=monday,
-        aktivite_tipi="soru_cozumu",
-        ders_title="TYT - Matematik",
-        ozel_sure_dk=45, sira_no=1, meta=None,
-    )
-    GrupDetay.objects.create(grup=grup, aciklama="30 soru çöz", sure_bilgisi="")
+    grup = _make_konu_task_with_videos_and_note(student, monday)
 
-    ok = tasks_svc.move_to_date(coach, grup.id, wednesday)
+    tasks_svc.copy_to_date(coach, grup.id, tuesday)
 
-    assert ok is True
+    # Both days now have a task
+    assert GorevGrubu.objects.filter(student=student, tarih=monday).count() == 1
+    assert GorevGrubu.objects.filter(student=student, tarih=tuesday).count() == 1
+
+    # Original task unchanged on monday
     grup.refresh_from_db()
-    assert grup.tarih == wednesday
-    assert grup.ozel_sure_dk == 45
-    detaylar = list(grup.detaylar.values_list("aciklama", flat=True))
-    assert detaylar == ["30 soru çöz"]
-    assert GorevGrubu.objects.filter(student=student, tarih=monday).count() == 0
+    assert grup.tarih == monday
+    original_detaylar = list(grup.detaylar.values("aciklama", "sure_bilgisi"))
+    assert len(original_detaylar) == 3
+    note_rows = [d for d in original_detaylar if not d["sure_bilgisi"]]
+    assert note_rows[0]["aciklama"] == "bu konuya dikkat et"
 
 
-# ── Test 4: expired student → 403 on move endpoint ───────────────────────────
+# ── Test 3: update() with note in payload preserves note ─────────────────────
 
 @pytest.mark.django_db
-def test_move_expired_student_returns_403(coach, student):
-    from datetime import timedelta
-    from django.utils import timezone
+def test_edit_save_with_note_in_detaylar_preserves_note(coach, student):
+    """update() deletes then rebuilds detaylar; if the payload includes the note row it must survive."""
+    monday = date.today()
+    grup = _make_konu_task_with_videos_and_note(student, monday)
+
+    tasks_svc.update(
+        coach, grup.id,
+        tarih=monday,
+        ders_title=grup.ders_title,
+        ozel_sure_dk=grup.ozel_sure_dk,
+        aktivite_tipi=grup.aktivite_tipi,
+        detaylar=[
+            {"aciklama": "Video 1", "sure_bilgisi": "30 dk"},
+            {"aciklama": "Video 2", "sure_bilgisi": "20 dk"},
+            {"aciklama": "bu konuya dikkat et", "sure_bilgisi": ""},
+        ],
+        meta=grup.meta,
+    )
+
+    detaylar = list(grup.detaylar.values("aciklama", "sure_bilgisi"))
+    note_rows = [d for d in detaylar if not d["sure_bilgisi"]]
+    assert len(note_rows) == 1
+    assert note_rows[0]["aciklama"] == "bu konuya dikkat et"
+    video_rows = [d for d in detaylar if d["sure_bilgisi"]]
+    assert len(video_rows) == 2
+
+
+# ── Test 4: expired student → 403 on copy endpoint ───────────────────────────
+
+@pytest.mark.django_db
+def test_copy_expired_student_returns_403(coach, student):
     from users_app.models import CoachStudent
 
     monday = date.today()
@@ -171,11 +160,10 @@ def test_move_expired_student_returns_403(coach, student):
     c = Client()
     c.force_login(coach)
     resp = c.post(
-        f'/coach/tasks/api/gorev/{grup.id}/move',
+        f'/coach/tasks/api/gorev/{grup.id}/copy',
         data=json.dumps({"hedef_tarih": tuesday.isoformat()}),
         content_type='application/json',
     )
     assert resp.status_code == 403
-    # Task must stay on original date
-    grup.refresh_from_db()
-    assert grup.tarih == monday
+    # No copy created — only the original task exists
+    assert GorevGrubu.objects.filter(student=student).count() == 1
