@@ -46,6 +46,9 @@
     z-index: 1;
     width: 100%;
     max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
   }
   .err-badge {
@@ -63,7 +66,9 @@
     padding: 4px 14px;
     margin-bottom: 20px;
   }
+  .err-badge svg { display: block; flex-shrink: 0; }
   .err-code {
+    align-self: stretch;
     font-size: 96px;
     font-weight: 800;
     line-height: 1;
@@ -75,6 +80,7 @@
     margin: 0 0 24px;
   }
   .err-title {
+    align-self: stretch;
     font-size: 22px;
     font-weight: 700;
     color: #ffffff;
@@ -82,6 +88,7 @@
     margin: 0 0 12px;
   }
   .err-sub {
+    align-self: stretch;
     font-size: 14px;
     color: #cbd5e1;
     line-height: 1.6;
@@ -107,6 +114,7 @@
   }
   .err-btn:hover { opacity: 0.88; transform: translateY(-1px); }
   .err-timer {
+    align-self: stretch;
     margin-top: 20px;
     font-size: 12px;
     color: #94a3b8;
@@ -122,7 +130,7 @@
     text-decoration: none;
     margin-bottom: 48px;
   }
-  .err-brand svg { color: #818cf8; }
+  .err-brand svg { display: block; color: #818cf8; }
 </style>
 </head>
 <body>
