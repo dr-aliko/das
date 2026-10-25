@@ -974,6 +974,11 @@ function panel() {
       if (g.aktivite_tipi === 'konu_anlatimi' && g.meta) {
         await this._hydrateKonuEdit(g);
       }
+      // Restore konu_not from the non-video detay (video rows have "X dk" sure_bilgisi; note row has "").
+      if (g.aktivite_tipi === 'konu_anlatimi') {
+        const noteDetay = (g.detaylar ?? []).find(d => !d.sure_bilgisi);
+        if (noteDetay?.aciklama) this.taskForm.konu_not = noteDetay.aciklama;
+      }
       this.showTaskModal = true;
       // Scroll AFTER modal is visible — scrollIntoView on a hidden element has no effect.
       if (g.aktivite_tipi === 'konu_anlatimi' && g.meta) {
@@ -1118,18 +1123,18 @@ function panel() {
     async onDrop(evt, toDate) {
       if (!this.dragTaskId) return;
       if (this.dragFromDate !== toDate) {
-        // Cross-day: copy — server carries meta.videos forward intact.
+        // Cross-day: move — server changes only tarih+sira_no, detaylar/meta/note untouched.
         try {
-          await fetch(`/coach/tasks/api/gorev/${this.dragTaskId}/copy`, {
+          await fetch(`/coach/tasks/api/gorev/${this.dragTaskId}/move`, {
             method: 'POST',
             headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
             body: JSON.stringify({ hedef_tarih: toDate }),
           });
         } catch (e) {
-          console.error('[onDrop copy]', e);
+          console.error('[onDrop move]', e);
         }
       }
-      // Same-day drop: intentional no-op (meta invariant preserved).
+      // Same-day drop: intentional no-op (sira_no/meta invariant preserved).
       this.dragTaskId = null; this.dragFromDate = null;
       await this.loadWeek();
     },

@@ -1303,6 +1303,11 @@ function coachMobilePanel() {
       }else{
         this.legacyHint=false;
       }
+      // Restore konu_not from the non-video detay (video rows have "X dk" sure_bilgisi; note row has "").
+      if(g.aktivite_tipi==='konu_anlatimi'){
+        const noteDetay=(g.detaylar??[]).find(d=>!d.sure_bilgisi);
+        if(noteDetay?.aciklama) this.taskForm.konu_not=noteDetay.aciklama;
+      }
       this.showEditSheet=true;
     },
     openCompletedTask(task){ this.openEdit(task); },

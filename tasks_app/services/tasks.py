@@ -227,6 +227,26 @@ def delete(coach: User, grup_id: int) -> bool:
 
 
 @transaction.atomic
+def move_to_date(coach: User, grup_id: int, hedef_tarih: date) -> bool:
+    """Change only tarih and sira_no — every other field (meta, detaylar, note) untouched."""
+    grup = (
+        GorevGrubu.objects.select_for_update()
+        .filter(student__coach=coach, pk=grup_id)
+        .first()
+    )
+    if not grup:
+        return False
+    next_sira = (
+        GorevGrubu.objects.filter(student=grup.student, tarih=hedef_tarih)
+        .aggregate(m=Max("sira_no"))["m"] or 0
+    ) + 1
+    grup.tarih = hedef_tarih
+    grup.sira_no = next_sira
+    grup.save(update_fields=["tarih", "sira_no"])
+    return True
+
+
+@transaction.atomic
 def copy_to_date(coach: User, grup_id: int, hedef_tarih: date) -> GorevGrubu | None:
     src = (
         GorevGrubu.objects.filter(student__coach=coach, pk=grup_id)
