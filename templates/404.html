@@ -1,0 +1,175 @@
+{% load static %}
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>404 · Sayfa Bulunamadı · Vagus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'marketing/site.css' %}" />
+<style>
+  .err-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background: linear-gradient(135deg, #0a0e14 0%, #0f141c 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .err-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 700px 500px at 20% 20%, rgba(99,102,241,0.18), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 80% 80%, rgba(124,58,237,0.12), transparent 60%);
+    pointer-events: none;
+  }
+  .err-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent 70%);
+    pointer-events: none;
+  }
+  .err-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+  .err-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #818cf8;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-bottom: 28px;
+  }
+  .err-code {
+    font-size: 96px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #e2e8f0 0%, #818cf8 60%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 24px;
+  }
+  .err-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--heading);
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  .err-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 0 36px;
+  }
+  .err-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 24px;
+    background: #6366f1;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 140ms, transform 100ms;
+  }
+  .err-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+  .err-timer {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--muted-2);
+  }
+  .err-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 18px;
+    color: white;
+    letter-spacing: -0.025em;
+    text-decoration: none;
+    margin-bottom: 48px;
+  }
+  .err-brand svg { color: #818cf8; }
+</style>
+</head>
+<body>
+
+<div class="err-shell">
+  <div class="err-card">
+
+    <a href="{% url 'users_app:login' %}" class="err-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5L11.5 18.5C11.7 18.9 12.3 18.9 12.5 18.5L14.5 14.5L16 16.5L19.5 4.5"/></svg>
+      Vagus
+    </a>
+
+    <div class="err-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Hata
+    </div>
+
+    <div class="err-code">404</div>
+
+    <h1 class="err-title">Aradığınız sayfa bulunamadı.</h1>
+    <p class="err-sub">Gitmek istediğiniz sayfa kaldırılmış, taşınmış<br>veya hiç var olmamış olabilir.</p>
+
+    <a href="{% url 'users_app:login' %}" class="err-btn" id="login-btn">
+      Giriş Sayfasına Dön
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+
+    <p class="err-timer" id="countdown-text">10 saniye içinde giriş sayfasına yönlendirileceksiniz.</p>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var loginUrl = "{% url 'users_app:login' %}";
+    var el = document.getElementById('countdown-text');
+    var n = 10;
+    var timer = setInterval(function () {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(timer);
+        window.location.href = loginUrl;
+      } else {
+        el.textContent = n + ' saniye içinde giriş sayfasına yönlendirileceksiniz.';
+      }
+    }, 1000);
+  })();
+</script>
+
+</body>
+</html>
