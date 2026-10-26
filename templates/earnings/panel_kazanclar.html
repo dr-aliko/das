@@ -182,7 +182,12 @@
               {% if row.status == 'held' %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-ink-800 text-ink-400">Beklemede</span>
               {% elif row.status == 'released' %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-400">Serbest</span>
+                {% if row.split_from_reassign %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);color:#a78bfa">Tamamlandı</span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-400">Serbest</span>
+                {% endif %}
               {% elif row.status == 'approved' %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 border border-amber-500/20 text-amber-400">Onaylandı</span>
               {% elif row.status == 'paid' %}

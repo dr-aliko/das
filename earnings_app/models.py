@@ -94,6 +94,11 @@ class EarningRow(models.Model):
     gap_fallback = models.BooleanField(default=False,
                                        help_text='Aralık günlüğü boşluğu; mevcut koça atandı')
 
+    split_from_reassign = models.BooleanField(
+        default=False,
+        help_text='Koç değişikliği sırasında orantısal bölünme ile oluşturuldu',
+    )
+
     payout_ref  = models.CharField(max_length=255, blank=True, default='')
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey(

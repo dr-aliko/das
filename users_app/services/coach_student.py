@@ -144,6 +144,9 @@ def reassign_student(student, new_coach, acting_staff):
         student.coach = new_coach
         student.save(update_fields=['coach'])
 
+        from earnings_app.services import split_held_earnings_on_reassign
+        split_held_earnings_on_reassign(student, new_coach, old_coach)
+
         Notification.objects.create(
             user=old_coach,
             title='Öğrenci başka bir koça atandı',

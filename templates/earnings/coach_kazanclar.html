@@ -14,7 +14,8 @@
 .earn-chip-serbest   { background: var(--surface-2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.25); }
 .earn-chip-onaylandi { background: var(--surface-2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
 .earn-chip-odendi    { background: var(--surface-2); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
-.earn-chip-iptal     { background: var(--surface-2); color: var(--muted-2); }
+.earn-chip-iptal       { background: var(--surface-2); color: var(--muted-2); }
+.earn-chip-tamamlandi  { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
 .earn-progress-track { height: 6px; border-radius: 9999px; background: var(--surface-2); overflow: hidden; }
 .earn-progress-bar   { height: 100%; border-radius: 9999px; transition: width 0.3s ease; }
 
@@ -179,7 +180,7 @@
               <p class="font-semibold text-ink-100 truncate" x-text="row.student_name"></p>
               <p class="text-xs text-ink-400 mt-0.5" x-text="row.coverage_label"></p>
             </div>
-            <span class="earn-chip shrink-0" :class="chipClass(row.status)" x-text="row.status_label"></span>
+            <span class="earn-chip shrink-0" :class="chipClass(row)" x-text="row.status_label"></span>
           </div>
 
           <div>
@@ -335,7 +336,8 @@ function kazanclarApp() {
       return Object.entries(seen).sort(function(a, b) { return a[0].localeCompare(b[0]); });
     },
 
-    chipClass: function(status) {
+    chipClass: function(row) {
+      if (row.status === 'split') return 'earn-chip-tamamlandi';
       var map = {
         held:     'earn-chip-bekliyor',
         released: 'earn-chip-serbest',
@@ -343,7 +345,7 @@ function kazanclarApp() {
         paid:     'earn-chip-odendi',
         void:     'earn-chip-iptal',
       };
-      return map[status] || 'earn-chip-iptal';
+      return map[row.status] || 'earn-chip-iptal';
     },
 
     progressStyle: function(row) {

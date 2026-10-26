@@ -59,6 +59,91 @@ def compute_split(student_id, coverage_start, coverage_end, pool_kurus):
     return segments
 
 
+def split_held_earnings_on_reassign(student, new_coach, old_coach):
+    """
+    Proportionally split HELD EarningRows when a student is transferred mid-subscription.
+
+    Must be called inside an atomic transaction with row-level locks already held on
+    the student and coach records.  Takes a lock on the matching EarningRows itself.
+
+    Three scenarios per row:
+    - coverage already expired  → release fully to old coach (status RELEASED)
+    - coverage not yet started  → re-assign wholesale to new coach
+    - coverage active           → pro-rata split at today; old coach gets RELEASED row
+                                  with elapsed-days share; new coach gets fresh HELD row
+                                  with remaining-days share.
+    """
+    from .models import EarningRow
+    from datetime import date as _date
+
+    today = _date.today()
+
+    held_rows = list(
+        EarningRow.objects
+        .select_for_update()
+        .filter(student=student, status=EarningRow.STATUS_HELD)
+        .order_by('coverage_start')
+    )
+
+    for row in held_rows:
+        if row.coverage_end <= today:
+            # Period over but not yet released by the nightly job — release fully now.
+            row.coach_days = row.period_days
+            row.amount_kurus = row.pool_kurus
+            row.status = EarningRow.STATUS_RELEASED
+            row.save(update_fields=['coach_days', 'amount_kurus', 'status'])
+
+        elif row.coverage_start >= today:
+            # Period hasn't started: hand over to new coach wholesale.
+            row.coach = new_coach
+            row.save(update_fields=['coach_id'])
+
+        else:
+            # Active period: proportional split at today.
+            elapsed_days = (today - row.coverage_start).days
+            orig_end = row.coverage_end
+            remaining_days = (orig_end - today).days
+
+            # Floor to nearest 100 kuruş; remainder stays with new coach.
+            old_amount = (row.pool_kurus * elapsed_days // row.period_days // 100) * 100
+            new_amount = row.pool_kurus - old_amount
+
+            # Close old coach's share.
+            row.coverage_end = today
+            row.period_days = elapsed_days
+            row.coach_days = elapsed_days
+            row.amount_kurus = old_amount
+            row.status = EarningRow.STATUS_RELEASED
+            row.split_from_reassign = True
+            row.save(update_fields=[
+                'coverage_end', 'period_days', 'coach_days',
+                'amount_kurus', 'status', 'split_from_reassign',
+            ])
+
+            # Open new coach's share only when there are days and money remaining.
+            if remaining_days > 0 and new_amount > 0:
+                EarningRow.objects.create(
+                    order_id=row.order_id,
+                    manual_record_id=row.manual_record_id,
+                    coach=new_coach,
+                    student=student,
+                    coverage_start=today,
+                    coverage_end=orig_end,
+                    period_days=remaining_days,
+                    coach_days=0,
+                    pool_kurus=new_amount,
+                    amount_kurus=0,
+                    kind=row.kind,
+                    status=EarningRow.STATUS_HELD,
+                )
+
+    if held_rows:
+        _log.info(
+            'split_held_earnings: student pk=%s %d rows split, old_coach pk=%s new_coach pk=%s',
+            student.pk, len(held_rows), old_coach.pk, new_coach.pk,
+        )
+
+
 def create_holding_earning(order):
     """
     Create a single held EarningRow when an Order is paid.

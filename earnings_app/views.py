@@ -380,6 +380,8 @@ _STATUS_LABELS = {
     EarningRow.STATUS_VOID:     'İptal',
 }
 
+_STATUS_LABEL_SPLIT_RELEASED = 'Tamamlandı'
+
 
 def _fmt_tl(kurus):
     tl = abs(int(kurus)) // 100
@@ -498,23 +500,25 @@ def coach_kazanclar(request):
         if r.status == EarningRow.STATUS_PAID and r.paid_at:
             paid_date_str = _fmt_day(localtime(r.paid_at).date())
 
+        is_split_released = r.split_from_reassign and r.status == EarningRow.STATUS_RELEASED
         row_dicts.append({
-            'id':             r.pk,
-            'student_name':   r.student.full_name,
-            'coverage_label': f'{_fmt_day(r.coverage_start)} – {_fmt_day(display_end)}',
-            'period_days':    r.period_days,
-            'coach_days':     live_n,
-            'segments':       _build_segments(live_n, r.period_days) if is_held else [],
-            'is_held':        is_held,
-            'amount_display': '' if is_held else _fmt_tl(r.amount_kurus),
-            'pool_display':   _fmt_tl(r.pool_kurus) if is_held else '',
-            'status':         r.status,
-            'status_label':   _STATUS_LABELS.get(r.status, r.status),
-            'filter_group':   filter_group,
-            'month_key':      mk,
-            'month_label':    ml,
-            'paid_date':      paid_date_str,
-            'payout_ref':     r.payout_ref,
+            'id':                 r.pk,
+            'student_name':       r.student.full_name,
+            'coverage_label':     f'{_fmt_day(r.coverage_start)} – {_fmt_day(display_end)}',
+            'period_days':        r.period_days,
+            'coach_days':         live_n,
+            'segments':           _build_segments(live_n, r.period_days) if is_held else [],
+            'is_held':            is_held,
+            'amount_display':     '' if is_held else _fmt_tl(r.amount_kurus),
+            'pool_display':       _fmt_tl(r.pool_kurus) if is_held else '',
+            'status':             'split' if is_split_released else r.status,
+            'status_label':       _STATUS_LABEL_SPLIT_RELEASED if is_split_released else _STATUS_LABELS.get(r.status, r.status),
+            'split_from_reassign': r.split_from_reassign,
+            'filter_group':       filter_group,
+            'month_key':          mk,
+            'month_label':        ml,
+            'paid_date':          paid_date_str,
+            'payout_ref':         r.payout_ref,
         })
 
     # Soft reminder for missing phone / IBAN / document
