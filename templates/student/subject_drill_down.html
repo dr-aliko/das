@@ -565,7 +565,7 @@
             <div class="das-card p-0 overflow-hidden">
                 <div class="divide-y divide-[var(--border)]">
                   {% for exam in month.exams %}
-                  <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
+                  <div class="flex items-center justify-between p-4" x-show="dataSource === '{{ exam.source }}'">
                     <div class="flex items-center gap-3 min-w-0">
                        <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
                        <div class="min-w-0">
@@ -574,7 +574,7 @@
                        </div>
                     </div>
                     <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
-                  </a>
+                  </div>
                   {% endfor %}
                 </div>
             </div>
@@ -587,7 +587,7 @@
             <div class="das-card p-0 overflow-hidden">
                 <div class="divide-y divide-[var(--border)]">
                   {% for exam in exams.recent %}
-                  <a href="{{ exam.detail_url }}" class="flex items-center justify-between p-4 active:bg-[var(--surface-2)] transition-colors" x-show="dataSource === '{{ exam.source }}'">
+                  <div class="flex items-center justify-between p-4" x-show="dataSource === '{{ exam.source }}'">
                     <div class="flex items-center gap-3 min-w-0">
                        <div class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ subjectColor }}"></div>
                        <div class="min-w-0">
@@ -596,7 +596,7 @@
                        </div>
                     </div>
                     <div class="text-lg font-black text-[var(--heading)] tabular-nums">{{ exam.net|floatformat:2 }}</div>
-                  </a>
+                  </div>
                   {% endfor %}
                 </div>
             </div>
