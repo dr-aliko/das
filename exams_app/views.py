@@ -3783,62 +3783,129 @@ def coach_brans_analytics(request):
     })
 
 
-@coach_required
-def coach_brans_student_detail(request, student_id):
-    """Drill-down: coach sees one student's BransDeneme entries with chart + period filter."""
-    from users_app.models import User as UserModel
+def _serialize_brans_student_data(student, period, ders_filter):
+    """Build JSON-serializable data for coach_brans_student_detail and its API variant."""
     from collections import defaultdict
 
-    student = get_object_or_404(UserModel, id=student_id, role='student', coach=request.user)
-
-    period = request.GET.get('period', 'all')
     since = None
     if period == '30':
         since = date.today() - timedelta(days=30)
     elif period == '90':
         since = date.today() - timedelta(days=90)
 
-    ders_filter = request.GET.get('ders', '')
     ders_filter_id = None
+    clean_filter = ders_filter
+    if ders_filter:
+        try:
+            ders_filter_id = int(ders_filter)
+        except ValueError:
+            clean_filter = ''
 
     qs = BransDeneme.objects.filter(student=student).select_related('ders')
     if since:
         qs = qs.filter(tarih__gte=since)
-    if ders_filter:
-        try:
-            ders_filter_id = int(ders_filter)
-            qs = qs.filter(ders_id=ders_filter_id)
-        except ValueError:
-            ders_filter = ''
+    if ders_filter_id:
+        qs = qs.filter(ders_id=ders_filter_id)
 
     entries = list(qs.order_by('tarih', 'ders__exam_type', 'ders__name'))
 
-    grouped = defaultdict(list)
+    grouped_dict = defaultdict(list)
     for entry in entries:
-        grouped[entry.ders].append(entry)
-    for k in grouped:
-        grouped[k].sort(key=lambda e: e.tarih, reverse=True)
+        grouped_dict[entry.ders].append(entry)
+
+    grouped = []
+    for ders, ders_entries in grouped_dict.items():
+        ders_entries.sort(key=lambda e: e.tarih, reverse=True)
+        grouped.append({
+            'ders_name': ders.display_name,
+            'count': len(ders_entries),
+            'entries': [
+                {
+                    'id': e.id,
+                    'tarih': e.tarih.isoformat(),
+                    'dogru': e.dogru,
+                    'yanlis': e.yanlis,
+                    'bos': e.bos,
+                    'net': float(e.net),
+                    'sure_dakika': e.sure_dakika,
+                }
+                for e in ders_entries
+            ],
+        })
+    grouped.sort(key=lambda g: g['ders_name'])
 
     chart_data = _build_brans_chart_data(entries)
-    top_topics = _build_brans_topic_analytics(student, since=since, ders_id=ders_filter_id)
-    all_ders = (
+
+    top_topics_raw = _build_brans_topic_analytics(student, since=since, ders_id=ders_filter_id)
+    top_topics = [
+        {
+            'topic_name': row['topic__name'],
+            'sub_category': row['topic__sub_category'] or '',
+            'subject_name': row['topic__subject__name'],
+            'exam_type': row['topic__subject__exam_type'],
+            'toplam_yanlis': row['toplam_yanlis'],
+            'son_tarih': row['son_tarih'].isoformat() if row['son_tarih'] else '',
+        }
+        for row in top_topics_raw
+    ]
+
+    return {
+        'period': period,
+        'ders_filter': clean_filter,
+        'chart_data': chart_data,
+        'has_entries': bool(entries),
+        'grouped': grouped,
+        'top_topics': top_topics,
+    }
+
+
+@coach_required
+def coach_brans_student_detail(request, student_id):
+    """Drill-down: coach sees one student's BransDeneme entries with chart + period filter."""
+    from users_app.models import User as UserModel
+
+    student = get_object_or_404(UserModel, id=student_id, role='student', coach=request.user)
+
+    period = request.GET.get('period', 'all')
+    ders_filter = request.GET.get('ders', '')
+    data = _serialize_brans_student_data(student, period, ders_filter)
+
+    all_ders_objs = list(
         Subject.objects
         .filter(brans_denemeler__student=student)
         .distinct()
         .order_by('exam_type', 'name')
     )
+    all_ders_list = [{'id': d.pk, 'name': d.display_name} for d in all_ders_objs]
+
+    page_init = {
+        'apiUrl': reverse('coach:brans_student_detail_api', kwargs={'student_id': student_id}),
+        'period': data['period'],
+        'dersFilter': data['ders_filter'],
+        'allDers': all_ders_list,
+        'chartData': data['chart_data'],
+        'hasEntries': data['has_entries'],
+        'grouped': data['grouped'],
+        'topTopics': data['top_topics'],
+    }
 
     return render(request, 'coach/brans_student_detail.html', {
         'student': student,
-        'grouped': dict(grouped),
-        'chart_data_json': safe_json(chart_data),
-        'has_entries': bool(entries),
-        'period': period,
-        'period_choices': [('all', 'Tümü'), ('90', 'Son 3 Ay'), ('30', 'Son 30 Gün')],
-        'top_topics': top_topics,
-        'all_ders': all_ders,
-        'ders_filter': ders_filter,
+        'page_init_json': page_init,
     })
+
+
+@coach_required
+def coach_brans_student_detail_api(request, student_id):
+    """JSON API: returns period/ders-filtered data for the async coach branch detail page."""
+    if not coach_can_view_student(request.user, student_id):
+        return JsonResponse({'error': 'Yetkisiz'}, status=403)
+    from users_app.models import User as UserModel
+    student = get_object_or_404(UserModel, id=student_id, role='student')
+    period = request.GET.get('period', 'all')
+    ders_filter = request.GET.get('ders', '')
+    data = _serialize_brans_student_data(student, period, ders_filter)
+    return JsonResponse(data)
 
 
 @coach_required

@@ -30,6 +30,7 @@ urlpatterns = [
     path('task/<int:task_id>/action/', views.coach_task_action, name='task_action'),
     path('brans/', views.coach_brans_analytics, name='brans_analytics'),
     path('brans/student/<int:student_id>/', views.coach_brans_student_detail, name='brans_student_detail'),
+    path('brans/student/<int:student_id>/api/', views.coach_brans_student_detail_api, name='brans_student_detail_api'),
     # Seviye Tespit Sınavı — coach views
     path('student/<int:student_id>/seviye-tespiti/', views.coach_placement_results, name='student_placement_results'),
     path('student/<int:student_id>/seviye-tespiti/<int:attempt_id>/', views.coach_placement_detail, name='student_placement_detail'),
