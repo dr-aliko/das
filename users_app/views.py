@@ -128,9 +128,72 @@ def _send_verification_email(user, code):
     msg.send()
 
 
+_LOGIN_STATS_CACHE_KEY = 'login_panel_stats'
+
+
+def _login_panel_stats():
+    """Return {total_students, total_exams, avg_net_increase} cached for 1 hour."""
+    def _compute():
+        from itertools import groupby
+        from operator import itemgetter
+        from exams_app.models import Exam
+        from django.db.models import Count, Sum, FloatField
+        from django.db.models.functions import Coalesce
+
+        total_students = User.objects.filter(role='student').count()
+        total_exams = Exam.objects.count()
+
+        # Students who have entered at least 2 exams can contribute an increase value.
+        student_ids = list(
+            Exam.objects.values('student_id')
+            .annotate(n=Count('id'))
+            .filter(n__gte=2)
+            .values_list('student_id', flat=True)
+        )
+
+        avg_increase = 0.0
+        if student_ids:
+            rows = list(
+                Exam.objects.filter(student_id__in=student_ids)
+                .annotate(
+                    total_net=Coalesce(
+                        Sum('results__net_score'), 0.0, output_field=FloatField()
+                    )
+                )
+                .values('student_id', 'exam_date', 'created_at', 'total_net')
+                .order_by('student_id', 'exam_date', 'created_at')
+            )
+            increases = []
+            for _, group in groupby(rows, key=itemgetter('student_id')):
+                exams = list(group)
+                if len(exams) >= 2:
+                    increases.append(exams[-1]['total_net'] - exams[0]['total_net'])
+            if increases:
+                avg_increase = round(sum(increases) / len(increases), 1)
+
+        return {
+            'total_students': total_students,
+            'total_exams': total_exams,
+            'avg_net_increase': avg_increase,
+        }
+
+    return cache.get_or_set(_LOGIN_STATS_CACHE_KEY, _compute, 3600)
+
+
 class CustomLoginView(LoginView):
     form_class = EmailAuthenticationForm
     template_name = 'auth/login.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        stats = _login_panel_stats()
+        avg = stats['avg_net_increase']
+        ctx['login_stats'] = {
+            'total_students': stats['total_students'],
+            'total_exams': stats['total_exams'],
+            'avg_net_increase': f'+{avg}' if avg > 0 else str(avg),
+        }
+        return ctx
 
     # ── rate-limit helpers ───────────────────────────────────────────────────
 

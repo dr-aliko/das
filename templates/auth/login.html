@@ -183,15 +183,15 @@
 
       <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; max-width:380px; margin:0 auto;">
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">12.000+</div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_students }}</div>
           <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Aktif öğrenci</div>
         </div>
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">320K+</div>
-          <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Çözülen deneme</div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_exams }}</div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Girilen deneme</div>
         </div>
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#76d48f;">+12,4</div>
+          <div class="tnum" style="font-size:24px; font-weight:700; color:#76d48f;">{{ login_stats.avg_net_increase }}</div>
           <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Ort. net artışı</div>
         </div>
       </div>
