@@ -190,7 +190,7 @@ class CustomLoginView(LoginView):
         ctx['login_stats'] = {
             'total_students': stats['total_students'],
             'total_exams': stats['total_exams'],
-            'avg_net_increase': stats['avg_net_increase'],
+            'avg_net_increase': abs(stats['avg_net_increase']),
         }
         return ctx
 

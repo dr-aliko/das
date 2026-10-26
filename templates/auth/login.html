@@ -222,7 +222,7 @@
     var e = ease(p);
     sEl.textContent = Math.round(e * data.total_students);
     xEl.textContent = Math.round(e * data.total_exams);
-    aEl.textContent = '+' + (e * data.avg_net_increase).toFixed(1);
+    aEl.textContent = '+' + (e * Math.abs(data.avg_net_increase)).toFixed(1);
     if (p < 1) requestAnimationFrame(step);
   }
 
