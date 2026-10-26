@@ -78,7 +78,7 @@
               <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:12px;">
                 {% for c in consents %}
                 <tr>
-                  <td style="padding:5px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;width:130px;vertical-align:top;">{{ c.accepted_at|date:"d.m.Y H:i" }}</td>
+                  <td style="padding:5px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;width:150px;vertical-align:top;">{{ c.accepted_at|date:"d.m.Y H:i:s" }}{% if c.client_ip %}<br><span style="font-size:10px;color:#9ca3af;">{{ c.client_ip }}</span>{% endif %}{% if c.user_agent %}<br><span style="font-size:10px;color:#9ca3af;">{{ c.user_agent|truncatechars:40 }}</span>{% endif %}</td>
                   <td style="padding:5px 0;border-bottom:1px solid #f3f4f6;color:{% if c.accepted %}#059669{% else %}#9ca3af{% endif %};width:80px;vertical-align:top;">{% if c.accepted %}Onaylandı{% else %}—{% endif %}</td>
                   <td style="padding:5px 0;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:top;">{{ c.text }}</td>
                 </tr>

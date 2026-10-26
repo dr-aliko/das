@@ -164,7 +164,9 @@
           <span class="{% if c.accepted %}text-emerald-400{% else %}text-ink-500{% endif %} font-semibold">
             {% if c.accepted %}Onaylandı{% else %}Onaylanmadı{% endif %}
           </span>
-          <span class="text-ink-500 text-xs ml-2">v{{ c.doc_version }} · {{ c.accepted_at|date:"d.m.Y H:i" }}</span>
+          <span class="text-ink-500 text-xs ml-2">v{{ c.doc_version }} · {{ c.accepted_at|date:"d.m.Y H:i:s" }}</span>
+          <br>
+          <span class="text-ink-500 font-mono text-xs">{% if c.client_ip %}{{ c.client_ip }}{% else %}—{% endif %}{% if c.user_agent %} · {{ c.user_agent|truncatechars:72 }}{% endif %}</span>
           <br>
           <span class="text-ink-400 text-xs leading-relaxed">{{ c.text }}</span>
         </span>
