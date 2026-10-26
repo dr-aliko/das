@@ -106,12 +106,17 @@ class TestInviteGate(TestCase):
 
     def test_3_pending_invites_reduce_available_credits(self):
         """
+        With free base saturated (3 active own students):
         balance=2, pending=0 → avail=2 → can_add returns True
         balance=2, pending=2 → avail=0 → can_add returns False with 'kalmadı' msg
         balance=0, pending=0 → avail=0 → can_add returns False with 'yok' msg
         """
         from capacity_app.services import can_add_own_student
         coach = _coach('ig')
+        # Saturate free base so credit logic is exercised
+        for i in range(3):
+            _link(coach, _student(f'ig_base_{i}'), source='coach')
+
         with override_settings(COACH_PER_STUDENT_PERIODS=True):
             grant_credits(coach, 2, CoachCreditLedger.REASON_MANUAL_GRANT)
             allowed, msg = can_add_own_student(coach)
@@ -124,6 +129,9 @@ class TestInviteGate(TestCase):
             self.assertIn('kalmadı', msg)
 
         coach2 = _coach('ig2')
+        # Saturate free base for coach2 too
+        for i in range(3):
+            _link(coach2, _student(f'ig2_base_{i}'), source='coach')
         with override_settings(COACH_PER_STUDENT_PERIODS=True):
             allowed, msg = can_add_own_student(coach2)
             self.assertFalse(allowed)
@@ -154,7 +162,10 @@ class TestAcceptanceFlow(TestCase):
             coach=coach,
             student=_student('af1x'),  # placeholder so email is free
         )
-        # grant 1 credit
+        # Saturate free base (coach already has 1 own student above; add 2 more)
+        _link(coach, _student('af1y'), source='coach')
+        _link(coach, _student('af1z'), source='coach')
+        # grant 1 credit (needed for the 4th student — beyond the free base)
         grant_credits(coach, 1, CoachCreditLedger.REASON_MANUAL_GRANT)
 
         c = Client()
@@ -191,10 +202,13 @@ class TestAcceptanceFlow(TestCase):
 
     def test_5_no_credit_rollback_neutral_message(self):
         """
-        flag=True, 0 credits: acceptance fails, transaction rolled back
-        (no user created), invite stays unused, neutral message shown.
+        flag=True, 0 credits, free base saturated (3 active own students):
+        acceptance fails, transaction rolled back (no user created), invite stays unused.
         """
         coach = _coach('af2')
+        # Saturate free base so the 0-credit check fires
+        for i in range(3):
+            _link(coach, _student(f'af2_base_{i}'), source='coach')
         student_email = f'noaccept_{coach.pk}@test.com'
         inv = StudentInvite.objects.create(
             coach=coach, email=student_email,

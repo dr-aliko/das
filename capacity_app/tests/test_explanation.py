@@ -54,9 +54,9 @@ class ParseExplanationBodyTests(TestCase):
         self.assertEqual(result['items'], [])
         self.assertIsNone(result['note'])
 
-    def test_default_body_has_four_items(self):
+    def test_default_body_has_five_items(self):
         result = parse_explanation_body(EXPLANATION_DEFAULT_BODY)
-        self.assertEqual(len(result['items']), 4)
+        self.assertEqual(len(result['items']), 5)
         self.assertIsNone(result['note'])
 
 

@@ -171,7 +171,14 @@
               <p class="text-ink-200 font-medium leading-tight">{{ row.coach.full_name }}</p>
               <p class="text-xs text-ink-500 mt-0.5">{{ row.coach.email }}</p>
             </td>
-            <td class="px-4 py-3 text-center text-ink-300 tnum">{{ row.granted }}</td>
+            <td class="px-4 py-3 text-center text-ink-300 tnum">
+              {{ row.granted }}
+              {% if row.purchased > 0 %}
+              <p class="text-[10px] text-ink-500">3+{{ row.purchased }}</p>
+              {% else %}
+              <p class="text-[10px] text-ink-600">3 ücretsiz</p>
+              {% endif %}
+            </td>
             <td class="px-4 py-3 text-center tnum
                        {% if row.free < 0 %}text-ruby-400 font-semibold{% else %}text-amber-400{% endif %}">{{ row.in_use }}</td>
             <td class="px-4 py-3 text-center tnum

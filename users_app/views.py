@@ -530,6 +530,7 @@ def coach_invite_view(request):
     from django.conf import settings as _settings
     from capacity_app.models import CapacitySettings
     from capacity_app.services import (
+        COACH_BASE_FREE_SLOTS,
         available_credits, can_add_own_student, get_capacity_status,
         parse_explanation_body, pending_invite_count,
     )
@@ -547,7 +548,8 @@ def coach_invite_view(request):
     if per_student_periods:
         avail_credits = available_credits(request.user)
         pending_credits = pending_invite_count(request.user)
-        capacity_blocked = avail_credits <= 0
+        within_free_base = cap_status['in_use'] < COACH_BASE_FREE_SLOTS
+        capacity_blocked = not within_free_base and avail_credits <= 0
         capacity_error = None
         if capacity_blocked:
             _, capacity_error = can_add_own_student(request.user)
@@ -742,6 +744,10 @@ def invite_register_view(request, token):
                         user.save(update_fields=['coach', 'is_approved', 'is_active'])
                         source = CoachStudent.SOURCE_COACH
                         from .services.coach_student import ensure_active_link
+                        from capacity_app.services import (
+                            COACH_BASE_FREE_SLOTS, count_active_own_students,
+                        )
+                        active_own_before = count_active_own_students(locked_invite.coach)
                         link, created, reactivated = ensure_active_link(locked_invite.coach, user, source, None)
                         # Explicitly set next_payment_due regardless of whether link was
                         # created or reactivated. ensure_active_link does not update
@@ -751,7 +757,9 @@ def invite_register_view(request, token):
                         link.save(update_fields=['next_payment_due'])
                         locked_invite.is_used = True
                         locked_invite.save(update_fields=['is_used'])
-                        consume_credit_for_invite(locked_invite.coach, locked_invite, link)
+                        # First COACH_BASE_FREE_SLOTS active own students are free — no credit consumed.
+                        if active_own_before >= COACH_BASE_FREE_SLOTS:
+                            consume_credit_for_invite(locked_invite.coach, locked_invite, link)
                 except IntegrityError:
                     raise  # duplicate email: keeps current 500 behavior, nothing consumed
                 except InsufficientCredits as exc:

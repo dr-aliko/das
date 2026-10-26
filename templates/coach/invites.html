@@ -53,6 +53,11 @@
       <div class="rounded-lg border border-ink-700 bg-ink-900 px-2 py-2.5 text-center">
         <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Toplam</p>
         <p class="text-xl font-bold text-ink-100 tnum">{{ cap_status.granted }}</p>
+        {% if cap_status.purchased > 0 %}
+        <p class="text-[10px] text-ink-500 mt-0.5">{{ cap_status.base_free }}+{{ cap_status.purchased }}</p>
+        {% else %}
+        <p class="text-[10px] text-ink-400 mt-0.5">{{ cap_status.base_free }} ücretsiz</p>
+        {% endif %}
       </div>
       <div class="rounded-lg border border-ink-700 bg-ink-900 px-2 py-2.5 text-center">
         <p class="text-[10px] text-ink-500 uppercase tracking-wider mb-0.5">Boş</p>

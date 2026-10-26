@@ -67,6 +67,8 @@ def panel_capacity(request):
                 'granted':       st['granted'],
                 'free':          st['free'],
                 'period_end':    st['period_end'],
+                'base_free':     st['base_free'],
+                'purchased':     st['purchased'],
                 'pending_order': pending_order,
             })
 

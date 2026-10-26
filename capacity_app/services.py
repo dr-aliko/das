@@ -7,9 +7,13 @@ from django.db import transaction
 
 _log = logging.getLogger(__name__)
 
+COACH_BASE_FREE_SLOTS = 3
+
 EXPLANATION_DEFAULT_TITLE = 'Kontenjan nasıl çalışır?'
 
 EXPLANATION_DEFAULT_BODY = (
+    "Ücretsiz 3 slot: Her koç, ek satın alma gerektirmeksizin 3 kendi öğrenci slotuna "
+    "varsayılan olarak sahiptir; bu slotlar kalıcıdır ve süresi dolmaz.\n"
     "Kendi öğrencileriniz: Kontenjan, Vagus'ta aynı anda takip edebileceğiniz kendi "
     "öğrenci sayınızdır — yani kendiniz davet ettiğiniz öğrenciler.\n"
     "30 günlük dönem: Dönemler 30 gün sürer; ayrılan öğrencinin slotu serbest kalır "
@@ -89,15 +93,32 @@ def is_own_student_source(source, student=None):
     return True  # conservative: NULL with no student info → count as own
 
 
+def count_active_own_students(coach):
+    """Count of active own-student links for this coach (excludes vagus source)."""
+    from users_app.models import CoachStudent
+    active_links = (
+        CoachStudent.objects
+        .filter(coach=coach, active=True)
+        .exclude(source='vagus')
+        .select_related('student')
+    )
+    count = 0
+    for link in active_links:
+        if is_own_student_source(link.source, link.student):
+            count += 1
+    return count
+
+
 def get_capacity_status(coach):
     """
     Returns a dict:
-      granted   — total slots from grants active today
-      in_use    — active CoachStudent own-student links (excl. vagus-source)
-      free      — granted - in_use  (may be negative for grandfathered overage)
+      granted    — total slots: COACH_BASE_FREE_SLOTS + purchased grants active today
+      in_use     — active CoachStudent own-student links (excl. vagus-source)
+      free       — granted - in_use  (may be negative for grandfathered overage)
       period_end — latest active grant end date, or None
+      base_free  — always COACH_BASE_FREE_SLOTS (3)
+      purchased  — slots from paid grants active today
     """
-    from users_app.models import CoachStudent
     from .models import CoachCapacityGrant
 
     today = date.today()
@@ -106,25 +127,19 @@ def get_capacity_status(coach):
         period_start__lte=today,
         period_end__gte=today,
     )
-    granted = sum(g.slots for g in active_grants)
+    purchased = sum(g.slots for g in active_grants)
+    granted = COACH_BASE_FREE_SLOTS + purchased
     period_end = active_grants.order_by('-period_end').values_list('period_end', flat=True).first()
 
-    active_links = (
-        CoachStudent.objects
-        .filter(coach=coach, active=True)
-        .exclude(source='vagus')
-        .select_related('student')
-    )
-    in_use = 0
-    for link in active_links:
-        if is_own_student_source(link.source, link.student):
-            in_use += 1
+    in_use = count_active_own_students(coach)
 
     return {
         'granted':    granted,
         'in_use':     in_use,
         'free':       granted - in_use,
         'period_end': period_end,
+        'base_free':  COACH_BASE_FREE_SLOTS,
+        'purchased':  purchased,
     }
 
 
@@ -132,10 +147,13 @@ def can_add_own_student(coach):
     """
     Returns (allowed: bool, error_msg: str|None).
 
-    When COACH_PER_STUDENT_PERIODS=True: credit-based check.
-    When COACH_PER_STUDENT_PERIODS=False: old capacity-enforcement check (unchanged).
+    When COACH_PER_STUDENT_PERIODS=True: credit-based check with free base.
+    When COACH_PER_STUDENT_PERIODS=False: slot-enforcement check (base 3 always included).
     """
     if getattr(settings, 'COACH_PER_STUDENT_PERIODS', False):
+        # Free base: first COACH_BASE_FREE_SLOTS active own students need no credit.
+        if count_active_own_students(coach) < COACH_BASE_FREE_SLOTS:
+            return True, None
         avail = available_credits(coach)
         if avail > 0:
             return True, None
@@ -152,10 +170,7 @@ def can_add_own_student(coach):
     status = get_capacity_status(coach)
     if status['free'] > 0:
         return True, None
-    if status['granted'] == 0:
-        msg = 'Kontenjanınız yok. Yeni öğrenci ekleyebilmek için kontenjan satın alın.'
-    else:
-        msg = 'Kontenjanınız doldu. Yeni öğrenci ekleyebilmek için kontenjan satın alın.'
+    msg = 'Kontenjanınız doldu. Yeni öğrenci ekleyebilmek için kontenjan satın alın.'
     return False, msg
 
 
