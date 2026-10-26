@@ -3563,12 +3563,13 @@ def _build_brans_chart_data(entries):
     ]
     datasets = []
     for i, (ders, ders_entries) in enumerate(by_ders.items()):
-        net_by_date = {}
+        nets_by_date = defaultdict(list)
         for e in ders_entries:
-            # Keep the best net for that date if multiple entries exist
-            d = e.tarih.isoformat()
-            if d not in net_by_date or e.net > net_by_date[d]:
-                net_by_date[d] = e.net
+            nets_by_date[e.tarih.isoformat()].append(float(e.net))
+        net_by_date = {
+            d: round(sum(nets) / len(nets), 2)
+            for d, nets in nets_by_date.items()
+        }
         color = color_cycle[i % len(color_cycle)]
         datasets.append({
             'label': ders.display_name,
