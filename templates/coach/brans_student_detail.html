@@ -123,15 +123,15 @@
                     {% if forloop.first %}bg-red-50{% endif %}">
           <div class="flex items-center gap-3 min-w-0 mr-4">
             {% if forloop.first %}
-              <span class="text-xs font-bold text-red-500 shrink-0">#1</span>
+              <span class="text-xs font-bold text-red-700 shrink-0">#1</span>
             {% elif forloop.counter == 2 %}
               <span class="text-xs font-semibold text-orange-400 shrink-0">#2</span>
             {% else %}
               <span class="text-xs text-gray-300 shrink-0">#{{ forloop.counter }}</span>
             {% endif %}
             <div class="min-w-0">
-              <div class="text-sm font-medium text-gray-800 truncate">{{ row.topic__name }}</div>
-              <div class="text-xs text-gray-400">
+              <div class="text-sm font-medium {% if forloop.first %}text-gray-900{% else %}text-gray-800{% endif %} truncate">{{ row.topic__name }}</div>
+              <div class="text-xs {% if forloop.first %}text-gray-600{% else %}text-gray-400{% endif %}">
                 {% if row.topic__sub_category %}{{ row.topic__sub_category }} · {% endif %}
                 {{ row.topic__subject__exam_type }} {{ row.topic__subject__name }}
                 {% if row.son_tarih %} · Son: {{ row.son_tarih|date:"d.m.Y" }}{% endif %}

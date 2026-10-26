@@ -3834,7 +3834,7 @@ def coach_brans_student_detail(request, student_id):
         'chart_data_json': safe_json(chart_data),
         'has_entries': bool(entries),
         'period': period,
-        'period_choices': [('all', 'Tümü'), ('90', '3 Ay'), ('30', '30 Gün')],
+        'period_choices': [('all', 'Tümü'), ('90', 'Son 3 Ay'), ('30', 'Son 30 Gün')],
         'top_topics': top_topics,
         'all_ders': all_ders,
         'ders_filter': ders_filter,
