@@ -24,6 +24,47 @@ _log = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def _live_days_for_held(held_rows):
+    """Return {row.pk: live_coach_days} for a list of HELD EarningRow objects.
+
+    Mirrors the interval-log algorithm in coach_kazanclar but works across
+    multiple coaches, so both the staff panel and the coach view can use it.
+    """
+    if not held_rows:
+        return {}
+
+    from django.utils.timezone import localtime, now as tz_now
+    from users_app.models import CoachStudentInterval
+
+    today    = localtime(tz_now()).date()
+    tomorrow = today + timedelta(days=1)
+
+    coach_ids   = {r.coach_id   for r in held_rows}
+    student_ids = {r.student_id for r in held_rows}
+
+    ivs_by_key = {}
+    for iv in CoachStudentInterval.objects.filter(
+        coach_id__in=coach_ids,
+        student_id__in=student_ids,
+    ):
+        ivs_by_key.setdefault((iv.coach_id, iv.student_id), []).append(iv)
+
+    result = {}
+    for r in held_rows:
+        total = 0
+        for iv in ivs_by_key.get((r.coach_id, r.student_id), []):
+            iv_start  = localtime(iv.started_at).date()
+            # Open (active) interval — exclusive upper bound is tomorrow so today counts
+            iv_end    = tomorrow if iv.ended_at is None else localtime(iv.ended_at).date()
+            seg_start = max(iv_start, r.coverage_start)
+            seg_end   = min(iv_end, tomorrow)
+            d = (seg_end - seg_start).days
+            if d > 0:
+                total += d
+        result[r.pk] = min(total, r.period_days)
+    return result
+
+
 # ── Panel (staff) ─────────────────────────────────────────────────────────────
 
 @staff_required
@@ -74,6 +115,13 @@ def panel_kazanclar_list(request):
             rows = rows.order_by('-coverage_start', '-created_at')
 
         rows = list(rows[:500])
+
+    # Patch coach_days on HELD rows with a live recalculation from the interval log.
+    # This is an in-memory attribute override — nothing is written to the database.
+    held_rows = [r for r in rows if r.status == EarningRow.STATUS_HELD]
+    live_days = _live_days_for_held(held_rows)
+    for r in held_rows:
+        r.coach_days = live_days.get(r.pk, r.coach_days)
 
     totals = _compute_totals(rows)
     config = EarningConfig.get()
