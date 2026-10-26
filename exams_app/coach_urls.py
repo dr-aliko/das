@@ -20,6 +20,7 @@ urlpatterns = [
     path('student/<int:student_id>/brans/<slug:subject_slug>/report/', views.brans_subject_export_coach, name='student_brans_subject_export'),
     path('student/<int:student_id>/brans/<slug:subject_slug>/', views.brans_subject_detail_coach, name='student_brans_subject_detail'),
     path('student/<int:student_id>/brans/<slug:subject_slug>/api/', views.brans_subject_detail_coach_api, name='student_brans_subject_detail_api'),
+    path('student/<int:student_id>/brans/<int:pk>/', views.coach_brans_exam_detail, name='student_brans_exam_detail'),
     path('student/<int:student_id>/brans/<int:pk>/konular/', views.coach_brans_topic_errors, name='student_brans_topic_errors'),
     path('student/<int:student_id>/brans-task-assign/', views.coach_brans_task_assign, name='brans_task_assign'),
     path('student/<int:student_id>/brans-task-action/<int:task_id>/', views.coach_brans_task_action, name='brans_task_action'),

@@ -366,8 +366,8 @@ def _subject_detail_source_stats(entries, current_cutoff, previous_cutoff):
     delta = round(current_net - prev_net, 2) if current_nets and previous_nets else 0.0
     best_obj = max(current_entries, key=lambda e: e.net) if current_entries else None
     worst_obj = min(current_entries, key=lambda e: e.net) if current_entries else None
-    avg3_entries = current_entries[:3]
-    avg10_entries = current_entries[:10]
+    avg3_entries = entries[:3]
+    avg10_entries = entries[:10]
 
     return {
         'currentNet': current_net,
@@ -827,7 +827,11 @@ def _build_brans_hub_context(student, period='30g', exam_type='TYT', *, coach_vi
             bos=e.bos,
             duration=f'{e.sure_dakika} dk' if e.sure_dakika else 'Süre yok',
             color=next((color for _k, _l, color, _c, names in _BRANS_HUB_SUBJECTS if e.ders.name in names), 'var(--primary)'),
-            detail_url=reverse('student:brans_detail', kwargs={'pk': e.id}) if not coach_view else '#',
+            detail_url=(
+                reverse('coach:student_brans_exam_detail', kwargs={'student_id': student.id, 'pk': e.id})
+                if coach_view
+                else reverse('student:brans_detail', kwargs={'pk': e.id})
+            ),
             edit_url=reverse('student:brans_edit', kwargs={'pk': e.id}) if not coach_view else '#',
             delete_url=reverse('student:brans_delete', kwargs={'pk': e.id}) if not coach_view else '#',
         )
@@ -3964,6 +3968,42 @@ def coach_brans_topic_errors(request, student_id, pk):
         final_fallback=reverse('coach:student_brans_hub', kwargs={'student_id': student_id}),
         back_fallback=reverse('coach:brans_student_detail', kwargs={'student_id': student_id}),
     )
+
+
+@coach_required
+def coach_brans_exam_detail(request, student_id, pk):
+    if not coach_can_view_student(request.user, student_id):
+        return HttpResponseForbidden('Bu öğrenciyi görüntüleme yetkiniz yok.')
+    from users_app.models import User as UserModel
+    student = get_object_or_404(UserModel, id=student_id, role='student')
+    entry = get_object_or_404(
+        BransDeneme.objects.select_related('ders'), pk=pk, student=student
+    )
+    topic_errors = entry.topic_errors.select_related('topic').order_by('-yanlis_sayisi')
+    prev = (
+        BransDeneme.objects
+        .filter(student=student, ders=entry.ders, tarih__lt=entry.tarih)
+        .order_by('-tarih', '-olusturulma_tarihi')
+        .first()
+    )
+    delta = None
+    if prev:
+        delta = {
+            'net':        round(entry.net - prev.net, 2),
+            'dogru':      entry.dogru - prev.dogru,
+            'yanlis':     entry.yanlis - prev.yanlis,
+            'bos':        entry.bos - prev.bos,
+            'prev_tarih': prev.tarih,
+            'prev_net':   prev.net,
+        }
+    return render(request, 'student/brans_detail.html', {
+        'entry':        entry,
+        'topic_errors': topic_errors,
+        'delta':        delta,
+        'coach_view':   True,
+        'student':      student,
+        'back_url':     reverse('coach:student_brans_hub', kwargs={'student_id': student_id}),
+    })
 
 
 # ── Seviye Tespit Sınavı — Student Views ─────────────────────────────────────
