@@ -181,17 +181,18 @@
       <h2 style="font-size:32px; font-weight:700; color:#ffffff; margin:0 0 16px; letter-spacing:-0.02em; line-height:1.2;">YKS hazırlığını plansız bırakma.</h2>
       <p style="font-size:16px; color:#cbd5e1; margin:0 0 40px; line-height:1.6;">Deneme analizi, aylık plan, haftalık görevler — hepsi tek panelde.</p>
 
+      {{ login_stats|json_script:"login-stats-data" }}
       <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; max-width:380px; margin:0 auto;">
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_students }}</div>
+          <div id="stat-students" class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_students }}</div>
           <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Aktif öğrenci</div>
         </div>
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_exams }}</div>
+          <div id="stat-exams" class="tnum" style="font-size:24px; font-weight:700; color:#ffffff;">{{ login_stats.total_exams }}</div>
           <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Girilen deneme</div>
         </div>
         <div>
-          <div class="tnum" style="font-size:24px; font-weight:700; color:#76d48f;">{{ login_stats.avg_net_increase }}</div>
+          <div id="stat-avg" class="tnum" style="font-size:24px; font-weight:700; color:#76d48f;">+{{ login_stats.avg_net_increase|floatformat:1 }}</div>
           <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Ort. net artışı</div>
         </div>
       </div>
@@ -200,5 +201,33 @@
 
 </div>
 
+<script>
+(function () {
+  var el = document.getElementById('login-stats-data');
+  if (!el) return;
+  var data = JSON.parse(el.textContent);
+  var sEl = document.getElementById('stat-students');
+  var xEl = document.getElementById('stat-exams');
+  var aEl = document.getElementById('stat-avg');
+  if (!sEl || !xEl || !aEl) return;
+
+  var duration = 1800;
+  var start = null;
+
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function step(ts) {
+    if (!start) start = ts;
+    var p = Math.min((ts - start) / duration, 1);
+    var e = ease(p);
+    sEl.textContent = Math.round(e * data.total_students);
+    xEl.textContent = Math.round(e * data.total_exams);
+    aEl.textContent = '+' + (e * data.avg_net_increase).toFixed(1);
+    if (p < 1) requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
+})();
+</script>
 </body>
 </html>

@@ -169,7 +169,7 @@ def _login_panel_stats():
                 if len(exams) >= 2:
                     increases.append(exams[-1]['total_net'] - exams[0]['total_net'])
             if increases:
-                avg_increase = round(sum(increases) / len(increases), 1)
+                avg_increase = abs(round(sum(increases) / len(increases), 1))
 
         return {
             'total_students': total_students,
@@ -187,11 +187,10 @@ class CustomLoginView(LoginView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         stats = _login_panel_stats()
-        avg = stats['avg_net_increase']
         ctx['login_stats'] = {
             'total_students': stats['total_students'],
             'total_exams': stats['total_exams'],
-            'avg_net_increase': f'+{avg}' if avg > 0 else str(avg),
+            'avg_net_increase': stats['avg_net_increase'],
         }
         return ctx
 
