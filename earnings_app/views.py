@@ -163,7 +163,11 @@ def _compute_totals(rows):
             seen_orders.add(r.order_id)
             gross += r.order.amount_kurus if r.order else 0
 
-    coach_share = sum(r.pool_kurus for r in non_void if r.kind == EarningRow.KIND_EARNING)
+    coach_share = sum(
+        (r.pool_kurus if r.status == EarningRow.STATUS_HELD else r.amount_kurus)
+        for r in non_void
+        if r.kind == EarningRow.KIND_EARNING
+    )
     vagus_share = gross - coach_share
 
     return {
