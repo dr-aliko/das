@@ -128,6 +128,23 @@
     </div>
   </div>
 
+  {# ── Program Tamamlama Oranı ── #}
+  {# Outer card is always rendered when not loading; inner show/hide is JS-controlled #}
+  {# to prevent Chart.js from reading dimensions while display:none (renders at 0×0). #}
+  <div x-show="!loading" class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-700 text-sm">Program Tamamlama Oranı</h2>
+      <p class="text-xs text-gray-400 mt-0.5"
+         x-text="period === '30' ? 'Günlük — Son 30 gün' : period === '90' ? 'Haftalık — Son 3 ay' : 'Haftalık — Tüm zamanlar'"></p>
+    </div>
+    <div id="programChartWrap" class="px-6 pt-4 pb-6" style="height:180px; display:none;">
+      <canvas id="programChart"></canvas>
+    </div>
+    <p id="programEmptyMsg" class="px-6 py-6 text-center text-sm text-gray-400">
+      Bu dönemde program görevi bulunamadı.
+    </p>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -136,6 +153,7 @@
 function bransDetailPage() {
   const _init = JSON.parse(document.getElementById('brans-detail-init').textContent);
   let _chartInst = null;
+  let _progChartInst = null;
 
   return {
     apiUrl:       _init.apiUrl,
@@ -146,6 +164,7 @@ function bransDetailPage() {
     hasEntries:   _init.hasEntries,
     grouped:      _init.grouped,
     topTopics:    _init.topTopics,
+    programData:  _init.programData || {labels: [], data: [], use_weekly: false},
     loading:      false,
     periodChoices: [
       {val: 'all', label: 'Tümü'},
@@ -154,7 +173,7 @@ function bransDetailPage() {
     ],
 
     init() {
-      this.$nextTick(() => this._renderChart());
+      this.$nextTick(() => { this._renderChart(); this._renderProgramChart(); });
     },
 
     setPeriod(val) {
@@ -183,13 +202,14 @@ function bransDetailPage() {
           headers: {'X-Requested-With': 'XMLHttpRequest'},
         });
         const data = await resp.json();
-        this.chartData  = data.chart_data;
-        this.hasEntries = data.has_entries;
-        this.grouped    = data.grouped;
-        this.topTopics  = data.top_topics;
+        this.chartData   = data.chart_data;
+        this.hasEntries  = data.has_entries;
+        this.grouped     = data.grouped;
+        this.topTopics   = data.top_topics;
+        this.programData = data.program_data || {labels: [], data: [], use_weekly: false};
       } finally {
         this.loading = false;
-        this.$nextTick(() => this._renderChart());
+        this.$nextTick(() => { this._renderChart(); this._renderProgramChart(); });
       }
     },
 
@@ -286,6 +306,72 @@ function bransDetailPage() {
       parts.push(row.exam_type + ' ' + row.subject_name);
       if (row.son_tarih) parts.push('Son: ' + this.fmtDate(row.son_tarih));
       return parts.join(' · ');
+    },
+
+    _renderProgramChart() {
+      if (_progChartInst) { _progChartInst.destroy(); _progChartInst = null; }
+      const wrap  = document.getElementById('programChartWrap');
+      const empty = document.getElementById('programEmptyMsg');
+      if (!wrap || !empty) return;
+
+      if (!this.programData.labels.length) {
+        wrap.style.display  = 'none';
+        empty.style.display = '';
+        return;
+      }
+
+      empty.style.display = 'none';
+      wrap.style.display  = '';
+      void wrap.offsetWidth; // force reflow so Chart.js reads correct container width
+
+      const canvas = document.getElementById('programChart');
+      if (!canvas) return;
+
+      const TR_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const fmtLabel = iso => {
+        const [y, m, d] = iso.split('-');
+        return (this.programData.use_weekly ? 'Hafta: ' : '') + `${parseInt(d)} ${TR_MONTHS[parseInt(m)-1]} ${y}`;
+      };
+      const isMobile = window.innerWidth < 640;
+
+      _progChartInst = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: this.programData.labels,
+          datasets: [{
+            label: 'Tamamlama',
+            data: this.programData.data,
+            backgroundColor: this.programData.data.map(v =>
+              v >= 80 ? 'rgba(16,185,129,0.7)' : v >= 50 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)'
+            ),
+            borderRadius: 4,
+            borderSkipped: false,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {duration: 200},
+          plugins: {
+            legend: {display: false},
+            tooltip: {
+              callbacks: {
+                title: ctx => fmtLabel(ctx[0].label),
+                label: ctx => ` ${ctx.parsed.y}%`,
+              },
+            },
+          },
+          scales: {
+            x: {ticks: {font: {size: isMobile ? 9 : 11}, maxTicksLimit: isMobile ? 4 : 8}},
+            y: {
+              min: 0,
+              max: 100,
+              ticks: {font: {size: 11}, callback: v => v + '%'},
+              title: {display: !isMobile, text: 'Tamamlama %', font: {size: 11}},
+            },
+          },
+        },
+      });
     },
   };
 }

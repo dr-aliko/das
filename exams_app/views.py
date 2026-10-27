@@ -3541,6 +3541,41 @@ def _build_brans_topic_analytics(student, since=None, top_n=10, ders_id=None):
     )
 
 
+def _build_program_completion_data(student, since=None, period='all'):
+    """
+    Group StudentTask by day (period='30') or week otherwise and return
+    completion-percentage series {labels, data, use_weekly} for the program chart.
+    """
+    from django.db.models import Count, Q
+    from django.db.models.functions import TruncDate, TruncWeek
+
+    use_weekly = period != '30'
+    qs = StudentTask.objects.filter(student=student)
+    if since:
+        qs = qs.filter(created_at__date__gte=since)
+
+    trunc_fn = TruncWeek('created_at') if use_weekly else TruncDate('created_at')
+    rows = list(
+        qs.annotate(bucket=trunc_fn)
+        .values('bucket')
+        .annotate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(is_completed=True)),
+        )
+        .order_by('bucket')
+    )
+
+    labels, data = [], []
+    for row in rows:
+        if row['bucket'] is None:
+            continue
+        labels.append(str(row['bucket'])[:10])  # YYYY-MM-DD
+        rate = round(row['completed'] / row['total'] * 100, 1) if row['total'] > 0 else 0.0
+        data.append(rate)
+
+    return {'labels': labels, 'data': data, 'use_weekly': use_weekly}
+
+
 def _build_brans_chart_data(entries):
     """Build Chart.js dataset for BransDeneme net trend, one line per ders."""
     from collections import defaultdict
@@ -3850,6 +3885,8 @@ def _serialize_brans_student_data(student, period, ders_filter):
         for row in top_topics_raw
     ]
 
+    program_data = _build_program_completion_data(student, since=since, period=period)
+
     return {
         'period': period,
         'ders_filter': clean_filter,
@@ -3857,6 +3894,7 @@ def _serialize_brans_student_data(student, period, ders_filter):
         'has_entries': bool(entries),
         'grouped': grouped,
         'top_topics': top_topics,
+        'program_data': program_data,
     }
 
 
@@ -3888,6 +3926,7 @@ def coach_brans_student_detail(request, student_id):
         'hasEntries': data['has_entries'],
         'grouped': data['grouped'],
         'topTopics': data['top_topics'],
+        'programData': data['program_data'],
     }
 
     return render(request, 'coach/brans_student_detail.html', {
