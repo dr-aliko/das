@@ -129,20 +129,48 @@
   </div>
 
   {# ── Program Tamamlama Oranı ── #}
-  {# Outer card is always rendered when not loading; inner show/hide is JS-controlled #}
-  {# to prevent Chart.js from reading dimensions while display:none (renders at 0×0). #}
+  {# Chart wrap / empty state are JS-controlled (not x-show) to prevent Chart.js 0×0 sizing. #}
   <div x-show="!loading" class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-      <h2 class="font-semibold text-gray-700 text-sm">Program Tamamlama Oranı</h2>
-      <p class="text-xs text-gray-400 mt-0.5"
-         x-text="period === '30' ? 'Günlük — Son 30 gün' : period === '90' ? 'Haftalık — Son 3 ay' : 'Haftalık — Tüm zamanlar'"></p>
+
+    {# Card header — icon badge + title + adaptive subtitle #}
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:var(--surface-2);">
+      <span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;background:var(--primary-tint);flex-shrink:0;">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <rect x="0.5" y="8" width="3.5" height="6.5" rx="1" fill="#6D5BFF"/>
+          <rect x="5.5" y="5" width="3.5" height="9.5" rx="1" fill="#6D5BFF" opacity=".75"/>
+          <rect x="10.5" y="2" width="3.5" height="12.5" rx="1" fill="#6D5BFF" opacity=".5"/>
+        </svg>
+      </span>
+      <div>
+        <h2 class="text-sm font-semibold" style="color:var(--heading);">Program Tamamlama Oranı</h2>
+        <p class="text-xs mt-0.5" style="color:var(--muted);"
+           x-text="period === '30' ? 'Günlük · Son 30 gün' : period === '90' ? 'Haftalık · Son 3 ay' : 'Haftalık · Tüm zamanlar'"></p>
+      </div>
     </div>
-    <div id="programChartWrap" class="px-6 pt-4 pb-6" style="height:180px; display:none;">
+
+    {# Chart canvas — height via inline style (avoids arbitrary Tailwind class) #}
+    <div id="programChartWrap" class="px-5 pb-5" style="padding-top:18px; height:230px; display:none;">
       <canvas id="programChart"></canvas>
     </div>
-    <p id="programEmptyMsg" class="px-6 py-6 text-center text-sm text-gray-400">
-      Bu dönemde program görevi bulunamadı.
-    </p>
+
+    {# Empty state — dashed-border placeholder with muted icon #}
+    <div id="programEmptyMsg" style="padding:28px 24px;">
+      <div style="border:1.5px dashed #e2e2ea;border-radius:12px;padding:32px 20px;text-align:center;">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"
+             style="margin:0 auto 14px;display:block;" aria-hidden="true">
+          <rect x="3" y="28" width="7" height="13" rx="2" fill="#d4d4e0"/>
+          <rect x="14" y="18" width="7" height="23" rx="2" fill="#d4d4e0"/>
+          <rect x="25" y="22" width="7" height="19" rx="2" fill="#d4d4e0"/>
+          <rect x="36" y="12" width="7" height="29" rx="2" fill="#d4d4e0"/>
+          <line x1="1" y1="43" x2="43" y2="43" stroke="#e2e2ea" stroke-width="1.5"/>
+          <circle cx="35" cy="11" r="9" fill="#f4f4f8" stroke="#e2e2ea" stroke-width="1.5"/>
+          <path d="M31.5 7.5l7 7M38.5 7.5l-7 7" stroke="#9898ad" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="text-sm font-medium" style="color:#2d2d3a;">Bu döneme ait görev bulunamadı</p>
+        <p class="text-xs mt-1" style="color:#9898ad;">Bu filtre için atanmış program görevi yok.</p>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -322,7 +350,7 @@ function bransDetailPage() {
 
       empty.style.display = 'none';
       wrap.style.display  = '';
-      void wrap.offsetWidth; // force reflow so Chart.js reads correct container width
+      void wrap.offsetWidth; // force reflow → Chart.js reads correct container width
 
       const canvas = document.getElementById('programChart');
       if (!canvas) return;
@@ -334,6 +362,12 @@ function bransDetailPage() {
       };
       const isMobile = window.innerWidth < 640;
 
+      // Semantic palette — muted emerald / amber / rose aligned with project tokens
+      const barColor = v =>
+        v >= 80 ? 'rgba(16,185,129,0.82)' :
+        v >= 50 ? 'rgba(245,158,11,0.78)'  :
+                  'rgba(239,68,68,0.78)';
+
       _progChartInst = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -341,33 +375,58 @@ function bransDetailPage() {
           datasets: [{
             label: 'Tamamlama',
             data: this.programData.data,
-            backgroundColor: this.programData.data.map(v =>
-              v >= 80 ? 'rgba(16,185,129,0.7)' : v >= 50 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)'
-            ),
-            borderRadius: 4,
-            borderSkipped: false,
+            backgroundColor: this.programData.data.map(barColor),
+            borderWidth: 0,
+            borderRadius: 5,
+            borderSkipped: 'bottom',
+            maxBarThickness: 32,
           }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          animation: {duration: 200},
+          animation: {duration: 320, easing: 'easeOutQuart'},
           plugins: {
             legend: {display: false},
             tooltip: {
+              backgroundColor: '#111118',
+              titleColor: '#f8fafc',
+              bodyColor: 'rgba(248,250,252,0.72)',
+              padding: {top: 10, right: 14, bottom: 10, left: 14},
+              cornerRadius: 8,
+              displayColors: false,
+              titleFont: {size: 11, weight: '600'},
+              bodyFont:  {size: 13, weight: '500'},
               callbacks: {
                 title: ctx => fmtLabel(ctx[0].label),
-                label: ctx => ` ${ctx.parsed.y}%`,
+                label: ctx => `${ctx.parsed.y}%`,
               },
             },
           },
           scales: {
-            x: {ticks: {font: {size: isMobile ? 9 : 11}, maxTicksLimit: isMobile ? 4 : 8}},
+            x: {
+              grid:   {display: false},
+              border: {display: false},
+              ticks: {
+                color: '#9898ad',
+                font:  {size: isMobile ? 9 : 11},
+                maxTicksLimit: isMobile ? 4 : 8,
+                maxRotation: 0,
+                padding: 6,
+              },
+            },
             y: {
               min: 0,
               max: 100,
-              ticks: {font: {size: 11}, callback: v => v + '%'},
-              title: {display: !isMobile, text: 'Tamamlama %', font: {size: 11}},
+              grid:   {color: 'rgba(0,0,0,0.04)', lineWidth: 1, drawTicks: false},
+              border: {display: false},
+              ticks: {
+                color: '#9898ad',
+                font:  {size: 11},
+                stepSize: 25,
+                padding: 8,
+                callback: v => v + '%',
+              },
             },
           },
         },
