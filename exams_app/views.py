@@ -3543,18 +3543,23 @@ def _build_brans_topic_analytics(student, since=None, top_n=10, ders_id=None):
 
 def _build_program_completion_data(student, since=None, period='all'):
     """
-    Group StudentTask by day (period='30') or week otherwise and return
-    completion-percentage series {labels, data, use_weekly} for the program chart.
+    Group GorevGrubu (daily program tasks) by day (period='30') or ISO week
+    otherwise and return completion-percentage series {labels, data, use_weekly}.
+    Uses GorevGrubu.tarih (DateField) — not StudentTask.created_at — because
+    GorevGrubu is the model coaches use to assign daily tasks to students.
+    is_master=True excludes student-edited copies to avoid double-counting.
     """
     from django.db.models import Count, Q
     from django.db.models.functions import TruncDate, TruncWeek
+    from tasks_app.models import GorevGrubu
 
     use_weekly = period != '30'
-    qs = StudentTask.objects.filter(student=student)
+    qs = GorevGrubu.objects.filter(student=student, is_master=True)
     if since:
-        qs = qs.filter(created_at__date__gte=since)
+        qs = qs.filter(tarih__gte=since)
 
-    trunc_fn = TruncWeek('created_at') if use_weekly else TruncDate('created_at')
+    # tarih is a DateField; TruncWeek returns the Monday of each week as a date.
+    trunc_fn = TruncWeek('tarih') if use_weekly else TruncDate('tarih')
     rows = list(
         qs.annotate(bucket=trunc_fn)
         .values('bucket')
