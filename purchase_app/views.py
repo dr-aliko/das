@@ -749,6 +749,10 @@ def bank_transfer_claim(request, order_token):
 
     from users_app.panel_badges import invalidate_panel_badges
     transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p'))
+    if order.is_renewal:
+        from django.urls import reverse
+        return redirect(reverse('student:paketim_havale',
+                                kwargs={'order_token': str(order_token)}))
     return redirect('purchase:bank_transfer_instructions', order_token=str(order_token))
 
 
