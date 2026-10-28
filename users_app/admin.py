@@ -13,12 +13,40 @@ def approve_coaches(modeladmin, request, queryset):
     queryset.filter(role='coach').update(is_approved=True, is_active=True)
 
 
+# ── Helpers for User admin ────────────────────────────────────────────────────
+
+class StudentSourceFilter(admin.SimpleListFilter):
+    title = 'Öğrenci Kaynağı'
+    parameter_name = 'student_source'
+
+    def lookups(self, request, model_admin):
+        return [('vagus', 'Vagus'), ('coach', 'Koç')]
+
+    def queryset(self, request, queryset):
+        if self.value() in ('vagus', 'coach'):
+            return queryset.filter(
+                role='student',
+                student_coach_links__source=self.value(),
+                student_coach_links__active=True,
+            )
+        return queryset
+
+
+class CoachStudentInline(admin.TabularInline):
+    model = CoachStudent
+    fk_name = 'student'
+    fields = ('coach', 'source', 'active', 'next_payment_due')
+    extra = 0
+    verbose_name = 'Koç-Öğrenci İlişkisi'
+    verbose_name_plural = 'Koç-Öğrenci İlişkileri'
+
+
 # ── User admin ────────────────────────────────────────────────────────────────
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display  = ('full_name', 'email', 'role', 'is_approved', 'is_active', 'created_at')
-    list_filter   = ('role', 'is_active', 'is_approved')
+    list_display  = ('full_name', 'email', 'role', 'student_source_col', 'is_approved', 'is_active', 'created_at')
+    list_filter   = ('role', 'is_active', 'is_approved', StudentSourceFilter)
     search_fields = ('full_name', 'email')
     ordering      = ('full_name',)
     actions       = [approve_coaches]
@@ -35,6 +63,18 @@ class UserAdmin(BaseUserAdmin):
         if obj and obj.role == 'student':
             return fieldsets + (self._coach_fieldset,)
         return fieldsets
+
+    def get_inlines(self, request, obj=None):
+        if obj and obj.role == 'student':
+            return [CoachStudentInline]
+        return []
+
+    @admin.display(description='Kaynak')
+    def student_source_col(self, obj):
+        if obj.role != 'student':
+            return '—'
+        link = obj.student_coach_links.filter(active=True).first()
+        return link.get_source_display() if link and link.source else '—'
 
     add_fieldsets = (
         (None, {
