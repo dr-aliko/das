@@ -12,8 +12,8 @@ class PlanAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display  = ('pk', 'email', 'coach', 'plan', 'amount_kurus', 'status', 'provider', 'created_at')
-    list_filter   = ('status', 'provider', 'plan')
+    list_display  = ('pk', 'email', 'coach', 'plan', 'amount_kurus', 'is_renewal', 'status', 'provider', 'created_at')
+    list_filter   = ('status', 'provider', 'plan', 'is_renewal')
     search_fields = ('email', 'full_name', 'provider_ref')
     readonly_fields = ('token', 'provider_ref', 'amount_kurus', 'created_at', 'updated_at')
     raw_id_fields = ('student', 'coach')

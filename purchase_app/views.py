@@ -764,6 +764,94 @@ def success(request, order_token):
     })
 
 
+# ── Student renewal ───────────────────────────────────────────────────────────
+
+def _renewal_legal_ctx():
+    return {
+        'legal_prelim_info_url':    settings.LEGAL_PRELIM_INFO_URL,
+        'legal_distance_sales_url': settings.LEGAL_DISTANCE_SALES_URL,
+        'legal_refund_url':         settings.LEGAL_REFUND_URL,
+        'legal_kvkk_url':           settings.LEGAL_KVKK_URL,
+        'legal_terms_url':          settings.LEGAL_TERMS_URL,
+        'purchase_price_tax_label': settings.PURCHASE_PRICE_TAX_LABEL,
+    }
+
+
+def student_renewal_view(request):
+    from users_app.decorators import student_required as _sr
+    from users_app.models import CoachStudent
+
+    if not request.user.is_authenticated:
+        return redirect('users_app:login')
+    if not request.user.is_student:
+        raise Http404
+
+    vagus_link = (
+        CoachStudent.objects
+        .filter(student=request.user, active=True, source=CoachStudent.SOURCE_VAGUS)
+        .select_related('coach')
+        .first()
+    )
+    if vagus_link is None:
+        raise Http404
+
+    coach = vagus_link.coach
+
+    renewal_plan = (
+        Plan.objects
+        .filter(active=True, duration_days=30)
+        .order_by('price_kurus')
+        .first()
+    )
+    if renewal_plan is None:
+        return render(request, 'student/paketim_yenile.html', {
+            'vagus_link': vagus_link,
+            'no_plan': True,
+        })
+
+    if request.method == 'POST':
+        required = ['consent_age', 'consent_prelim', 'consent_distance_refund', 'consent_service_start']
+        if any(not request.POST.get(k) for k in required):
+            return render(request, 'student/paketim_yenile.html', {
+                'vagus_link': vagus_link,
+                'plan': renewal_plan,
+                'coach': coach,
+                'consent_error': 'Devam etmek için zorunlu onayları işaretleyin.',
+                **_renewal_legal_ctx(),
+            })
+
+        from django.utils import timezone
+        provider = get_provider()
+        ip  = _checkout_get_ip(request)
+        ua  = request.META.get('HTTP_USER_AGENT', '')[:512]
+        now = timezone.now()
+
+        with transaction.atomic():
+            order = Order(
+                email=request.user.email,
+                student=request.user,
+                coach=coach,
+                plan=renewal_plan,
+                amount_kurus=renewal_plan.price_kurus,
+                full_name=request.user.full_name,
+                phone=request.user.phone or '',
+                provider=provider.name,
+                is_renewal=True,
+            )
+            order.save()
+            _save_consents(order, request.POST, ip, ua, now, settings.LEGAL_DOCS_VERSION)
+
+        checkout_url = provider.create_checkout(order, request)
+        return redirect(checkout_url)
+
+    return render(request, 'student/paketim_yenile.html', {
+        'vagus_link':  vagus_link,
+        'plan':        renewal_plan,
+        'coach':       coach,
+        **_renewal_legal_ctx(),
+    })
+
+
 # ── Staff panel ───────────────────────────────────────────────────────────────
 
 from users_app.decorators import staff_required

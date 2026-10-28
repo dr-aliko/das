@@ -1634,6 +1634,16 @@ def student_dashboard(request):
         ctx['stats'] = v2_stats
         ctx['subjects'] = _build_v2_subjects(exam_list)
 
+    from users_app.models import CoachStudent as _CS
+    vagus_link = (
+        _CS.objects
+        .filter(student=request.user, active=True, source=_CS.SOURCE_VAGUS)
+        .select_related('coach')
+        .first()
+    )
+    ctx['vagus_link'] = vagus_link
+    ctx['vagus_days_remaining'] = vagus_link.days_remaining if vagus_link else None
+
     ctx['first_run'] = request.session.pop('first_run', False)
     template = 'student/dashboard_v2.html' if dashboard_v2 else 'student/dashboard.html'
     return render(request, template, ctx)

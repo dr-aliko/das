@@ -21,7 +21,7 @@ from users_app.views import (
     panel_koc_ekle_view, panel_koc_davet_resend, panel_koc_sil, profil_wp_availability,
     coach_profile_view, coach_profile_quick_update, serve_private_document,
     staff_coach_documents_view, staff_coach_document_action, staff_coach_phone_edit,
-    panel_home_view,
+    panel_home_view, panel_abonelikler_view,
 )
 from struggle_app.views import CoachStruggleStatsView
 from earnings_app.views import coach_kazanclar, coach_kazanclar_export_csv
@@ -87,6 +87,7 @@ urlpatterns = [
     path('panel/odemeler/', panel_odemeler_view, name='panel_odemeler'),
     path('panel/davetler/', panel_davetler_view, name='panel_davetler'),
     path('panel/ogrenciler/', panel_ogrenciler_view, name='panel_ogrenciler'),
+    path('panel/abonelikler/', panel_abonelikler_view, name='panel_abonelikler'),
     path('panel/student/<int:coach_id>/<int:student_id>/unlink/', panel_student_unlink, name='panel_student_unlink'),
     path('panel/ogrenciler/<int:student_id>/koc-degistir/', panel_koc_degistir_view, name='panel_koc_degistir'),
     path('panel/fee-tier/add/', panel_fee_tier_add, name='panel_fee_tier_add'),

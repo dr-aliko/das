@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load panel_nav_tags %}
+
+{% block title %}Panel — Abonelikler{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% panel_nav active_section %}
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 px-5 py-4">
+    <div class="flex items-center gap-2 mb-0.5">
+      <span class="text-xs font-bold uppercase tracking-widest text-steel-400 bg-steel-500/10 border border-steel-500/20 px-2 py-0.5 rounded">Staff</span>
+      <h1 class="text-lg font-semibold text-white">Vagus Abonelikleri</h1>
+    </div>
+    <p class="text-sm text-ink-400">Vagus kaynaklı aktif öğrencilerin paket bitiş tarihleri ve kalan süreleri.</p>
+  </div>
+
+  <div class="rounded-2xl border border-ink-700 bg-ink-950 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-ink-800 bg-ink-900/50">
+            <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Öğrenci</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider">Koç</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-36">Bitiş Tarihi</th>
+            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-ink-500 uppercase tracking-wider w-28">Kalan Gün</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-800/60">
+          {% for link in links %}
+          {% with dr=link.days_remaining %}
+          <tr class="hover:bg-ink-900/40 transition-colors">
+            <td class="px-5 py-3">
+              <p class="font-medium text-ink-100">{{ link.student.full_name }}</p>
+              <p class="text-xs text-ink-500">{{ link.student.email }}</p>
+            </td>
+            <td class="px-4 py-3 text-ink-300">{{ link.coach.full_name }}</td>
+            <td class="px-4 py-3 tabular-nums">
+              {% if link.next_payment_due %}
+                {% if dr is not None and dr <= 7 %}
+                  <span class="text-ruby-400 font-medium">{{ link.next_payment_due|date:"d.m.Y" }}</span>
+                {% elif dr is not None and dr <= 14 %}
+                  <span class="text-amber-400 font-medium">{{ link.next_payment_due|date:"d.m.Y" }}</span>
+                {% else %}
+                  <span class="text-ink-300">{{ link.next_payment_due|date:"d.m.Y" }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-ink-700">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 tabular-nums font-semibold">
+              {% if dr is None %}
+                <span class="text-ink-700">—</span>
+              {% elif dr < 0 %}
+                <span class="text-ruby-400">Gecikmiş ({{ dr|stringformat:"d"|slice:"1:" }} gün)</span>
+              {% elif dr <= 7 %}
+                <span class="text-ruby-400">{{ dr }} gün</span>
+              {% elif dr <= 14 %}
+                <span class="text-amber-400">{{ dr }} gün</span>
+              {% else %}
+                <span class="text-emerald-400">{{ dr }} gün</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="4" class="px-5 py-10 text-center text-ink-500 text-sm">
+              Aktif Vagus aboneliği bulunamadı.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

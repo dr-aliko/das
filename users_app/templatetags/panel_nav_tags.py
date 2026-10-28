@@ -53,8 +53,9 @@ def _build_nav_groups(per_student):
             'label':     'Öğrenciler',
             'badge_key': 'ogrenciler_group',
             'pages': [
-                {'key': 'students', 'label': 'Öğrenciler', 'url_name': 'panel_ogrenciler', 'badge_key': 'overdue'},
-                {'key': 'invites',  'label': 'Davetler',   'url_name': 'panel_davetler'},
+                {'key': 'students',     'label': 'Öğrenciler',  'url_name': 'panel_ogrenciler',  'badge_key': 'overdue'},
+                {'key': 'abonelikler',  'label': 'Abonelikler', 'url_name': 'panel_abonelikler'},
+                {'key': 'invites',      'label': 'Davetler',    'url_name': 'panel_davetler'},
             ],
         },
         {

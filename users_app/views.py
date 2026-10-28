@@ -1850,6 +1850,23 @@ def panel_ogrenciler_view(request):
 
 
 @staff_required
+def panel_abonelikler_view(request):
+    from datetime import date as _date
+    today = _date.today()
+    links = (
+        CoachStudent.objects
+        .filter(active=True, source=CoachStudent.SOURCE_VAGUS)
+        .select_related('student', 'coach')
+        .order_by('next_payment_due')
+    )
+    return render(request, 'panel/abonelikler.html', {
+        'links':          links,
+        'today':          today,
+        'active_section': 'abonelikler',
+    })
+
+
+@staff_required
 @require_http_methods(['POST'])
 def panel_student_unlink(request, coach_id, student_id):
     from .services.coach_student import deactivate_link

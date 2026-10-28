@@ -367,6 +367,60 @@ function studentTasks() {
     </div>
   </div>
 
+  {% if vagus_link %}
+  <div class="rounded-2xl border border-ink-700 mt-4 overflow-hidden"
+       style="background:var(--surface-1);">
+    <div class="px-5 py-4 border-b border-ink-700 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-steel-400 inline-block"></span>
+        <h2 class="text-sm font-semibold text-ink-100">Paketim</h2>
+      </div>
+      <span class="text-xs font-semibold px-2 py-0.5 rounded border border-steel-500/20 text-steel-400"
+            style="background:rgba(100,149,237,0.08);">Vagus</span>
+    </div>
+    <div class="px-5 py-4 flex flex-wrap items-center gap-4 justify-between">
+      <div class="flex flex-wrap gap-6">
+        <div>
+          <p class="text-xs text-ink-500 mb-0.5">Paket bitiş tarihi</p>
+          {% if vagus_link.next_payment_due %}
+            <p class="text-sm font-semibold text-ink-100">{{ vagus_link.next_payment_due|date:"d.m.Y" }}</p>
+          {% else %}
+            <p class="text-sm text-ink-500">—</p>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-ink-500 mb-0.5">Kalan süre</p>
+          {% if vagus_days_remaining is not None %}
+            {% if vagus_days_remaining > 14 %}
+              <p class="text-sm font-bold text-emerald-400">{{ vagus_days_remaining }} gün</p>
+            {% elif vagus_days_remaining > 7 %}
+              <p class="text-sm font-bold text-amber-400">{{ vagus_days_remaining }} gün</p>
+            {% elif vagus_days_remaining >= 0 %}
+              <p class="text-sm font-bold text-ruby-400">{{ vagus_days_remaining }} gün</p>
+            {% else %}
+              <p class="text-sm font-bold text-ruby-400">Süresi doldu</p>
+            {% endif %}
+          {% else %}
+            <p class="text-sm text-ink-500">—</p>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-ink-500 mb-0.5">Koçun</p>
+          <p class="text-sm text-ink-200">{{ vagus_link.coach.full_name }}</p>
+        </div>
+      </div>
+      <a href="{% url 'student:paketim_yenile' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                border border-steel-500/40 text-steel-300 transition-colors"
+         style="background:rgba(100,149,237,0.1);"
+         onmouseover="this.style.background='rgba(100,149,237,0.18)'"
+         onmouseout="this.style.background='rgba(100,149,237,0.1)'">
+        Paketi Yenile →
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {% if exams %}
   <div x-show="sel.length === 2" x-cloak
        class="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-1/2 -translate-x-1/2 z-50
