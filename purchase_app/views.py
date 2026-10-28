@@ -766,6 +766,15 @@ def success(request, order_token):
 
 # ── Student renewal ───────────────────────────────────────────────────────────
 
+_RENEWAL_FEATURES = [
+    'Kişiye özel haftalık program',
+    'Deneme sonuçlarının ders ve konu bazında analizi',
+    'Konu takibi',
+    'Zorlandığın soruları aralıklı tekrar',
+    'İlerleme raporları',
+]
+
+
 def _renewal_legal_ctx():
     return {
         'legal_prelim_info_url':    settings.LEGAL_PRELIM_INFO_URL,
@@ -774,6 +783,7 @@ def _renewal_legal_ctx():
         'legal_kvkk_url':           settings.LEGAL_KVKK_URL,
         'legal_terms_url':          settings.LEGAL_TERMS_URL,
         'purchase_price_tax_label': settings.PURCHASE_PRICE_TAX_LABEL,
+        'included_features':        _RENEWAL_FEATURES,
     }
 
 
@@ -806,7 +816,8 @@ def student_renewal_view(request):
     if renewal_plan is None:
         return render(request, 'student/paketim_yenile.html', {
             'vagus_link': vagus_link,
-            'no_plan': True,
+            'coach':      coach,
+            'no_plan':    True,
         })
 
     if request.method == 'POST':

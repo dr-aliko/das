@@ -10,11 +10,11 @@
   </div>
 
   <div class="rounded-2xl border border-ink-700 overflow-hidden" style="background:var(--surface-1);">
+
+    {# ── Page header ─────────────────────────────────────────────────────────── #}
     <div class="px-6 py-4 border-b border-ink-700">
       <h1 class="text-lg font-semibold text-ink-100">Paketi Yenile</h1>
-      <p class="text-sm text-ink-400 mt-0.5">
-        {{ vagus_link.coach.full_name }} koçunuzla 30 günlük paket yenileme
-      </p>
+      <p class="text-sm text-ink-400 mt-0.5">Mevcut paketinizi 30 gün uzatın</p>
     </div>
 
     {% if no_plan %}
@@ -25,37 +25,82 @@
 
     {% else %}
 
-    <div class="px-6 py-4 border-b border-ink-700 space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="text-sm text-ink-400">Plan</span>
-        <span class="text-sm font-semibold text-ink-100">{{ plan.name }}</span>
+    {# ── Package summary card ─────────────────────────────────────────────────── #}
+    <div class="px-6 py-5 border-b border-ink-700 space-y-4">
+
+      {# Coach row #}
+      <div class="flex items-center gap-3">
+        <span class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+              style="background:rgba(100,149,237,0.12); color:#6495ED; border:1px solid rgba(100,149,237,0.25);">
+          {{ coach.full_name|first|upper }}
+        </span>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-ink-500">Koçunuz</p>
+          <p class="text-sm font-semibold text-ink-100">{{ coach.full_name }}</p>
+        </div>
       </div>
-      <div class="flex items-center justify-between">
-        <span class="text-sm text-ink-400">Süre</span>
-        <span class="text-sm font-semibold text-ink-100">{{ plan.duration_days }} gün</span>
+
+      {# Divider #}
+      <div style="height:1px; background:var(--border-subtle, rgba(255,255,255,0.07));"></div>
+
+      {# Duration + price row #}
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-ink-500 mb-0.5">Süre</p>
+          <p class="text-sm font-semibold text-ink-100">1 aylık / 30 günlük erişim</p>
+        </div>
+        <div class="text-right">
+          <p class="text-2xl font-bold text-steel-300 tabular-nums">{{ plan.price_display }}</p>
+          {% if purchase_price_tax_label %}
+          <p class="text-[11px] text-ink-600">{{ purchase_price_tax_label }}</p>
+          {% endif %}
+        </div>
       </div>
-      <div class="flex items-center justify-between">
-        <span class="text-sm text-ink-400">Tutar</span>
-        <span class="text-base font-bold text-steel-300">{{ plan.price_display }}</span>
+
+      {# Divider #}
+      <div style="height:1px; background:var(--border-subtle, rgba(255,255,255,0.07));"></div>
+
+      {# Included features #}
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-ink-500 mb-2">Dahil olanlar</p>
+        <ul class="space-y-1.5">
+          {% for item in included_features %}
+          <li class="flex items-start gap-2">
+            <svg class="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 14 14" fill="none"
+                 aria-hidden="true">
+              <circle cx="7" cy="7" r="7" fill="rgba(100,149,237,0.15)"/>
+              <path d="M4.5 7l2 2 3-3" stroke="#6495ED" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="text-xs text-ink-300 leading-relaxed">{{ item }}</span>
+          </li>
+          {% endfor %}
+        </ul>
       </div>
-      {% if purchase_price_tax_label %}
-      <p class="text-xs text-ink-600">{{ purchase_price_tax_label }}</p>
-      {% endif %}
+
     </div>
 
+    {# ── Current expiry notice ─────────────────────────────────────────────────── #}
     {% if vagus_link.next_payment_due %}
-    <div class="px-6 py-3 border-b border-ink-700 text-xs text-ink-500">
-      Mevcut bitiş tarihiniz: <strong class="text-ink-300">{{ vagus_link.next_payment_due|date:"d.m.Y" }}</strong>.
-      Yenilemeden sonra bu tarihten itibaren 30 gün eklenecektir.
+    <div class="px-6 py-3 border-b border-ink-700 flex items-center gap-2 text-xs text-ink-500">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+           class="shrink-0 text-ink-600">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+      Mevcut bitiş tarihiniz:
+      <strong class="text-ink-300">{{ vagus_link.next_payment_due|date:"d.m.Y" }}</strong>
+      — yenilemeden sonra bu tarihten 30 gün eklenecektir.
     </div>
     {% endif %}
 
+    {# ── Consent form ─────────────────────────────────────────────────────────── #}
     <form method="post" class="px-6 py-5 space-y-4">
       {% csrf_token %}
 
       {% if consent_error %}
-      <div class="rounded-lg border border-ruby-500/30 px-4 py-2 text-sm text-ruby-400"
-           style="background:rgba(220,38,38,0.08);">
+      <div class="rounded-lg border px-4 py-2 text-sm"
+           style="border-color:rgba(220,38,38,0.35); color:#f87171; background:rgba(220,38,38,0.08);">
         {{ consent_error }}
       </div>
       {% endif %}
