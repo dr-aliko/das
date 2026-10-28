@@ -853,6 +853,10 @@ def student_renewal_view(request):
             _save_consents(order, request.POST, ip, ua, now, settings.LEGAL_DOCS_VERSION)
 
         checkout_url = provider.create_checkout(order, request)
+        if order.provider == 'bank_transfer':
+            from django.urls import reverse
+            checkout_url = reverse('student:paketim_havale',
+                                   kwargs={'order_token': str(order.token)})
         return redirect(checkout_url)
 
     return render(request, 'student/paketim_yenile.html', {
@@ -861,6 +865,20 @@ def student_renewal_view(request):
         'coach':       coach,
         **_renewal_legal_ctx(),
     })
+
+
+def student_renewal_instructions_view(request, order_token):
+    if not request.user.is_authenticated:
+        return redirect('users_app:login')
+    if not request.user.is_student:
+        raise Http404
+
+    order = get_object_or_404(Order, token=order_token, is_renewal=True)
+    if order.student_id != request.user.pk:
+        raise Http404
+
+    ctx = _instructions_ctx(order)
+    return render(request, 'student/paketim_yenile_success.html', ctx)
 
 
 # ── Staff panel ───────────────────────────────────────────────────────────────

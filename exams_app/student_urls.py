@@ -1,11 +1,12 @@
 from django.urls import path
 from . import views
-from purchase_app.views import student_renewal_view
+from purchase_app.views import student_renewal_view, student_renewal_instructions_view
 
 app_name = 'student'
 
 urlpatterns = [
     path('paketim/yenile/', student_renewal_view, name='paketim_yenile'),
+    path('paketim/<uuid:order_token>/havale/', student_renewal_instructions_view, name='paketim_havale'),
     path('', views.student_dashboard, name='dashboard'),
     path('analytics/', views.dashboard_analytics_partial, name='dashboard_analytics'),
     path('analytics/chart/', views.dashboard_chart_data, name='dashboard_chart_data'),
