@@ -27,7 +27,7 @@
                   {% else %}bg-ink-700{% endif %}">
         {{ student.full_name|first|upper }}
       </div>
-      <span class="pii font-semibold text-ink-100 truncate">{{ student.full_name }}</span>
+      <span class="pii font-semibold text-ink-100 break-words min-w-0">{{ student.full_name }}</span>
       {% if student.grade %}
       <span class="pii shrink-0 text-xs text-ink-500">· {{ student.grade }}</span>
       {% endif %}
