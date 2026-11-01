@@ -194,7 +194,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <h3 class="pii font-semibold text-ink-100 break-words">{{ item.student.full_name }}</h3>
+                  <h3 class="pii font-semibold text-ink-100 min-w-0 line-clamp-2">{{ item.student.full_name }}</h3>
                   <div class="flex items-center gap-1.5 shrink-0">
                     {% if item.cs %}{% membership_badge item.cs %}{% endif %}
                     {% if item.status == 'iyi' %}
@@ -324,7 +324,7 @@
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="pii font-semibold text-ink-100 text-sm">{{ item.student.full_name }}</span>
+                <span class="pii font-semibold text-ink-100 text-sm line-clamp-2">{{ item.student.full_name }}</span>
                 {% if item.status == 'iyi' %}
                 <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İyi</span>
                 {% elif item.status == 'dusus' %}
