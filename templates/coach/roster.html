@@ -193,47 +193,45 @@
                 {{ item.initials }}
               </div>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-2">
-                  <h3 class="pii font-semibold text-ink-100 min-w-0 line-clamp-2">{{ item.student.full_name }}</h3>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    {% if item.cs %}{% membership_badge item.cs %}{% endif %}
-                    {% if item.status == 'iyi' %}
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                                 bg-emerald-tint text-emerald-500 text-[11px] font-semibold">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>İyi
-                    </span>
-                    {% elif item.status == 'dusus' %}
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                                 bg-amber-tint text-amber-500 text-[11px] font-semibold">
-                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
-                    </span>
-                    {% endif %}
-                    {% if item.source == 'vagus' %}
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                          style="background:rgba(139,92,246,0.12);color:#a78bfa">Vagus</span>
-                    {% else %}
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                          style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
-                    {% endif %}
-                    {% if item.source != 'vagus' %}{# Trash — not rendered for Vagus-assigned students #}
-                    <button @click.prevent.stop="confirm = true" x-show="!confirm"
-                            class="w-10 h-10 inline-flex items-center justify-center rounded-md
-                                   text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint
-                                   opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-150"
-                            style="position:relative;z-index:1"
-                            title="Öğrenciyi listeden çıkar" aria-label="Öğrenciyi listeden çıkar">
-                      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75"
-                           viewBox="0 0 24 24" aria-hidden="true">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14H6L5 6"/>
-                        <path d="M10 11v6M14 11v6"/>
-                      </svg>
-                    </button>
-                    {% endif %}
-                  </div>
+                <h3 class="pii font-semibold text-ink-100 leading-snug">{{ item.student.full_name }}</h3>
+                <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                  {% if item.cs %}{% membership_badge item.cs %}{% endif %}
+                  {% if item.status == 'iyi' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                               bg-emerald-tint text-emerald-500 text-[11px] font-semibold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>İyi
+                  </span>
+                  {% elif item.status == 'dusus' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                               bg-amber-tint text-amber-500 text-[11px] font-semibold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Düşüş
+                  </span>
+                  {% endif %}
+                  {% if item.source == 'vagus' %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                        style="background:rgba(139,92,246,0.12);color:#a78bfa">Vagus</span>
+                  {% else %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                        style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
+                  {% endif %}
                 </div>
                 <p class="pii text-xs text-ink-400 mt-0.5">{{ item.student.grade|default:"—" }}</p>
               </div>
+              {% if item.source != 'vagus' %}{# Trash — not rendered for Vagus-assigned students #}
+              <button @click.prevent.stop="confirm = true" x-show="!confirm"
+                      class="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-md
+                             text-ink-600 hover:text-ruby-500 hover:bg-ruby-tint
+                             opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-150"
+                      style="position:relative;z-index:1"
+                      title="Öğrenciyi listeden çıkar" aria-label="Öğrenciyi listeden çıkar">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.75"
+                     viewBox="0 0 24 24" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+              {% endif %}
             </div>
             {% if item.phone_display %}
             <div class="mt-2" style="position:relative;z-index:1">
@@ -323,19 +321,19 @@
               {{ item.initials }}
             </div>
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="pii font-semibold text-ink-100 text-sm line-clamp-2">{{ item.student.full_name }}</span>
+              <p class="pii font-semibold text-ink-100 text-sm leading-snug">{{ item.student.full_name }}</p>
+              <div class="mt-0.5 flex items-center gap-1.5 flex-wrap">
                 {% if item.status == 'iyi' %}
-                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İyi</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-tint text-emerald-500 font-semibold">İyi</span>
                 {% elif item.status == 'dusus' %}
-                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-tint text-amber-500 font-semibold">Düşüş</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-tint text-amber-500 font-semibold">Düşüş</span>
                 {% endif %}
                 {% if item.cs %}{% membership_badge item.cs %}{% endif %}
                 {% if item.source == 'vagus' %}
-                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold"
                       style="background:rgba(139,92,246,0.12);color:#a78bfa">Vagus</span>
                 {% else %}
-                <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold"
                       style="background:rgba(71,147,214,0.12);color:#7ab3d4">Kendi</span>
                 {% endif %}
               </div>
