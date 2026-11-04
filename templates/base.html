@@ -13,7 +13,8 @@
   {# ── PWA ── #}
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'vagus/pwa/apple-touch-icon.png' %}" />
   <link rel="manifest" href="{% url 'manifest' %}">
-  <meta name="theme-color" content="#6D5BFF" />
+  <meta name="theme-color" content="#121623" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Vagus">
@@ -54,6 +55,11 @@
   <script src="{% static 'js/das-tokens.js' %}"></script>
   <style>
     [x-cloak] { display: none !important; }
+
+    /* Root and body fill the full viewport so no OS chrome peeks through */
+    html { background-color: var(--bg); }
+    html.dark { background-color: var(--dark-bg); }
+    body { min-height: 100vh; min-height: 100dvh; background-color: var(--bg); }
 
     /* Dark mode overrides ─── applied when <html class="dark">
        Values reference the --dark-* set in tokens.css (single source). */
