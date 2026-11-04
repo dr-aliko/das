@@ -939,6 +939,48 @@ class EarlyReviewTests(TestCase):
         print('  PASS — no state mutation from GET-only visit')
 
 
+class ImageSecurityTests(TestCase):
+    """HTML/SVG content renamed to .png is rejected; valid PNG gets a uuid-based name."""
+
+    def test_html_disguised_as_png_rejected(self):
+        print('\n' + '='*60)
+        print('TEST IMAGE-SEC-1: HTML/SVG content renamed .png is rejected by Pillow detection')
+        print('='*60)
+        from struggle_app.views import _validate_image
+        for label, content in [
+            ('html', b'<html><body>hello</body></html>'),
+            ('svg',  b'<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'),
+        ]:
+            fake = SimpleUploadedFile(f'evil.png', content, content_type='image/png')
+            err, ext = _validate_image(fake)
+            self.assertIsNotNone(err, f'{label} content should be rejected')
+            self.assertIsNone(ext, f'ext should be None on rejection')
+            print(f'  {label} content rejected: "{err}"  PASS')
+
+    def test_valid_png_gets_uuid_name(self):
+        print('\n' + '='*60)
+        print('TEST IMAGE-SEC-2: Valid PNG gets uuid-based path regardless of content_type header')
+        print('='*60)
+        from struggle_app.views import _validate_image
+        from struggle_app.models import _struggle_q_upload
+        png_bytes = _tiny_png()
+        # Deliberately wrong content_type to prove detection uses Pillow, not content_type
+        f = SimpleUploadedFile('original.png', png_bytes, content_type='image/jpeg')
+        err, ext = _validate_image(f)
+        self.assertIsNone(err)
+        self.assertEqual(ext, 'png')
+        print(f'  Pillow-detected ext: {ext}  PASS')
+
+        path1 = _struggle_q_upload(None, f'img.{ext}')
+        path2 = _struggle_q_upload(None, f'img.{ext}')
+        self.assertNotEqual(path1, path2, 'each call must produce a unique uuid')
+        self.assertTrue(path1.startswith('struggle/questions/'))
+        self.assertTrue(path1.endswith('.png'))
+        print(f'  path1: {path1}')
+        print(f'  path2: {path2}')
+        print('  paths are unique and end in .png  PASS')
+
+
 class SubjectLeakTests(TestCase):
     """
     Subject leak fix (#1):

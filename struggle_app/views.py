@@ -14,24 +14,29 @@ from users_app.decorators import coach_can_view_student, coach_required, student
 from .models import StudentStruggleQuestion
 from .services import submit_struggle_review
 
-_ALLOWED_MIME = frozenset({'image/jpeg', 'image/png', 'image/webp', 'image/gif'})
-_MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+_MAX_SIZE   = 5 * 1024 * 1024
+_MAX_PIXELS = 50_000_000
+_FORMAT_EXT = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}
 
 
 def _validate_image(f):
-    """Return error string or None if the uploaded file is a valid image."""
+    """Return (error_string, None) or (None, ext) for the uploaded file."""
     if f.size > _MAX_SIZE:
-        return "Görsel 5 MB'dan büyük olamaz."
-    if f.content_type not in _ALLOWED_MIME:
-        return "Yalnızca JPEG, PNG, WebP veya GIF yükleyebilirsiniz."
+        return "Görsel 5 MB'dan büyük olamaz.", None
     try:
         from PIL import Image
         img = Image.open(f)
+        fmt = img.format
+        if fmt not in _FORMAT_EXT:
+            return "Yalnızca JPEG, PNG veya WebP yükleyebilirsiniz.", None
+        w, h = img.size
+        if w * h > _MAX_PIXELS:
+            return "Görsel boyutu çok büyük.", None
         img.verify()
         f.seek(0)
     except Exception:
-        return "Geçersiz görsel dosyası."
-    return None
+        return "Geçersiz görsel dosyası.", None
+    return None, _FORMAT_EXT[fmt]
 
 
 def _question_json(q):
@@ -115,13 +120,15 @@ class StudentStruggleAddView(View):
             )
 
         if q_img:
-            err = _validate_image(q_img)
+            err, q_ext = _validate_image(q_img)
             if err:
                 return JsonResponse({'ok': False, 'error': err}, status=400)
+            q_img.name = f"img.{q_ext}"
         if s_img:
-            err = _validate_image(s_img)
+            err, s_ext = _validate_image(s_img)
             if err:
                 return JsonResponse({'ok': False, 'error': err}, status=400)
+            s_img.name = f"img.{s_ext}"
 
         try:
             subject = Subject.objects.get(id=int(subject_id))

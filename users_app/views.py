@@ -1344,22 +1344,34 @@ def geri_bildirim_gonder(request):
     )
     gorsel = request.FILES.get('gorsel')
     if gorsel:
-        _ALLOWED_MIME = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
-        _MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+        _G_MAX     = 5 * 1024 * 1024
+        _G_MAX_PX  = 50_000_000
+        _G_FMT_EXT = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}
 
-        if gorsel.size > _MAX_SIZE:
-            return JsonResponse({'ok': False, 'error': 'Görsel 5 MB\'dan büyük olamaz.'}, status=400)
-        if gorsel.content_type not in _ALLOWED_MIME:
-            return JsonResponse({'ok': False, 'error': 'Yalnızca JPEG, PNG, WebP veya GIF yükleyebilirsiniz.'}, status=400)
+        if gorsel.size > _G_MAX:
+            return JsonResponse({'ok': False, 'error': "Görsel 5 MB'dan büyük olamaz."}, status=400)
+
+        g_fmt = None
         try:
             from PIL import Image
-            img = Image.open(gorsel)
-            img.verify()
+            _img = Image.open(gorsel)
+            g_fmt = _img.format
+            g_w, g_h = _img.size
+            _img.verify()
             gorsel.seek(0)
         except Exception:
             return JsonResponse({'ok': False, 'error': 'Geçersiz görsel dosyası.'}, status=400)
 
-        email_msg.attach(gorsel.name, gorsel.read(), gorsel.content_type)
+        if g_fmt not in _G_FMT_EXT:
+            return JsonResponse({'ok': False, 'error': 'Yalnızca JPEG, PNG veya WebP yükleyebilirsiniz.'}, status=400)
+        if g_w * g_h > _G_MAX_PX:
+            return JsonResponse({'ok': False, 'error': 'Görsel boyutu çok büyük.'}, status=400)
+
+        import uuid as _uuid
+        g_ext  = _G_FMT_EXT[g_fmt]
+        g_name = f"{_uuid.uuid4().hex}.{g_ext}"
+        g_mime = f"image/{'jpeg' if g_ext == 'jpg' else g_ext}"
+        email_msg.attach(g_name, gorsel.read(), g_mime)
 
     try:
         email_msg.send()

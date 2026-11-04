@@ -1,5 +1,21 @@
+import os
+import uuid
+from datetime import date as _date
+
 from django.conf import settings
 from django.db import models
+
+
+def _struggle_q_upload(instance, filename):
+    ext = os.path.splitext(filename)[1]
+    today = _date.today()
+    return f"struggle/questions/{today.year}/{today.month:02d}/{uuid.uuid4().hex}{ext}"
+
+
+def _struggle_s_upload(instance, filename):
+    ext = os.path.splitext(filename)[1]
+    today = _date.today()
+    return f"struggle/solutions/{today.year}/{today.month:02d}/{uuid.uuid4().hex}{ext}"
 
 
 class StudentStruggleQuestion(models.Model):
@@ -20,11 +36,11 @@ class StudentStruggleQuestion(models.Model):
         related_name='struggle_questions',
     )
     question_image = models.ImageField(
-        upload_to='struggle/questions/%Y/%m/', blank=True, null=True,
+        upload_to=_struggle_q_upload, blank=True, null=True,
     )
     question_text = models.TextField(blank=True)
     solution_image = models.ImageField(
-        upload_to='struggle/solutions/%Y/%m/', blank=True, null=True,
+        upload_to=_struggle_s_upload, blank=True, null=True,
     )
     solution_text = models.TextField(blank=True)
     notes     = models.TextField(blank=True)
