@@ -567,3 +567,39 @@ def test_dersler_ayt_alan_strict_filter(client):
     assert 'Biyoloji' not in ea_names
     assert 'Tarih 2' not in ea_names
     assert ea_visible[-1]['id'] == 'sub_0'
+
+
+# ── Test 18: mobile soru_cozumu saves with "SINAV - DERS" ders_title format ──
+
+@pytest.mark.django_db
+def test_soru_cozumu_sinav_ders_title_format_saved(client):
+    """saveMobileTask() (after the fix) builds ders_title as 'TYT - Matematik'.
+    Verify the endpoint stores it intact and returns it via GET."""
+    import json
+    coach = baker.make('users_app.User', role='coach', is_approved=True)
+    student = baker.make('users_app.User', role='student', coach=coach)
+    baker.make('users_app.CoachStudent', coach=coach, student=student, active=True)
+    client.force_login(coach)
+
+    payload = {
+        'student_id': student.id,
+        'tarih': '2026-01-13',
+        'aktivite_tipi': 'soru_cozumu',
+        'ders_title': 'TYT - Matematik',
+        'ozel_sure_dk': 45,
+        'detaylar': json.dumps([{'aciklama': 'Limit soruları', 'sure_bilgisi': ''}]),
+    }
+    r = client.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(payload),
+        content_type='application/json',
+    )
+    assert r.status_code == 201
+    grup_id = r.json()['id']
+
+    r2 = client.get(f'/coach/tasks/api/gorev/{grup_id}')
+    assert r2.status_code == 200
+    data = r2.json()
+    assert data['ders_title'] == 'TYT - Matematik'
+    assert data['aktivite_tipi'] == 'soru_cozumu'
+    assert data['meta'] is None

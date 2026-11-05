@@ -274,7 +274,7 @@
     </svg>
   </button>
 
-  {% include "tasks/partials/_task_bottom_sheets.html" %}
+  {% include "tasks/partials/_task_bottom_sheets.html" with coach_mode=True %}
 
 </div>
 {# ── END MOBILE VIEW ─────────────────────────────────────────────────────────── #}
@@ -1274,6 +1274,17 @@ function coachMobilePanel() {
         ytPlaylistPk:null, ytPlaylistTitle:'',
       };
 
+      if(g.aktivite_tipi!=='konu_anlatimi' && g.ders_title){
+        const sep=g.ders_title.indexOf(' - ');
+        if(sep!==-1){
+          const maybeExam=g.ders_title.slice(0,sep);
+          if(['TYT','AYT'].includes(maybeExam)){
+            this.taskForm.sinav_tipi=maybeExam;
+            const dersAd=g.ders_title.slice(sep+3);
+            this.taskForm.konu_ders_id=String(this.dersler.find(d=>d.ad===dersAd)?.id??'');
+          }
+        }
+      }
       if(g.aktivite_tipi==='konu_anlatimi' && g.meta){
         const meta=g.meta;
         this.taskForm.sinav_tipi=meta.sinav_tipi??'TYT';
@@ -1385,13 +1396,11 @@ function coachMobilePanel() {
           };
         }
       }else{
-        /* soru_cozumu / tekrar */
-        if(!this.taskForm.ders_title.trim()){
-          this.taskForm.error='Görev başlığı gerekli.'; return;
-        }
-        ders_title=this.taskForm.ders_title.trim();
-        const aciklama=(this.taskForm.aciklama||ders_title||'—').trim();
-        detaylar=JSON.stringify([{aciklama,sure_bilgisi:''}]);
+        if(!this.taskForm.konu_ders_id){this.taskForm.error='Ders seçilmeli.';return;}
+        if(!this.taskForm.aciklama.trim()){this.taskForm.error='Açıklama boş olamaz.';return;}
+        const ders=this.dersler.find(d=>d.id==this.taskForm.konu_ders_id);
+        ders_title=ders?`${this.taskForm.sinav_tipi} - ${ders.ad}`:'';
+        detaylar=JSON.stringify([{aciklama:this.taskForm.aciklama.trim(),sure_bilgisi:''}]);
       }
 
       const payload={

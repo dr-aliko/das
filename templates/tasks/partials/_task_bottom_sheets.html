@@ -75,7 +75,43 @@
                  ══════════════════════════════════════════════ -->
             <div x-show="taskForm.aktivite_tipi !== 'konu_anlatimi'" class="space-y-5">
 
-                <!-- Task title -->
+                {% if coach_mode %}
+                <!-- Sınav Tipi (coach: API-driven ders list follows) -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">SINAV TİPİ</label>
+                    <div class="flex gap-2">
+                        <template x-for="tip in ['TYT', 'AYT']" :key="tip">
+                            <button type="button"
+                                    @click="taskForm.sinav_tipi = tip; taskForm.konu_ders_id = ''"
+                                    class="flex-1 py-2 rounded-xl text-sm font-bold border transition-colors"
+                                    :class="taskForm.sinav_tipi === tip
+                                        ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'"
+                                    x-text="tip"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Ders picker from API (same filteredDersler as konu_anlatimi) -->
+                <div>
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">DERS</label>
+                    <div x-show="loadingDersler" class="text-[var(--muted)] text-xs px-1">Dersler yükleniyor…</div>
+                    <div x-show="dersler.length > 0"
+                         class="space-y-1.5 max-h-36 overflow-y-auto"
+                         style="-ms-overflow-style:none;scrollbar-width:none;">
+                        <template x-for="d in filteredDersler" :key="d.id">
+                            <button type="button"
+                                    @click="taskForm.konu_ders_id = String(d.id)"
+                                    class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors"
+                                    :class="taskForm.konu_ders_id === String(d.id)
+                                        ? 'bg-[var(--primary-tint)] border-[var(--primary)] text-[var(--primary)]'
+                                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--heading)] active:bg-[var(--surface-1)]'"
+                                    x-text="d.ad"></button>
+                        </template>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Task title (student: free text) -->
                 <div>
                     <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2 px-1">GÖREV BAŞLIĞI</label>
                     <input type="text"
@@ -106,6 +142,7 @@
                         </template>
                     </div>
                 </div>
+            {% endif %}
 
                 <!-- Date & Duration -->
                 <div class="grid grid-cols-2 gap-4">
@@ -370,7 +407,7 @@
                     @click="saveMobileTask()"
                     :disabled="taskForm.aktivite_tipi === 'konu_anlatimi'
                         ? taskForm.selectedVideos.length === 0
-                        : !taskForm.ders_title.trim()"
+                        : {% if coach_mode %}!taskForm.konu_ders_id{% else %}!taskForm.ders_title.trim(){% endif %}"
                     class="flex-[2] px-4 py-3 rounded-xl bg-[var(--primary)] disabled:opacity-40 text-white text-sm font-bold active:scale-95 transition-transform shadow-lg shadow-indigo-500/20">
                 Kaydet
             </button>
