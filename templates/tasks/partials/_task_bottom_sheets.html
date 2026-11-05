@@ -222,12 +222,19 @@
                     </div>
                 </div>
 
-                <!-- Yüklenen YouTube Playlistler (coach-only; ytListeler defined in coachMobilePanel) -->
-                <template x-if="filteredYtListeler && filteredYtListeler.length > 0">
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2 px-1">
-                      <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">YÜKLENEN YT PLAYLİSTLER</label>
-                    </div>
+                {% if coach_mode %}
+                {# Coach: always-visible YT playlist header with "Playlist Ekle" button #}
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between px-1">
+                    <label class="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">YÜKLENEN YT PLAYLİSTLER</label>
+                    <button type="button"
+                            @click="window.dispatchEvent(new CustomEvent('open-playlist-importer', { detail: { examType: taskForm.sinav_tipi } }))"
+                            class="text-xs font-bold"
+                            style="color:var(--primary)">
+                      + Playlist Ekle
+                    </button>
+                  </div>
+                  <template x-if="filteredYtListeler && filteredYtListeler.length > 0">
                     <div class="space-y-1.5 max-h-32 overflow-y-auto"
                          style="-ms-overflow-style:none;scrollbar-width:none;">
                       <template x-for="l in filteredYtListeler" :key="l.pk">
@@ -253,21 +260,12 @@
                         </div>
                       </template>
                     </div>
-                  </div>
-                </template>
-
-                <!-- No-playlist nudge: flag off, ders selected, no matching YT playlists, not loading -->
-                <template x-if="typeof _LEGACY_ENABLED !== 'undefined' && !_LEGACY_ENABLED && taskForm.konu_ders_id && filteredYtListeler.length === 0 && !loadingListeler">
-                  <div class="px-1 space-y-2">
-                    <p class="text-xs" style="color:var(--muted)">Bu ders için henüz oynatma listesi eklemediniz.</p>
-                    <button type="button"
-                            @click="window.dispatchEvent(new CustomEvent('open-playlist-importer', { detail: { examType: taskForm.sinav_tipi } }))"
-                            class="h-8 px-3 text-xs font-bold rounded-xl border transition-colors"
-                            style="color:var(--primary);background:var(--primary-tint);border-color:var(--primary)">
-                      Playlist ekle
-                    </button>
-                  </div>
-                </template>
+                  </template>
+                  <template x-if="typeof _LEGACY_ENABLED !== 'undefined' && !_LEGACY_ENABLED && taskForm.konu_ders_id && !(filteredYtListeler && filteredYtListeler.length > 0) && !loadingListeler">
+                    <p class="text-xs px-1" style="color:var(--muted)">Bu ders için henüz oynatma listesi eklemediniz.</p>
+                  </template>
+                </div>
+                {% endif %}
 
                 <!-- Listeyi yenile — coach-only, shown when a YT playlist the coach owns is selected -->
                 <template x-if="String(taskForm.liste_id).startsWith('yt:') && !!(ytListeler.find(l => l.pk === taskForm.ytPlaylistPk) || {}).is_mine">
