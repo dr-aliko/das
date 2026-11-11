@@ -21,3 +21,5 @@ backups/
 backups/
 *.sql
 .env.bak*
+data.json
+encrypted.data
