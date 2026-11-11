@@ -1943,6 +1943,25 @@ def _parse_topic_error_rows(post):
             continue
         if topic_id and (wrong_cnt > 0 or blank_cnt > 0):
             rows.append((topic_id, wrong_cnt, blank_cnt))
+    existing_ids = set(
+        Topic.objects.filter(id__in=[r[0] for r in rows]).values_list('id', flat=True)
+    )
+    return [r for r in rows if r[0] in existing_ids]
+
+
+def _parse_brans_error_rows(post):
+    try:
+        raw_rows = json.loads(post.get('errors_json', '[]'))
+    except (json.JSONDecodeError, ValueError):
+        return []
+    rows = []
+    for row in raw_rows if isinstance(raw_rows, list) else []:
+        try:
+            topic_id = row.get('topicId')
+            yanlis = max(0, int(row.get('yanlisSayisi', 0) or 0))
+        except (AttributeError, TypeError, ValueError):
+            continue
+        rows.append((topic_id if isinstance(topic_id, int) else None, yanlis))
     return rows
 
 
@@ -2314,18 +2333,10 @@ def exam_create_step2(request, exam_id):
     )
 
     if request.method == 'POST':
-        errors_json = request.POST.get('errors_json', '[]')
-        try:
-            rows = json.loads(errors_json)
-        except json.JSONDecodeError:
-            rows = []
-
-        ExamTopicError.objects.filter(exam=exam).delete()
-        for row in rows:
-            topic_id = row.get('topicId')
-            wrong = max(0, int(row.get('wrongCount', 0) or 0))
-            blank = max(0, int(row.get('blankCount', 0) or 0))
-            if topic_id and (wrong > 0 or blank > 0):
+        rows = _parse_topic_error_rows(request.POST)
+        with transaction.atomic():
+            ExamTopicError.objects.filter(exam=exam).delete()
+            for topic_id, wrong, blank in rows:
                 ExamTopicError.objects.update_or_create(
                     exam=exam, topic_id=topic_id,
                     defaults={'wrong_count': wrong, 'blank_count': blank},
@@ -2974,6 +2985,8 @@ def coach_complete_task(request, task_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     task = get_object_or_404(StudentTask, id=task_id)
+    if not coach_can_view_student(request.user, task.student_id):
+        return JsonResponse({'ok': False}, status=403)
     if is_student_program_expired(request.user, task.student_id):
         return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     task.is_completed = True
@@ -3037,6 +3050,8 @@ def coach_task_action(request, task_id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     task = get_object_or_404(StudentTask, id=task_id)
+    if not coach_can_view_student(request.user, task.student_id):
+        return JsonResponse({'ok': False}, status=403)
     if is_student_program_expired(request.user, task.student_id):
         return JsonResponse({'error': _EXPIRED_MSG}, status=403)
     return _task_action_handler(request, task)
@@ -4037,16 +4052,12 @@ def _render_brans_topic_errors(request, entry, *, final_fallback, back_fallback)
     ])
 
     if request.method == 'POST':
-        raw = request.POST.get('errors_json', '[]')
-        try:
-            rows = json.loads(raw)
-        except json.JSONDecodeError:
-            rows = []
+        rows = _parse_brans_error_rows(request.POST)
 
         valid_topic_ids = set(
             Topic.objects.filter(subject=entry.ders).values_list('id', flat=True)
         )
-        total_yanlis = sum(max(0, int(r.get('yanlisSayisi', 0) or 0)) for r in rows)
+        total_yanlis = sum(yanlis for _topic_id, yanlis in rows)
         if total_yanlis > entry.yanlis:
             messages.error(
                 request,
@@ -4054,15 +4065,14 @@ def _render_brans_topic_errors(request, entry, *, final_fallback, back_fallback)
                 f'deneme yanlış sayısını ({entry.yanlis}) aşamaz.'
             )
         else:
-            BransTopicError.objects.filter(brans_deneme=entry).delete()
-            for row in rows:
-                topic_id = row.get('topicId')
-                yanlis   = max(0, int(row.get('yanlisSayisi', 0) or 0))
-                if topic_id and yanlis > 0 and topic_id in valid_topic_ids:
-                    BransTopicError.objects.update_or_create(
-                        brans_deneme=entry, topic_id=topic_id,
-                        defaults={'yanlis_sayisi': yanlis},
-                    )
+            with transaction.atomic():
+                BransTopicError.objects.filter(brans_deneme=entry).delete()
+                for topic_id, yanlis in rows:
+                    if topic_id and yanlis > 0 and topic_id in valid_topic_ids:
+                        BransTopicError.objects.update_or_create(
+                            brans_deneme=entry, topic_id=topic_id,
+                            defaults={'yanlis_sayisi': yanlis},
+                        )
             messages.success(request, 'Konu hataları kaydedildi.')
             return redirect(next_url if has_next else final_fallback)
 
@@ -4230,9 +4240,9 @@ def placement_save_answer(request, attempt_id):
     attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
     try:
         data = json.loads(request.body)
-        question_id = data.get('question_id')
+        question_id = int(data.get('question_id'))
         selected = data.get('selected_option')  # A-E or null
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
         return JsonResponse({'ok': False}, status=400)
 
     question = get_object_or_404(ExamQuestion, pk=question_id, exam=attempt.exam)

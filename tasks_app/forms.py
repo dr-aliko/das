@@ -26,6 +26,8 @@ class GorevForm(forms.Form):
             raise forms.ValidationError("Detaylar bir liste olmalı.")
         result = []
         for item in data:
+            if not isinstance(item, dict) or not isinstance(item.get("aciklama") or "", str):
+                raise forms.ValidationError("Detaylar geçersiz.")
             aciklama = (item.get("aciklama") or "").strip()
             if not aciklama:
                 raise forms.ValidationError("Her detayın bir açıklaması olmalı.")

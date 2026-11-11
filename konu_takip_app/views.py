@@ -2,6 +2,7 @@ import json
 
 from django.http import HttpResponseForbidden, JsonResponse
 
+from exams_app.models import Subject
 from exams_app.utils import safe_json
 from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
@@ -356,6 +357,7 @@ class CoachToggleSrView(View):
             return JsonResponse({'ok': False, 'error': 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'}, status=403)
 
         student = get_object_or_404(User, pk=student_id, role='student')
+        get_object_or_404(Subject, pk=subject_id)
         new_value = toggle_subject_sr(student, subject_id)
         return JsonResponse({'ok': True, 'sr_enabled': new_value, 'subject_id': subject_id})
 
@@ -369,6 +371,7 @@ class StudentToggleSrView(View):
         except (KeyError, ValueError, TypeError, json.JSONDecodeError):
             return JsonResponse({'ok': False, 'error': 'invalid'}, status=400)
 
+        get_object_or_404(Subject, pk=subject_id)
         new_value = toggle_subject_sr(request.user, subject_id)
         return JsonResponse({'ok': True, 'sr_enabled': new_value, 'subject_id': subject_id})
 

@@ -23,9 +23,10 @@ _YT_IMPORT_TIMEOUT = 300
 
 def _body(request) -> dict:
     try:
-        return json.loads(request.body or b"{}")
-    except json.JSONDecodeError:
+        data = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _build_meta(aktivite_tipi: str, body: dict) -> dict | None:
@@ -256,13 +257,14 @@ class KaynakKitapListView(View):
             sid = 0
         if sid and is_student_program_expired(request.user, sid):
             return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
-        ok = resources.add(
-            request.user,
-            body.get("student_id"),
-            body.get("kitap_adi", ""),
-            body.get("ders", ""),
-            body.get("sinav_tipi", ""),
+        kitap_adi, ders, sinav_tipi = (
+            body.get(key) or "" for key in ("kitap_adi", "ders", "sinav_tipi")
         )
+        if not all(isinstance(v, str) for v in (kitap_adi, ders, sinav_tipi)):
+            return JsonResponse({"ok": False}, status=400)
+        if len(kitap_adi.strip()) > 255 or len(ders) > 64 or len(sinav_tipi) > 32:
+            return JsonResponse({"ok": False}, status=400)
+        ok = resources.add(request.user, sid, kitap_adi, ders, sinav_tipi)
         return JsonResponse({"ok": ok}, status=201 if ok else 400)
 
 
@@ -510,11 +512,12 @@ class YoutubeImportJobStatusView(View):
 @method_decorator(coach_required, name='dispatch')
 class YoutubePlaylistListView(View):
     def get(self, request):
-        from django.db.models import Q
+        from django.db.models import Count, Q
         from tasks_app.models import YouTubePlaylist
         qs = (YouTubePlaylist.objects
               .filter(Q(imported_by=request.user) | Q(imported_by__isnull=True))
               .select_related('subject')
+              .annotate(video_total=Count('videos'))
               .order_by('exam_type', 'title'))
         playlists = [
             {
@@ -524,7 +527,7 @@ class YoutubePlaylistListView(View):
                 "channel_title":   p.channel_title,
                 "exam_type":       p.exam_type,
                 "subject_display": p.subject.display_name if p.subject else "",
-                "video_count":     p.videos.count(),
+                "video_count":     p.video_total,
                 "is_mine":         p.imported_by_id == request.user.pk,
                 "last_synced_at":  p.last_synced_at.isoformat() if p.last_synced_at else None,
             }
@@ -629,6 +632,7 @@ class ExportXlsxView(View):
                     dur = f"⏱{g['ozel_sure_dk']}dk  " if g["ozel_sure_dk"] else ""
                     text = f"{g['ders_title'] or ''}\n{dur}{detay_lines}"
                     cell = ws.cell(row=row, column=col + 1, value=text.strip())
+                    cell.data_type = "s"
                     color = RENK.get(g["aktivite_tipi"], "FFFFFFFF")
                     cell.fill = PatternFill("solid", fgColor=color)
                     cell.alignment = Alignment(wrap_text=True, vertical="top")
@@ -926,6 +930,7 @@ class StudentExportXlsxView(View):
                     dur = f"⏱{g['ozel_sure_dk']}dk  " if g["ozel_sure_dk"] else ""
                     done = " ✓" if g.get("is_completed") else ""
                     cell = ws.cell(row=row, column=col + 1, value=f"{g['ders_title'] or ''}{done}\n{dur}{details}".strip())
+                    cell.data_type = "s"
                     cell.fill = PatternFill("solid", fgColor=RENK.get(g["aktivite_tipi"], "FFFFFFFF"))
                     cell.alignment = Alignment(wrap_text=True, vertical="top")
                     cell.font = Font(size=8)

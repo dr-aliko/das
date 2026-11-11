@@ -7,6 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from exams_app.models import Subject
+from exams_app.utils import safe_json
 from konu_takip_app.alan_utils import struggle_subject_groups
 from konu_takip_app.models import KonuTakipTopic
 from users_app.decorators import coach_can_view_student, coach_required, student_required
@@ -85,10 +86,10 @@ class StudentStruggleIndexView(View):
         ayt_subjects_json = [{'id': s.id, 'name': s.display_name} for s in ayt_subjects]
 
         return render(request, 'struggle/index.html', {
-            'due_json': json.dumps(due_json),
-            'all_json': json.dumps(all_json),
-            'tyt_subjects_json': json.dumps(tyt_subjects_json),
-            'ayt_subjects_json': json.dumps(ayt_subjects_json),
+            'due_json': safe_json(due_json),
+            'all_json': safe_json(all_json),
+            'tyt_subjects_json': safe_json(tyt_subjects_json),
+            'ayt_subjects_json': safe_json(ayt_subjects_json),
             'due_count': len(due_qs),
             'total_count': len(all_qs),
         })
