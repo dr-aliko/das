@@ -32,6 +32,7 @@
            color: '{{ s.color }}',
            d: {{ s.correct }}, y: {{ s.wrong }}, b: {{ s.blank }},
            total: {{ s.question_count }},
+           acc:   {{ s.accuracy_percent }},
            net:   {{ s.net|stringformat:".2f" }}
          }{% if not forloop.last %},{% endif %}
          {% endfor %}
@@ -184,9 +185,10 @@ function examDetailState(cfg) {
           /* Confirmed by server — use authoritative values */
           this.displayNet = json.total_net;
           const sid = String(this.edit.resultId);
-          this.subjectIndex[sid].d   = this.edit.d;
-          this.subjectIndex[sid].y   = this.edit.y;
-          this.subjectIndex[sid].b   = this.editBlank;
+          this.subjectIndex[sid].d   = json.correct;
+          this.subjectIndex[sid].y   = json.wrong;
+          this.subjectIndex[sid].b   = json.blank;
+          this.subjectIndex[sid].acc = json.accuracy_percent;
           this.subjectIndex[sid].net = json.net_score;
           this.showEditSheet = false;
         }

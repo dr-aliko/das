@@ -23,25 +23,26 @@
       <div class="grid grid-cols-3 gap-2 text-center text-[10px] py-2.5 border-y" style="border-color:var(--border)">
         <div>
           <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Doğru" %}</p>
-          <p class="text-sm font-bold tnum mt-0.5 text-up">{{ s.correct }}</p>
+          <p class="text-sm font-bold tnum mt-0.5 text-up"{% if not coach_view %} x-text="subjectIndex['{{ s.id }}'].d"{% endif %}>{{ s.correct }}</p>
         </div>
         <div>
           <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Yanlış" %}</p>
-          <p class="text-sm font-bold tnum mt-0.5 text-down">{{ s.wrong }}</p>
+          <p class="text-sm font-bold tnum mt-0.5 text-down"{% if not coach_view %} x-text="subjectIndex['{{ s.id }}'].y"{% endif %}>{{ s.wrong }}</p>
         </div>
         <div>
           <p class="font-semibold uppercase" style="color:var(--muted)">{% trans "Boş" %}</p>
-          <p class="text-sm font-bold tnum mt-0.5" style="color:var(--muted-2)">{{ s.blank }}</p>
+          <p class="text-sm font-bold tnum mt-0.5" style="color:var(--muted-2)"{% if not coach_view %} x-text="subjectIndex['{{ s.id }}'].b"{% endif %}>{{ s.blank }}</p>
         </div>
       </div>
 
       <div class="mt-2.5 flex items-center justify-between text-[10px]">
         <span class="font-semibold uppercase" style="color:var(--muted)">{% trans "Doğruluk" %}</span>
-        <span class="font-bold tnum" style="color:var(--body)">{{ s.accuracy_percent }}%</span>
+        <span class="font-bold tnum" style="color:var(--body)"{% if not coach_view %} x-text="subjectIndex['{{ s.id }}'].acc + '%'"{% endif %}>{{ s.accuracy_percent }}%</span>
       </div>
       <div class="mt-1.5 h-1.5 w-full rounded-full overflow-hidden" style="background:var(--surface-3)">
         <div class="h-full rounded-full transition-all"
-             style="width:{{ s.accuracy_percent }}%; background:{{ s.color }}"></div>
+             style="width:{{ s.accuracy_percent }}%; background:{{ s.color }}"
+             {% if not coach_view %}:style="{ width: subjectIndex['{{ s.id }}'].acc + '%' }"{% endif %}></div>
       </div>
 
     </div>

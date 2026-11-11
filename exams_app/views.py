@@ -23,7 +23,7 @@ from users_app.utils import is_student_program_expired
 _EXPIRED_MSG = 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'
 
 from .forms import BransDenemeForm
-from .net import calculate_net, total_net
+from .net import accuracy_percent, calculate_net, total_net
 from .models import (
     BransDeneme, BransTopicError, Exam, ExamResult, ExamTopicError,
     Publisher, Subject, StudentTask, Topic,
@@ -1694,14 +1694,13 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
     # ── Subject breakdown ─────────────────────────────────────────────────
     subject_breakdown = []
     for r in results:
-        total_q = r.correct_answers + r.wrong_answers + r.blank_answers
-        accuracy = round(r.correct_answers / total_q * 100) if total_q > 0 else 0
+        accuracy = accuracy_percent(r.correct_answers, r.wrong_answers, r.blank_answers)
         subject_breakdown.append(SimpleNamespace(
             id=r.id,
             name=r.subject.display_name,
             full_name=r.subject.name,
             color=_subject_group_color(r.subject.name),
-            net=round(r.net_score, 2),
+            net=calculate_net(r.correct_answers, r.wrong_answers),
             accuracy_percent=accuracy,
             correct=r.correct_answers,
             wrong=r.wrong_answers,
@@ -1711,7 +1710,7 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
 
     subject_breakdown.sort(key=lambda s: (_subject_group_priority(s.full_name), s.name))
 
-    net_total = round(sum(r.net_score for r in results), 2)
+    net_total = total_net(results)
 
     # ── Previous exam (same student, immediately before this one) ─────────
     prev_exam_obj = (
@@ -1738,7 +1737,7 @@ def _build_exam_detail_v2_context(exam, results_qs, topic_errors_qs):
             r.subject.name: r
             for r in prev_exam_obj.results.select_related('subject').all()
         }
-        prev_net = round(sum(r.net_score for r in prev_results.values()), 2)
+        prev_net = total_net(prev_results.values())
         net_delta = round(net_total - prev_net, 2)
         from django.utils.formats import number_format as _nf
         _abs = _nf(abs(net_delta), decimal_pos=2)
@@ -1871,7 +1870,11 @@ def exam_result_update(request, exam_id, result_id):
 
         return JsonResponse({
             'status':    'ok',
+            'correct':   result.correct_answers,
+            'wrong':     result.wrong_answers,
+            'blank':     result.blank_answers,
             'net_score': result.net_score,
+            'accuracy_percent': accuracy_percent(correct, wrong, blank),
             'total_net': total_net(exam.results.all()),
         })
     except (json.JSONDecodeError, ValueError, TypeError):
