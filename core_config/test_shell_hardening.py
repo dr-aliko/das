@@ -48,3 +48,21 @@ def test_cdn_scripts_are_pinned_with_sri():
     for tag in tags:
         assert re.search(r'@\d+\.\d+\.\d+/', tag), tag
         assert 'integrity="sha384-' in tag and 'crossorigin="anonymous"' in tag, tag
+
+
+def test_cdnjs_scripts_are_pinned_with_sri():
+    from pathlib import Path
+    from django.conf import settings
+    templates = Path(settings.BASE_DIR) / 'templates'
+    tags = [
+        tag
+        for name in ('coach/tasks/hafta.html', 'student/tasks/hafta.html')
+        for tag in re.findall(
+            r'<script[^>]+cdnjs\.cloudflare\.com[^>]*>',
+            (templates / name).read_text(encoding='utf-8'),
+        )
+    ]
+    assert len(tags) == 4
+    for tag in tags:
+        assert re.search(r'/\d+\.\d+\.\d+/', tag), tag
+        assert 'integrity="sha512-' in tag and 'crossorigin="anonymous"' in tag, tag

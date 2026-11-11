@@ -153,3 +153,24 @@ def test_plan_create_rejects_unknown_kind_and_survives_infinite_share(staff_clie
                                    'coach_share_tl': 'inf'})
     assert resp.status_code == 200
     assert Plan.objects.get(name='Sonsuz').coach_share_kurus == 0
+
+
+@pytest.mark.django_db
+def test_checkout_counter_keeps_full_window_and_fails_open():
+    from unittest import mock
+    from django.core.cache import cache
+    from purchase_app import services
+
+    email, ip = 'window@example.com', '203.0.113.31'
+    keys = services._checkout_cache_keys(email, ip)
+    cache.delete_many(keys)
+    with mock.patch.object(cache, 'set', wraps=cache.set) as spy:
+        services.increment_checkout_counters(email, ip)
+        services.increment_checkout_counters(email, ip)
+    assert len(spy.call_args_list) == 4
+    assert all(c.args[2] == services._CHECKOUT_WINDOW for c in spy.call_args_list)
+    assert [cache.get(k) for k in keys] == [2, 2]
+    cache.delete_many(keys)
+
+    with mock.patch.object(cache, 'get', side_effect=RuntimeError('cache down')):
+        services.increment_checkout_counters(email, ip)

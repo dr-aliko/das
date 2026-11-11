@@ -32,12 +32,11 @@ def is_checkout_rate_limited(email, ip):
 
 
 def increment_checkout_counters(email, ip):
-    key_ip, key_email = _checkout_cache_keys(email, ip)
-    for key in (key_ip, key_email):
-        try:
-            cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, _CHECKOUT_WINDOW)
+    try:
+        for key in _checkout_cache_keys(email, ip):
+            cache.set(key, (cache.get(key) or 0) + 1, _CHECKOUT_WINDOW)
+    except Exception:
+        _log.warning('checkout rate-limit bookkeeping failed', exc_info=True)
 
 
 # ── Active provider ───────────────────────────────────────────────────────────
