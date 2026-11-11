@@ -20,7 +20,7 @@ def get_student_status(student):
     recent = list(
         Exam.objects.filter(student=student)
         .prefetch_related('results')
-        .order_by('-exam_date')[:2]
+        .order_by('-exam_date', '-created_at')[:2]
     )
 
     if len(recent) >= 2:

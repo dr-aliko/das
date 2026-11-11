@@ -47,7 +47,7 @@ def _rule_exam_stagnation(student, today):
 def _rule_net_decline(student, today):
     from exams_app.models import Exam
     last3 = list(Exam.objects.filter(student=student)
-                 .prefetch_related('results').order_by('-exam_date')[:3])
+                 .prefetch_related('results').order_by('-exam_date', '-created_at')[:3])
     if len(last3) < 3:
         return None
     nets = [float(e.total_net()) for e in reversed(last3)]
@@ -70,7 +70,7 @@ def _rule_net_decline(student, today):
 def _rule_net_momentum(student, today):
     from exams_app.models import Exam
     last2 = list(Exam.objects.filter(student=student)
-                 .prefetch_related('results').order_by('-exam_date')[:2])
+                 .prefetch_related('results').order_by('-exam_date', '-created_at')[:2])
     if len(last2) < 2:
         return None
     delta = float(last2[0].total_net()) - float(last2[1].total_net())

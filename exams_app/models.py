@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from .net import calculate_net, total_net, with_net_field
+
 
 class Publisher(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -117,7 +119,7 @@ class Exam(models.Model):
         return f'{self.student.full_name} — {self.custom_name} ({self.exam_date})'
 
     def total_net(self):
-        return sum(r.net_score for r in self.results.all())
+        return total_net(self.results.all())
 
 
 class ExamResult(models.Model):
@@ -138,7 +140,9 @@ class ExamResult(models.Model):
         return f'{self.exam} / {self.subject.name}: {self.net_score}'
 
     def save(self, *args, **kwargs):
-        self.net_score = round(self.correct_answers - (self.wrong_answers * 0.25), 2)
+        self.net_score = calculate_net(self.correct_answers, self.wrong_answers)
+        if 'update_fields' in kwargs:
+            kwargs['update_fields'] = with_net_field(kwargs['update_fields'], 'net_score')
         super().save(*args, **kwargs)
 
     def has_errors(self):
@@ -231,7 +235,9 @@ class BransDeneme(models.Model):
         indexes = [models.Index(fields=['student', 'ders', 'tarih'])]
 
     def save(self, *args, **kwargs):
-        self.net = round(self.dogru - self.yanlis * 0.25, 2)
+        self.net = calculate_net(self.dogru, self.yanlis)
+        if 'update_fields' in kwargs:
+            kwargs['update_fields'] = with_net_field(kwargs['update_fields'], 'net')
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -352,7 +358,7 @@ class StudentExamAttempt(models.Model):
 
     @property
     def net_score(self):
-        return round(self.correct_count - self.wrong_count * 0.25, 2)
+        return calculate_net(self.correct_count, self.wrong_count)
 
     @property
     def elapsed_seconds(self):

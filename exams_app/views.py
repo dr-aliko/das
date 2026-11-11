@@ -9,7 +9,7 @@ _log = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -23,6 +23,7 @@ from users_app.utils import is_student_program_expired
 _EXPIRED_MSG = 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'
 
 from .forms import BransDenemeForm
+from .net import calculate_net, total_net
 from .models import (
     BransDeneme, BransTopicError, Exam, ExamResult, ExamTopicError,
     Publisher, Subject, StudentTask, Topic,
@@ -210,7 +211,7 @@ def _build_denemeler_v2_context(user, filters=None):
     # Annotate with computed net, delta, and type label.
     exam_objs = []
     for e in exams_raw:
-        net = round(sum(r.net_score for r in e.results.all()), 2)
+        net = total_net(e.results.all())
         exam_objs.append(SimpleNamespace(
             id=e.id,
             date=e.exam_date,
@@ -1866,13 +1867,12 @@ def exam_result_update(request, exam_id, result_id):
         result.correct_answers = correct
         result.wrong_answers   = wrong
         result.blank_answers   = blank
-        result.save()   # net_score = round(correct - wrong * 0.25, 2) in ExamResult.save()
+        result.save()
 
-        total_net = round(sum(r.net_score for r in exam.results.all()), 2)
         return JsonResponse({
             'status':    'ok',
             'net_score': result.net_score,
-            'total_net': total_net,
+            'total_net': total_net(exam.results.all()),
         })
     except (json.JSONDecodeError, ValueError, TypeError):
         return JsonResponse({'status': 'error', 'detail': 'Geçersiz veri.'}, status=400)
@@ -1907,6 +1907,42 @@ def _resolve_publisher_id(request):
     return publisher_id or None
 
 
+def _parse_subject_counts(post, subjects):
+    rows = {}
+    for subject in subjects:
+        try:
+            correct, wrong, blank = (
+                int(post.get(f'{field}_{subject.id}', 0) or 0)
+                for field in ('correct', 'wrong', 'blank')
+            )
+        except (TypeError, ValueError):
+            return None, 'Geçersiz sayı girdiniz.'
+        if min(correct, wrong, blank) < 0:
+            return None, 'Değerler negatif olamaz.'
+        if correct + wrong + blank > subject.question_count:
+            return None, f'Toplam {subject.question_count} soruyu geçemez ({subject.display_name}).'
+        rows[subject.id] = (correct, wrong, blank)
+    return rows, None
+
+
+def _parse_topic_error_rows(post):
+    try:
+        raw_rows = json.loads(post.get('errors_json', '[]'))
+    except (json.JSONDecodeError, ValueError):
+        return []
+    rows = []
+    for row in raw_rows if isinstance(raw_rows, list) else []:
+        try:
+            topic_id  = int(row.get('topicId') or 0)
+            wrong_cnt = max(0, int(row.get('wrongCount', 0) or 0))
+            blank_cnt = max(0, int(row.get('blankCount', 0) or 0))
+        except (AttributeError, TypeError, ValueError):
+            continue
+        if topic_id and (wrong_cnt > 0 or blank_cnt > 0):
+            rows.append((topic_id, wrong_cnt, blank_cnt))
+    return rows
+
+
 @student_required
 def exam_edit(request, exam_id):
     """Edit an existing exam — reuses the V2 create template for a unified UI."""
@@ -1928,34 +1964,30 @@ def exam_edit(request, exam_id):
             messages.error(request, 'Lütfen zorunlu alanları doldurun.')
             return redirect('student:exam_edit', exam_id=exam.id)
 
-        exam.publisher_id    = publisher_id
-        exam.custom_name     = custom_name
-        exam.exam_date       = exam_date
-        exam.duration_minutes = duration
-        exam.student_note    = student_note
-        exam.save()
+        counts, count_error = _parse_subject_counts(request.POST, subjects)
+        if count_error:
+            messages.error(request, count_error)
+            return redirect('student:exam_edit', exam_id=exam.id)
+        error_rows = _parse_topic_error_rows(request.POST)
 
-        for subject in subjects:
-            correct = int(request.POST.get(f'correct_{subject.id}', 0) or 0)
-            wrong   = int(request.POST.get(f'wrong_{subject.id}',   0) or 0)
-            blank   = int(request.POST.get(f'blank_{subject.id}',   0) or 0)
-            ExamResult.objects.update_or_create(
-                exam=exam, subject_id=subject.id,
-                defaults={'correct_answers': correct, 'wrong_answers': wrong, 'blank_answers': blank},
-            )
+        with transaction.atomic():
+            exam.publisher_id    = publisher_id
+            exam.custom_name     = custom_name
+            exam.exam_date       = exam_date
+            exam.duration_minutes = duration
+            exam.student_note    = student_note
+            exam.save()
 
-        # Inline topic errors — replace all
-        errors_raw = request.POST.get('errors_json', '[]')
-        try:
-            error_rows = json.loads(errors_raw)
-        except (json.JSONDecodeError, ValueError):
-            error_rows = []
-        exam.topic_errors.all().delete()
-        for row in error_rows:
-            topic_id  = row.get('topicId')
-            wrong_cnt = max(0, int(row.get('wrongCount', 0) or 0))
-            blank_cnt = max(0, int(row.get('blankCount', 0) or 0))
-            if topic_id and (wrong_cnt > 0 or blank_cnt > 0):
+            existing = {r.subject_id: r for r in exam.results.all()}
+            for subject_id, (correct, wrong, blank) in counts.items():
+                result = existing.get(subject_id) or ExamResult(exam=exam, subject_id=subject_id)
+                result.correct_answers = correct
+                result.wrong_answers   = wrong
+                result.blank_answers   = blank
+                result.save()
+
+            exam.topic_errors.all().delete()
+            for topic_id, wrong_cnt, blank_cnt in error_rows:
                 ExamTopicError.objects.update_or_create(
                     exam=exam, topic_id=topic_id,
                     defaults={'wrong_count': wrong_cnt, 'blank_count': blank_cnt},
@@ -2094,35 +2126,27 @@ def exam_create_v2(request):
             messages.error(request, 'Lütfen zorunlu alanları doldurun.')
             return render(request, 'student/exam_create_v2.html', _v2_create_ctx(subjects, publishers, request))
 
-        exam = Exam.objects.create(
-            student=request.user,
-            publisher_id=publisher_id,
-            custom_name=custom_name,
-            exam_date=exam_date,
-            duration_minutes=duration,
-            student_note=student_note,
-        )
+        counts, count_error = _parse_subject_counts(request.POST, subjects)
+        if count_error:
+            messages.error(request, count_error)
+            return render(request, 'student/exam_create_v2.html', _v2_create_ctx(subjects, publishers, request))
+        error_rows = _parse_topic_error_rows(request.POST)
 
-        for subject in subjects:
-            correct = int(request.POST.get(f'correct_{subject.id}', 0) or 0)
-            wrong   = int(request.POST.get(f'wrong_{subject.id}',   0) or 0)
-            blank   = int(request.POST.get(f'blank_{subject.id}',   0) or 0)
-            ExamResult.objects.create(
-                exam=exam, subject_id=subject.id,
-                correct_answers=correct, wrong_answers=wrong, blank_answers=blank,
+        with transaction.atomic():
+            exam = Exam.objects.create(
+                student=request.user,
+                publisher_id=publisher_id,
+                custom_name=custom_name,
+                exam_date=exam_date,
+                duration_minutes=duration,
+                student_note=student_note,
             )
-
-        # Inline topic errors (DAS-348)
-        errors_raw = request.POST.get('errors_json', '[]')
-        try:
-            error_rows = json.loads(errors_raw)
-        except (json.JSONDecodeError, ValueError):
-            error_rows = []
-        for row in error_rows:
-            topic_id   = row.get('topicId')
-            wrong_cnt  = max(0, int(row.get('wrongCount', 0) or 0))
-            blank_cnt  = max(0, int(row.get('blankCount', 0) or 0))
-            if topic_id and (wrong_cnt > 0 or blank_cnt > 0):
+            for subject_id, (correct, wrong, blank) in counts.items():
+                ExamResult.objects.create(
+                    exam=exam, subject_id=subject_id,
+                    correct_answers=correct, wrong_answers=wrong, blank_answers=blank,
+                )
+            for topic_id, wrong_cnt, blank_cnt in error_rows:
                 ExamTopicError.objects.update_or_create(
                     exam=exam, topic_id=topic_id,
                     defaults={'wrong_count': wrong_cnt, 'blank_count': blank_cnt},
@@ -2191,38 +2215,39 @@ def exam_create_step1(request):
 
         student_note = request.POST.get('student_note', '').strip() or None
 
-        exam = Exam.objects.create(
-            student=request.user,
-            publisher_id=publisher_id,
-            custom_name=custom_name,
-            exam_date=exam_date,
-            duration_minutes=duration,
-            student_note=student_note,
-        )
-
-        total_duration = sum(
-            int(request.POST.get(f'duration_{s.id}', '0') or 0)
-            for s in subjects
-        )
-        if total_duration > 165:
+        durations = {}
+        for subject in subjects:
+            duration_raw = request.POST.get(f'duration_{subject.id}', '').strip()
+            durations[subject.id] = int(duration_raw) if duration_raw.isdigit() and int(duration_raw) > 0 else None
+        if sum(d or 0 for d in durations.values()) > 165:
             messages.error(request, 'Ders sürelerinin toplamı 165 dakikayı aşamaz.')
             return render(request, 'student/exam_create_step1.html',
                           {'subjects': subjects, 'publishers': publishers})
 
+        counts, count_error = _parse_subject_counts(request.POST, subjects)
+        if count_error:
+            messages.error(request, count_error)
+            return render(request, 'student/exam_create_step1.html',
+                          {'subjects': subjects, 'publishers': publishers})
+
         has_errors = False
-        for subject in subjects:
-            correct = int(request.POST.get(f'correct_{subject.id}', 0) or 0)
-            wrong = int(request.POST.get(f'wrong_{subject.id}', 0) or 0)
-            blank = int(request.POST.get(f'blank_{subject.id}', 0) or 0)
-            duration_raw = request.POST.get(f'duration_{subject.id}', '').strip()
-            duration_val = int(duration_raw) if duration_raw.isdigit() and int(duration_raw) > 0 else None
-            result = ExamResult.objects.create(
-                exam=exam, subject=subject,
-                correct_answers=correct, wrong_answers=wrong, blank_answers=blank,
-                subject_duration_minutes=duration_val,
+        with transaction.atomic():
+            exam = Exam.objects.create(
+                student=request.user,
+                publisher_id=publisher_id,
+                custom_name=custom_name,
+                exam_date=exam_date,
+                duration_minutes=duration,
+                student_note=student_note,
             )
-            if result.has_errors():
-                has_errors = True
+            for subject_id, (correct, wrong, blank) in counts.items():
+                result = ExamResult.objects.create(
+                    exam=exam, subject_id=subject_id,
+                    correct_answers=correct, wrong_answers=wrong, blank_answers=blank,
+                    subject_duration_minutes=durations[subject_id],
+                )
+                if result.has_errors():
+                    has_errors = True
 
         if request.user.coach:
             from users_app.services.notifications import send_push_notification
@@ -4325,7 +4350,7 @@ def _build_placement_analytics(attempt):
         'correct': correct,
         'wrong':   wrong,
         'blank':   blank,
-        'net':     round(correct - wrong * 0.25, 2),
+        'net':     calculate_net(correct, wrong),
         'pct':     round(correct / total * 100, 1) if total else 0,
     }
 
@@ -4445,14 +4470,14 @@ def _build_exam_export_context(student, period_str, *, is_pdf=False, coach_view=
     for exam in exams:
         result_map = {r.subject_id: r for r in exam.results.all()}
         cells = [result_map.get(sid) for sid in subject_ids]
-        total_net = round(sum(r.net_score for r in result_map.values()), 2)
+        exam_total_net = total_net(result_map.values())
         table_rows.append({
             'id':        exam.id,
             'date':      exam.exam_date,
             'name':      exam.custom_name,
             'publisher': exam.publisher.name,
             'cells':     cells,
-            'total_net': total_net,
+            'total_net': exam_total_net,
         })
 
     # Subject averages

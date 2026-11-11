@@ -1057,7 +1057,7 @@ def profil_view(request):
 
     best_net = 0.0
     for exam in exam_qs:
-        net = sum(float(r.net_score) for r in exam.results.all())
+        net = exam.total_net()
         if net > best_net:
             best_net = net
 
