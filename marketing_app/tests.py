@@ -48,3 +48,24 @@ def test_email_failure_is_logged_and_request_still_saved(public_coach, caplog):
     assert response.context['submitted'] is True
     assert CoachRequest.objects.count() == 1
     assert 'coach request email failed' in caplog.text
+
+
+def test_coach_request_capped_per_email(public_coach):
+    from django.core.cache import cache
+    from marketing_app import views
+    cache.clear()
+    for _ in range(views._REQUEST_EMAIL_MAX):
+        assert _post(public_coach).status_code == 200
+    blocked = _post(public_coach, email='ELIF@example.com')
+    assert blocked.status_code == 429
+    assert views._REQUEST_LIMIT_MSG in blocked.content.decode()
+    assert CoachRequest.objects.count() == views._REQUEST_EMAIL_MAX
+    assert _post(public_coach, email='other@example.com').status_code == 200
+    cache.clear()
+
+
+def test_coach_request_limit_fails_open(public_coach):
+    with mock.patch('marketing_app.views.cache.get', side_effect=RuntimeError('cache down')):
+        response = _post(public_coach)
+    assert response.status_code == 200
+    assert CoachRequest.objects.count() == 1

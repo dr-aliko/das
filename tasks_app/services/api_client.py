@@ -8,8 +8,7 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
-_BASE = getattr(settings, "EXTERNAL_API_BASE_URL", "http://152.70.23.159:5000/api")
-_TIMEOUT = getattr(settings, "EXTERNAL_API_TIMEOUT", 5)
+_TIMEOUT = settings.EXTERNAL_API_TIMEOUT
 _CACHE_TTL = 300  # 5 minutes
 _LOG_THROTTLE = 60  # seconds between repeated error logs for the same URL
 _last_error_log: dict[str, float] = {}
@@ -22,7 +21,11 @@ def _throttled_warning(url: str, msg: str, *args) -> None:
         logger.warning(msg, *args)
 
 
-def _get(url: str, params: dict | None = None):
+def _get(path: str, params: dict | None = None):
+    base = settings.EXTERNAL_API_BASE_URL
+    if not base:
+        return None
+    url = f"{base}/{path}"
     raw_key = f"{url}:{sorted(params.items()) if params else ''}"
     cache_key = "api:" + hashlib.md5(raw_key.encode()).hexdigest()
     cached = cache.get(cache_key)
@@ -58,21 +61,22 @@ def _extract_list(data, *envelope_keys: str) -> list:
 
 
 def get_dersler() -> list:
-    data = _get(f"{_BASE}/dersler")
+    data = _get("dersler")
     items = _extract_list(data, "dersler", "data", "results")
     if not items:
-        logger.warning("get_dersler: returned empty — raw type was %s", type(data).__name__)
+        if settings.EXTERNAL_API_BASE_URL:
+            logger.warning("get_dersler: returned empty — raw type was %s", type(data).__name__)
         return []
     return [{"id": d["Id"], "ad": d["Title"]} for d in items if "Id" in d]
 
 
 def get_oynatma_listeleri(ders_id: int, sinav_tipi: str) -> list:
-    data = _get(f"{_BASE}/oynatma-listeleri/{ders_id}", params={"tip": sinav_tipi})
+    data = _get(f"oynatma-listeleri/{ders_id}", params={"tip": sinav_tipi})
     items = _extract_list(data, "listeler", "data", "results")
     return [{"id": d["Id"], "baslik": d["Title"]} for d in items if "Id" in d]
 
 
 def get_videolar(liste_id: int) -> list:
-    data = _get(f"{_BASE}/videolar/{liste_id}")
+    data = _get(f"videolar/{liste_id}")
     items = _extract_list(data, "videolar", "data", "results")
     return [{"id": d["Id"], "baslik": d["Title"], "sure_dk": d["Sure_dk"]} for d in items if "Id" in d]

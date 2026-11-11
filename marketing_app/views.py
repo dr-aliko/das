@@ -1,13 +1,50 @@
+import hashlib
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
 
 from .forms import CoachRequestForm
+from users_app.utils import client_ip
+
 from .models import CoachProfile, CoachRequest, FAQItem, FeatureItem, PricingPlan, SiteSettings, Testimonial
 
 logger = logging.getLogger(__name__)
+
+_REQUEST_IP_MAX = 10
+_REQUEST_IP_WINDOW = 60 * 60
+_REQUEST_EMAIL_MAX = 3
+_REQUEST_EMAIL_WINDOW = 60 * 60 * 24
+_REQUEST_LIMIT_MSG = 'Çok fazla başvuru gönderildi. Lütfen daha sonra tekrar deneyin.'
+
+
+def _request_limit_keys(email, ip):
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+    email_hash = hashlib.sha256(email.strip().lower().encode()).hexdigest()
+    return f'coachreq_ip_{ip_hash}', f'coachreq_email_{email_hash}'
+
+
+def _coach_request_limited(email, ip):
+    try:
+        key_ip, key_email = _request_limit_keys(email, ip)
+        return (
+            (cache.get(key_ip) or 0) >= _REQUEST_IP_MAX
+            or (cache.get(key_email) or 0) >= _REQUEST_EMAIL_MAX
+        )
+    except Exception:
+        logger.warning('coach request rate-limit check failed; allowing the request', exc_info=True)
+        return False
+
+
+def _count_coach_request(email, ip):
+    try:
+        key_ip, key_email = _request_limit_keys(email, ip)
+        cache.set(key_ip, (cache.get(key_ip) or 0) + 1, _REQUEST_IP_WINDOW)
+        cache.set(key_email, (cache.get(key_email) or 0) + 1, _REQUEST_EMAIL_WINDOW)
+    except Exception:
+        logger.warning('coach request rate-limit bookkeeping failed', exc_info=True)
 
 
 def home(request):
@@ -68,9 +105,20 @@ def coach_request(request, slug):
     if request.method == 'POST':
         form = CoachRequestForm(request.POST)
         if form.is_valid():
+            email = form.cleaned_data['email']
+            ip = client_ip(request)
+            if _coach_request_limited(email, ip):
+                form.add_error(None, _REQUEST_LIMIT_MSG)
+                return render(request, 'marketing/coach_request.html', {
+                    'active_nav': 'coaches',
+                    'coach': coach,
+                    'form': form,
+                    'submitted': False,
+                }, status=429)
             obj = form.save(commit=False)
             obj.coach_profile = coach
             obj.save()
+            _count_coach_request(email, ip)
             _send_coach_request_email(obj, coach)
             return render(request, 'marketing/coach_request.html', {
                 'active_nav': 'coaches',

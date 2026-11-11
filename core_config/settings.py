@@ -235,7 +235,8 @@ else:
 
 # External task catalog API (dersler / oynatma listeleri / videolar)
 # Used only for konu_anlatimi create/refresh flow. Edit hydration uses meta.videos instead.
-EXTERNAL_API_BASE_URL = config('EXTERNAL_API_BASE_URL', default='http://152.70.23.159:5000/api')
+# Empty disables the catalog: the api_client then returns empty lists.
+EXTERNAL_API_BASE_URL = config('EXTERNAL_API_BASE_URL', default='').strip().rstrip('/')
 EXTERNAL_API_TIMEOUT = config('EXTERNAL_API_TIMEOUT', default=5, cast=int)
 LEGACY_PLAYLISTS_ENABLED = config('LEGACY_PLAYLISTS_ENABLED', default=True, cast=bool)
 

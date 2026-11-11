@@ -1,7 +1,7 @@
 {% load static %}
 // Vagus — Service Worker
 // Bump CACHE_NAME on every deploy that changes precached assets.
-const CACHE_NAME = 'vagus-shell-{{ cache_name }}';
+const CACHE_NAME = 'vagus-shell-v2-{{ cache_name }}';
 
 // Assets fetched and stored on install.
 // Only same-origin, version-stable resources belong here.
@@ -55,23 +55,12 @@ self.addEventListener('fetch', event => {
   // Let the browser's HTTP cache handle those.
   if (url.origin !== self.location.origin) return;
 
-  // ── Strategy 1: HTML navigations → Network-first ────────────────────────
-  // Try the network; on success, cache a copy so the page works offline later.
-  // On network failure, serve a cached copy if available, then /offline/.
+  // ── Strategy 1: HTML navigations → Network only ─────────────────────────
+  // Pages can hold private student/coach data, so they are never stored.
+  // On network failure, serve the precached /offline/ page.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(request)
-            .then(cached => cached || caches.match('/offline/'))
-        )
+      fetch(request).catch(() => caches.match('/offline/'))
     );
     return;
   }

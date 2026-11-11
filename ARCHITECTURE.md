@@ -116,7 +116,7 @@ BransDeneme          student FK + subject FK + date + scores
 | `DESKTOP_V2_DEFAULT` | True | Activate desktop layout for all users |
 | `Q_SYNC` | False | Run Django-Q2 tasks synchronously (dev/test only) |
 | `DJANGO_LOG_FILE` | (empty) | Path for rotating log file; unset disables file logging |
-| `EXTERNAL_API_BASE_URL` | `http://...` | External task catalog API base |
+| `EXTERNAL_API_BASE_URL` | (empty) | External task catalog API base; empty disables the catalog |
 | `CSRF_TRUSTED_ORIGINS` | `https://app.vagus.tr` | Comma-separated trusted CSRF origins |
 | `PUBLIC_SITE_URL` | `https://vagus.tr` | Public marketing site base URL |
 | `APP_BASE_URL` | `https://app.vagus.tr` | Django app/panel base URL for generated links |
