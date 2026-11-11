@@ -9,6 +9,7 @@ _log = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,7 +18,7 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
-from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
 from users_app.utils import is_student_program_expired
 
 _EXPIRED_MSG = 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'
@@ -2414,6 +2415,26 @@ def exam_compare(request):
 # COACH VIEWS
 # ──────────────────────────────────────────────
 
+def _recent_exams_by_student(student_ids, per_student):
+    from django.db.models import F, Window
+    from django.db.models.functions import RowNumber
+    ranked = (
+        Exam.objects.filter(student_id__in=student_ids)
+        .annotate(recency_rank=Window(
+            RowNumber(),
+            partition_by=F('student_id'),
+            order_by=[F('exam_date').desc(), F('created_at').desc()],
+        ))
+        .filter(recency_rank__lte=per_student)
+        .prefetch_related('results')
+        .order_by('student_id', 'recency_rank')
+    )
+    grouped = {}
+    for exam in ranked:
+        grouped.setdefault(exam.student_id, []).append(exam)
+    return grouped
+
+
 def _fmt_phone(phone):
     """Convert +905051234567 → ('0505 123 45 67', '+905051234567') for display and tel links."""
     if not phone:
@@ -2431,9 +2452,7 @@ def coach_dashboard(request):
     """DAS-413/414/416: Coach Roster — lists active students with status and quick stats."""
     from users_app.models import User, CoachStudent, CoachAuditLog
 
-    students = list(
-        User.objects.filter(role='student', coach=request.user).order_by('full_name')
-    )
+    students = list(coach_students(request.user).order_by('full_name'))
     today = date.today()
 
     linked_ids = set(
@@ -2472,12 +2491,16 @@ def coach_dashboard(request):
     student_data = []
     status_counts = {'iyi': 0, 'dusus': 0}
 
+    student_ids = [s.id for s in students]
+    recent_exams = _recent_exams_by_student(student_ids, 2)
+    since_30 = today - timedelta(days=30)
+    exams_30_by_student = {}
+    for exam in (Exam.objects.filter(student_id__in=student_ids, exam_date__gte=since_30)
+                 .prefetch_related('results')):
+        exams_30_by_student.setdefault(exam.student_id, []).append(exam)
+
     for student in students:
-        exams = list(
-            Exam.objects.filter(student=student)
-            .prefetch_related('results')
-            .order_by('-exam_date')[:5]
-        )
+        exams = recent_exams.get(student.id, [])
 
         last_net = None
         avg_30d = None
@@ -2495,11 +2518,7 @@ def coach_dashboard(request):
             else:
                 last_exam_ago = f'{days_ago}+ Gün'
 
-            since_30 = today - timedelta(days=30)
-            exams_30 = list(
-                Exam.objects.filter(student=student, exam_date__gte=since_30)
-                .prefetch_related('results')
-            )
+            exams_30 = exams_30_by_student.get(student.id, [])
             if exams_30:
                 avg_30d = round(
                     sum(float(e.total_net()) for e in exams_30) / len(exams_30), 2
@@ -2809,24 +2828,22 @@ def unlink_student(request, student_id):
 @coach_required
 def coach_exam_overview(request):
     """Student directory — each student card links to their full exam list."""
-    from users_app.models import User, CoachStudent
-    active_ids = (
-        CoachStudent.objects
-        .filter(coach=request.user, active=True)
-        .values_list('student_id', flat=True)
+    from django.db.models import Count
+    students = list(coach_students(request.user))
+    student_ids = [s.id for s in students]
+    totals = dict(
+        Exam.objects.filter(student_id__in=student_ids)
+        .order_by().values('student_id').annotate(total=Count('id'))
+        .values_list('student_id', 'total')
     )
-    students = list(User.objects.filter(id__in=active_ids, role='student'))
+    latest_exams = _recent_exams_by_student(student_ids, 1)
     student_data = []
     for s in students:
-        exams = list(
-            Exam.objects.filter(student=s)
-            .prefetch_related('results')
-            .order_by('-exam_date')
-        )
+        exams = latest_exams.get(s.id, [])
         last_net = round(float(exams[0].total_net()), 2) if exams else None
         student_data.append({
             'student': s,
-            'total': len(exams),
+            'total': totals.get(s.id, 0),
             'last_net': last_net,
             'last_date': exams[0].exam_date if exams else None,
         })
@@ -2932,8 +2949,7 @@ def assign_task(request):
     direct_complete = bool(data.get('direct_complete', False))
     if is_student_program_expired(request.user, student_id):
         return JsonResponse({'error': _EXPIRED_MSG}, status=403)
-    from users_app.models import User
-    student = get_object_or_404(User, id=student_id, role='student', coach=request.user)
+    student = get_object_or_404(coach_students(request.user), id=student_id)
     topic = get_object_or_404(Topic, id=topic_id)
     tomorrow = date.today() + timedelta(days=1)
     if direct_complete:
@@ -3144,8 +3160,7 @@ def coach_brans_task_action(request, student_id, task_id):
 
 @coach_required
 def compare_exams(request, student_id):
-    from users_app.models import User
-    student = get_object_or_404(User, id=student_id, role='student', coach=request.user)
+    student = get_object_or_404(coach_students(request.user), id=student_id)
 
     exam1_id = request.GET.get('exam1', '')
     exam2_id = request.GET.get('exam2', '')
@@ -3850,19 +3865,20 @@ def coach_brans_analytics(request):
     from django.db.models import Avg, Count, Max
     from users_app.models import User as UserModel
 
-    students = list(
-        UserModel.objects
-        .filter(role='student', coach=request.user)
-        .order_by('full_name')
-    )
+    students = list(coach_students(request.user).order_by('full_name'))
+    stats_by_student = {
+        row['student_id']: row
+        for row in (
+            BransDeneme.objects.filter(student_id__in=[s.id for s in students])
+            .order_by().values('student_id')
+            .annotate(total=Count('id'), last_date=Max('tarih'), avg_net=Avg('net'))
+        )
+    }
+    empty_stats = {'total': 0, 'last_date': None, 'avg_net': None}
 
     student_data = []
     for s in students:
-        stats = (
-            BransDeneme.objects
-            .filter(student=s)
-            .aggregate(total=Count('id'), last_date=Max('tarih'), avg_net=Avg('net'))
-        )
+        stats = stats_by_student.get(s.id, empty_stats)
         student_data.append({
             'student':  s,
             'total':    stats['total'] or 0,
@@ -3961,7 +3977,7 @@ def coach_brans_student_detail(request, student_id):
     """Drill-down: coach sees one student's BransDeneme entries with chart + period filter."""
     from users_app.models import User as UserModel
 
-    student = get_object_or_404(UserModel, id=student_id, role='student', coach=request.user)
+    student = get_object_or_404(coach_students(request.user), id=student_id)
 
     period = request.GET.get('period', 'all')
     ders_filter = request.GET.get('ders', '')
@@ -4011,7 +4027,7 @@ def coach_brans_compare(request, student_id):
     """Coach compares two BransDeneme entries for one of their students."""
     from users_app.models import User as UserModel
 
-    student = get_object_or_404(UserModel, id=student_id, role='student', coach=request.user)
+    student = get_object_or_404(coach_students(request.user), id=student_id)
 
     try:
         a_id = int(request.GET['a'])
@@ -4187,13 +4203,23 @@ def placement_start(request, exam_id):
     if request.method != 'POST':
         return redirect('student:placement_list')
     exam = get_object_or_404(PlacementExam, pk=exam_id, is_active=True)
-    existing = StudentExamAttempt.objects.filter(
-        student=request.user, exam=exam, is_completed=False
-    ).first()
-    if existing:
-        return redirect('student:placement_take', attempt_id=existing.pk)
-    attempt = StudentExamAttempt.objects.create(student=request.user, exam=exam)
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        attempt = StudentExamAttempt.objects.filter(
+            student=request.user, exam=exam, is_completed=False
+        ).first()
+        if not attempt:
+            attempt = StudentExamAttempt.objects.create(student=request.user, exam=exam)
     return redirect('student:placement_take', attempt_id=attempt.pk)
+
+
+_PLACEMENT_GRACE_SECONDS = 60
+_PLACEMENT_TIME_UP = {'ok': False, 'error': 'Sınav süresi doldu.'}
+
+
+def _placement_time_is_up(attempt):
+    allowed = attempt.exam.duration_minutes * 60 + _PLACEMENT_GRACE_SECONDS
+    return (timezone.now() - attempt.start_time).total_seconds() > allowed
 
 
 @student_required
@@ -4237,7 +4263,12 @@ def placement_take(request, attempt_id):
 @require_http_methods(['POST'])
 @student_required
 def placement_save_answer(request, attempt_id):
-    attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
+    attempt = get_object_or_404(
+        StudentExamAttempt.objects.select_related('exam'),
+        pk=attempt_id, student=request.user, is_completed=False,
+    )
+    if _placement_time_is_up(attempt):
+        return JsonResponse(_PLACEMENT_TIME_UP, status=403)
     try:
         data = json.loads(request.body)
         question_id = int(data.get('question_id'))
@@ -4260,7 +4291,12 @@ def placement_save_answer(request, attempt_id):
 @require_http_methods(['POST'])
 @student_required
 def placement_save_time(request, attempt_id):
-    attempt = get_object_or_404(StudentExamAttempt, pk=attempt_id, student=request.user, is_completed=False)
+    attempt = get_object_or_404(
+        StudentExamAttempt.objects.select_related('exam'),
+        pk=attempt_id, student=request.user, is_completed=False,
+    )
+    if _placement_time_is_up(attempt):
+        return JsonResponse(_PLACEMENT_TIME_UP, status=403)
     try:
         data = json.loads(request.body)
         question_id = int(data['question_id'])

@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Max, Prefetch
 
 from tasks_app.models import GorevGrubu, GrupDetay
+from users_app.decorators import coach_students
 
 User = get_user_model()
 
@@ -16,7 +17,7 @@ def week_for_student(
 ) -> list[dict]:
     qs = (
         GorevGrubu.objects.filter(
-            student__coach=coach,
+            student__in=coach_students(coach),
             student_id=student_id,
             tarih__range=(hafta_basi, hafta_sonu),
         )
@@ -28,7 +29,7 @@ def week_for_student(
 
 def get_one(coach: User, grup_id: int) -> dict | None:
     grup = (
-        GorevGrubu.objects.filter(student__coach=coach, pk=grup_id)
+        GorevGrubu.objects.filter(student__in=coach_students(coach), pk=grup_id)
         .prefetch_related("detaylar")
         .first()
     )
@@ -165,8 +166,7 @@ def create(
     detaylar: list[dict],
     meta: dict | None = None,
 ) -> GorevGrubu | None:
-    from users_app.models import User as UserModel
-    student = UserModel.objects.filter(role='student', coach=coach, pk=student_id).first()
+    student = coach_students(coach).filter(pk=student_id).first()
     if not student:
         return None
     next_sira = (
@@ -202,7 +202,7 @@ def update(
     detaylar: list[dict],
     meta: dict | None = None,
 ) -> bool:
-    grup = GorevGrubu.objects.filter(student__coach=coach, pk=grup_id).first()
+    grup = GorevGrubu.objects.filter(student__in=coach_students(coach), pk=grup_id).first()
     if not grup:
         return False
     GorevGrubu.objects.filter(pk=grup_id).update(
@@ -222,14 +222,14 @@ def update(
 
 
 def delete(coach: User, grup_id: int) -> bool:
-    deleted, _ = GorevGrubu.objects.filter(student__coach=coach, pk=grup_id).delete()
+    deleted, _ = GorevGrubu.objects.filter(student__in=coach_students(coach), pk=grup_id).delete()
     return bool(deleted)
 
 
 @transaction.atomic
 def copy_to_date(coach: User, grup_id: int, hedef_tarih: date) -> GorevGrubu | None:
     src = (
-        GorevGrubu.objects.filter(student__coach=coach, pk=grup_id)
+        GorevGrubu.objects.filter(student__in=coach_students(coach), pk=grup_id)
         .prefetch_related("detaylar")
         .first()
     )
@@ -259,12 +259,12 @@ def copy_to_date(coach: User, grup_id: int, hedef_tarih: date) -> GorevGrubu | N
 def swap_order(coach: User, suruklenen_id: int, birakilan_id: int) -> bool:
     a = (
         GorevGrubu.objects.select_for_update()
-        .filter(student__coach=coach, pk=suruklenen_id)
+        .filter(student__in=coach_students(coach), pk=suruklenen_id)
         .first()
     )
     b = (
         GorevGrubu.objects.select_for_update()
-        .filter(student__coach=coach, pk=birakilan_id)
+        .filter(student__in=coach_students(coach), pk=birakilan_id)
         .first()
     )
     # Both must exist, belong to the same student, and be on the same date.

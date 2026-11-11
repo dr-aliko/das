@@ -6,31 +6,22 @@ from django.shortcuts import redirect
 _log = logging.getLogger(__name__)
 
 
-def coach_can_view_student(coach, student_id):
-    """Returns True if coach is authorised to view this student's data (DAS-412).
+def coach_students(coach):
+    """Students this coach may see and edit: the single source of truth for coach access.
 
-    Primary check: CoachStudent table (active=True).
-    Fallback: User.coach FK (legacy) — grants access but logs a warning; run
-    check_coach_consistency --fix to create the missing CoachStudent row.
+    An active CoachStudent row grants access; so does the User.coach FK, which unlink and
+    staff reassign keep in step with the link.
     """
+    from django.db.models import Q
     from users_app.models import CoachStudent, User
-    try:
-        student = User.objects.get(id=student_id, role='student')
-    except User.DoesNotExist:
-        return False
+    active_links = CoachStudent.objects.filter(coach=coach, active=True)
+    return User.objects.filter(role='student').filter(
+        Q(pk__in=active_links.values('student_id')) | Q(coach=coach)
+    )
 
-    if CoachStudent.objects.filter(coach=coach, student=student, active=True).exists():
-        return True
 
-    if student.coach_id == coach.id:
-        _log.warning(
-            'coach_can_view_student: gap — student pk=%s has User.coach but no active '
-            'CoachStudent row; run check_coach_consistency --fix',
-            student.pk,
-        )
-        return True
-
-    return False
+def coach_can_view_student(coach, student_id):
+    return coach_students(coach).filter(pk=student_id).exists()
 
 
 def student_required(view_func):

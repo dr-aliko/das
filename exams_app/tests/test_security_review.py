@@ -116,3 +116,86 @@ def test_placement_save_answer_rejects_malformed_body(student_user, payload):
     )
 
     assert resp.status_code == 400
+
+
+def _coach_page_query_count(coach, url, student_count):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    for _ in range(student_count):
+        student = baker.make('users_app.User', role='student', is_active=True, coach=coach)
+        baker.make('users_app.CoachStudent', coach=coach, student=student, active=True, source='coach')
+        for correct in (5, 6, 7):
+            exam = _exam(student)
+            exam.exam_date = date.today()
+            exam.save(update_fields=['exam_date'])
+            baker.make('exams_app.ExamResult', exam=exam, correct_answers=correct, wrong_answers=0, blank_answers=0)
+    client = _client(coach)
+    with CaptureQueriesContext(connection) as ctx:
+        assert client.get(url).status_code == 200
+    return len(ctx)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('url', ['/coach/', '/coach/denemeler/'])
+def test_coach_pages_query_count_does_not_grow_with_students(coach_user, url):
+    few = _coach_page_query_count(coach_user, url, 2)
+    many = _coach_page_query_count(coach_user, url, 5)
+
+    assert many == few
+
+
+@pytest.mark.django_db
+def test_exam_overview_reports_total_and_latest_net(coach_user):
+    student = baker.make('users_app.User', role='student', is_active=True, coach=coach_user)
+    baker.make('users_app.CoachStudent', coach=coach_user, student=student, active=True)
+    for exam_date, correct in ((date(2026, 1, 5), 10), (date(2026, 2, 5), 30)):
+        exam = _exam(student)
+        exam.exam_date = exam_date
+        exam.save(update_fields=['exam_date'])
+        baker.make('exams_app.ExamResult', exam=exam, correct_answers=correct, wrong_answers=0, blank_answers=0)
+
+    row = _client(coach_user).get('/coach/denemeler/').context['student_data'][0]
+
+    assert (row['total'], row['last_net'], row['last_date']) == (2, 30.0, date(2026, 2, 5))
+
+
+@pytest.mark.django_db
+def test_placement_rejects_answers_after_time_is_up(student_user):
+    from datetime import timedelta
+    from django.utils import timezone
+    from exams_app.models import StudentExamAttempt, StudentQuestionAnswer
+
+    placement = baker.make('exams_app.PlacementExam', is_active=True, duration_minutes=45)
+    question = baker.make('exams_app.ExamQuestion', exam=placement)
+    attempt = baker.make(StudentExamAttempt, student=student_user, exam=placement, is_completed=False)
+    client = _client(student_user)
+    answer_url = f'/student/seviye-tespiti/{attempt.pk}/cevap/'
+    body = {'question_id': question.pk, 'selected_option': 'A', 'seconds': 5}
+
+    in_time = client.post(answer_url, data=json.dumps(body), content_type='application/json')
+    StudentExamAttempt.objects.filter(pk=attempt.pk).update(start_time=timezone.now() - timedelta(minutes=47))
+    late_answer = client.post(
+        answer_url, data=json.dumps({**body, 'selected_option': 'B'}), content_type='application/json',
+    )
+    late_time = client.post(
+        f'/student/seviye-tespiti/{attempt.pk}/sure/', data=json.dumps(body), content_type='application/json',
+    )
+    submit = client.post(f'/student/seviye-tespiti/{attempt.pk}/bitir/')
+
+    assert (in_time.status_code, late_answer.status_code, late_time.status_code) == (200, 403, 403)
+    assert StudentQuestionAnswer.objects.get(attempt=attempt).selected_option == 'A'
+    assert submit.status_code == 302
+
+
+@pytest.mark.django_db
+def test_placement_start_reuses_the_open_attempt(student_user):
+    from exams_app.models import StudentExamAttempt
+
+    placement = baker.make('exams_app.PlacementExam', is_active=True, duration_minutes=45)
+    client = _client(student_user)
+
+    first = client.post(f'/student/seviye-tespiti/{placement.pk}/baslat/')
+    second = client.post(f'/student/seviye-tespiti/{placement.pk}/baslat/')
+
+    assert first.url == second.url
+    assert StudentExamAttempt.objects.filter(student=student_user, exam=placement).count() == 1

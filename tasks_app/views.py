@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
 from users_app.utils import is_student_program_expired
 from tasks_app.forms import GorevForm
 from tasks_app.models import AktiviteTipi
@@ -19,6 +19,9 @@ from tasks_app.services import resources, students
 # Must stay below Q_CLUSTER['retry'] in settings.py so Django-Q never re-queues
 # a still-running import and triggers a duplicate.
 _YT_IMPORT_TIMEOUT = 300
+
+_MAX_SURE_DK = 1440
+_MAX_ACIKLAMA_LEN = 2000
 
 
 def _body(request) -> dict:
@@ -171,7 +174,7 @@ class GorevDetailView(View):
             return JsonResponse({"errors": form.errors}, status=400)
         from tasks_app.models import GorevGrubu
         sid = GorevGrubu.objects.filter(
-            student__coach=request.user, pk=pk
+            student__in=coach_students(request.user), pk=pk
         ).values_list('student_id', flat=True).first()
         if sid and is_student_program_expired(request.user, sid):
             return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
@@ -191,7 +194,7 @@ class GorevDetailView(View):
     def delete(self, request, pk: int):
         from tasks_app.models import GorevGrubu
         sid = GorevGrubu.objects.filter(
-            student__coach=request.user, pk=pk
+            student__in=coach_students(request.user), pk=pk
         ).values_list('student_id', flat=True).first()
         if sid and is_student_program_expired(request.user, sid):
             return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
@@ -208,7 +211,7 @@ class GorevCopyView(View):
             return JsonResponse({"errors": "hedef_tarih gerekli"}, status=400)
         from tasks_app.models import GorevGrubu
         sid = GorevGrubu.objects.filter(
-            student__coach=request.user, pk=pk
+            student__in=coach_students(request.user), pk=pk
         ).values_list('student_id', flat=True).first()
         if sid and is_student_program_expired(request.user, sid):
             return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
@@ -227,7 +230,7 @@ class GorevReorderView(View):
             return JsonResponse({"errors": "hedef_id gerekli"}, status=400)
         from tasks_app.models import GorevGrubu
         sid = GorevGrubu.objects.filter(
-            student__coach=request.user, pk=pk
+            student__in=coach_students(request.user), pk=pk
         ).values_list('student_id', flat=True).first()
         if sid and is_student_program_expired(request.user, sid):
             return JsonResponse({"error": "Bu öğrencinin süresi dolmuş, program düzenlenemiyor."}, status=403)
@@ -828,12 +831,29 @@ class StudentGorevCreateView(View):
         body = _body(request)
         try:
             tarih = date.fromisoformat(body["tarih"])
-        except (KeyError, ValueError):
+        except (KeyError, TypeError, ValueError):
             return JsonResponse({"errors": "tarih gerekli"}, status=400)
         aktivite_tipi = body.get("aktivite_tipi", "tekrar")
-        ders_title    = (body.get("ders_title") or "").strip() or None
-        ozel_sure_dk  = body.get("ozel_sure_dk")
-        aciklama      = (body.get("aciklama") or "").strip()
+        if aktivite_tipi not in AktiviteTipi.values:
+            return JsonResponse({"errors": "aktivite_tipi geçersiz"}, status=400)
+        ders_title, aciklama = body.get("ders_title") or "", body.get("aciklama") or ""
+        if not isinstance(ders_title, str) or not isinstance(aciklama, str):
+            return JsonResponse({"errors": "metin alanları geçersiz"}, status=400)
+        ders_title, aciklama = ders_title.strip() or None, aciklama.strip()
+        if len(ders_title or "") > 255 or len(aciklama) > _MAX_ACIKLAMA_LEN:
+            return JsonResponse({"errors": "metin çok uzun"}, status=400)
+        ozel_sure_dk = body.get("ozel_sure_dk")
+        if ozel_sure_dk in (None, ""):
+            ozel_sure_dk = None
+        else:
+            try:
+                if isinstance(ozel_sure_dk, (bool, float)):
+                    raise ValueError
+                ozel_sure_dk = int(ozel_sure_dk)
+            except (TypeError, ValueError):
+                return JsonResponse({"errors": "ozel_sure_dk geçersiz"}, status=400)
+            if not 0 <= ozel_sure_dk <= _MAX_SURE_DK:
+                return JsonResponse({"errors": "ozel_sure_dk geçersiz"}, status=400)
         detaylar = [{"aciklama": aciklama}] if aciklama else []
         grup = tasks.student_create(
             request.user,

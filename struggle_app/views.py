@@ -5,12 +5,13 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
+from django_ratelimit.decorators import ratelimit
 
 from exams_app.models import Subject
 from exams_app.utils import safe_json
 from konu_takip_app.alan_utils import struggle_subject_groups
 from konu_takip_app.models import KonuTakipTopic
-from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
 
 from .models import StudentStruggleQuestion
 from .services import submit_struggle_review
@@ -18,6 +19,14 @@ from .services import submit_struggle_review
 _MAX_SIZE   = 5 * 1024 * 1024
 _MAX_PIXELS = 50_000_000
 _FORMAT_EXT = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}
+_ADD_RATE = '60/h'
+_MAX_TEXT_LEN = 5000
+_MAX_NOTES_LEN = 2000
+_MAX_QUESTIONS = 1000
+
+
+def _add_rate(group, request):
+    return _ADD_RATE
 
 
 def _validate_image(f):
@@ -96,6 +105,7 @@ class StudentStruggleIndexView(View):
 
 
 @method_decorator(student_required, name='dispatch')
+@method_decorator(ratelimit(key='user', rate=_add_rate, method='POST', block=False), name='post')
 class StudentStruggleAddView(View):
     def post(self, request):
         subject_id = request.POST.get('subject_id', '').strip()
@@ -106,8 +116,23 @@ class StudentStruggleAddView(View):
         q_text     = request.POST.get('question_text', '').strip()
         s_text     = request.POST.get('solution_text', '').strip()
 
+        if getattr(request, 'limited', False):
+            return JsonResponse(
+                {'ok': False, 'error': 'Çok fazla soru eklediniz. Lütfen biraz sonra tekrar deneyin.'},
+                status=429,
+            )
+
         if not subject_id:
             return JsonResponse({'ok': False, 'error': 'Ders seçilmedi.'}, status=400)
+
+        if max(len(q_text), len(s_text)) > _MAX_TEXT_LEN or len(notes) > _MAX_NOTES_LEN:
+            return JsonResponse({'ok': False, 'error': 'Metin çok uzun.'}, status=400)
+
+        if StudentStruggleQuestion.objects.filter(student=request.user).count() >= _MAX_QUESTIONS:
+            return JsonResponse(
+                {'ok': False, 'error': 'Soru sınırına ulaştınız. Yeni soru eklemek için eski sorulardan silin.'},
+                status=400,
+            )
 
         if q_img and q_text:
             return JsonResponse(
@@ -246,16 +271,9 @@ class CoachStruggleStatsView(View):
 
     def get(self, request):
         from django.db.models import Count, Q
-        from users_app.models import CoachStudent, User
+        from users_app.models import User
 
-        active_ids = (
-            CoachStudent.objects
-            .filter(coach=request.user, active=True)
-            .values_list('student_id', flat=True)
-        )
-        coached_students = list(
-            User.objects.filter(role='student', id__in=active_ids).order_by('full_name')
-        )
+        coached_students = list(coach_students(request.user).order_by('full_name'))
 
         selected_student = None
         try:

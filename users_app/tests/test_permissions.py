@@ -42,3 +42,22 @@ def test_coach_role_as_student_id_denies_access(coach_user):
 @pytest.mark.django_db
 def test_nonexistent_student_id_denies_access(coach_user):
     assert coach_can_view_student(coach_user, 99999999) is False
+
+
+@pytest.mark.django_db
+def test_staff_reassigned_vagus_student_moves_to_new_coach(coach_user, student_user):
+    from users_app.decorators import coach_students
+    from users_app.services.coach_student import reassign_student
+
+    new_coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    staff = baker.make('users_app.User', is_staff=True, is_active=True)
+    student_user.coach = coach_user
+    student_user.save(update_fields=['coach'])
+    CoachStudent.objects.create(
+        coach=coach_user, student=student_user, active=True, source=CoachStudent.SOURCE_VAGUS,
+    )
+
+    reassign_student(student_user, new_coach, staff)
+
+    assert list(coach_students(new_coach)) == [student_user]
+    assert not coach_students(coach_user).exists()

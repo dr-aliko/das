@@ -100,3 +100,58 @@ def test_youtube_playlist_list_counts_videos_without_per_row_queries(coach_user,
 
     counts = sorted(p['video_count'] for p in resp.json()['playlists'])
     assert counts == [1, 2, 3]
+
+
+def _create_task(coach, student):
+    return _client(coach).post('/coach/tasks/api/gorevler', content_type='application/json', data=json.dumps({
+        'student_id': student.id, 'tarih': '2026-01-12', 'aktivite_tipi': 'tekrar',
+        'ders_title': 'Mat', 'detaylar': json.dumps([{'aciklama': 'tekrar et'}]),
+    }))
+
+
+@pytest.mark.django_db
+def test_coach_task_access_follows_the_active_link(coach_user):
+    from users_app.models import CoachStudent
+
+    linked_only = baker.make('users_app.User', role='student', is_active=True)
+    baker.make(CoachStudent, coach=coach_user, student=linked_only, active=True, source='vagus')
+    other_coach = baker.make('users_app.User', role='coach', is_active=True, is_approved=True)
+    reassigned = baker.make('users_app.User', role='student', is_active=True, coach=other_coach)
+    baker.make(CoachStudent, coach=coach_user, student=reassigned, active=False)
+    baker.make(CoachStudent, coach=other_coach, student=reassigned, active=True)
+    grup = baker.make(GorevGrubu, student=reassigned, tarih=date(2026, 1, 12), meta=None)
+
+    assert _create_task(coach_user, linked_only).status_code == 201
+    assert _create_task(other_coach, reassigned).status_code == 201
+    assert _create_task(coach_user, reassigned).status_code == 404
+    assert _client(coach_user).delete(f'/coach/tasks/api/gorev/{grup.id}').status_code == 404
+    assert GorevGrubu.objects.filter(pk=grup.pk).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('override', [
+    {'aktivite_tipi': 'hack'}, {'ozel_sure_dk': 'abc'}, {'ozel_sure_dk': -5}, {'ozel_sure_dk': 99999},
+    {'ders_title': 'x' * 256}, {'ders_title': ['x']}, {'tarih': 5}, {'aciklama': 'x' * 2001},
+])
+def test_student_task_create_rejects_invalid_input(student_user, override):
+    body = {'tarih': '2026-01-12', 'aktivite_tipi': 'tekrar', 'ders_title': 'Mat', 'ozel_sure_dk': 30, 'aciklama': 'a'}
+
+    resp = _client(student_user).post(
+        '/student/tasks/api/gorev/new', data=json.dumps({**body, **override}), content_type='application/json',
+    )
+
+    assert resp.status_code == 400
+    assert not GorevGrubu.objects.exists()
+
+
+@pytest.mark.django_db
+def test_student_task_create_still_accepts_client_payloads(student_user):
+    client = _client(student_user)
+    for sure in (30, '45', None, ''):
+        resp = client.post('/student/tasks/api/gorev/new', content_type='application/json', data=json.dumps({
+            'tarih': '2026-01-12', 'aktivite_tipi': 'soru_cozumu', 'ders_title': None,
+            'ozel_sure_dk': sure, 'aciklama': 'a',
+        }))
+        assert resp.status_code == 201
+
+    assert sorted(GorevGrubu.objects.values_list('ozel_sure_dk', flat=True), key=str) == [30, 45, None, None]

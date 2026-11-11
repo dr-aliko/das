@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from users_app.decorators import coach_can_view_student, coach_required, student_required
+from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
 from users_app.models import User
 from users_app.utils import is_student_program_expired
 
@@ -59,15 +59,7 @@ def _progress_response(progress):
 @method_decorator(coach_required, name='dispatch')
 class CoachKonuTakipView(View):
     def get(self, request):
-        from users_app.models import CoachStudent
-        active_ids = (
-            CoachStudent.objects
-            .filter(coach=request.user, active=True)
-            .values_list('student_id', flat=True)
-        )
-        coached_students = list(
-            User.objects.filter(role='student', id__in=active_ids).order_by('full_name')
-        )
+        coached_students = list(coach_students(request.user).order_by('full_name'))
 
         selected_student = None
         try:
