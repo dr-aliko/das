@@ -41,7 +41,7 @@
   {% endif %}
 
   {# ── Kontenjan card — hidden in per-student mode ─────────────────────────── #}
-  {% if not per_student_periods %}{% if enforcement_on or cap_status.granted > 0 %}
+  {% if not per_student_periods %}{% if enforcement_on or cap_status.purchased > 0 %}
   <div class="border-b border-ink-700 px-4 md:px-6 py-4">
 
     {# Three stat tiles #}

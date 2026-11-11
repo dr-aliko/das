@@ -203,6 +203,41 @@ def _mask_email(email):
         return '***'
 
 
+_CHECKOUT_RATE_MSG = 'Çok fazla istek gönderildi. Lütfen 15 dakika sonra tekrar deneyin.'
+_OPEN_ORDER_STATUSES = (Order.STATUS_PENDING, Order.STATUS_AWAITING_TRANSFER)
+
+
+def _reports_existing_account(form):
+    errors = form.errors.as_data()
+    return any(
+        e.code == 'exists'
+        for field in ('email', 'phone')
+        for e in errors.get(field, [])
+    )
+
+
+def _open_order_checkout_url(email, coach, plan):
+    """Checkout URL of the buyer's still-open order for the same coach and plan, if any."""
+    from django.urls import reverse
+    order = (
+        Order.objects
+        .filter(
+            email__iexact=email, coach=coach, plan=plan, is_renewal=False,
+            amount_kurus=plan.price_kurus, status__in=_OPEN_ORDER_STATUSES,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+    if order is None:
+        return None
+    token = str(order.token)
+    if order.provider == 'bank_transfer' and order.status == Order.STATUS_AWAITING_TRANSFER:
+        return reverse('purchase:bank_transfer_instructions', kwargs={'order_token': token})
+    if order.provider == 'sandbox':
+        return reverse('purchase:sandbox_pay', kwargs={'order_token': token})
+    return None
+
+
 def _safe_next(next_param, wp_id):
     """Validate next redirect; must start with /satin-al/ or fallback."""
     if next_param and next_param.startswith('/satin-al/'):
@@ -337,7 +372,22 @@ def step1(request, wp_id):
 
     # Anonymous POST
     form = PurchaseForm(request.POST)
+    ip = _checkout_get_ip(request)
+    raw_email = request.POST.get('email', '').lower().strip()
+
+    if is_checkout_rate_limited(raw_email, ip):
+        from django.forms.utils import ErrorDict
+        form._errors = ErrorDict()
+        form._errors['__all__'] = form.error_class([_CHECKOUT_RATE_MSG])
+        ctx = _base_ctx(coach, plans,
+                        selected_plan_id=request.POST.get('plan', ''),
+                        mod=mod)
+        ctx['form'] = form
+        return render(request, 'purchase/purchase_page.html', ctx)
+
     if not form.is_valid():
+        if _reports_existing_account(form):
+            increment_checkout_counters(raw_email, ip)
         ctx = _base_ctx(coach, plans,
                         selected_plan_id=request.POST.get('plan', ''),
                         mod=mod)
@@ -345,10 +395,9 @@ def step1(request, wp_id):
         return render(request, 'purchase/purchase_page.html', ctx)
 
     email = form.cleaned_data['email'].lower().strip()
-    ip = _checkout_get_ip(request)
 
     if is_checkout_rate_limited(email, ip):
-        form.add_error(None, 'Çok fazla istek gönderildi. Lütfen 15 dakika sonra tekrar deneyin.')
+        form.add_error(None, _CHECKOUT_RATE_MSG)
         ctx = _base_ctx(coach, plans,
                         selected_plan_id=request.POST.get('plan', ''),
                         mod=mod)
@@ -637,6 +686,10 @@ def step3_payment(request, wp_id):
     from django.db import transaction
     from django.utils import timezone
 
+    open_order_url = _open_order_checkout_url(email, coach, plan)
+    if open_order_url:
+        return redirect(open_order_url)
+
     provider   = get_provider()
     ip         = _checkout_get_ip(request)
     ua         = request.META.get('HTTP_USER_AGENT', '')[:512]
@@ -835,7 +888,23 @@ def student_renewal_view(request):
                 **_renewal_legal_ctx(),
             })
 
+        from django.urls import reverse
         from django.utils import timezone
+
+        open_order = (
+            Order.objects
+            .filter(
+                student=request.user, coach=coach, plan=renewal_plan, is_renewal=True,
+                provider='bank_transfer', amount_kurus=renewal_plan.price_kurus,
+                status=Order.STATUS_AWAITING_TRANSFER,
+            )
+            .order_by('-created_at')
+            .first()
+        )
+        if open_order is not None:
+            return redirect(reverse('student:paketim_havale',
+                                    kwargs={'order_token': str(open_order.token)}))
+
         provider = get_provider()
         ip  = _checkout_get_ip(request)
         ua  = request.META.get('HTTP_USER_AGENT', '')[:512]
@@ -979,8 +1048,10 @@ def panel_plan_create(request):
         coach_share_int = int(float(coach_share_tl)) * 100
         if coach_share_int < 0:
             raise ValueError
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         coach_share_int = 0
+    if kind not in dict(Plan.KIND_CHOICES):
+        errors.append('Geçersiz plan türü.')
 
     if not errors:
         Plan.objects.create(
@@ -1032,8 +1103,10 @@ def panel_plan_update(request, pk):
         coach_share_int = int(float(coach_share_tl)) * 100
         if coach_share_int < 0:
             raise ValueError
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         coach_share_int = plan.coach_share_kurus
+    if kind not in dict(Plan.KIND_CHOICES):
+        errors.append('Geçersiz plan türü.')
 
     if not errors:
         plan.name              = name
@@ -1067,10 +1140,11 @@ def panel_order_mark_paid(request, pk):
 @require_POST
 def panel_order_cancel(request, pk):
     """Cancel a pending or awaiting-transfer order."""
-    order = get_object_or_404(Order, pk=pk)
-    if order.status in (Order.STATUS_PENDING, Order.STATUS_AWAITING_TRANSFER):
-        order.status = Order.STATUS_CANCELLED
-        order.save(update_fields=['status', 'updated_at'])
-        from users_app.panel_badges import invalidate_panel_badges
-        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p'))
+    with transaction.atomic():
+        order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
+        if order.status in (Order.STATUS_PENDING, Order.STATUS_AWAITING_TRANSFER):
+            order.status = Order.STATUS_CANCELLED
+            order.save(update_fields=['status', 'updated_at'])
+            from users_app.panel_badges import invalidate_panel_badges
+            transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_p'))
     return redirect('purchase_panel:order_detail', pk=pk)

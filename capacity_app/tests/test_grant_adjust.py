@@ -59,11 +59,12 @@ def active_grant(db, coach):
 def test_reduce_updates_capacity_status(active_grant, staff):
     coach = active_grant.coach
     before = get_capacity_status(coach)
-    assert before['granted'] == 5
+    assert before['purchased'] == 5
 
     adjust_grant(active_grant.pk, 'reduce', 3, active_grant.period_end, staff, 'test reduce')
     after = get_capacity_status(coach)
-    assert after['granted'] == 3
+    assert after['purchased'] == 3
+    assert after['granted'] == after['base_free'] + 3
 
 
 @pytest.mark.django_db

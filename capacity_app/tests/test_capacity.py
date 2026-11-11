@@ -26,6 +26,7 @@ from model_bakery import baker
 
 from capacity_app.models import CapacitySettings, CoachCapacityGrant, CoachCapacityOrder
 from capacity_app.services import (
+    COACH_BASE_FREE_SLOTS,
     can_add_own_student,
     cancel_stale_capacity_orders,
     create_capacity_order,
@@ -48,6 +49,13 @@ def coach(db):
 @pytest.fixture
 def student(db):
     return baker.make(User, role='student', is_active=True, is_approved=True)
+
+
+def _fill_base_slots(coach):
+    for _ in range(COACH_BASE_FREE_SLOTS):
+        s = baker.make(User, role='student', is_active=True, is_approved=True)
+        baker.make(CoachStudent, coach=coach, student=s,
+                   source=CoachStudent.SOURCE_COACH, active=True)
 
 
 @pytest.fixture
@@ -158,9 +166,9 @@ def test_capacity_status_no_grants(coach, student):
     baker.make(CoachStudent, coach=coach, student=student,
                source=CoachStudent.SOURCE_COACH, active=True)
     st = get_capacity_status(coach)
-    assert st['granted'] == 0
+    assert st['granted'] == COACH_BASE_FREE_SLOTS
     assert st['in_use'] == 1
-    assert st['free'] == -1  # overage
+    assert st['free'] == COACH_BASE_FREE_SLOTS - 1
 
 
 @pytest.mark.django_db
@@ -168,9 +176,9 @@ def test_capacity_status_with_grant(coach, student, grant_10):
     baker.make(CoachStudent, coach=coach, student=student,
                source=CoachStudent.SOURCE_COACH, active=True)
     st = get_capacity_status(coach)
-    assert st['granted'] == 10
+    assert st['granted'] == COACH_BASE_FREE_SLOTS + 10
     assert st['in_use'] == 1
-    assert st['free'] == 9
+    assert st['free'] == COACH_BASE_FREE_SLOTS + 9
 
 
 @pytest.mark.django_db
@@ -181,7 +189,7 @@ def test_vagus_links_not_counted(coach, grant_10):
                    source=CoachStudent.SOURCE_VAGUS, active=True)
     st = get_capacity_status(coach)
     assert st['in_use'] == 0
-    assert st['free'] == 10
+    assert st['free'] == COACH_BASE_FREE_SLOTS + 10
 
 
 # ── 5. NULL-source rule ────────────────────────────────────────────────────────
@@ -219,7 +227,7 @@ def test_enforcement_off_allows_when_full(coach, settings):
 @pytest.mark.django_db
 def test_enforcement_on_blocks_when_full(coach, settings):
     settings.COACH_CAPACITY_ENFORCED = True
-    # No grants → capacity 0, in_use 0, free 0
+    _fill_base_slots(coach)
     allowed, msg = can_add_own_student(coach)
     assert allowed is False
     assert msg is not None
@@ -236,6 +244,7 @@ def test_enforcement_on_allows_when_space(coach, grant_10, settings):
 @pytest.mark.django_db
 def test_invite_creation_blocked_when_enforcement_on(coach, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     coach.set_password('testpass')
     coach.save()
     client = Client()
@@ -266,6 +275,7 @@ def test_invite_creation_allowed_when_enforcement_on_with_capacity(coach, grant_
 @pytest.mark.django_db
 def test_invite_acceptance_blocked_when_enforcement_on(coach, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     from users_app.models import StudentInvite
     invite = baker.make(
         StudentInvite,

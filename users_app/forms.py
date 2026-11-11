@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 from .models import CoachProfile, StudentInvite, User
@@ -92,6 +93,11 @@ class CoachRegistrationForm(forms.Form):
         p2 = self.cleaned_data.get('password2')
         if p1 and p2 and p1 != p2:
             raise forms.ValidationError('Şifreler eşleşmiyor.')
+        if p2:
+            validate_password(p2, User(
+                email=self.cleaned_data.get('email', ''),
+                full_name=self.cleaned_data.get('full_name', ''),
+            ))
         return p2
 
 
@@ -156,6 +162,8 @@ class InviteAcceptForm(forms.Form):
         p2 = self.cleaned_data.get('password2')
         if p1 and p2 and p1 != p2:
             raise forms.ValidationError('Şifreler eşleşmiyor.')
+        if p2:
+            validate_password(p2, User(full_name=self.cleaned_data.get('full_name', '')))
         return p2
 
 

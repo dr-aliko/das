@@ -85,7 +85,8 @@ class PurchaseForm(forms.Form):
             qs = qs.exclude(pk=self.current_user.pk)
         if qs.exists():
             raise forms.ValidationError(
-                'Bu e-posta ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.'
+                'Bu e-posta ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.',
+                code='exists',
             )
         return email
 
@@ -106,7 +107,8 @@ class PurchaseForm(forms.Form):
             qs = qs.exclude(pk=self.current_user.pk)
         if qs.exists():
             raise forms.ValidationError(
-                'Bu telefon numarası ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.'
+                'Bu telefon numarası ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.',
+                code='exists',
             )
         return national
 

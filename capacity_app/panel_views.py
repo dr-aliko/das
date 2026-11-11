@@ -21,6 +21,15 @@ User = get_user_model()
 _TAB = 'capacity'
 
 
+def _digest(text):
+    import hashlib
+    return hashlib.md5(text.encode()).hexdigest()
+
+
+_MAX_PRICE_TL = 1_000_000
+_MAX_CREDIT_CHANGE = 1000
+
+
 def _tab_ctx():
     per_student = getattr(django_settings, 'COACH_PER_STUDENT_PERIODS', False)
     return {'active_tab': _TAB, 'active_section': _TAB, 'per_student': per_student}
@@ -128,15 +137,16 @@ def panel_capacity_order_mark_paid(request, pk):
 @staff_required
 @require_POST
 def panel_capacity_order_cancel(request, pk):
-    order = get_object_or_404(CoachCapacityOrder, pk=pk)
-    if order.status in (
-        CoachCapacityOrder.STATUS_PENDING,
-        CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
-    ):
-        order.status = CoachCapacityOrder.STATUS_CANCELLED
-        order.save(update_fields=['status', 'updated_at'])
-        from users_app.panel_badges import invalidate_panel_badges
-        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_c'))
+    with transaction.atomic():
+        order = get_object_or_404(CoachCapacityOrder.objects.select_for_update(), pk=pk)
+        if order.status in (
+            CoachCapacityOrder.STATUS_PENDING,
+            CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
+        ):
+            order.status = CoachCapacityOrder.STATUS_CANCELLED
+            order.save(update_fields=['status', 'updated_at'])
+            from users_app.panel_badges import invalidate_panel_badges
+            transaction.on_commit(lambda: invalidate_panel_badges('pbadge:transfers_c'))
     return redirect('capacity_panel:order_detail', pk=pk)
 
 
@@ -163,7 +173,9 @@ def panel_capacity_grant_create(request):
         slots = None
 
     if not errors and coach and slots:
-        create_manual_grant(coach, slots, request.user)
+        from users_app.utils import is_duplicate_submit
+        if not is_duplicate_submit(f'capgrant_{request.user.pk}_{coach.pk}_{slots}'):
+            create_manual_grant(coach, slots, request.user)
 
     return redirect('capacity_panel:overview')
 
@@ -187,7 +199,7 @@ def panel_capacity_settings(request):
             tl_str = request.POST.get('per_slot_price_tl', '').strip()
             try:
                 tl = int(tl_str)
-                if tl < 0:
+                if tl < 0 or tl > _MAX_PRICE_TL:
                     raise ValueError
             except (ValueError, TypeError):
                 error = 'Geçerli bir tutar girin (0 veya pozitif tam sayı TL).'
@@ -416,12 +428,13 @@ def panel_renewal_mark_paid(request, pk):
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def panel_renewal_cancel(request, pk):
     from .models import CoachStudentRenewalOrder
-    order = get_object_or_404(CoachStudentRenewalOrder, pk=pk)
-    if order.status == CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER:
-        order.status = CoachStudentRenewalOrder.STATUS_CANCELLED
-        order.save(update_fields=['status', 'updated_at'])
-        from users_app.panel_badges import invalidate_panel_badges
-        transaction.on_commit(lambda: invalidate_panel_badges('pbadge:renewals_claimed'))
+    with transaction.atomic():
+        order = get_object_or_404(CoachStudentRenewalOrder.objects.select_for_update(), pk=pk)
+        if order.status == CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER:
+            order.status = CoachStudentRenewalOrder.STATUS_CANCELLED
+            order.save(update_fields=['status', 'updated_at'])
+            from users_app.panel_badges import invalidate_panel_badges
+            transaction.on_commit(lambda: invalidate_panel_badges('pbadge:renewals_claimed'))
     return redirect('capacity_panel:renewal_detail', pk=pk)
 
 
@@ -437,6 +450,7 @@ def panel_coach_credits(request, coach_pk):
         is_own_student_source,
     )
     from users_app.models import CoachStudent, Notification
+    from users_app.utils import is_duplicate_submit
 
     coach = get_object_or_404(User, pk=coach_pk, role='coach')
 
@@ -466,19 +480,23 @@ def panel_coach_credits(request, coach_pk):
             else:
                 try:
                     n = int(n_str)
-                    if n < 1:
+                    if n < 1 or n > _MAX_CREDIT_CHANGE:
                         raise ValueError
                 except (ValueError, TypeError):
-                    error = 'Geçerli bir pozitif tam sayı girin.'
+                    error = f'Geçerli bir pozitif tam sayı girin (en fazla {_MAX_CREDIT_CHANGE}).'
+            if not error and not is_duplicate_submit(
+                f'credgrant_{request.user.pk}_{coach.pk}_{n}_{_digest(notes)}'
+            ):
+                with transaction.atomic():
+                    grant_credits(coach, n, CoachCreditLedger.REASON_MANUAL_GRANT,
+                                  staff=request.user, notes=notes)
+                    Notification.objects.create(
+                        user=coach,
+                        title='Davet hakkı tanımlandı',
+                        body=f'Size {n} davet hakkı tanımlandı.',
+                        url='/auth/invite-students/',
+                    )
             if not error:
-                grant_credits(coach, n, CoachCreditLedger.REASON_MANUAL_GRANT,
-                              staff=request.user, notes=notes)
-                Notification.objects.create(
-                    user=coach,
-                    title='Davet hakkı tanımlandı',
-                    body=f'Size {n} davet hakkı tanımlandı.',
-                    url='/auth/invite-students/',
-                )
                 from users_app.panel_badges import invalidate_panel_badges
                 transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                 return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)
@@ -491,10 +509,15 @@ def panel_coach_credits(request, coach_pk):
             else:
                 try:
                     delta = int(delta_str)
+                    if abs(delta) > _MAX_CREDIT_CHANGE:
+                        raise ValueError
                 except (ValueError, TypeError):
-                    error = 'Geçerli bir tam sayı girin (pozitif veya negatif).'
+                    error = f'Geçerli bir tam sayı girin (en fazla ±{_MAX_CREDIT_CHANGE}).'
             if not error:
-                adjust_credits_staff(coach, delta, request.user, notes=notes)
+                if not is_duplicate_submit(
+                    f'credadj_{request.user.pk}_{coach.pk}_{delta}_{_digest(notes)}'
+                ):
+                    adjust_credits_staff(coach, delta, request.user, notes=notes)
                 from users_app.panel_badges import invalidate_panel_badges
                 transaction.on_commit(lambda: invalidate_panel_badges('pbadge:overdue'))
                 return redirect('capacity_panel:coach_credits', coach_pk=coach_pk)

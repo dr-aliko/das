@@ -16,7 +16,8 @@ from django.urls import reverse
 from model_bakery import baker
 
 from capacity_app.models import CoachCapacityGrant
-from capacity_app.services import can_add_own_student
+from capacity_app.services import COACH_BASE_FREE_SLOTS, can_add_own_student
+from users_app.models import CoachStudent
 
 User = get_user_model()
 
@@ -36,6 +37,13 @@ def coach_client(coach):
     return c
 
 
+def _fill_base_slots(coach):
+    for _ in range(COACH_BASE_FREE_SLOTS):
+        s = baker.make(User, role='student', is_active=True, is_approved=True)
+        baker.make(CoachStudent, coach=coach, student=s,
+                   source=CoachStudent.SOURCE_COACH, active=True)
+
+
 @pytest.fixture
 def pending_invite(db, coach):
     from users_app.models import StudentInvite
@@ -52,11 +60,12 @@ def pending_invite(db, coach):
 # ── Service: message text ──────────────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_no_grants_message_says_yok(coach, settings):
+def test_no_grants_base_slots_full_message_says_doldu(coach, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     allowed, msg = can_add_own_student(coach)
     assert not allowed
-    assert 'yok' in msg.lower()
+    assert 'doldu' in msg.lower()
     assert 'http' not in msg
     assert '/coach/kontenjan/' not in msg
 
@@ -74,6 +83,7 @@ def test_full_capacity_message_says_doldu(coach, settings, db):
     from users_app.models import CoachStudent
     student = baker.make(User, role='student', is_active=True, is_approved=True)
     baker.make(CoachStudent, coach=coach, student=student, active=True, source='coach')
+    _fill_base_slots(coach)
 
     allowed, msg = can_add_own_student(coach)
     assert not allowed
@@ -87,6 +97,7 @@ def test_full_capacity_message_says_doldu(coach, settings, db):
 @pytest.mark.django_db
 def test_coach_invite_page_error_has_no_url_text(coach, coach_client, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     resp = coach_client.post(reverse('users_app:coach_invites'), {
         'email': 'x@example.com', 'full_name': 'Test',
     })
@@ -100,6 +111,7 @@ def test_coach_invite_page_error_has_no_url_text(coach, coach_client, settings):
 @pytest.mark.django_db
 def test_coach_invite_page_html_has_capacity_button(coach, coach_client, settings):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     resp = coach_client.post(reverse('users_app:coach_invites'), {
         'email': 'x@example.com', 'full_name': 'Test',
     })
@@ -113,6 +125,7 @@ def test_coach_invite_page_html_has_capacity_button(coach, coach_client, setting
 @pytest.mark.django_db
 def test_student_invite_page_neutral_message(coach, settings, pending_invite):
     settings.COACH_CAPACITY_ENFORCED = True
+    _fill_base_slots(coach)
     c = Client()
     resp = c.post(f'/auth/invite/{pending_invite.token}/', {
         'full_name': 'Test Student',

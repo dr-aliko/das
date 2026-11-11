@@ -13,10 +13,8 @@ _CHECKOUT_EMAIL_MAX = 3
 
 
 def _checkout_get_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '127.0.0.1')
+    from users_app.utils import client_ip
+    return client_ip(request)
 
 
 def _checkout_cache_keys(email, ip):
@@ -84,6 +82,18 @@ def on_payment_success(order):
 
         if order.status == Order.STATUS_PAID:
             return  # idempotent
+
+        if order.status not in (
+            Order.STATUS_PENDING,
+            Order.STATUS_AWAITING_TRANSFER,
+            Order.STATUS_NEEDS_REVIEW,
+            Order.STATUS_CANCELLED,
+        ):
+            _log.warning(
+                'on_payment_success: order %s has status %s and cannot be marked paid',
+                order.pk, order.status,
+            )
+            return
 
         # Look up existing user by email
         try:

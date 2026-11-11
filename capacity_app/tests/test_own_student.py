@@ -71,8 +71,8 @@ def test_capacity_excludes_vagus(coach):
 
     status = get_capacity_status(coach)
     assert status['in_use'] == 1   # only own student counts
-    assert status['granted'] == 5
-    assert status['free'] == 4
+    assert status['granted'] == status['base_free'] + 5
+    assert status['free'] == status['base_free'] + 4
 
 
 # ── Roster source split ───────────────────────────────────────────────────────

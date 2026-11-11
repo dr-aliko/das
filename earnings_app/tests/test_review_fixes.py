@@ -71,3 +71,46 @@ def test_approve_ignores_foreign_referer(staff_client):
     same_host = 'http://testserver/panel/kazanclar/?status=released'
     resp = staff_client.post(reverse('earnings_panel:approve', args=[row2.pk]), HTTP_REFERER=same_host)
     assert resp['Location'] == same_host
+
+
+@pytest.mark.django_db
+def test_transition_rechecks_status_on_locked_row():
+    from earnings_app.services import approve_earning, mark_paid, void_earning
+    staff = baker.make(User, role='coach', is_active=True, is_staff=True)
+
+    stale = make_row(status=EarningRow.STATUS_RELEASED)
+    EarningRow.objects.filter(pk=stale.pk).update(status=EarningRow.STATUS_VOID)
+    with pytest.raises(ValueError):
+        approve_earning(stale, staff)
+
+    stale = make_row(status=EarningRow.STATUS_APPROVED)
+    EarningRow.objects.filter(pk=stale.pk).update(status=EarningRow.STATUS_VOID)
+    with pytest.raises(ValueError):
+        mark_paid(stale, staff, payout_ref='REF')
+
+    stale = make_row(status=EarningRow.STATUS_APPROVED)
+    EarningRow.objects.filter(pk=stale.pk).update(status=EarningRow.STATUS_PAID)
+    with pytest.raises(ValueError):
+        void_earning(stale, staff, reason='x')
+    stale.refresh_from_db()
+    assert stale.status == EarningRow.STATUS_PAID
+
+
+def test_manual_payment_double_submit_and_bounds(staff_client):
+    from earnings_app.models import ManualPaymentRecord
+    coach = baker.make(User, role='coach', is_active=True, is_approved=True)
+    student = baker.make(User, role='student', is_active=True)
+    url = reverse('earnings_panel:manuel_odeme')
+    data = {'student_id': student.pk, 'coach_id': coach.pk, 'amount_tl': '3000',
+            'coach_pool_tl': '2500', 'date': '2026-11-01', 'days': '30', 'note': 'havale'}
+
+    assert staff_client.post(url, data).status_code == 302
+    assert staff_client.post(url, data).status_code == 302
+    assert ManualPaymentRecord.objects.count() == 1
+    assert EarningRow.objects.filter(manual_record__isnull=False).count() == 1
+
+    pool_over_amount = dict(data, amount_tl='1000', coach_pool_tl='2000', date='2026-11-02')
+    assert staff_client.post(url, pool_over_amount).status_code == 200
+    overflow = dict(data, amount_tl='99999999999', coach_pool_tl='1', date='2026-11-03')
+    assert staff_client.post(url, overflow).status_code == 200
+    assert ManualPaymentRecord.objects.count() == 1

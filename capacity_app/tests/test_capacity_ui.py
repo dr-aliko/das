@@ -180,8 +180,13 @@ def test_zero_slot_grant_no_date_shown(coach, coach_client, settings):
 # ── Invites page: form state ──────────────────────────────────────────────────
 
 @pytest.mark.django_db
-def test_form_hidden_when_enforcement_on_and_no_capacity(coach_client, settings):
+def test_form_hidden_when_enforcement_on_and_no_capacity(coach, coach_client, settings):
+    from capacity_app.services import COACH_BASE_FREE_SLOTS
+    from users_app.models import CoachStudent
     settings.COACH_CAPACITY_ENFORCED = True
+    for _ in range(COACH_BASE_FREE_SLOTS):
+        s = baker.make(User, role='student', is_active=True)
+        baker.make(CoachStudent, coach=coach, student=s, active=True, source='coach')
     resp = coach_client.get(reverse('users_app:coach_invites'))
     assert resp.status_code == 200
     assert resp.context['capacity_blocked'] is True
@@ -274,8 +279,8 @@ def test_invites_flag_false_slot_card_present(coach_client, active_grant, settin
 
 @pytest.mark.django_db
 def test_activation_command_matches_get_capacity_status(settings):
-    """Command converts the same number of credits as get_capacity_status.free
-    for a coach with two active grants (8+5=13) and 11 own students (free=2)."""
+    """Command converts the unused purchased slots (purchased - in_use); the 3 free
+    base slots are not converted. Two active grants (8+5=13), 11 own students -> 2 credits."""
     from datetime import date, timedelta
     from io import StringIO
 
@@ -303,9 +308,9 @@ def test_activation_command_matches_get_capacity_status(settings):
         baker.make(CoachStudent, coach=coach, student=s, active=True, source='coach')
 
     status = get_capacity_status(coach)
-    assert status['granted'] == 13
+    assert status['granted'] == 16
     assert status['in_use'] == 11
-    assert status['free'] == 2
+    assert status['free'] == 5
 
     call_command('activate_per_student_periods', apply=True, coach=coach.pk,
                  stdout=StringIO())
@@ -315,6 +320,7 @@ def test_activation_command_matches_get_capacity_status(settings):
         .filter(coach=coach, reason=CoachCreditLedger.REASON_CONVERTED_FROM_GRANT)
         .aggregate(total=Sum('delta'))['total'] or 0
     )
-    assert converted == status['free'], (
-        f'command wrote {converted} credits but get_capacity_status.free={status["free"]}'
+    unused_purchased = status['purchased'] - status['in_use']
+    assert converted == unused_purchased == 2, (
+        f'command wrote {converted} credits but unused purchased slots={unused_purchased}'
     )

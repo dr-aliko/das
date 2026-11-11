@@ -24,6 +24,9 @@ from .services import (
 _log = logging.getLogger(__name__)
 User = get_user_model()
 
+_MAX_MANUAL_KURUS = 100_000_000
+_MAX_MANUAL_DAYS = 3660
+
 _CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
 
 
@@ -259,7 +262,7 @@ def panel_manuel_odeme_create(request):
 
     try:
         amount_kurus = int(amount_str) * 100
-        if amount_kurus <= 0:
+        if amount_kurus <= 0 or amount_kurus > _MAX_MANUAL_KURUS:
             raise ValueError
     except (ValueError, TypeError):
         errors.append('Geçerli bir ödeme tutarı girin (₺, pozitif tam sayı).')
@@ -267,7 +270,7 @@ def panel_manuel_odeme_create(request):
 
     try:
         pool_kurus = int(pool_str) * 100
-        if pool_kurus <= 0:
+        if pool_kurus <= 0 or pool_kurus > _MAX_MANUAL_KURUS:
             raise ValueError
     except (ValueError, TypeError):
         errors.append('Geçerli bir koç havuzu tutarı girin (₺, pozitif tam sayı).')
@@ -281,24 +284,34 @@ def panel_manuel_odeme_create(request):
 
     try:
         days = int(days_str)
-        if days <= 0:
+        if days <= 0 or days > _MAX_MANUAL_DAYS:
             raise ValueError
     except (ValueError, TypeError):
         errors.append('Geçerli bir süre girin (pozitif tam sayı gün).')
         days = None
 
+    if not errors and pool_kurus > amount_kurus:
+        errors.append('Koç havuzu, ödeme tutarından büyük olamaz.')
+
     if not errors:
-        record = ManualPaymentRecord.objects.create(
-            student=student,
-            coach=coach,
-            amount_kurus=amount_kurus,
-            coach_pool_kurus=pool_kurus,
-            date=payment_date,
-            days=days,
-            note=note,
-            created_by=request.user,
+        from users_app.utils import is_duplicate_submit
+        submit_key = (
+            f'manualpay_{request.user.pk}_{student.pk}_{coach.pk}_'
+            f'{amount_kurus}_{pool_kurus}_{payment_date}_{days}'
         )
-        create_earning_for_manual_record(record)
+        if not is_duplicate_submit(submit_key):
+            with transaction.atomic():
+                record = ManualPaymentRecord.objects.create(
+                    student=student,
+                    coach=coach,
+                    amount_kurus=amount_kurus,
+                    coach_pool_kurus=pool_kurus,
+                    date=payment_date,
+                    days=days,
+                    note=note,
+                    created_by=request.user,
+                )
+                create_earning_for_manual_record(record)
         from users_app.panel_badges import invalidate_panel_badges
         transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
 

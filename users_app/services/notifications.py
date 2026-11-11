@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.conf import settings
+
+_log = logging.getLogger(__name__)
 
 
 def send_push_notification(user, title, body, url=None):
@@ -44,6 +47,9 @@ def send_push_notification(user, title, body, url=None):
             if exc.response is not None and exc.response.status_code in (404, 410):
                 sub.is_active = False
                 sub.save(update_fields=['is_active'])
+            failed += 1
+        except Exception:
+            _log.exception('push send failed for subscription pk=%s', sub.pk)
             failed += 1
 
     return sent, failed

@@ -317,36 +317,50 @@ def void_order_earnings(order_id, reason='order_cancelled', actor=None):
     )
 
 
-def approve_earning(row, actor):
-    """released → approved."""
+def _locked_row(row):
     from .models import EarningRow
-    if row.status != EarningRow.STATUS_RELEASED:
-        raise ValueError('Yalnızca serbest satırlar onaylanabilir.')
-    row.status = EarningRow.STATUS_APPROVED
-    row.approved_at = timezone.now()
-    row.approved_by = actor
-    row.save(update_fields=['status', 'approved_at', 'approved_by'])
+    return EarningRow.objects.select_for_update().get(pk=row.pk)
+
+
+def approve_earning(row, actor):
+    """released → approved. The status is re-checked on the locked row."""
+    from .models import EarningRow
+    with transaction.atomic():
+        locked = _locked_row(row)
+        if locked.status != EarningRow.STATUS_RELEASED:
+            raise ValueError('Yalnızca serbest satırlar onaylanabilir.')
+        locked.status = EarningRow.STATUS_APPROVED
+        locked.approved_at = timezone.now()
+        locked.approved_by = actor
+        locked.save(update_fields=['status', 'approved_at', 'approved_by'])
+    row.refresh_from_db()
 
 
 def mark_paid(row, actor, payout_ref=''):
-    """approved → paid (immutable after this)."""
+    """approved → paid (immutable after this). The status is re-checked on the locked row."""
     from .models import EarningRow
-    if row.status != EarningRow.STATUS_APPROVED:
-        raise ValueError('Yalnızca onaylanmış satırlar ödendi olarak işaretlenebilir.')
-    row.status = EarningRow.STATUS_PAID
-    row.paid_at = timezone.now()
-    row.paid_by = actor
-    row.payout_ref = payout_ref or ''
-    row.save(update_fields=['status', 'paid_at', 'paid_by', 'payout_ref'])
+    with transaction.atomic():
+        locked = _locked_row(row)
+        if locked.status != EarningRow.STATUS_APPROVED:
+            raise ValueError('Yalnızca onaylanmış satırlar ödendi olarak işaretlenebilir.')
+        locked.status = EarningRow.STATUS_PAID
+        locked.paid_at = timezone.now()
+        locked.paid_by = actor
+        locked.payout_ref = payout_ref or ''
+        locked.save(update_fields=['status', 'paid_at', 'paid_by', 'payout_ref'])
+    row.refresh_from_db()
 
 
 def void_earning(row, actor, reason=''):
-    """Void a single non-paid earning row."""
+    """Void a single non-paid earning row. The status is re-checked on the locked row."""
     from .models import EarningRow
-    if row.status == EarningRow.STATUS_PAID:
-        raise ValueError('Ödenmiş satırlar iptal edilemez.')
-    row.status = EarningRow.STATUS_VOID
-    row.voided_at = timezone.now()
-    row.voided_by = actor
-    row.void_reason = reason
-    row.save(update_fields=['status', 'voided_at', 'voided_by', 'void_reason'])
+    with transaction.atomic():
+        locked = _locked_row(row)
+        if locked.status == EarningRow.STATUS_PAID:
+            raise ValueError('Ödenmiş satırlar iptal edilemez.')
+        locked.status = EarningRow.STATUS_VOID
+        locked.voided_at = timezone.now()
+        locked.voided_by = actor
+        locked.void_reason = reason
+        locked.save(update_fields=['status', 'voided_at', 'voided_by', 'void_reason'])
+    row.refresh_from_db()

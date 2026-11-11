@@ -8,6 +8,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from .models import CoachCapacityOrder
 from .services import (
@@ -54,6 +55,7 @@ def _claim_rate_limited(order_token):
 
 
 @_coach_required
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
 def capacity_page(request):
     from .models import CapacitySettings
 
@@ -75,7 +77,16 @@ def capacity_page(request):
             if cfg.per_slot_price_kurus == 0:
                 error = 'Fiyatlandırma henüz yapılandırılmamış. Lütfen yönetici ile iletişime geçin.'
             else:
-                order = create_capacity_order(coach, slots)
+                order = (
+                    CoachCapacityOrder.objects
+                    .filter(
+                        coach=coach, slots=slots,
+                        per_slot_kurus=cfg.per_slot_price_kurus,
+                        status=CoachCapacityOrder.STATUS_AWAITING_TRANSFER,
+                    )
+                    .order_by('-created_at')
+                    .first()
+                ) or create_capacity_order(coach, slots)
                 return redirect('capacity:order_instructions', order_token=str(order.token))
 
     return render(request, 'capacity/capacity_page.html', {
@@ -146,22 +157,26 @@ def renewal_start(request, cs_pk):
     from .models import CapacitySettings, CoachStudentRenewalOrder
     from users_app.models import CoachStudent
 
-    cs = get_object_or_404(CoachStudent, pk=cs_pk, coach=request.user, active=True, source=CoachStudent.SOURCE_COACH)
     cfg = CapacitySettings.get()
-    if cfg.per_slot_price_kurus == 0:
-        messages.error(request, 'Fiyat belirlenmemiş.')
-        return redirect('users_app:coach_invites')
-
-    open_order = CoachStudentRenewalOrder.objects.filter(
-        coach_student=cs, status=CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER
-    ).first()
-    if open_order is None:
-        open_order = CoachStudentRenewalOrder.objects.create(
-            coach_student=cs,
-            amount_kurus=cfg.per_slot_price_kurus,
-            per_student_kurus=cfg.per_slot_price_kurus,
-            ref_code=generate_unique_ref(),
+    with transaction.atomic():
+        cs = get_object_or_404(
+            CoachStudent.objects.select_for_update(),
+            pk=cs_pk, coach=request.user, active=True, source=CoachStudent.SOURCE_COACH,
         )
+        if cfg.per_slot_price_kurus == 0:
+            messages.error(request, 'Fiyat belirlenmemiş.')
+            return redirect('users_app:coach_invites')
+
+        open_order = CoachStudentRenewalOrder.objects.filter(
+            coach_student=cs, status=CoachStudentRenewalOrder.STATUS_AWAITING_TRANSFER
+        ).first()
+        if open_order is None:
+            open_order = CoachStudentRenewalOrder.objects.create(
+                coach_student=cs,
+                amount_kurus=cfg.per_slot_price_kurus,
+                per_student_kurus=cfg.per_slot_price_kurus,
+                ref_code=generate_unique_ref(),
+            )
     return redirect('capacity:renewal_instructions', order_token=str(open_order.token))
 
 

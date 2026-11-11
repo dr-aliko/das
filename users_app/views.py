@@ -68,10 +68,8 @@ _LOGIN_RATE_MSG    = (
 
 
 def _login_get_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '127.0.0.1')
+    from .utils import client_ip
+    return client_ip(request)
 
 
 def _login_cache_keys(email, ip):
@@ -93,10 +91,7 @@ _VERIFY_RESEND_MAX      = 5     # resends per window
 
 
 def _verify_get_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '127.0.0.1')
+    return _login_get_ip(request)
 
 
 def _verify_resend_keys(email, ip):
@@ -347,13 +342,30 @@ class CustomPasswordResetConfirmView(DjangoPRConfirmView):
         return response
 
 
+_REGISTER_WINDOW = 3600
+_REGISTER_IP_MAX = 10
+_REGISTER_RATE_MSG = 'Çok fazla kayıt denemesi. Lütfen daha sonra tekrar deneyin.'
+
+
+def _register_rate_key(request):
+    return 'register_ip_' + hashlib.md5(_login_get_ip(request).encode()).hexdigest()
+
+
 def register_view(request):
     """Public registration — creates coach account, requires email verification before approval."""
     if request.user.is_authenticated:
         return redirect('/')
     if request.method == 'POST':
         form = CoachRegistrationForm(request.POST)
-        if form.is_valid():
+        rate_key = _register_rate_key(request)
+        if (cache.get(rate_key) or 0) >= _REGISTER_IP_MAX:
+            form._errors = ErrorDict()
+            form._errors['__all__'] = form.error_class([_REGISTER_RATE_MSG])
+        elif form.is_valid():
+            try:
+                cache.incr(rate_key)
+            except ValueError:
+                cache.set(rate_key, 1, _REGISTER_WINDOW)
             user = User.objects.create_user(
                 email=form.cleaned_data['email'],
                 full_name=form.cleaned_data['full_name'],
@@ -518,7 +530,7 @@ def _send_invite_email(invite, request):
     async_task('users_app.tasks.send_invite_email_task', invite.id)
 
 
-@ratelimit(key='user', rate='20/d', block=True)
+@ratelimit(key='user', rate='20/d', method='POST', block=True)
 def coach_invite_view(request):
     from users_app.decorators import coach_required
     # Apply decorator programmatically so the function can be referenced by name in urls.py
@@ -564,17 +576,21 @@ def coach_invite_view(request):
     if request.method == 'POST':
         form = InviteStudentForm(request.POST)
         if form.is_valid():
-            allowed, cap_msg = can_add_own_student(request.user)
-            if not allowed:
+            invite = None
+            with transaction.atomic():
+                User.objects.select_for_update().get(pk=request.user.pk)
+                allowed, cap_msg = can_add_own_student(request.user)
+                if allowed:
+                    invite = StudentInvite.objects.create(
+                        coach=request.user,
+                        email=form.cleaned_data['email'],
+                        full_name=form.cleaned_data.get('full_name', ''),
+                        token=StudentInvite.generate_token(),
+                    )
+            if invite is None:
                 capacity_error = cap_msg
                 capacity_blocked = True
             else:
-                invite = StudentInvite.objects.create(
-                    coach=request.user,
-                    email=form.cleaned_data['email'],
-                    full_name=form.cleaned_data.get('full_name', ''),
-                    token=StudentInvite.generate_token(),
-                )
                 _send_invite_email(invite, request)
                 messages.success(request, f'{invite.email} adresine davet gönderildi.')
                 return redirect('users_app:coach_invites')
@@ -785,41 +801,49 @@ def invite_register_view(request, token):
                 messages.success(request, f'Hoş geldin, {user.full_name}!')
                 return redirect('/student/')
 
-            # flag=False or staff invite: existing code path unchanged
-            if not invite.initiated_by_staff:
-                from capacity_app.services import can_add_own_student
-                allowed, cap_msg = can_add_own_student(invite.coach)
-                if not allowed:
-                    capacity_full_error = cap_msg
-                    return render(request, 'auth/invite_register.html', {
-                        'form': form,
-                        'invite': invite,
-                        'capacity_full_error': capacity_full_error,
-                    })
+            # flag=False or staff invite
+            with transaction.atomic():
+                if not StudentInvite.objects.select_for_update().filter(
+                    pk=invite.pk, is_used=False,
+                ).exists():
+                    from django.http import Http404
+                    raise Http404
+                User.objects.select_for_update().get(pk=invite.coach_id)
 
-            user = User.objects.create_user(
-                email=invite.email,
-                full_name=form.cleaned_data['full_name'],
-                role='student',
-                password=form.cleaned_data['password1'],
-            )
-            user.coach = invite.coach
-            user.is_approved = True
-            user.is_active = True
-            user.save(update_fields=['coach', 'is_approved', 'is_active'])
+                if not invite.initiated_by_staff:
+                    from capacity_app.services import can_add_own_student
+                    allowed, cap_msg = can_add_own_student(invite.coach)
+                    if not allowed:
+                        capacity_full_error = cap_msg
+                        return render(request, 'auth/invite_register.html', {
+                            'form': form,
+                            'invite': invite,
+                            'capacity_full_error': capacity_full_error,
+                        })
 
-            source = (
-                CoachStudent.SOURCE_VAGUS if invite.initiated_by_staff
-                else CoachStudent.SOURCE_COACH
-            )
-            next_payment_due = None
-            if invite.start_date:
-                next_payment_due = invite.start_date + timedelta(days=30)
-            from .services.coach_student import ensure_active_link
-            ensure_active_link(invite.coach, user, source, next_payment_due)
+                user = User.objects.create_user(
+                    email=invite.email,
+                    full_name=form.cleaned_data['full_name'],
+                    role='student',
+                    password=form.cleaned_data['password1'],
+                )
+                user.coach = invite.coach
+                user.is_approved = True
+                user.is_active = True
+                user.save(update_fields=['coach', 'is_approved', 'is_active'])
 
-            invite.is_used = True
-            invite.save(update_fields=['is_used'])
+                source = (
+                    CoachStudent.SOURCE_VAGUS if invite.initiated_by_staff
+                    else CoachStudent.SOURCE_COACH
+                )
+                next_payment_due = None
+                if invite.start_date:
+                    next_payment_due = invite.start_date + timedelta(days=30)
+                from .services.coach_student import ensure_active_link
+                ensure_active_link(invite.coach, user, source, next_payment_due)
+
+                invite.is_used = True
+                invite.save(update_fields=['is_used'])
 
             login(request, user)
             request.session['first_run'] = True
@@ -1308,21 +1332,27 @@ def profil_ayarlar(request):
 
 @login_required
 @require_http_methods(['POST'])
+@ratelimit(key='user', rate='10/h', method='POST', block=False)
 def geri_bildirim_gonder(request):
     """Accept feedback form submission and email it to support."""
     from django.utils import timezone
 
-    tip     = request.POST.get('tip', '').strip()
-    mesaj   = request.POST.get('mesaj', '').strip()
-    ua      = request.POST.get('user_agent', '')
-    screen  = request.POST.get('screen_info', '')
+    if getattr(request, 'limited', False):
+        return JsonResponse(
+            {'ok': False, 'error': 'Çok fazla geri bildirim gönderildi. Lütfen daha sonra tekrar deneyin.'},
+            status=429,
+        )
+
+    tip     = request.POST.get('tip', '').strip()[:50]
+    mesaj   = request.POST.get('mesaj', '').strip()[:5000]
+    ua      = request.POST.get('user_agent', '')[:500]
+    screen  = request.POST.get('screen_info', '')[:200]
 
     if not mesaj:
         return JsonResponse({'ok': False, 'error': 'Mesaj boş olamaz.'}, status=400)
 
     user = request.user
-    ip   = (request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
-            or request.META.get('REMOTE_ADDR', ''))
+    ip   = _login_get_ip(request)
     zaman = timezone.now().strftime('%Y-%m-%d %H:%M UTC')
 
     tip_labels = {'hata': 'Hata Bildirimi', 'oneri': 'Öneri', 'soru': 'Soru'}
@@ -1341,7 +1371,7 @@ def geri_bildirim_gonder(request):
         subject=subject,
         body=body,
         from_email='Vagus <noreply@vagus.tr>',
-        to=['info@vagus.tr', 'kayaa3413@gmail.com'],
+        to=list(settings.FEEDBACK_RECIPIENTS),
         reply_to=[user.email],
     )
     gorsel = request.FILES.get('gorsel')
@@ -1385,6 +1415,31 @@ def geri_bildirim_gonder(request):
 
 # ── Web Push subscription management ─────────────────────────────────────────
 
+_PUSH_ENDPOINT_HOSTS = (
+    'fcm.googleapis.com',
+    'android.googleapis.com',
+    'updates.push.services.mozilla.com',
+)
+_PUSH_ENDPOINT_HOST_SUFFIXES = (
+    '.push.services.mozilla.com',
+    '.notify.windows.com',
+    '.push.apple.com',
+)
+
+
+def _is_push_service_endpoint(endpoint):
+    from urllib.parse import urlsplit
+    try:
+        parts = urlsplit(endpoint)
+        host = (parts.hostname or '').lower()
+        port = parts.port
+    except ValueError:
+        return False
+    if parts.scheme != 'https' or port not in (None, 443) or parts.username or parts.password:
+        return False
+    return host in _PUSH_ENDPOINT_HOSTS or host.endswith(_PUSH_ENDPOINT_HOST_SUFFIXES)
+
+
 @login_required
 @require_http_methods(['POST'])
 def push_subscribe(request):
@@ -1401,7 +1456,7 @@ def push_subscribe(request):
 
     if not (endpoint and p256dh and auth_key):
         return JsonResponse({'ok': False, 'error': 'Missing fields'}, status=400)
-    if not endpoint.startswith('https://') or len(endpoint) > 600:
+    if len(endpoint) > 600 or not _is_push_service_endpoint(endpoint):
         return JsonResponse({'ok': False, 'error': 'Invalid endpoint'}, status=400)
 
     PushSubscription.objects.update_or_create(
@@ -1437,10 +1492,14 @@ def push_unsubscribe(request):
 
 @login_required
 @require_http_methods(['POST'])
+@ratelimit(key='user', rate='10/h', method='POST', block=False)
 def push_test(request):
     """Send a real test push notification to all active subscriptions of the logged-in user."""
     from .services.notifications import send_push_notification
     from django.conf import settings as djsettings
+
+    if getattr(request, 'limited', False):
+        return JsonResponse({'ok': False, 'error': 'Too many test notifications'}, status=429)
 
     if not djsettings.VAPID_PRIVATE_KEY:
         return JsonResponse({'ok': False, 'error': 'VAPID not configured'}, status=500)
@@ -2143,7 +2202,7 @@ def _send_koc_invite_email_now(coach, request):
 
 
 @staff_required
-@ratelimit(key='user', rate='20/h', block=True)
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
 def panel_koc_ekle_view(request):
     from .utils import filter_coaches_by_q
     q = request.GET.get('q', '').strip()
@@ -2265,7 +2324,7 @@ def _coach_deletion_block(coach):
 
 
 @staff_required
-@ratelimit(key='user', rate='20/h', block=True)
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
 def panel_koc_sil(request, coach_id):
     coach = User.objects.filter(pk=coach_id, role='coach').first()
     if coach is None:
@@ -2457,7 +2516,7 @@ def serve_private_document(request, path):
 # ── Staff: coach document review ──────────────────────────────────────────────
 
 @staff_required
-@ratelimit(key='user', rate='30/h', block=True)
+@ratelimit(key='user', rate='30/h', method='POST', block=True)
 def staff_coach_documents_view(request):
     from users_app.panel_badges import qs_docs, qs_no_iban, qs_no_phone, qs_doc_missing, qs_profile_issues
 

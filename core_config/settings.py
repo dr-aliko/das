@@ -13,8 +13,20 @@ try:
 except Exception:
     GIT_COMMIT = 'dev'
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
+_INSECURE_DEV_SECRET_KEY = 'django-insecure-dev-key-change-in-production'
+
+
+def _resolve_secret_key(value, debug):
+    if value and value != _INSECURE_DEV_SECRET_KEY:
+        return value
+    if not debug:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('SECRET_KEY must be set to a private value when DEBUG is false.')
+    return _INSECURE_DEV_SECRET_KEY
+
+
 DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = _resolve_secret_key(config('SECRET_KEY', default=''), DEBUG)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='app.vagus.tr,127.0.0.1,localhost', cast=Csv())
 
 INSTALLED_APPS = [
@@ -240,6 +252,8 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL',  default='Vagus <noreply@vagus.tr>')
 
 # Web Push (VAPID) — generate key pair once with py_vapid; store in .env
+FEEDBACK_RECIPIENTS = config('FEEDBACK_RECIPIENTS', default='info@vagus.tr,kayaa3413@gmail.com', cast=Csv())
+
 VAPID_PUBLIC_KEY  = config('VAPID_PUBLIC_KEY',  default='')
 VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
 VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='info@vagus.tr')

@@ -148,3 +148,32 @@ def is_student_program_expired(coach, student_id):
             coach, student_id, exc,
         )
         return False
+
+
+def client_ip(request):
+    """
+    Client IP as written by our own reverse proxy: the last X-Forwarded-For hop,
+    else X-Real-IP, else REMOTE_ADDR. Earlier X-Forwarded-For hops are client-supplied.
+    """
+    import ipaddress
+    meta = request.META
+    candidates = (
+        meta.get('HTTP_X_FORWARDED_FOR', '').split(',')[-1],
+        meta.get('HTTP_X_REAL_IP', ''),
+        meta.get('REMOTE_ADDR', ''),
+    )
+    for raw in candidates:
+        value = raw.strip()
+        if not value:
+            continue
+        try:
+            return str(ipaddress.ip_address(value))
+        except ValueError:
+            continue
+    return '127.0.0.1'
+
+
+def is_duplicate_submit(key, seconds=10):
+    """True when the same form submission was already accepted within the last few seconds."""
+    from django.core.cache import cache
+    return not cache.add(f'dupsubmit_{key}', 1, seconds)
