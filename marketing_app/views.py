@@ -1,9 +1,13 @@
+import logging
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render, get_object_or_404
 
 from .forms import CoachRequestForm
 from .models import CoachProfile, CoachRequest, FAQItem, FeatureItem, PricingPlan, SiteSettings, Testimonial
+
+logger = logging.getLogger(__name__)
 
 
 def home(request):
@@ -85,7 +89,7 @@ def coach_request(request, slug):
 
 def _send_coach_request_email(obj, coach):
     recipient = coach.user.email or settings.DEFAULT_FROM_EMAIL
-    subject = f'Yeni Koç Talebi: {obj.full_name}'
+    subject = f'Yeni Koç Talebi: {" ".join(obj.full_name.split())}'
     body = (
         f'Merhaba {coach.get_display_name()},\n\n'
         f'Yeni bir görüşme talebi aldınız.\n\n'
@@ -107,7 +111,10 @@ def _send_coach_request_email(obj, coach):
         f'Talep Tarihi: {obj.created_at.strftime("%d.%m.%Y %H:%M")}\n\n'
         f'Talebi Vagus admin panelinden de görüntüleyebilirsiniz.'
     )
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient])
+    except Exception:
+        logger.exception('coach request email failed (request_id=%s)', obj.pk)
 
 
 def about(request):

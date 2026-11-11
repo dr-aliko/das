@@ -1,8 +1,13 @@
 import hashlib
+import logging
 
 from django.contrib import admin
 from django.core.cache import cache
 from django.http import HttpResponse
+
+from users_app.utils import client_ip
+
+logger = logging.getLogger(__name__)
 
 _WINDOW   = 900   # 15-minute fixed window and lockout duration
 _PAIR_MAX = 10    # failures for username+IP before lockout
@@ -11,13 +16,6 @@ _MSG = (
     'Çok fazla başarısız giriş denemesi. '
     'Lütfen 15 dakika sonra tekrar deneyin.'
 )
-
-
-def _get_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '127.0.0.1')
 
 
 def _cache_keys(username, ip):
@@ -34,10 +32,7 @@ def _is_limited(username, ip):
 def _increment(username, ip):
     pk, ik = _cache_keys(username, ip)
     for key in (pk, ik):
-        try:
-            cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, _WINDOW)
+        cache.set(key, (cache.get(key) or 0) + 1, _WINDOW)
 
 
 def _clear(username, ip):
@@ -51,7 +46,7 @@ def admin_login_view(request, extra_context=None):
         return admin.site.login(request, extra_context=extra_context)
 
     username = request.POST.get('username', '').strip()
-    ip = _get_ip(request)
+    ip = client_ip(request)
 
     try:
         if _is_limited(username, ip):
@@ -59,7 +54,7 @@ def admin_login_view(request, extra_context=None):
                 _MSG, content_type='text/plain; charset=utf-8', status=429
             )
     except Exception:
-        pass  # fail open — never block a login due to a cache error
+        logger.warning('admin login rate-limit check failed; allowing the attempt', exc_info=True)
 
     response = admin.site.login(request, extra_context=extra_context)
 
@@ -69,6 +64,6 @@ def admin_login_view(request, extra_context=None):
         else:
             _increment(username, ip)
     except Exception:
-        pass  # fail open
+        logger.warning('admin login rate-limit bookkeeping failed', exc_info=True)
 
     return response
