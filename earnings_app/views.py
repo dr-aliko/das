@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from users_app.decorators import staff_required
 from users_app.models import CoachProfile
+from users_app.utils import safe_referer
 
 from .models import EarningConfig, EarningRow, ManualPaymentRecord
 from .services import (
@@ -22,6 +23,13 @@ from .services import (
 
 _log = logging.getLogger(__name__)
 User = get_user_model()
+
+_CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def _csv_text(value):
+    text = str(value or '')
+    return "'" + text if text.startswith(_CSV_FORMULA_PREFIXES) else text
 
 
 def _live_days_for_held(held_rows):
@@ -192,7 +200,7 @@ def panel_kazanclar_approve(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
     from users_app.panel_badges import invalidate_panel_badges
     transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
-    return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
+    return redirect(safe_referer(request, 'earnings_panel:list'))
 
 
 @staff_required
@@ -206,7 +214,7 @@ def panel_kazanclar_mark_paid(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
     from users_app.panel_badges import invalidate_panel_badges
     transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
-    return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
+    return redirect(safe_referer(request, 'earnings_panel:list'))
 
 
 @staff_required
@@ -220,7 +228,7 @@ def panel_kazanclar_void(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
     from users_app.panel_badges import invalidate_panel_badges
     transaction.on_commit(lambda: invalidate_panel_badges('pbadge:earnings'))
-    return redirect(request.META.get('HTTP_REFERER', 'earnings_panel:list'))
+    return redirect(safe_referer(request, 'earnings_panel:list'))
 
 
 @staff_required
@@ -330,7 +338,6 @@ def panel_kazanclar_export_csv(request):
         EarningRow.objects
         .select_related('coach', 'student', 'order')
         .order_by('-coverage_start')
-        [:5000]
     )
 
     status_filter = request.GET.get('status', '')
@@ -347,11 +354,11 @@ def panel_kazanclar_export_csv(request):
         except (ValueError, AttributeError):
             pass
 
-    for r in rows:
+    for r in rows[:5000]:
         writer.writerow([
             r.pk,
-            r.coach.full_name if r.coach else '',
-            r.student.full_name if r.student else '',
+            _csv_text(r.coach.full_name if r.coach else ''),
+            _csv_text(r.student.full_name if r.student else ''),
             r.order_id or '',
             r.coverage_start,
             r.coverage_end,
@@ -364,7 +371,7 @@ def panel_kazanclar_export_csv(request):
             r.get_kind_display(),
             r.get_status_display(),
             'Evet' if r.gap_fallback else 'Hayır',
-            r.payout_ref,
+            _csv_text(r.payout_ref),
             r.approved_at.date() if r.approved_at else '',
             r.paid_at.date() if r.paid_at else '',
         ])
@@ -582,14 +589,14 @@ def coach_kazanclar_export_csv(request):
         paid_str = localtime(r.paid_at).date().isoformat() if r.paid_at else ''
         writer.writerow([
             r.pk,
-            r.student.full_name if r.student else '',
+            _csv_text(r.student.full_name if r.student else ''),
             r.coverage_start,
             r.coverage_end,
             r.period_days,
             r.coach_days,
             amount_str,
             _STATUS_LABELS.get(r.status, r.status),
-            r.payout_ref,
+            _csv_text(r.payout_ref),
             paid_str,
         ])
 

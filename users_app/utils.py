@@ -16,6 +16,17 @@ def all_coaches_for_json():
     ]
 
 
+def safe_referer(request, fallback='/'):
+    """Return the Referer only when it points back at this host, else fallback."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        return referer
+    return fallback
+
+
 def filter_coaches_by_q(coaches, q):
     """Return coaches whose full_name or email contains q (Turkish-case-insensitive)."""
     if not q:

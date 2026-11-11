@@ -81,7 +81,7 @@
         <form method="post" action="{% url 'capacity_panel:order_mark_paid' pk=order.pk %}">
           {% csrf_token %}
           <button type="submit"
-                  onclick="return confirm('Ödemenin hesaba geçtiğinden emin misin?\n{{ order.coach.full_name }} · {{ order.ref_code }} · {{ order.amount_kurus|kurus_tl }}')"
+                  onclick="return confirm('Ödemenin hesaba geçtiğinden emin misin?\n{{ order.coach.full_name|escapejs }} · {{ order.ref_code }} · {{ order.amount_kurus|kurus_tl }}')"
                   class="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
             Ödeme Alındı
           </button>

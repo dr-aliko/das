@@ -518,7 +518,7 @@ def _send_invite_email(invite, request):
     async_task('users_app.tasks.send_invite_email_task', invite.id)
 
 
-@ratelimit(key='user_or_ip', rate='20/d', block=True)
+@ratelimit(key='user', rate='20/d', block=True)
 def coach_invite_view(request):
     from users_app.decorators import coach_required
     # Apply decorator programmatically so the function can be referenced by name in urls.py
@@ -1211,20 +1211,22 @@ def alan_sinif_save(request):
         data = json.loads(request.body)
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse({'ok': False, 'error': 'invalid JSON'}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON'}, status=400)
 
-    valid_alan  = {k for k, _ in User.ALAN_CHOICES}
+    valid_alan = {k for k, _ in User.ALAN_CHOICES}
     valid_sinif = {k for k, _ in User.SINIF_CHOICES}
 
     fields_to_save = []
     if 'alan' in data:
         val = data['alan']
-        if val not in valid_alan and val != '':
+        if not isinstance(val, str) or (val not in valid_alan and val != ''):
             return JsonResponse({'ok': False, 'error': 'invalid alan'}, status=400)
         request.user.alan = val
         fields_to_save.append('alan')
     if 'sinif' in data:
         val = data['sinif']
-        if val not in valid_sinif and val != '':
+        if not isinstance(val, str) or (val not in valid_sinif and val != ''):
             return JsonResponse({'ok': False, 'error': 'invalid sinif'}, status=400)
         request.user.sinif = val
         fields_to_save.append('sinif')
@@ -1399,6 +1401,8 @@ def push_subscribe(request):
 
     if not (endpoint and p256dh and auth_key):
         return JsonResponse({'ok': False, 'error': 'Missing fields'}, status=400)
+    if not endpoint.startswith('https://') or len(endpoint) > 600:
+        return JsonResponse({'ok': False, 'error': 'Invalid endpoint'}, status=400)
 
     PushSubscription.objects.update_or_create(
         endpoint=endpoint,
@@ -2387,8 +2391,9 @@ def coach_profile_quick_update(request):
                 transaction.on_commit(lambda: invalidate_panel_badges('pbadge:belgeler'))
         # success or invalid: redirect back (fail-open)
     except Exception:
-        pass
-    return redirect(request.META.get('HTTP_REFERER') or '/')
+        _log.exception('coach_profile_quick_update failed for user pk=%s', request.user.pk)
+    from .utils import safe_referer
+    return redirect(safe_referer(request))
 
 
 # ── Private document serving ──────────────────────────────────────────────────
