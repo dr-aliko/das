@@ -19,7 +19,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
 from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
-from users_app.utils import is_student_program_expired
+from users_app.utils import is_student_program_expired, period_links
 
 _EXPIRED_MSG = 'Bu öğrencinin süresi dolmuş, program düzenlenemiyor.'
 
@@ -2471,10 +2471,7 @@ def coach_dashboard(request):
     # Build CoachStudent lookup for expiry badges and source classification
     cs_map = {
         cs.student_id: cs
-        for cs in CoachStudent.objects.filter(
-            coach=request.user, active=True,
-            student_id__in=[s.id for s in students],
-        )
+        for cs in period_links(request.user).filter(student_id__in=[s.id for s in students])
     }
 
     # Pre-fetch students who have a paid purchase_app Order (needed for NULL-source rule)

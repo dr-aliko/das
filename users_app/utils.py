@@ -109,10 +109,29 @@ def membership_expiry_info(cs):
     }
 
 
+def period_links(coach):
+    """
+    CoachStudent rows that carry a student's period for this coach: active links, plus
+    Vagus links the nightly overdue job deactivated (the student stays listed, locked).
+    Manual removals and reassignments are not included.
+    """
+    from django.db.models import Q
+    from users_app.models import CoachStudent
+    return CoachStudent.objects.filter(coach=coach).filter(
+        Q(active=True)
+        | Q(
+            active=False,
+            source=CoachStudent.SOURCE_VAGUS,
+            deactivation_reason=CoachStudent.DEACTIVATION_PAYMENT_OVERDUE,
+        )
+    )
+
+
 def is_student_program_expired(coach, student_id):
     """
-    Returns True only when coach's active student has next_payment_due < today AND
-    the expiry rule applies to them.
+    Returns True only when coach's student has next_payment_due < today AND
+    the expiry rule applies to them. Covers active links and Vagus links
+    deactivated by the nightly overdue job (see period_links).
 
     Expiry rule applies to:
     - Vagus-sourced students (always, unchanged behaviour).
@@ -126,9 +145,8 @@ def is_student_program_expired(coach, student_id):
     import logging
     try:
         from users_app.models import CoachStudent
-        try:
-            cs = CoachStudent.objects.get(coach=coach, student_id=student_id, active=True)
-        except CoachStudent.DoesNotExist:
+        cs = period_links(coach).filter(student_id=student_id).first()
+        if cs is None:
             return False
 
         if cs.source != CoachStudent.SOURCE_VAGUS:

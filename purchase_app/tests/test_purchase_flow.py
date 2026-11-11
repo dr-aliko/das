@@ -877,3 +877,33 @@ def test_order_confirm_email_contains_consent_list(coach, active_plan, settings)
     assert 'Onaylarınız' in txt
     assert 'vagus.tr/on-bilgilendirme-formu' in txt
 
+
+@pytest.mark.django_db(transaction=True)
+def test_paid_renewal_reactivates_overdue_link_and_extends_period(coach, active_plan):
+    from users_app.models import CoachStudent
+    from users_app.utils import is_student_program_expired
+
+    student = baker.make(
+        'users_app.User', role='student', is_active=True, email='renew@example.com', coach=coach,
+    )
+    link = baker.make(
+        CoachStudent, coach=coach, student=student, active=False,
+        source=CoachStudent.SOURCE_VAGUS,
+        deactivation_reason=CoachStudent.DEACTIVATION_PAYMENT_OVERDUE,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    assert is_student_program_expired(coach, student.id) is True
+    order = baker.make(
+        'purchase_app.Order', email=student.email, coach=coach, plan=active_plan,
+        amount_kurus=active_plan.price_kurus, status=Order.STATUS_PENDING,
+        provider='sandbox', provider_ref=f'sandbox-{uuid.uuid4()}', full_name=student.full_name,
+    )
+
+    with patch('django_q.tasks.async_task'):
+        on_payment_success(order)
+
+    link.refresh_from_db()
+    assert link.active is True
+    assert link.deactivation_reason is None
+    assert link.next_payment_due == date.today() + timedelta(days=active_plan.duration_days)
+    assert is_student_program_expired(coach, student.id) is False

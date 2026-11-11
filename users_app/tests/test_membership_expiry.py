@@ -180,13 +180,83 @@ def test_no_coach_student_record_returns_false(coach, student):
 
 
 @pytest.mark.django_db
-def test_inactive_link_returns_false(coach, student):
+@pytest.mark.parametrize('reason', [
+    CoachStudent.DEACTIVATION_MANUAL, CoachStudent.DEACTIVATION_REASSIGN, None,
+])
+def test_inactive_link_returns_false(coach, student, reason):
     CoachStudent.objects.create(
         coach=coach, student=student,
-        source=CoachStudent.SOURCE_VAGUS, active=False,
+        source=CoachStudent.SOURCE_VAGUS, active=False, deactivation_reason=reason,
         next_payment_due=date.today() - timedelta(days=5),
     )
     assert is_student_program_expired(coach, student.id) is False
+
+
+@pytest.mark.django_db
+def test_link_deactivated_by_overdue_job_is_expired(coach, student, vagus_link):
+    vagus_link.next_payment_due = date.today() - timedelta(days=5)
+    vagus_link.save()
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    from users_app.tasks import auto_deactivate_overdue_vagus_students
+    with patch('django.conf.settings.AUTO_DEACTIVATE_VAGUS_OVERDUE', True):
+        with patch('users_app.services.notifications.send_push_notification'):
+            auto_deactivate_overdue_vagus_students()
+
+    vagus_link.refresh_from_db()
+    assert vagus_link.active is False
+    assert is_student_program_expired(coach, student.id) is True
+
+
+def _post_task(coach, student):
+    c = Client()
+    c.force_login(coach)
+    return c.post(
+        '/coach/tasks/api/gorevler',
+        data=json.dumps(_create_payload(student.id)),
+        content_type='application/json',
+    )
+
+
+@pytest.mark.django_db
+def test_active_expired_vagus_student_is_listed_but_locked(coach, student, vagus_link):
+    vagus_link.next_payment_due = date.today() - timedelta(days=5)
+    vagus_link.save()
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+
+    roster = c.get('/coach/')
+    listed = c.get('/coach/tasks/api/students').json()['students']
+
+    assert [item['student'].id for item in roster.context['student_data']] == [student.id]
+    assert 'Süre bitti' in roster.content.decode()
+    assert listed == [{'id': student.id, 'full_name': student.full_name, 'alan': student.alan, 'is_expired': True}]
+    assert _post_task(coach, student).status_code == 403
+
+
+@pytest.mark.django_db
+def test_overdue_deactivated_vagus_student_is_listed_but_locked(coach, student):
+    CoachStudent.objects.create(
+        coach=coach, student=student,
+        source=CoachStudent.SOURCE_VAGUS, active=False,
+        deactivation_reason=CoachStudent.DEACTIVATION_PAYMENT_OVERDUE,
+        next_payment_due=date.today() - timedelta(days=5),
+    )
+    student.coach = coach
+    student.save(update_fields=['coach'])
+    c = Client()
+    c.force_login(coach)
+
+    roster = c.get('/coach/')
+    listed = c.get('/coach/tasks/api/students').json()['students']
+
+    assert [item['student'].id for item in roster.context['student_data']] == [student.id]
+    assert 'Süre bitti' in roster.content.decode()
+    assert listed == [{'id': student.id, 'full_name': student.full_name, 'alan': student.alan, 'is_expired': True}]
+    assert _post_task(coach, student).status_code == 403
+    assert c.get(f'/coach/student/{student.id}/').status_code == 200
 
 
 @pytest.mark.django_db
@@ -438,10 +508,11 @@ def test_create_task_allowed_vagus_null_date(coach, student):
 
 
 @pytest.mark.django_db
-def test_create_task_allowed_inactive_vagus_link(coach, student):
+def test_create_task_blocked_for_overdue_deactivated_vagus_link(coach, student):
     CoachStudent.objects.create(
         coach=coach, student=student,
         source=CoachStudent.SOURCE_VAGUS, active=False,
+        deactivation_reason=CoachStudent.DEACTIVATION_PAYMENT_OVERDUE,
         next_payment_due=date.today() - timedelta(days=5),
     )
     student.coach = coach
@@ -453,7 +524,7 @@ def test_create_task_allowed_inactive_vagus_link(coach, student):
         data=json.dumps(_create_payload(student.id)),
         content_type='application/json',
     )
-    assert resp.status_code == 201
+    assert resp.status_code == 403
 
 
 @pytest.mark.django_db

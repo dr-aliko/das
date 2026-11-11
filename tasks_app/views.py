@@ -9,7 +9,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from users_app.decorators import coach_can_view_student, coach_required, coach_students, student_required
-from users_app.utils import is_student_program_expired
+from users_app.utils import is_student_program_expired, period_links
 from tasks_app.forms import GorevForm
 from tasks_app.models import AktiviteTipi
 from tasks_app.services import api_client, tasks, week as week_svc
@@ -68,8 +68,7 @@ class HaftaView(View):
         coached_students = list(students.list_for_coach(request.user))
         cs_map = {
             cs.student_id: cs
-            for cs in CoachStudent.objects.filter(
-                coach=request.user, active=True,
+            for cs in period_links(request.user).filter(
                 student_id__in=[s.id for s in coached_students],
             )
         }
@@ -97,8 +96,7 @@ class StudentListView(View):
         student_list = list(students.list_for_coach(request.user))
         cs_map = {
             cs.student_id: cs
-            for cs in CoachStudent.objects.filter(
-                coach=request.user, active=True,
+            for cs in period_links(request.user).filter(
                 student_id__in=[s.id for s in student_list],
             )
         }
